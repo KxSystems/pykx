@@ -1,0 +1,20 @@
+feature .pykx errors are all catchable
+    before
+        arr:: .pykx.eval"[1, 2, 3]"
+    should be possible to catch raised errors
+        expect pyeval to be caught
+            `ERROR~@[.pykx.pyeval;"1+'test'";{`ERROR}]
+        expect eval to be caugt
+            `ERROR~@[.pykx.eval;"1+'test'";{`ERROR}]
+        expect p to be caugt
+            `ERROR~@[value;"p)1+'test'";{`ERROR}]
+        expect pyexec to be caugt
+            `ERROR~@[.pykx.pyexec;"1+'test'";{`ERROR}]
+        expect qeval to be caugt
+            `ERROR~@[.pykx.qeval;"1+'test'";{`ERROR}]
+        expect get to be caugt
+            `ERROR~@[.pykx.get;`foobarbaz;{`ERROR}]
+        expect getattr to be caugt
+            `ERROR~.[.pykx.getattr;(arr;`foobarbaz);{`ERROR}]
+        expect setattr to be caugt
+            `ERROR~.[.pykx.setattr;(arr;`test;5);{`ERROR}]

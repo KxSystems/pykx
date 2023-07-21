@@ -1,0 +1,32 @@
+/*
+	Title: Extra CSS for code.kx.com/dashboards in MkDocs
+	Author: stephen@kx.com
+ */
+
+/* component-listing
+--------------------------------------------- */
+#component-grid {
+  display: grid; 
+  grid:
+  '. . . . . . .';
+  '. . . . . . .';
+  '. . . . . . .';
+  '. . . . . . .';
+  '. . . . . . .';
+  '. . . . . . .';
+  '. . . . . . .';
+  '. . . . . . .';
+  /*grid-gap: 10px;*/
+  background-color: #white;
+  /*padding:10px;*/
+}
+#component-grid > p {
+  /*background-color: #dbdcde;*/
+  /*padding: 20px 5px;*/
+  text-align: center;
+}
+#component-grid svg {
+  width: 32px;
+  height: 32px;   
+  max-height: none; 
+}

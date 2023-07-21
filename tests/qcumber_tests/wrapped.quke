@@ -1,0 +1,131 @@
+feature .pykx wrapped objects
+    before
+        a:: .pykx.eval"lambda x: pykx.LongVector([y + 1 for y in x])";
+        b:: .pykx.eval"lambda x, y: x + y";
+        c:: a[<];
+        d:: a[>];
+        e:: b[<];
+        f:: b[>];
+        sym:: .pykx.eval"lambda x: x";
+        symq:: sym[<];
+        noargs:: .pykx.eval"lambda: pykx.LongAtom(2)";
+        noargsq:: noargs[<];
+        .pykx.pyexec"aclass = type('TestClass', (object,), {'x': pykx.LongAtom(3), 'y': pykx.toq('hello')})";
+        pyclass:: .pykx.eval"aclass";
+        kwlambda:: .pykx.eval"lambda x, y=3: x + y";
+        kwl:: .pykx.eval"lambda x, y=2, z=3: x + y + z";
+        onlykwargs:: .pykx.eval"lambda x=1, y=2, z=3: x + y + z";
+
+    should be callable as functions
+        expect foreign object with single argument
+            .qu.compare[112h; type a[til 10]`.];
+
+        expect foreign object with multiple arguments
+            .qu.compare[112h; type b[2; 3]`.];
+
+        expect foreign object with arrow function single argument
+            .qu.compare[112h; type d[til 10]];
+
+        expect foreign object with arrow function using multiple arguments
+            .qu.compare[112h; type f[2; 3]];
+
+        expect the correct ktypes single argument
+            .qu.compare[7h; type a[til 10]`];
+
+        expect the correct ktype with multiple arguments
+            .qu.compare[-7h; type b[2; 3]`];
+
+        expect the correct ktypes for arrow function with single argument
+            .qu.compare[7h; type c[til 10]];
+
+        expect the correct ktypes for arrow function with multiple arguments
+            .qu.compare[-7h; type e[2; 3]];
+
+        expect the correct return values with single argument
+            .qu.compare[1 + til 10; a[til 10]`];
+
+        expect the correct return values with multiple arguments
+            .qu.compare[5; b[2; 3]`];
+
+        expect arrow function doesn't require a backtick single argument
+            .qu.compare[1+ til 10; c[til 10]];
+
+        expect arrow function doesn't require a backtick multiple arguments
+            .qu.compare[5; e[2; 3]];
+
+        expect single symbol to be used as function parameter
+            .qu.compare[`hello; sym[`hello]`];
+
+        expect arrow function to be callable with single symbol
+            .qu.compare[`hello; symq[`hello]];
+
+        expect functions to be callable without arguments
+            .qu.compare[2; noargs[::]`];
+
+        expect arrow function to be callable with no arguments
+            .qu.compare[2; noargsq[::]];
+
+        expect only keyword arguments to be usable
+            .qu.compare[6; onlykwargs[`z pykw 2; `y pykw 2; `x pykw 2]`];
+
+    should support get attribute functionality
+        expect getattr can return functions
+            .qu.compare[10; .pykx.eval["pykx.LongVector(range(10))"][`:__len__][::]`];
+
+        expect correct value from getattr
+            .qu.compare[3; pyclass[`:x]`];
+
+        expect to get nested attribute
+            .qu.compare[1b; pyclass[`:x.is_atom]`];
+
+    should provide useful error message when calling uncallable object
+        expect to fail with helpful error message
+            @[{.pykx.eval["1"][x]; 0b};
+                "x";
+                {x like "Attempted to call non callable python foreign object"}]
+
+    should support key word arguments and pyarglist
+        expect key word args to be ignored when not supplied
+            .qu.compare[4; kwlambda[1]`];
+
+        expect key word args to be used when supplied
+            .qu.compare[2; kwlambda[1; `y pykw 1]`];
+
+        expect keywords can be passed in as a dictionary with pykwargs
+            .qu.compare[2; kwlambda[1; pykwargs (enlist `y)!(enlist 1)]`];
+
+        expect keywords can be passed in as a dictionary with pykwargs and pykw
+            .qu.compare[3; kwl[1; pykwargs (enlist `y)!(enlist 1); `z pykw 1]`]
+
+        expect arglist to be usable for passing arguments
+            .qu.compare[5; kwlambda[pyarglist (2 3)]`];
+
+        expect to fail with helpful error message when a symobl atom is not used with pykwargs
+            @[{kwlambda[1; x]; 0b};
+                pykwargs (enlist "z")!(enlist 2);
+                {x like "Expected Symbol Atom for keyword argument name"}]
+
+        expect only one instance of pykwargs to be allowed
+            @[{kwlambda[1; pykwargs (enlist `a)!(enlist 2); x]; 0b};
+                pykwargs (enlist "z")!(enlist 2);
+                {x like "Expected only one key word dictionary to be used in function call"}]
+
+        expect only one instance of pyarglist to be allowed
+            @[{kwlambda[pyarglist 1; x]; 0b};
+                pyarglist 2;
+                {x like "Expected only one arg list to be using in function call"}]
+
+        expect only unique keyword argument names to be allowed
+            @[{kwl[x; `y pykw 1; pykwargs (`y`z)!(3 4)]; 0b};
+                1;
+                {x like "Expected only unique key names for keyword arguments in function call"}]
+
+        expect to fail with helpful error message when a symobl atom is not used with pykw
+            @[{kwlambda[1; x]; 0b};
+                "z" pykw 2;
+                {x like "Expected Symbol Atom for keyword argument name"}]
+
+        expect to fail with helpful error message
+            @[{kwlambda[1; x]; 0b};
+                `z pykw 2;
+                {x like "TypeError(\"<lambda>() got an unexpected keyword argument 'z'\")"}]

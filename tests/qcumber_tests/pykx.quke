@@ -1,0 +1,40 @@
+feature .pykx.eval
+    should return the correct types
+        expect to return a wrapped object
+            .qu.compare[105h; type .pykx.eval["1 + 1"]]
+
+        expect the unwrapped foreign to be the correct ktype long
+            .qu.compare[-7h; type .pykx.eval["1 + 1"]`]
+
+        expect the unwrapped foreign to be the correct ktype int 
+            .qu.compare[-6h; type .pykx.eval["pykx.IntAtom(1 + 1)"]`]
+
+        expect the unwrapped foreign to be the correct ktype short
+            .qu.compare[-5h; type .pykx.eval["pykx.ShortAtom(1 + 1)"]`]
+
+        expect the unwrapped foreign to be the correct ktype symbol
+            .qu.compare[-11h; type .pykx.eval["'hello world'"]`]
+
+        expect the unwrapped foreign to be the correct ktype char vector
+            .qu.compare[10h; type .pykx.eval["b'hello world'"]`]
+
+        expect the wrapped object to contain a foreign
+            .qu.compare[112h; type .pykx.eval["1 + 1"]`.]
+
+    should error appropriately if supplied an incorrect type
+        expect to error if input type is non string
+            err:@[.pykx.eval;5?0Ng;{x}];
+            err like "String input expected for code evaluation/execution."
+
+        expect to evaluate correctly if supplied a char atom
+            .qu.compare[-7h; type .pykx.eval["1"]`]
+feature .pykx.qeval
+    should return the correct values and types
+        expect to return a 2
+            .qu.compare[2; .pykx.qeval["1+1"]]
+        expect to return a composition
+            .qu.compare[105h; type .pykx.qeval["lambda x, y: x + y"]]
+         expect to return 2
+            .qu.compare[2; .pykx.qeval["lambda x, y: x + y"][1;1]]
+        expect to return 2
+            .qu.compare[2; .pykx.qeval["lambda x, y: x + y"] . (1;1)]

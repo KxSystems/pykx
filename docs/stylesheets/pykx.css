@@ -1,0 +1,10 @@
+.md-grid {
+    max-width: 75rem;
+}
+
+/* Indentation with bars on the left */
+div.doc-contents:not(.first) {
+    padding-left: 25px;
+    border-left: .05rem solid var(--md-default-fg-color--lightest);
+    margin-bottom: 80px;
+  }

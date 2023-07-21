@@ -1,0 +1,117 @@
+feature .pykx global set and get
+    should return wrapped objects with get
+        expect wrapped object to be returned
+            .pykx.set[`a; til 10];
+            .qu.compare[105h; type .pykx.get[`a]];
+        expect foreign in wrapped object
+            .qu.compare[112h; type .pykx.get[`a]`.];
+        expect correct internal type
+            .qu.compare[7h; type .pykx.get[`a]`];
+
+    should set objects with specified type
+        expect correct python types
+            .pykx.set[`b; .pykx.topy til 10];
+            .qu.compare[`$"<class 'list'>"; .pykx.eval["str(type(b))"]`];
+        expect numpy type
+            .pykx.set[`b; .pykx.tonp til 10];
+            .qu.compare[`$"<class 'numpy.ndarray'>"; .pykx.eval["str(type(b))"]`];
+        expect pandas type
+            .pykx.set[`b; .pykx.topd til 10];
+            .qu.compare[`$"<class 'pandas.core.series.Series'>"; .pykx.eval["str(type(b))"]`];
+        expect pyarrow type
+            .pykx.set[`b; .pykx.topa til 10];
+            .qu.compare[`$"<class 'pyarrow.lib.Int64Array'>"; .pykx.eval["str(type(b))"]`];
+        expect k type
+            .pykx.set[`b; .pykx.tok til 10];
+            .qu.compare[`$"<class 'pykx.wrappers.LongVector'>"; .pykx.eval["str(type(b))"]`];
+
+    should support variadic function arguments
+        expect numpy to be default conversion type
+            .pykx.set[`b; til 10];
+            .qu.compare[`$"<class 'numpy.ndarray'>"; .pykx.eval["str(type(b))"]`];
+
+    should provide useful error messages when set it used incorreclty
+        expect to fail with helpful error message
+            @[{.pykx.set[x; til 10]; 0b};
+                "x";
+                {x like "Expected a SymbolAtom for the attribute to set in .pykx.set"}]
+        expect to fail with helpful error message
+            @[{.pykx.set[`b; til 10; x]; 0b};
+                "x";
+                {x like "rank"}]
+
+    should provide useful error message when get is used incorrectly
+        expect to fail with helpful error message
+            @[{.pykx.get[x]; 0b};
+                "x";
+                {x like "Expected a SymbolAtom for the attribute to get in .pykx.get"}]
+
+feature .pykx object get and set attribute
+    before each
+        .pykx.pyexec"aclass = type('TestClass', (object,), {'x': pykx.LongAtom(3), 'y': pykx.toq('hello')})";
+        a:: .pykx.eval"aclass";
+
+    should get foreign object
+        expect foreign return value
+            .qu.compare[112h; type .pykx.getattr[a`.; `x]];
+        expect the value within the foreign to be correct
+            .qu.compare[3; .pykx.toq .pykx.getattr[a`.; `x]];
+
+    should be able to set an objects attribute
+        expect to be able to set a new property
+            .pykx.setattr[a`.; `z; til 10];
+            .qu.compare[til 10; .pykx.toq .pykx.getattr[a`.; `z]];
+        expect to be able to overwrite an existing property
+            .pykx.setattr[a`.; `x; til 10];
+            .qu.compare[til 10; .pykx.toq .pykx.getattr[a`.; `x]];
+        expect the object to be set with the numpy dtype by default
+            .pykx.setattr[a`.; `x; til 10];
+            .qu.compare[`$"<class 'numpy.ndarray'>"; .pykx.eval["str(type(aclass.x))"]`];
+
+    should set with the specified type
+        expect python type
+            .pykx.setattr[a`.;`x;.pykx.topy til 10];
+            .qu.compare[`$"<class 'list'>"; .pykx.eval["str(type(aclass.x))"]`];
+        expect numpy type
+            .pykx.setattr[a`.;`x;.pykx.tonp til 10];
+            .qu.compare[`$"<class 'numpy.ndarray'>"; .pykx.eval["str(type(aclass.x))"]`];
+        expect pandas type
+            .pykx.setattr[a`.;`x;.pykx.topd til 10];
+            .qu.compare[`$"<class 'pandas.core.series.Series'>"; .pykx.eval["str(type(aclass.x))"]`];
+        expect pyarrow type
+            .pykx.setattr[a`.;`x;.pykx.topa til 10];
+            .qu.compare[`$"<class 'pyarrow.lib.Int64Array'>"; .pykx.eval["str(type(aclass.x))"]`];
+        expect k type
+            .pykx.setattr[a`.;`x;.pykx.tok til 10];
+            .qu.compare[`$"<class 'pykx.wrappers.LongVector'>"; .pykx.eval["str(type(aclass.x))"]`];
+
+    should provide useful error messages when setattr is used incorreclty
+        expect to fail with helpful error message for foreign
+            @[{.pykx.setattr[x; `x; til 10]; 0b};
+                "x";
+                {x like "Expected foreign object for call to .pykx.setattr"}]
+
+        expect to fail with helpful error message for attribute to set
+            @[{.pykx.setattr[a`.; x; til 10]; 0b};
+                "x";
+                {x like "Expected a SymbolAtom for the attribute to set in .pykx.setattr"}]
+
+        expect helpful error for incorrect number of arguments
+            @[{.pykx.setattr[a`.; `x; til 10; x]; 0b};
+                `z;
+                {x like "rank"}]
+
+
+    should provide useful error message when getattr is used incorrectly
+        expect to fail with helpful error message for foreign
+            @[{.pykx.getattr[x; `x]; 0b};
+                "x";
+                {x like "Expected foreign object for call to .pykx.getattr"}]
+        expect to fail with helpful error message suggesting to unwrap the foreign
+            @[{.pykx.getattr[x; `x]; 0b};
+                a;
+                {x like "Expected foreign object for call to .pykx.getattr, try unwrapping the foreign object with `."}]
+        expect to fail with helpful error message for attribute to set
+            @[{.pykx.getattr[a`.; x]; 0b};
+                "x";
+                {x like "Expected a SymbolAtom for the attribute to get in .pykx.getattr"}]

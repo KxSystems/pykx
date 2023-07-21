@@ -1,0 +1,92 @@
+<!-- CUSTOM SWAGGER CSS TO ENSURE OPENAPI WORKS WITH DARKMODE-->
+.swagger-ui .info .title {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .info a {
+    color: var(--md-typeset-a-color) !important;
+}
+.swagger-ui .info .title small {
+    background: var(--md-typeset-a-color) !important;
+}
+.swagger-ui .opblock-description-wrapper p, .swagger-ui .opblock-external-docs-wrapper p, .swagger-ui .opblock-title_normal p {
+    color: var(--md-default-fg-color) !important;
+}
+.md-typeset a {
+    color: var(--md-typeset-a-color);
+}
+.swagger-ui a.nostyle, .swagger-ui a.nostyle:visited {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .opblock .opblock-summary-description {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .markdown p, .swagger-ui .markdown pre, .swagger-ui .renderedMarkdown p, .swagger-ui .renderedMarkdown pre {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .response-col_status {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui table thead tr td, .swagger-ui table thead tr th {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .response-col_links {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .response-col_links {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui table thead tr td, .swagger-ui table thead tr th {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .tab li button.tablinks {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .tab li button.tablinks {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .response-control-media-type__accept-message {
+    color: var(--md-code-hl-string-color) !important;
+}
+.swagger-ui .info .title small.version-stamp {
+    background-color: var(--md-code-hl-string-color) !important;
+}
+.swagger-ui .response-control-examples__title, .swagger-ui .response-control-media-type__title {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .model {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .parameter__extension, .swagger-ui .parameter__in {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .parameter__name {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .parameter__type {
+    color: var(--md-default-fg-color) !important;
+}
+.md-typeset ol li, .md-typeset ul li {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .opblock .opblock-section-header h4 {
+    color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .opblock .opblock-section-header {
+    background: #1c7d4d45 !important;
+}
+.swagger-ui select {
+  border: 2px solid var(--md-default-fg-color) !important;
+  background:var(--md-default-bg-color) !important; 
+  color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .btn {
+  border: 2px solid var(--md-default-fg-color) !important;
+  background:var(--md-default-bg-color) !important; 
+  color: var(--md-default-fg-color) !important;
+}
+.swagger-ui .parameter__name.required:after {
+    color: var(--md-code-hl-special-color) !important;
+}
+.swagger-ui .info .title {
+    color: var(--md-default-fg-color) !important;
+}

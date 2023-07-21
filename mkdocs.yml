@@ -1,0 +1,215 @@
+---
+site_name: 'PyKX'
+site_author: 'KX'
+site_description: 'PyKX Documentation'
+site_url: 'https://code.kx.com/pykx'
+copyright: 'Ⓒ KX 2022'
+site_dir: 'public'
+dev_addr: 'localhost:8080'
+
+use_directory_urls: false
+
+# Keep commented out until PyKX is open-source
+# repo_url: 'https://gitlab.com/kxdev/kxinsights/python/pykx'
+# edit_uri: 'edit/main/docs/'
+
+extra_css:
+  - https://code.kx.com/assets/stylesheets/main.b941530a.min.css
+  - https://code.kx.com/stylesheets/2021.css
+  - https://code.kx.com/stylesheets/prism.css
+  - https://code.kx.com/stylesheets/extra.css
+  - https://code.kx.com/stylesheets/hide-footer-nav.css
+  - stylesheets/mkdocstrings.css
+  - https://code.kx.com/stylesheets/dashboards.css
+  - https://code.kx.com/dashboards/stylesheets/dashboards.css
+  - stylesheets/swagger.css
+
+extra_javascript:
+  - https://code.kx.com/scripts/prism.js
+  - https://code.kx.com/scripts/extra.js
+  - https://code.kx.com/scripts/mathjax.js
+  - https://code.kx.com/scripts/polyfill.min.js
+  - https://code.kx.com/scripts/tex-mmmdtml.js
+  - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML'
+  - 'https://code.jquery.com/jquery-3.6.0.min.js'
+  - 'https://use.fontawesome.com/3dbf29ed12.js'
+  # this relative path is needed to source from code.kx.com!!!
+  - "&period;&period;/&period;&period;/pykx/scripts/versions.js"
+  # Uncomment only for local test 
+  # - 'scripts/versions.js'
+
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - extra
+  - def_list
+  - meta
+  - tables
+  - markdown_grid_tables
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+      options:
+        custom_icons:
+          - custom_theme/.icons
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.extra
+  - pymdownx.highlight:
+      use_pygments: false
+  - pymdownx.magiclink
+  - pymdownx.mark
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tilde
+  - toc:
+      permalink: false
+      title: On this page
+
+plugins:
+  - autorefs
+  - mkdocs-jupyter:
+      execute: True
+      include: ["*.ipynb"]
+      include_source: True # Let users download the Jupyter notebook to use interactively
+  - exclude:
+      glob:
+        - internal/*
+  - mkdocstrings:
+      handlers:
+        python:
+          rendering:
+            docstring_section_style: 'table'
+            heading_level: 2
+            line_length: 80
+            members_order: 'source'
+            merge_init_into_class: true
+            separate_signature: true
+            show_bases: true
+            show_if_no_docstring: false
+            show_object_full_path: false
+            show_root_full_path: true
+            show_root_heading: true
+            show_root_toc_entry: true
+            show_signature: true
+            show_source: false
+            show_submodules: false
+
+          import:
+            - https://docs.python.org/3/objects.inv
+            - https://numpy.org/doc/stable/objects.inv
+            - https://pandas.pydata.org/docs/objects.inv
+  - render_swagger
+  - search
+  - spellcheck:
+      known_words: spelling.txt
+      ignore_code: true    # Ignore words in <code> tags
+      min_length: 2        # Minimum length of words to consider
+      # max_capital: 1     # Maximum number of capital letters in a word
+      allow_unicode: false # Keep unicode characters
+      skip_files:          # Skip files entirely
+        - comparisons.md # Skipped due to false positives
+        - performance.md # Skipped due to false positives
+        - getting-started/interface_overview.ipynb
+        - getting-started/q_magic_command.ipynb
+        - user-guide/advanced/Pandas_API.ipynb
+
+
+theme:
+  name: material
+  custom_dir: custom_theme/
+  favicon: https://code.kx.com/favicon.ico
+  font: false
+  features:
+    - content.tabs.link # Insiders
+    - header.autohide
+    - navigation.tabs
+    - content.code.annotate
+    - search.suggest
+  palette:
+  - media: "(prefers-color-scheme: light)"
+    scheme: kx-light
+    toggle:
+      icon: material/toggle-switch-off-outline
+      name: Switch to dark mode
+  - media: "(prefers-color-scheme: dark)"
+    scheme: slate
+    toggle:
+      icon: material/toggle-switch
+      name: Switch to light mode
+
+  language: en
+docs_dir: docs
+
+nav:
+  - Home: 'https://code.kx.com/insights/'
+  - kdb+ and q: 'https://code.kx.com/q'
+  - kdb Insights: "https://code.kx.com/insights/core"
+  - kdb Insights Enterprise: "https://code.kx.com/insights/platform/"
+  - Licensing : "https://code.kx.com/insights/licensing/licensing/"
+  - PyKX:
+    - index.md
+    - Getting Started:
+      - What is PyKX?: getting-started/what_is_pykx.md 
+      - Installation: getting-started/installing.md
+      - Quickstart guide: getting-started/quickstart.md
+      - Notebook Example: getting-started/interface_overview.ipynb 
+      - Jupyter q Magic Command: getting-started/q_magic_command.ipynb
+    - User Guide:
+      - Introduction: user-guide/index.md
+      - Fundamentals:
+        - Generating PyKX objects: user-guide/fundamentals/creating.md
+        - Interacting with PyKX objects: user-guide/fundamentals/evaluating.md
+        - Querying data: user-guide/fundamentals/querying.md
+        - Indexing PyKX objects: user-guide/fundamentals/indexing.md
+        - Handling nulls and infinities: user-guide/fundamentals/nulls_and_infinities.md
+      - Advanced usage and performance considerations:
+        - Communicating via IPC: user-guide/advanced/ipc.md
+        - Using q functions in a Pythonic way: user-guide/advanced/context_interface.md
+        - Running PyKX under q: user-guide/advanced/running_under_q.md
+        - Modes of operation: user-guide/advanced/modes.md
+        - Numpy integration: user-guide/advanced/numpy.md
+        - Performance considerations: user-guide/advanced/performance.md
+        - Interface limitations: user-guide/advanced/limitations.md
+        - Environment variables: user-guide/advanced/environment_variables.md
+        - Pandas API: user-guide/advanced/Pandas_API.ipynb
+    - API:                       
+      - Q Namespaces:
+        - api/q/q.md
+        # - api/q/Q.md
+        # - api/q/j.md
+        # - api/q/z.md
+      - api/wrappers.md
+      - api/toq.md
+      - api/type_conversions.md
+      - api/query.md
+      - api/ctx.md
+      - api/ipc.md
+      - api/console.md
+      - api/exceptions.md
+      - api/embedded_q.md
+      - api/read.md
+      - api/schema.md
+      - api/write.md
+      - api/pykx_under_q.md
+      - api/reimporting.md
+    - Examples:
+      - Subscriber: examples/subsciber/readme.md
+      - Compression and Encryption: examples/compress_and_encrypt/readme.md
+      - IPC: examples/ipc/README.md
+      - PyKX as a Server: examples/server/server.md
+    - Extras:
+      - Comparisons against other Python/q interfaces: extras/comparisons.md
+      - Frequently asked questions: extras/faq.md
+      - Known issues: extras/known_issues.md
+    - Release notes: changelog.md
+    - License: license.md

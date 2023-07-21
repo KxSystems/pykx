@@ -1,0 +1,224 @@
+[project]
+name = "pykx"
+description = "An interface between Python and q"
+readme = "README.md"
+requires-python = ">=3.7"
+license = { file = "LICENSE.txt" }
+authors = [
+    { name = "KX", email = "pykx@kx.com" },
+]
+keywords = ["pykx", "q", "kx", "database", "ffi"] # max of 5 keywords
+dynamic=['version']
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Environment :: Other Environment",
+    "Framework :: Flake8",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Financial and Insurance Industry",
+    "Intended Audience :: Healthcare Industry",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Manufacturing",
+    "Intended Audience :: Other Audience",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Telecommunications Industry",
+    "License :: Other/Proprietary License",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: C",
+    "Programming Language :: Cython",
+    "Programming Language :: Other",
+    "Programming Language :: Other Scripting Engines",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: Implementation :: CPython",
+    # "Programming Language :: Python :: Implementation :: PyPy",
+    "Topic :: Database",
+    "Topic :: Database :: Database Engines/Servers",
+    "Topic :: Database :: Front-Ends",
+    "Topic :: Software Development",
+    "Topic :: Software Development :: Interpreters",
+    "Topic :: Software Development :: Libraries",
+    "Typing :: Typed",
+]
+dependencies = [
+    "numpy~=1.22; python_version!='3.7'",
+    "numpy~=1.20; python_version=='3.7'",
+    "pandas~=1.2",
+    "pytz~=2022.1",
+]
+
+
+[project.optional-dependencies]
+doc = [
+    "black==22.1.0", # Used by mkdocstrings to format function signatures
+    "griffe==0.14.0", # Force-install a newer version of griffe (mkdocstrings backend/dep) to get a required bugfix
+    "jupyter==1.0.0",
+    "markdown-grid-tables==0.0.1",
+    "mkdocs-autorefs==0.4.1",
+    "mkdocs-click==0.5.0",
+    "mkdocs-exclude==1.0.2",
+    "mkdocs-jupyter==0.20.0",
+    "mkdocs-material==8.1.10",
+    "mkdocs-render-swagger-plugin==0.0.3",
+    "mkdocs-spellcheck==0.2.0",
+    "mkdocstrings[python]==0.18.0",
+    "pygments==2.11",
+    "pymdown-extensions==9.3",
+]
+lint = [
+    "flake8==4.0.1",
+    "flake8-bugbear==22.1.11",
+    "flake8-colors==0.1.9",
+    "flake8-docstrings==1.6.0",
+    "flake8-import-order==0.18.1",
+    "pep8-naming==0.12.1",
+    "pyproject-flake8==0.0.1a2",
+]
+pyarrow = [
+    # TODO: Fix pyarrow version 10.0 support
+    # TODO: Fix pyarrow support for python 3.11
+    "pyarrow>=3.0.0, <10.0.0; python_version!='3.11'",
+]
+test = [
+    "coverage[toml]==6.3.2",
+    "Cython==3.0.0a11",
+    "plotly==5.10.0",
+    "pytest==7.1.2",
+    "pytest-asyncio==0.18.3",
+    "pytest-benchmark==3.4.1",
+    "pytest-cov==3.0.0",
+    "pytest-monitor==1.6.5; sys_platform!='darwin'",
+    "pytest-randomly==3.11.0",
+    "pytest-xdist==2.5.0",
+]
+
+
+[project.urls]
+homepage = "https://code.kx.com/pykx"
+documentation = "https://code.kx.com/pykx"
+repository = "https://code.kx.com/pykx"
+changelog = "https://code.kx.com/pykx/changelog.html"
+
+
+[build-system]
+requires = [
+    "Cython==3.0.0a11",
+    "numpy~=1.22, <1.23; python_version!='3.7'", # Use the highest patch version of numpy 1.22.x, this will still support a user using numpy version 1.22.0
+    "numpy~=1.20.0; python_version=='3.7'", # Use numpy version 1.20.x for building the python 3.7 wheel
+    "setuptools==60.9.3",
+    "setuptools-scm[toml]>=6.0.1",
+    "tomli>=2.0.1",
+    "wheel>=0.36.2",
+]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools_scm]
+write_to = "src/pykx/_version.py"
+
+
+[tool.pytest.ini_options]
+testpaths = [ 'tests' ]
+filterwarnings = [
+    "ignore:Coverage disabled via --no-cov switch!:pytest.PytestWarning:pytest_cov.plugin",
+    "ignore:No data was collected",
+    "ignore:Module pykx was never imported",
+]
+markers = [
+    "embedded",
+    "ipc",
+    "isolate",
+    "large",
+    "licensed",
+    "unlicensed",
+    "nep49",
+    "pandas_api",
+]
+asyncio_mode = "strict"
+
+
+[tool.flake8]
+filename = "*.py,*.pyx,*.pxd"
+exclude = [
+    ".git",
+    "build",
+    "dist",
+    "*.pyc",
+    ".eggs",
+    "*.egg",
+    "*.egg-info",
+    ".cache",
+    ".eggs",
+    ".venv*",
+    "venv*",
+    "tmp",
+    "doc",
+    "site-package",
+    "docs/internal",
+    "vcpkg",
+    "tests/win_tests/*",
+]
+show-source = "True"
+max-complexity = 10
+max-line-length = 100
+import-order-style = "appnexus"
+format = "${cyan}%(path)s${reset}:${yellow_bold}%(row)d${reset}:${green_bold}%(col)d${reset}: ${red_bold}%(code)s${reset} %(text)s"
+select = "C,E,F,I,W,B,B901,B902,B903"
+per-file-ignores = [
+    "__init__.py:F401,F403" # Allow unused and * imports in __init__ files; this lets us expose definitions
+]
+ignore = [
+    "D107", # missing docstring in __init__
+    "E124", # closing bracket does not match visual indentation; Google's Python style guide is incompatible with this
+    "E225", # missing whitespace around operator (It thinks the * used for pointers is an operator)
+    "E226", # missing whitespace around arithmetic operator (It thinks the * used for pointers is an operator)
+    "E227", # missing whitespace around bitwise operator (It thinks the < and > used for casting are operators)
+    "E241", # multiple spaces after ':'
+    "E261", # two spaces before inline comment
+    "E402", # module level import not at top of file (We use the `I` codes for import order related issues)
+    "E999", # syntax error (Cython syntax is not valid Python syntax)
+    "I100", # import statements are in the wrong order
+    "I202", # additional newline in a group of imports (We use three 3: built-in, third-party, local)
+    "W503", # depracated warning - goes against PEP8
+]
+
+
+[tool.coverage.run]
+plugins = [ "Cython.Coverage" ]
+concurrency = [ "multiprocessing" ]
+parallel = true
+branch = true
+relative_files = true
+data_file = "coverage/.coverage"
+source = [ "pykx" ]
+omit = [
+    "*.pxd",
+    "parse_tests.py",
+    "**/nbextension.py",
+]
+
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+precision = 2
+exclude_lines = [
+    "nocov",
+    "if TYPE_CHECKING:",
+]
+
+[tool.pyright]
+include = ["src"]
+exclude = [
+    "**/__pycache__",
+]
+reportMissingImports = false
+reportMissingTypeStubs = false
+reportGeneralTypeIssues = "warning"

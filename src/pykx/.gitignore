@@ -1,0 +1,9 @@
+# Auto-generated files
+*.c
+!_numpy.c
+!python.c
+!pykx.c
+!pykxq.c
+!numpy_conversions.c
+*.html
+_version.py

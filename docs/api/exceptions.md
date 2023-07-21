@@ -1,0 +1,3 @@
+# Exceptions
+
+::: pykx.exceptions

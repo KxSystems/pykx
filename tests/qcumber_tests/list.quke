@@ -1,0 +1,43 @@
+feature PyKX list assignment, retrieval and indexing
+    before
+        numpyList  ::.pykx.import[`numpy;`:arange]10;
+        pythonList ::.pykx.eval"[True,2,3.0,'four']";
+        .pykx.pyexec"aclass = type('TestClass', (object,), {'x': pykx.LongAtom(3), 'y': pykx.toq('hello')})";
+        pythonClass::.pykx.get`aclass;
+
+    should Support indexing of Python objects appropriately using q syntax
+        expect To return the correct objects based on index while within range
+            all(
+               5~numpyList[@;5]`;
+               pythonList[@;0]`;
+               `four~pythonList[@;3]`
+               )
+
+        expect a Pythonic error to be returned on failure to index the Python object
+            @[{numpyList[@;x]`;0b};
+              20;
+              {x like "IndexError('index 20 is out of bounds for axis 0 with size 10')"}]
+
+        expect to return an error when the Python object contains no __getitem__ method
+            @[{pythonClass[@;x]};
+              2;
+              {x like "AttributeError(\"type object 'TestClass' has no attribute '__getitem__'\")"}]
+
+    should Support setting attributes within a class using q like syntax
+        expect to return the correct items when these have overwritten the Python objects
+            pythonClass[:;`:pyattr;til 10];     // Set an attribute on the Python class
+            til[10]~pythonClass[`:pyattr]`
+
+    should Support setting and retrieval of Python objects within list items using q syntax
+        expect to set an item within Python and Numpy lists
+            pythonList[=;1;5];     // Set index 1 to value 5
+            numpyList[=;0;5];      // Set index 0 to value 5
+            all(
+               (1b;5;3f;`four)~pythonList`;
+               5~first numpyList`
+               )
+
+        expect to return an error when the Python object contains no __setitem__ method
+            @[{pythonClass[=;1;x]};
+              10;
+              {x like "AttributeError(\"type object 'TestClass' has no attribute '__setitem__'\")"}]

@@ -1,0 +1,67 @@
+feature conversions
+    before
+        t::.pykx.eval["lambda x: bytes(str(type(x)), 'utf-8')"][<];
+    should convert unwrapped foreigns to correct types
+        expect python type
+            .qu.compare["<class 'list'>"; t .pykx.topy til 10];
+        expect numpy type
+            .qu.compare["<class 'numpy.ndarray'>"; t .pykx.tonp til 10];
+        expect pandas type
+            .qu.compare["<class 'pandas.core.series.Series'>"; t .pykx.topd til 10];
+        expect pyarrow type
+            .qu.compare["<class 'pyarrow.lib.Int64Array'>"; t .pykx.topa til 10];
+        expect K type
+            .qu.compare["<class 'pykx.wrappers.LongVector'>"; t .pykx.tok til 10];
+        expect raw conversions to work
+            .qu.compare["<class 'int'>"; t .pykx.toraw .z.t];
+        expect raw datetime conversions to work
+            .qu.compare["<class 'float'>"; t .pykx.toraw 2006.07.21T09:13:39];
+    should convert wrapped foreigns to correct types
+        expect python type
+            x:.pykx.eval"pykx.LongVector(list(range(10)))";
+            .qu.compare["<class 'list'>"; t .pykx.topy x];
+        expect numpy type
+            x:.pykx.eval"pykx.LongVector(list(range(10)))";
+            .qu.compare["<class 'numpy.ndarray'>"; t .pykx.tonp x];
+        expect pandas type
+            x:.pykx.eval"pykx.LongVector(list(range(10)))";
+            .qu.compare["<class 'pandas.core.series.Series'>"; t .pykx.topd x];
+        expect pyarrow type
+            x:.pykx.eval"pykx.LongVector(list(range(10)))";
+            .qu.compare["<class 'pyarrow.lib.Int64Array'>"; t .pykx.topa x];
+        expect K type
+            x:.pykx.eval"pykx.LongVector(list(range(10)))";
+            .qu.compare["<class 'pykx.wrappers.LongVector'>"; t .pykx.tok x];
+        expect raw list type
+            x:.pykx.eval"pykx.LongVector(list(range(10)))";
+            .qu.compare["<class 'list'>"; t .pykx.toraw x];
+
+feature default conversions
+    before each
+        t::.pykx.eval["lambda x: bytes(str(type(x)), 'utf-8')"][<];
+    after each
+        .pykx.setdefault["numpy"];
+    should support python default
+        expect python default
+            .pykx.setdefault["python"];
+            .qu.compare["<class 'list'>"; t til 10];
+    should support numpy default
+        expect numpy default
+            .pykx.setdefault["numpy"];
+            .qu.compare["<class 'numpy.ndarray'>"; t til 10];
+    should support pandas default
+        expect pandas default
+            .pykx.setdefault["pandas"];
+            .qu.compare["<class 'pandas.core.series.Series'>"; t til 10];
+    should support pyarrow default
+        expect pyarrow default
+            .pykx.setdefault["PyArrow"];
+            .qu.compare["<class 'pyarrow.lib.Int64Array'>"; t til 10];
+    should support K default
+        expect K default
+            .pykx.setdefault["k"];
+            .qu.compare["<class 'pykx.wrappers.LongVector'>"; t til 10];
+    should error under condition default conversion type is not supported
+        expect failure if default conversion unsupported
+            err:@[.pykx.setdefault;"unsupported";{x}];
+            err like "unknown conversion type: unsupported"

@@ -1,0 +1,10 @@
+repo: pykx
+tests:
+  - path: ./tests
+    definition: pytest
+    level: UNIT
+    tags: ["TICKET"]
+  - path: ./tests/qcumber_tests
+    definition: qcumber
+    level: UNIT
+    tags: ["TICKET"]

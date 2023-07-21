@@ -1,0 +1,165 @@
+# PyKX Demo
+
+# Note that here "K object" refers to an object for which
+# `isinstance(obj, pykx.K)` is `True`. "K objects" from q
+# (i.e. `struct k0*`) will be referred to as "underlying K objects".
+
+import numpy as np
+import pykx as kx
+
+print(kx.q('([] til 3; `a`b`c)'))
+
+kx.q('"this is a char vector"')
+
+# All K objects support at least one of the following (most support all):
+# `py()`, `np()`, `pd()`, `pa()`
+
+kx.q('8?0Ng').py()
+kx.q('8?0Ng').np()
+kx.q('8?0Ng').pd()
+kx.q('8?0Ng').py()
+
+t = kx.q('([] a:til 4; b:4?`8; c:4?0Ng; d:4?0Wp)')
+
+t.py()
+t.np()
+t.pd()
+t.pa()
+
+l = kx.q('(0b;"G"$"00000000-0000-0000-0000-000000000001";0x02;3h;4i;5j;6e;7f)')
+
+
+# Note the difference between the py property, versus calling list on the K object
+
+# Invocation of the py method returns the items converted
+# to their closest Python representation
+l.py()
+# Calling list on the item will generate a Python list with the
+# individual q items contained as list items
+list(l)
+
+
+# Temporal types can also be converted to appropriate equivalents
+timestamps = kx.q('"p"$4?0Wj')
+timestamps.py()
+timestamps.np()
+timestamps.pd()
+timestamps.pa()
+
+timespans = kx.q('"n"$4?0Wj')
+timespans.py()
+timespans.np()
+timespans.pd()
+timespans.pa()
+
+
+# Users more familiar with q can get access to an equivalent
+# to a q console within Python the variables of which can be
+# accessed from within the Python process once the console
+# has been exited
+kx.q.console()
+
+til 10
+
+\d .pykx
+
+r:9?0W
+
+\\
+
+kx.q('.pykx.r').np()
+
+
+# Users have access to the functions within the base '.q'
+# namespace by default for example
+kx.q.til(10)
+kx.q.max([1,2,3,4])
+tab = kx.q('([]10?1f;10?1f;5+10?10h;10?1e)').pd()
+kx.q.min(tab)
+
+# Users can also get access to the '.z.' and '.Q' namespace
+kx.q.Q.addr('localhost')
+kx.q.z.h
+
+
+# By default PyKX allows users to define extensions modules
+# which are loaded in automatically from QHOME when PyKX is
+# initialised. To run this example add the script 
+# 'extension/extension.q' to QHOME and initialise the interface
+
+# Retrieve 'test_function' and 'test_data'
+kx.q.extension.test_function
+kx.q.extension.test_data
+
+# Use 'test_function' on 'test_data'
+kx.q.extension.test_function(kx.q.extension.test_data)
+
+
+# The interface also contains a wrapper around the KX's functional
+# querying language, as such it follows the conventions of that
+# structure
+
+# python q object based on memory location
+qtab = kx.q('([]col1:100?`a`b`c;col2:100?1f;col3:100?5)')
+# assign python q object to named entity
+kx.q['qtab'] = qtab
+
+# Help is available for the querying functionality
+help(kx.q.qsql)
+
+# The following are equivalent w.r.t select functionality
+kx.q.qsql.select(qtab)
+kx.q.qsql.select('qtab')
+
+kx.q.qsql.select(qtab, where = 'col1=`a')
+kx.q.qsql.select(qtab, columns = {'col1':'col1', 'newname_col2':'col2'})
+kx.q.qsql.select(qtab, columns={'maxCol2':'max col2'}, by={'groupcol':'col1'})
+kx.q.qsql.select(qtab, columns={'minCol2': 'min col2',
+                     'col3': 'max col3'},
+            by={'col1': 'col1'},
+            where=['col3<0.5', 'col2>0.7'])
+
+# The following are equivalent w.r.t delete functionality
+kx.q.qsql.delete(qtab)
+kx.q.qsql.delete('qtab')
+
+# The following will envoke non persistent deletion on the table
+# i.e. the original table is not modified
+kx.q.qsql.delete(qtab, 'col1')
+kx.q.qsql.delete(qtab, where='col1=`a')
+kx.q.qsql.delete(qtab, ['col2','col3'])
+
+# In the case that the table is named in the q memory space, for example
+# added via q['qtab']=qtab then the table can be perminently modified
+# using the following
+kx.q.qsql.delete('qtab', where='col1=`b', modify = True)
+
+
+# IPC interfacing
+
+# This interface provides users with the ability to interface with
+# external q processes in order to facilitate the publishing and
+# retrieval of data from these processes
+
+# In another terminal start a q process on port 5000.
+# Define .z.ps and .z.pg handlers
+$ q -p 5000
+q).z.ps:{[x]0N!(`.z.ps;x);value x}
+q).z.pg:{[x]0N!(`.z.pg;x);value x}
+
+# From the Python interface
+# Look at the 'help' provided for the IPC interface
+help(kx.QConnection)
+
+# Establish a connection to the q process
+conn = kx.QConnection('localhost', 5000)
+
+# Make a sync call with and without additional parameters
+conn('1+1')
+conn('{x+y}', 1, kx.q('2'))
+tab = kx.q('([]10?1f;10?1f;5+10?10h;10?1e)').pd()
+conn('{y#x}', tab, ['x2', 'x3'])
+
+# Make an async call with and without additional parameters
+conn('1+1', wait=False)
+conn('{[x;y]testTab::x+y}', tab, ['x1', 'x2'])

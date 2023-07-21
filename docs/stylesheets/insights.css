@@ -1,0 +1,11 @@
+/*
+	Title: Common extra CSS for code.kx.com/insights in MkDocs
+	Author: stephen@kx.com
+	Version: 2021.08.18
+ */
+
+/* suppress nav footer
+--------------------------------------------- */
+.md-footer-nav {
+	display: none;
+}

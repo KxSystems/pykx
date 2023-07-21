@@ -1,0 +1,25 @@
+include MANIFEST.in
+include pyproject.toml
+include README.md
+include setup.py
+
+graft src/pykx/include
+graft src/pykx/lib
+
+recursive-include src/pykx *.py *.pxd *.pyx *.c *.so *.k
+recursive-include tests *.py
+
+include src/pykx/pykx.q
+include src/pykx/pykx_init.q_
+
+exclude **/.gitignore
+exclude .gitlab-ci.yml
+exclude mkdocs.yml
+exclude **/pykx_init.q
+
+prune build
+prune coverage
+prune docs
+prune benchmarks
+prune examples
+prune tests

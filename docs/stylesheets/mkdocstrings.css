@@ -1,0 +1,25 @@
+/* Indentation with bars on the left */
+div.doc-contents:not(.first) {
+    padding-left: 25px;
+    border-left: 4px solid rgba(230, 230, 230);
+    margin-bottom: 80px;
+}
+
+/* Avoid breaking parameters name, etc. in table cells. */
+td code {
+    word-break: normal !important;
+}
+
+h3.doc > code {
+    white-space: normal;
+}
+
+h2.doc > code {
+    background: var(--md-code-bg-color);
+    word-break: break-word;
+    white-space: break-spaces;
+}
+
+h3.doc > code {
+    background: var(--md-code-bg-color);
+}

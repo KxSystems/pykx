@@ -1,0 +1,19 @@
+feature .pykx.import
+    should allow importation and use of other libraries
+        expect to import the numpy package
+            np:.pykx.import[`numpy];
+            all(105h=type np;.pykx.repr[np]like"<module 'numpy'*")
+
+        expect to be able to load a function form a loaded module and make use of it
+            arange:.pykx.import[`numpy;`:arange];
+            all(105h=type arange;.pykx.repr[arange]like"*arange>")
+        expect non C contiguous data conversions to work
+            mat: .pykx.import[`numpy][`:arange;12][`:reshape;3;4][`:T]`;
+            res: ((0 4 8); (1 5 9); (2 6 10); (3 7 11));
+            all(all(mat=res))
+
+    should provide a helpfull error message when used incorrectly
+        expect a helpful error message
+            @[{.pykx.import x; 0b};
+                "a";
+                {x like "Module to be imported must be a symbol"}]

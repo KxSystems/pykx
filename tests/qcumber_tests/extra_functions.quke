@@ -1,0 +1,53 @@
+feature .pykx.repr
+    before
+        .pykx.pyexec"aclass = type('TestClass', (object,), {'x': pykx.LongAtom(3), 'y': pykx.toq('hello')})";
+        a:: .pykx.eval"aclass";
+
+    should return char vector type
+        expect char vector
+            .qu.compare["<class '__main__.TestClass'>"; .pykx.repr a`.];
+        expect char vector of length one
+            .qu.compare[enlist "2"; .pykx.repr .pykx.eval["1 + 1"]`.];
+    should still work for non foreign objects
+        expect q objects to be handled
+            .qu.compare["`ab\n"; .pykx.repr `ab];
+
+feature .pykx.modpow
+    should provide modpow functionality
+        expect mod to work
+            .qu.compare[5; .pykx.modpow[10; 2; 19]];
+        expect pow to work without mod
+            .qu.compare[100; .pykx.modpow[10; 2; ::]];
+
+feature .pykx.unwrap
+    should unwrap wrapped foreigns
+        expect a foreign to be contained
+            .qu.compare[112h; type .pykx.unwrap .pykx.eval"1"];
+    should pass on unwrapped foreigns
+        expect a foreign to be contained
+            .qu.compare[112h; type .pykx.unwrap[.pykx.eval["1"]`.]];
+
+feature .pykx.toq
+    should return native q types from unwrapped foreign
+        expect a long atom
+            .qu.compare[-7h; type .pykx.toq .pykx.eval["1"]`.];
+        expect a short atom
+            .qu.compare[-5h; type .pykx.toq .pykx.eval["pykx.ShortAtom(1)"]`.];
+    should return native q types from wrapped foreign
+        expect a long atom
+            .qu.compare[-7h; type .pykx.toq .pykx.eval["1"]];
+        expect a short atom
+            .qu.compare[-5h; type .pykx.toq .pykx.eval["pykx.ShortAtom(1)"]];
+
+feature .pykx.py2q
+    should return native q types from unwrapped foreign
+        expect a long atom
+            .qu.compare[-7h; type .pykx.py2q .pykx.eval["1"]`.];
+        expect a short atom
+            .qu.compare[-5h; type .pykx.py2q .pykx.eval["pykx.ShortAtom(1)"]`.];
+    should return native q types from wrapped foreign
+        expect a long atom
+            .qu.compare[-7h; type .pykx.py2q .pykx.eval["1"]];
+        expect a short atom
+            .qu.compare[-5h; type .pykx.py2q .pykx.eval["pykx.ShortAtom(1)"]];
+
