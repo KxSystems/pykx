@@ -10,7 +10,7 @@ github_actions:
 python:
   - '**/*.py'
   - '**/*.pyx'
-C:
+c:
   - '**/*.c'
 q:
   - '**/*.q'
