@@ -1,0 +1,22 @@
+---
+documentation:
+  - 'docs/**'
+  - 'custom_theme/**'
+  - 'mkdocs.yml'
+github:
+  - any: ['.github/*', '!.github/workflows']
+github_actions:
+  - '.github/workflows/*'
+python:
+  - '**/*.py'
+  - '**/*.pyx'
+c:
+  - '**/*.c'
+q:
+  - '**/*.q'
+  - '**/*.k'
+  - '**/.q_'
+tests:
+  - 'tests/**'
+examples:
+  - 'examples/**'
