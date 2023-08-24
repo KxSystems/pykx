@@ -12,8 +12,26 @@ kx.install_into_QHOME()
 
 or equivalently using only command line
 
+```python
+python -c "import pykx;pykx.install_into_QHOME()"
+```
+
+If you previously had `embedPy` installed pass:
+
+```python
+python -c "import pykx;pykx.install_into_QHOME(overwrite_embedpy=True)"
+```
+
+If you cannot edit files in `QHOME` you can copy the files to your local folder and load `pykx.q` from there:
+
 ```bash
-python -c "import pykx as kx; kx.install_into_QHOME()"
+python -c "import pykx;pykx.install_into_QHOME(to_local_folder=True)"
+```
+
+## Gain access to the `.pykx` namespace within the `q` session
+
+```q
+q)\l pykx.q
 ```
 
 ## `.pykx.eval`
@@ -535,7 +553,7 @@ type | description |
 	[Pandas](https://pandas.pydata.org/docs/user_guide/index.html) | `"pd", "pandas", "Pandas"`   |
 	[Python](https://docs.python.org/3/library/datatypes.html)     | `"py", "python", "Python"`   |
 	[PyArrow](https://arrow.apache.org/docs/python/index.html)     | `"pa", "pyarrow", "PyArrow"` |
-	[K](type_conversion.md)                                        | `"k", "q"`                   |
+	[K](type_conversions.md)                                        | `"k", "q"`                   |
 
 ```q
 // Default value on startup is `"np"`

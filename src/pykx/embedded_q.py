@@ -13,14 +13,83 @@ from . import wrappers
 from . import schema
 from .config import find_core_lib, licensed, no_qce, pykx_dir, skip_under_q
 from .core import keval as _keval
-from .exceptions import LicenseException, PyKXWarning, QError
+from .exceptions import FutureCancelled, LicenseException, NoResults, PyKXException, PyKXWarning, QError # noqa
 from ._wrappers import _factory as factory
 
 
 __all__ = [
     'EmbeddedQ',
+    'EmbeddedQFuture',
     'q',
 ]
+
+
+class EmbeddedQFuture():
+    _result = None
+    _exception = None
+
+    def __init__(self):
+        self._done = False # nocov
+        self._cancelled = False # nocov
+        self._cancelled_message = '' # nocov
+
+    def __await__(self) -> Any:
+        if self.done(): # nocov
+            return self.result() # nocov
+        while not self.done(): # nocov
+            pass # nocov
+        yield from self # nocov
+        return self.result() # nocov
+
+    async def __async_await__(self) -> Any:
+        return await self # nocov
+
+    def _await(self) -> Any:
+        if self.done(): # nocov
+            return self.result() # nocov
+        while not self.done(): # nocov
+            pass # nocov
+        return self.result() # nocov
+
+    def set_result(self, val: Any) -> None:
+        self._result = val # nocov
+        self._done = True # nocov
+
+    def set_exception(self, err: Exception) -> None:
+        self._done = True # nocov
+        self._exception = err # nocov
+
+    def result(self) -> Any:
+        if self._exception is not None: # nocov
+            raise self._exception # nocov
+        if self._cancelled: # nocov
+            raise FutureCancelled(self._cancelled_message) # nocov
+        if self._result is not None: # nocov
+            return self._result # nocov
+        raise NoResults() # nocov
+
+    def done(self) -> bool:
+        return self._done or self._cancelled # nocov
+
+    def cancelled(self) -> bool:
+        return self._cancelled # nocov
+
+    def cancel(self, msg: str = '') -> None:
+        self._cancelled = True # nocov
+        self._cancelled_message = msg # nocov
+
+    def exception(self) -> BaseException:
+        if self._cancelled: # nocov
+            return FutureCancelled(self._cancelled_message) # nocov
+        if not self._done: # nocov
+            return NoResults() # nocov
+        return self._exception # nocov
+
+    def get_loop(self):
+        raise PyKXException('QFutures do not rely on an event loop to drive them, ' # nocov
+                            'and therefore do not have one.') # nocov
+
+    __iter__ = __await__ # nocov
 
 
 def eprint(*args, **kwargs):

@@ -1,4 +1,4 @@
-from ..wrappers import BooleanVector, IntVector, List, LongVector, ShortVector, SymbolAtom, SymbolVector # noqa
+from ..wrappers import BooleanVector, IntVector, K, List, LongVector, ShortVector, SymbolAtom, SymbolVector # noqa
 from ..exceptions import QError
 from . import api_return, MetaAtomic
 
@@ -493,9 +493,19 @@ class TableLoc(MetaAtomic):
 
     @api_return
     def __setitem__(self, loc, val):
-        if isinstance(loc, str) or isinstance(loc, list):
-            updates = q('{$[1=count x;enlist[x]!enlist[y];x!y]}', loc, val)
-            res = q('{![x;();0b;y]}', self.tab, updates)
+        val = K(val)
+        if isinstance(loc, str):
+            res = q(f'{{[x; pykxval] update {loc}: pykxval from x}}', self.tab, val)
+            self.tab.__dict__.update(res.__dict__)
+            return self.tab
+        if isinstance(loc, list):
+            if len(val) != len(loc):
+                raise RuntimeError('The length of values and columns to update must match.')
+            update_str = ''
+            for i, l in enumerate(loc):
+                update_str += f'{l}: pykxval[{i}], '
+            update_str = update_str[:-2] + ' ' # strip the last ,
+            res = q(f'{{[x; pykxval] update {update_str} from x}}', self.tab, val)
             self.tab.__dict__.update(res.__dict__)
             return self.tab
         if not isinstance(loc, tuple) or len(loc) != 2:

@@ -47,6 +47,12 @@ def test_df_ndim(q):
 
 
 @pytest.mark.pandas_api
+def test_df_ndim_multicol(q):
+    df = q('([] til 10; 10?10; 10?1f)')
+    assert(df.ndim == df.pd().ndim)
+
+
+@pytest.mark.pandas_api
 def test_df_shape(q):
     df = q('([] til 10; 10?10)')
     assert (df.shape == df.pd().shape)
@@ -265,11 +271,25 @@ def test_df_set_cols(kx, q):
         q('{update x:reverse til 10 from x}', qtab).py()
     )
     df = qtab
+    df['x'] = ['a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e']
+    assert check_result_and_type(
+        kx,
+        df,
+        q('{update x:`a`a`b`b`c`c`d`d`e`e from x}', qtab).py()
+    )
+    df = qtab
     df[['x', 'x3']] = [q('reverse til 10'), 99]
     assert check_result_and_type(
         kx,
         df,
         q('{update x:reverse til 10, x3:99 from x}', qtab).py()
+    )
+    df = qtab
+    df[['x', 'x3']] = [q('reverse til 10'), ['a', 'a', 'b', 'b', 'c', 'c', 'd', 'd', 'e', 'e']]
+    assert check_result_and_type(
+        kx,
+        df,
+        q('{update x:reverse til 10, x3:`a`a`b`b`c`c`d`d`e`e from x}', qtab).py()
     )
 
 

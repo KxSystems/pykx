@@ -2,6 +2,7 @@ import pykx as kx
 
 
 def q(instructions, code): # noqa
+    ld = kx.SymbolAtom('.Q.pykxld')
     if len(instructions)>0:
         host = 'localhost'
         port = None
@@ -79,8 +80,7 @@ def q(instructions, code): # noqa
             no_ctx=no_ctx
         )
         try:
-            _q('.Q.pykxld')
-            ld = kx.SymbolAtom('.Q.pykxld')
+            _q(ld)
         except kx.QError as err:
             if '.Q.pykxld' in str(err):
                 # .Q.pykxld is not defined on the server so we pass it as inline code

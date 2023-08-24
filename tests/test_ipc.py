@@ -12,6 +12,9 @@ import time
 from uuid import uuid4
 
 
+import psutil
+
+
 # Do not import pykx here - use the `kx` fixture instead!
 import pytest
 
@@ -213,6 +216,12 @@ def test_no_pyfunc_over_ipc(kx, q_port):
     assert sum(q('{z x+y}', 3, 5, q('til')).py()) == 28
     with pytest.raises(ValueError):
         q('{z x+y}', 3, 5, lambda x: range(x))
+
+
+def test_no_wrap_over_ipc(kx, q_port):
+    q = kx.QConnection(port=q_port)
+    with pytest.raises(ValueError):
+        q('{x}', kx.q('{x}', round))
 
 
 @pytest.mark.asyncio
@@ -605,3 +614,19 @@ def test_sync_helpful_error_for_closed_conn(kx, q_port):
     with pytest.raises(RuntimeError):
         with kx.SyncQConnection(port=q_port) as q:
             q('hclose .z.w; til 10')
+
+
+def check_enough_memory(GiB):
+    minimum_memory = GiB
+    memory_size = psutil.virtual_memory().available >> 30
+    return memory_size >= minimum_memory
+
+
+@pytest.mark.unlicensed
+@pytest.mark.timeout(60)
+@pytest.mark.skipif(not check_enough_memory(25), reason='Not enough memory')
+def test_large_IPC(kx, q_port):
+    with kx.SyncQConnection(port=q_port) as q:
+        size = 4294967296 # Exceed 32 bit unsigned
+        res = q('{x#0x0}', size)
+        assert size == len(res)

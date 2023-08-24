@@ -143,6 +143,9 @@ def isolate_test(item):
     proc = mp_ctx.Process(target=isolated_test_runner, args=(item, in_pipe))
     proc.start()
     timeout = 20.0
+    for x in item.own_markers:
+        if x.name == 'timeout':
+            timeout = x.args[0]
     try:
         if out_pipe.poll(timeout):
             return out_pipe.recv()

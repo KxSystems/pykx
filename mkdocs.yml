@@ -81,6 +81,7 @@ plugins:
       execute: True
       include: ["*.ipynb"]
       include_source: True # Let users download the Jupyter notebook to use interactively
+      allow_errors: False
   - exclude:
       glob:
         - internal/*
@@ -203,10 +204,11 @@ nav:
       - api/pykx_under_q.md
       - api/reimporting.md
     - Examples:
-      - Subscriber: examples/subsciber/readme.md
+      - Subscriber: examples/subscriber/readme.md
       - Compression and Encryption: examples/compress_and_encrypt/readme.md
       - IPC: examples/ipc/README.md
       - PyKX as a Server: examples/server/server.md
+      - Multithreaded Execution: examples/threaded_execution/README.md
     - Extras:
       - Comparisons against other Python/q interfaces: extras/comparisons.md
       - Frequently asked questions: extras/faq.md

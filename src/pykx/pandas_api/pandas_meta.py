@@ -95,7 +95,7 @@ class PandasMeta:
 
     @property
     def ndim(self):
-        return q('{if[99h~type x; x:value x]; count cols x}', self).py()
+        return 2
 
     @property
     def shape(self):
