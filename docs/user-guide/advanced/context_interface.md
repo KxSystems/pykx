@@ -121,7 +121,7 @@ The following provides a number of examples of the context interface being used:
 		...   }
 		... '''
 		>>>
-		>>> demo_extension_filename = kx.QHOME/'demo_extension.q'
+		>>> demo_extension_filename = kx.qhome/'demo_extension.q'
 		>>> with open(demo_extension_filename, 'w') as f:
 		...     f.write(demo_extension_source)
 		```
@@ -171,8 +171,8 @@ The layers of the tree are as follows:
   underscore](https://code.kx.com/q/basics/syscmds/#_-hide-q-code))
 
 So for example if `pykx.q.script` was accessed, the context `.script` was not defined in memory in
-q, and `paths` was set to `['.', pykx.QHOME]`
-(where `pykx.QHOME == pathlib.Path('/opt/kdb')`), then the following paths would be checked
+q, and `paths` was set to `['.', pykx.qhome]`
+(where `pykx.qhome == pathlib.Path('/opt/kdb')`), then the following paths would be checked
 in order until one is found to exist, or they have all been checked:
 
 1.  `./.script.q`

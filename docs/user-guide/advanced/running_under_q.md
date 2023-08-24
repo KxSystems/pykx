@@ -20,10 +20,22 @@ To make use of PyKX running embedded within a q session a user must have the fol
 To facilitate the execution of Python code within a q session a user must first install the PyKX library and the q script used to drive this embedded feature into their `$QHOME` location. This can be done as follows.
 
 1. Install the PyKX library following the instructions [here](../../getting-started/installing.md).
-2. Run the following command to install the `pykx.q` script using the following:
+2. Run the following command to install the `pykx.q` script:
 
     ```python
     python -c "import pykx;pykx.install_into_QHOME()"
+    ```
+
+    If you previously had `embedPy` installed pass:
+
+    ```python
+    python -c "import pykx;pykx.install_into_QHOME(overwrite_embedpy=True)"
+    ```
+
+    If you cannot edit files in `QHOME` you can copy the files to your local folder and load `pykx.q` from there:
+
+    ```bash
+    python -c "import pykx;pykx.install_into_QHOME(to_local_folder=True)"
     ```
 
 ### Initialisation

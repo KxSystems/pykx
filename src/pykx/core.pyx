@@ -154,13 +154,12 @@ cdef inline uintptr_t _keval(const char* code, K k1, K k2, K k3, K k4, K k5, K k
         is_foreign(k6) or            \
         is_foreign(k7) or            \
         is_foreign(k8)
-
     try:
         with q_lock:
             if not not_safe_to_drop_GIL and release_gil and handle == 0:
                 # with nogil ensures the gil is dropped during the call into k
                 with nogil:
-                    return <uintptr_t>k(handle, <char* const>code, k1, k2, k3, k4, k5, k6, k7, k8, NULL)
+                    return <uintptr_t>knogil(<void*> k, <char* const>code, k1, k2, k3, k4, k5, k6, k7, k8)
             return <uintptr_t>k(handle, <char* const>code, k1, k2, k3, k4, k5, k6, k7, k8, NULL)
     except BaseException as err:
         raise err
@@ -169,23 +168,23 @@ cdef inline uintptr_t _keval(const char* code, K k1, K k2, K k3, K k4, K k5, K k
 def keval(code: bytes, k1=None, k2=None, k3=None, k4=None, k5=None, k6=None, k7=None, k8=None, handle=0):
     # This code is ugly, but Cython can turn it into a switch statement.
     if k1 is None:
-        return _keval(code, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, handle=handle)
+        return _keval(code, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, handle)
     elif k2 is None:
-        return _keval(code, r1k(k1), NULL, NULL, NULL, NULL, NULL, NULL, NULL, handle=handle)
+        return _keval(code, r1k(k1), NULL, NULL, NULL, NULL, NULL, NULL, NULL, handle)
     elif k3 is None:
-        return _keval(code, r1k(k1), r1k(k2), NULL, NULL, NULL, NULL, NULL, NULL, handle=handle)
+        return _keval(code, r1k(k1), r1k(k2), NULL, NULL, NULL, NULL, NULL, NULL, handle)
     elif k4 is None:
-        return _keval(code, r1k(k1), r1k(k2), r1k(k3), NULL, NULL, NULL, NULL, NULL, handle=handle)
+        return _keval(code, r1k(k1), r1k(k2), r1k(k3), NULL, NULL, NULL, NULL, NULL, handle)
     elif k5 is None:
-        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), NULL, NULL, NULL, NULL, handle=handle)
+        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), NULL, NULL, NULL, NULL, handle)
     elif k6 is None:
-        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), r1k(k5), NULL, NULL, NULL, handle=handle)
+        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), r1k(k5), NULL, NULL, NULL, handle)
     elif k7 is None:
-        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), r1k(k5), r1k(k6), NULL, NULL, handle=handle)
+        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), r1k(k5), r1k(k6), NULL, NULL, handle)
     elif k8 is None:
-        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), r1k(k5), r1k(k6), r1k(k7), NULL, handle=handle)
+        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), r1k(k5), r1k(k6), r1k(k7), NULL, handle)
     else:
-        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), r1k(k5), r1k(k6), r1k(k7), r1k(k8), handle=handle)
+        return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), r1k(k5), r1k(k6), r1k(k7), r1k(k8), handle)
 
 
 def _link_qhome():
@@ -342,6 +341,9 @@ jk = <K (*)(K* x, K y)>dlsym(_q_handle, 'jk')
 js = <K (*)(K* x, S s)>dlsym(_q_handle, 'js')
 jv = <K (*)(K* x, K y)>dlsym(_q_handle, 'jv')
 k = <K (*)(I handle, const S s, ...) nogil>dlsym(_q_handle, 'k')
+cdef extern from 'include/foreign.h':
+    K k_wrapper(void* x, char* code, void* a1, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8) nogil
+knogil = k_wrapper
 ka = <K (*)(I t)>dlsym(_q_handle, 'ka')
 kb = <K (*)(I x)>dlsym(_q_handle, 'kb')
 kc = <K (*)(I x)>dlsym(_q_handle, 'kc')

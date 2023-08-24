@@ -1,5 +1,30 @@
 # Changelog
 
+## PyKX 1.6.3
+
+### Fixes and Improvements
+
+- Fixed Pandas API use of ndim functionality which should return `2` when interacting with tables following the expected Pandas behaviour.
+- Fixed an error when using the Pandas API to update a column with a `Symbols`, `Characters`, and `Generic Lists`.
+- Prevent attempting to pass wrapped Python functions over IPC.
+- Support IPC payloads over 4GiB.
+
+## PyKX 1.6.2
+
+### Additions
+
+- Added `to_local_folder` kwarg to `install_into_QHOME` to enable use of `pykx.q` without write access to `QHOME`.
+- Added [an example](examples/threaded_execution/README.md) that shows how to use `EmbeddedQ` in a multithreaded context where the threads need to modify global state.
+- Added [PYKX_NO_SIGINT](user-guide/advanced/environment_variables.md) environment variable.
+
+### Fixes and Improvements
+
+- Fixed and issue causing a crash when closing `QConnection` instances on Windows.
+- Updated q 4.0 libraries to 2023.08.11. Note: Mac ARM release remains on 2022.09.30.
+- Fix [Jupyter Magic](getting-started/q_magic_command.md) in local mode.
+- Fix error when binding with [FFI](https://github.com/KxSystems/ffi) in `QINIT`.
+- Fix issue calling `peach` with `PYKX_RELEASE_GIL` set to true when calling a Python function.
+
 ## PyKX 1.6.1
 
 ### Additions

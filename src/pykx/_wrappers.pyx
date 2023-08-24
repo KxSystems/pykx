@@ -436,7 +436,7 @@ cpdef object _to_bytes(mode, x, wait):
     if ser == NULL:
         return factory(<uintptr_t>core.ee(ser), False, 1)
     res = _to_bytes_(ser, <char>wait)
-    return (<long><uintptr_t>ser, res)
+    return (<unsigned long long><uintptr_t>ser, res)
 
 
 cpdef decref_numpy_allocated_data(x):

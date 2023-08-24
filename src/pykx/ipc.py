@@ -462,12 +462,15 @@ class QConnection(Q):
             prev_types.extend([type(x) for x in params])
             data.extend(params)
             data = [K(x) if not isinstance(x, type(None)) else CharVector(x) for x in data]
-            for a, b in zip(prev_types, (type(x) for x in data)):
+            for a, b in zip(prev_types, data):
+
                 if not issubclass(a, type(None))\
-                   and (issubclass(b, Function) or isinstance(b, Foreign)
-                        or (isinstance(b, Composition) and q('{.pykx.isw x}', b))
+                   and (issubclass(type(b), Function) or isinstance(b, Foreign)
+                        or (isinstance(b, Composition) and q('{.pykx.i.isw x}', b))
                    )\
-                   and not issubclass(a, Function):
+                   and not issubclass(a, Function)\
+                   or issubclass(type(b), Function) and\
+                        isinstance(b, Composition) and q('{.pykx.i.isw x}', b):
                     raise ValueError('Cannot send Python function over IPC')
         return data
 
@@ -552,18 +555,18 @@ class QConnection(Q):
             self.close()
             raise RuntimeError("Attempted to use a closed IPC connection")
 
-        # The last 4 bytes of the header contain the size and the first byte contains information
+        # The last 5 bytes of the header contain the size and the first byte contains information
         # about whether the message is encoded in big-endian or little-endian form
         endianness = chunks[0]
         if endianness == 1: # little-endian
-            size = chunks[7]
-            for i in range(6, 3, -1):
+            size = chunks[3]
+            for i in range(7, 3, -1):
                 size = size << 8
                 size += chunks[i]
         else: # nocov
             # big-endian
-            size = chunks[4]
-            for i in range(5, 8):
+            size = chunks[3]
+            for i in range(4, 8):
                 size = size << 8
                 size += chunks[i]
 
@@ -1667,18 +1670,18 @@ class RawQConnection(QConnection):
             if len(chunks) == 0:
                 return
 
-            # The last 4 bytes of the header contain the size and the first byte contains
+            # The last 5 bytes of the header contain the size and the first byte contains
             # information about whether the message is encoded in big-endian or little-endian form
             endianness = chunks[0]
             if endianness == 1: # little-endian
-                size = chunks[7]
-                for i in range(6, 3, -1):
+                size = chunks[3]
+                for i in range(7, 3, -1):
                     size = size << 8
                     size += chunks[i]
             else: # nocov
                 # big-endian
-                size = chunks[4]
-                for i in range(5, 8):
+                size = chunks[3]
+                for i in range(4, 8):
                     size = size << 8
                     size += chunks[i]
 

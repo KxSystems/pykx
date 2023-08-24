@@ -1,10 +1,23 @@
 #define PY_SSIZE_T_CLEAN
 #include "Python.h"
 #include "k.h"
+#include <stdio.h>
 
 static PyObject* get_py_ptr(K f) {
     return (PyObject*)kK(f)[1];
 }
+
+
+static K k_wrapper(void* k_fn, S code, void* a1, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8) {
+    int gstate = PyGILState_Ensure();
+    K res = NULL;
+    Py_BEGIN_ALLOW_THREADS
+    K (*k_func)(I, S, ...) = (K (*)(I, S, ...))k_fn;
+    res = k_func(0, code, a1, a2, a3, a4, a5, a6, a7, a8, NULL);
+    Py_END_ALLOW_THREADS
+    PyGILState_Release(gstate);
+    return res;
+} 
 
 
 static void py_destructor(K x) {

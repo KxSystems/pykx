@@ -62,6 +62,8 @@ def _is_set(envvar):
 
 under_q = _is_enabled('PYKX_UNDER_Q')
 qlib_location = Path(os.getenv('PYKX_Q_LIB_LOCATION', pykx_dir/'lib'))
+no_sigint = _is_enabled('PYKX_NO_SIGINT')
+
 
 enable_pandas_api = _is_enabled('PYKX_ENABLE_PANDAS_API', '--pandas-api')
 ignore_qhome = _is_enabled('IGNORE_QHOME', '--ignore-qhome')
@@ -78,7 +80,7 @@ else:
     k_allocator = False
 
 k_gc = _is_enabled('PYKX_GC', '--pykxgc')
-release_gil = _is_enabled('PYKX_RELEASE_GIL', '--release-gil') and False
+release_gil = _is_enabled('PYKX_RELEASE_GIL', '--release-gil')
 use_q_lock = os.getenv('PYKX_Q_LOCK', False)
 skip_under_q = _is_enabled('SKIP_UNDERQ', '--skip-under-q')
 no_qce = _is_enabled('PYKX_NOQCE', '--no-qce')

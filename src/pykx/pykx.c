@@ -63,6 +63,7 @@ EXPORT K k_pykx_init(K k_q_lib_path) {
     kpn_ptr = (K (*)(S, J))dlsym(q_lib, "kpn");
     kp_ptr = (K (*)(S))dlsym(q_lib, "kp");
 
+    Py_Initialize();
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
@@ -749,4 +750,5 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
     PyGILState_Release(gstate);
     return res;
 }
+
 

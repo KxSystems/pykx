@@ -35,7 +35,7 @@ from typing import Any, List, Optional, Union
 from warnings import warn
 from weakref import proxy
 
-from .config import k_allocator, licensed, pykx_platlib_dir
+from .config import k_allocator, licensed, no_sigint, pykx_platlib_dir
 from . import util
 
 if platform.system() == 'Windows': # nocov
@@ -318,7 +318,7 @@ from . import schema
 from ._wrappers import _init as _wrappers_init
 _wrappers_init(wrappers)
 
-from .embedded_q import EmbeddedQ, q
+from .embedded_q import EmbeddedQ, EmbeddedQFuture, q
 from ._version import version as __version__
 from .exceptions import *
 
@@ -352,23 +352,25 @@ if sys.version_info[1] < 8:
     )
 
 
-def install_into_QHOME(overwrite_embedpy=False) -> None:
+def install_into_QHOME(overwrite_embedpy=False, to_local_folder=False) -> None:
     """Copies the embedded Python functionality of PyKX into `$QHOME`.
 
         Parameters:
             overwrite_embedpy: If embedPy had previously been installed replace it otherwise
                 save functionality as pykx.q
+            to_local_folder: Copy the files to your local folder rather than QHOME
 
         Returns:
             None
     """
-    p = Path(qhome)/'p.k'
+    dest = Path(".") if to_local_folder else qhome
+    p = Path(dest)/'p.k'
     if not p.exists() or overwrite_embedpy:
         shutil.copy(Path(__file__).parent/'p.k', p)
-    shutil.copy(Path(__file__).parent/'pykx.q', qhome/'p.q' if overwrite_embedpy else qhome)
-    shutil.copy(Path(__file__).parent/'pykx_init.q_', qhome)
+    shutil.copy(Path(__file__).parent/'pykx.q', dest/'p.q' if overwrite_embedpy else dest)
+    shutil.copy(Path(__file__).parent/'pykx_init.q_', dest)
     if platform.system() == 'Windows':
-        shutil.copy(Path(__file__).parent/'lib/w64/q.dll', qhome)
+        shutil.copy(Path(__file__).parent/'lib/w64/q.dll', dest)
 
 
 def activate_numpy_allocator() -> None:
@@ -445,6 +447,7 @@ except NameError:
 __all__ = sorted([
     'AsyncQConnection',
     'EmbeddedQ',
+    'EmbeddedQFuture',
     'Q',
     'qargs',
     'QConnection',
@@ -474,11 +477,12 @@ __all__ = sorted([
     *wrappers.__all__,
 ])
 
-try:
-    signal.signal(signal.SIGINT, signal.default_int_handler)
-except Exception:
-    import logging
-    logging.exception('Failed to set SIGINT handler...')
+if not no_sigint:
+    try:
+        signal.signal(signal.SIGINT, signal.default_int_handler)
+    except Exception:
+        import logging
+        logging.exception('Failed to set SIGINT handler...')
 
 
 def __dir__():

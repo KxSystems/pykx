@@ -139,28 +139,28 @@ i.isarg :{any(i.iskw;i.isargl;i.iskwd)@\:x}
 .q.pykwargs :{x y}(`..pyks;;)      / identify keyword dict (**kwargs in python)
 
 i.parseArgs:{
-  i.hasargs:$[(x~enlist[::])&1=count x;0;1];
-  i.kwlist:x where i.iskw each x;
-  i.kwdict:$[1<count[x where i.iskwd each x];
+  hasargs:$[(x~enlist[::])&1=count x;0;1];
+  kwlist:x where i.iskw each x;
+  kwdict:$[1<count[x where i.iskwd each x];
     '"Expected only one key word dictionary to be used in function call";
     $[0=count[x where i.iskwd each x]; ()!(); (x where i.iskwd each x)[0][::]1]
     ];
-  i.kwargs:$[0<count i.kwlist;
-    ({x[::][1]} each i.kwlist)!({x[::]2} each i.kwlist);
+  kwargs:$[0<count kwlist;
+    ({x[::][1]} each kwlist)!({x[::]2} each kwlist);
     ()!()
     ];
-  i.keys: key[i.kwargs],key i.kwdict;
-  if[not count[i.keys]=count distinct i.keys;
+  parse_keys: key[kwargs],key kwdict;
+  if[not count[parse_keys]=count distinct parse_keys;
     '"Expected only unique key names for keyword arguments in function call"
     ];
-  if[any{not -11h=type x}each i.keys;
+  if[any{not -11h=type x}each parse_keys;
     '"Expected Symbol Atom for keyword argument name"
     ];
   // Join will overwrite duplicated keys so we must do the check first
-  i.kwargs: i.kwargs,i.kwdict;
-  if[not count i.kwargs;i.kwargs:()!()];
-  i.kwargs:(key i.kwargs)!({unwrap i.convertArg i.toDefault i.kwargs[x]} each key i.kwargs);
-  (i.hasargs; {unwrap i.convertArg i.toDefault x} each (x where not i.isarg each x),$[0<count[x where i.isargl each x]; $[1<count[x where i.isargl each x]; '"Expected only one arg list to be using in function call"; (x where i.isargl each x)[0][::]1]; x where i.isargl each x]; i.kwargs)
+  kwargs: kwargs,kwdict;
+  if[not count kwargs;kwargs:()!()];
+  kwargs:(key kwargs)!({[kwargs; x] unwrap i.convertArg i.toDefault kwargs[x]}[kwargs;] each key kwargs);
+  (hasargs; {unwrap i.convertArg i.toDefault x} each (x where not i.isarg each x),$[0<count[x where i.isargl each x]; $[1<count[x where i.isargl each x]; '"Expected only one arg list to be using in function call"; (x where i.isargl each x)[0][::]1]; x where i.isargl each x]; kwargs)
   };
 
 

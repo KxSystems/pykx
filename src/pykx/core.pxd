@@ -78,6 +78,7 @@ cdef K (*jk)(K* x, K y)
 cdef K (*js)(K* x, S s)
 cdef K (*jv)(K* x, K y)
 cdef K (*k)(I handle, const S s, ...) nogil
+cdef K (*knogil)(void* x, char* code, void* a1, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8) nogil
 cdef K (*ka)(I t)
 cdef K (*kb)(I x)
 cdef K (*kc)(I x)
