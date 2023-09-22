@@ -61,6 +61,10 @@ ZS zs(K x) {
     return s[x->n]=0,s;
 }
 
+static int check_py_foreign(K x){return x->t==112 && x->n==2 && *kK(x)==(K)py_destructor;}
+
+EXPORT K k_check_python(K x){return kb(check_py_foreign(x));}
+
 EXPORT K k_pykx_init(K k_q_lib_path) {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
@@ -253,6 +257,7 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
     }
 
     if (k_code_string->t != 10) {
+        PyGILState_Release(gstate);
         return raise_k_error("String input expected for code evaluation/execution.");
     }
 
@@ -269,6 +274,7 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
 
     if (!k_ret->g) {
         if ((k = k_py_error())) {
+            Py_XDECREF(py_ret);
             PyGILState_Release(gstate);
             return k;
         } else Py_XDECREF(py_ret);
@@ -276,17 +282,21 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
         return (K)0;
     }
     if ((k = k_py_error())) {
+        Py_XDECREF(py_ret);
         PyGILState_Release(gstate);
         return k;
     }
+
     if (as_foreign->g) {
         k = (K)create_foreign(py_ret);
+        Py_XDECREF(py_ret);
         PyGILState_Release(gstate);
         return k;
     }
     P py_k_ret = PyObject_CallFunctionObjArgs(toq, py_ret, NULL);
     Py_XDECREF(py_ret);
     if ((k = k_py_error())) {
+        Py_XDECREF(py_k_ret);
         PyGILState_Release(gstate);
         return k;
     }
@@ -374,6 +384,8 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
 EXPORT K foreign_to_q(K f) {
     if (f->t != 112)
         return raise_k_error("Expected foreign object for call to .pykx.toq");
+    if (!check_py_foreign(f))
+        return raise_k_error("Provided foreign object is not a Python object");
     K k;
     int gstate = PyGILState_Ensure();
 
@@ -409,7 +421,6 @@ EXPORT K foreign_to_q(K f) {
     return res;
 }
 
-
 EXPORT K repr(K as_repr, K f) {
     K k;
     if (f->t != 112) {
@@ -425,22 +436,28 @@ EXPORT K repr(K as_repr, K f) {
             return raise_k_error("Expected a foreign object for .pykx.print");
         }
     }
+    else {
+        if (!check_py_foreign(f))
+            return raise_k_error("Provided foreign object is not a Python object");
+    }
     int gstate = PyGILState_Ensure();
     P repr;
+    P str;
     P p = get_py_ptr(f);
-    if (as_repr->g) {
-        repr = PyObject_Repr(p);
-    } else {
-        repr = PyObject_Str(p);
-        FILE* fout = stdout;
-        PyObject_Print(p, fout, Py_PRINT_RAW);
-        return NULL;
+    repr = PyObject_Repr(p);
+    str = PyUnicode_AsEncodedString(repr, "utf-8", "~E~");
+    Py_XDECREF(repr);
+    if (!as_repr->g) {
+        const char *bytes = PyBytes_AS_STRING(str);
+        printf("%s\n", bytes);
+        Py_XDECREF(str);
+        return (K)0;
     }
     if ((k = k_py_error())) {
         PyGILState_Release(gstate);
+        Py_XDECREF(str);
         return k;
     }
-    P str = PyUnicode_AsEncodedString(repr, "utf-8", "~E~");
     const char *chars = PyBytes_AS_STRING(str);
     PyGILState_Release(gstate);
     return kp(chars);
@@ -495,9 +512,6 @@ EXPORT K get_global(K attr) {
 
 EXPORT K set_global(K attr, K val) {
     K k;
-    if (attr->t != -11) {
-        return raise_k_error("Expected a SymbolAtom for the attribute to set in .pykx.set");
-    }
     int gstate = PyGILState_Ensure();
 
     P p = PyImport_AddModule("__main__");
@@ -526,6 +540,10 @@ EXPORT K set_attr(K f, K attr, K val) {
             return raise_k_error("Expected foreign object for call to .pykx.setattr, try unwrapping the foreign object with `.");
         }
         return raise_k_error("Expected foreign object for call to .pykx.setattr");
+    }
+    else {
+        if (!check_py_foreign(f))
+            return raise_k_error("Provided foreign object is not a Python object, not suitable to have an attribute set");
     }
     if (attr->t != -11) {
         return raise_k_error("Expected a SymbolAtom for the attribute to set in .pykx.setattr");

@@ -12,7 +12,7 @@ Due to the design of nulls and infinites in q, there are some technical consider
 
 ## Checking for nulls and infinities
 
-[The q function named null](https://code.kx.com/q/ref/null/) can be applied to most PyKX objects, and will return if the object is null by returning `1b`, or if it contains nulls by returning a collection of booleans whose shape matches the object. Like with any function from the `.q` namespace, it can be accessed via the [context interface](../../api/ctx.md): [`q.null`](../../api/q/q.md#null)).
+[The q function named null](https://code.kx.com/q/ref/null/) can be applied to most PyKX objects, and will return if the object is null by returning `1b`, or if it contains nulls by returning a collection of booleans whose shape matches the object. Like with any function from the `.q` namespace, it can be accessed via the [context interface](../../api/pykx-execution/ctx.md): [`q.null`](../../api/pykx-execution/q.md#null)).
 
 ```python
 >>> import pykx as kx
@@ -65,9 +65,51 @@ Temporal vectors use `NaT` to represent null values in Numpy and Pandas, `None` 
 
 When converting a table from q to Python with one of the methods above, each column will be transformed as an independent vector as described above.
 
+The following provides an example of the masked array behaviour outlined in the `.np` method described above which is additionally exhibited by the `.pd` method.
+
+```python
+>>> import pykx as kx
+>>> df = kx.q('([] til 10; 0N 5 10 15 0N 20 25 30 0N 35)').pd()
+>>> print(df)
+   x  x1
+0  0  --
+1  1   5
+2  2  10
+3  3  15
+4  4  --
+5  5  20
+6  6  25
+7  7  30
+8  8  --
+9  9  35
+>>> kx.toq(df)
+pykx.Table(pykx.q('
+x x1
+----
+0
+1 5
+2 10
+3 15
+4
+5 20
+6 25
+7 30
+8
+9 35
+'))
+```
+
+For more information on masked numpy arrays and interactions with null representation data in Pandas see the following links
+
+- [Numpy masked arrays](https://numpy.org/doc/stable/reference/maskedarray.generic.html#filling-in-the-missing-data)
+- [Pandas working with missing data](https://pandas.pydata.org/docs/user_guide/missing_data.html)
+- [Pandas nullable integer data types](https://pandas.pydata.org/docs/user_guide/integer_na.html#integer-na)
+
+
 ## Python to q
 
 Wherever practical the conversions from q to Python are symmetric, so most of the conversions detailed in the section above work in reverse too. For instance, if you convert a Numpy masked array with dtype `np.int32` to q, the masked values will be represented by int null (`0Ni`) in q.
+
 
 ## Performance
 

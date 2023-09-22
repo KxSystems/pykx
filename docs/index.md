@@ -21,19 +21,17 @@ This provides documentation for users that are new to q/kdb+ and PyKX. Included 
 
 Our user guide provides useful information which allows a user to get an understanding of the key concepts behind PyKX, how the library is intended to be used and includes examples of the library functionality.
 
-### [API](api/q/q.md)
+### [API](api/pykx-execution/q.md)
 
 The API reference guide contains detailed descriptions of the functions, modules and objects managed by PyKX. It describes how functions can be called, data types manipulated and data queried in addition to much broader usage of the library. Use of the API reference assumes you have a strong understanding of how the library is intended to be used through the getting started and user guide sections.
 
-### [Extras](extras/faq.md)
+### Extras
 
-The `Extras` section includes additional information that is of importance to users, this includes frequently asked questions associated with the library which are not covered in other sections of the documentation or which need to be highlighted and a list of known issues with the library which should be understood by advanced users of the library.
+The `Extras` section contains additional information users may find interesting, this includes the following:
 
-## Community Help
+- [Known interface issues](extras/known_issues.md)
+- [Comparisons against other q-Python interfaces](extras/comparisons.md)
 
-If you have any issues or questions you can post them to [community.kx.com](https://community.kx.com/). Also available on Stack Overflow are the tags [pykx](https://stackoverflow.com/questions/tagged/pykx) and [kdb](https://stackoverflow.com/questions/tagged/kdb).
+## [Getting Help](support.md)
 
-## Customer Support
-
-* Inquires or feedback: [`pykx@kx.com`](mailto:pykx@kx.com)
-* Support for Licensed Subscribers: [support.kx.com](https://support.kx.com/support/home)
+If you have any issues or questions relating to PyKX the support page provides users with links to helpful community locations and support contact information for PyKX.

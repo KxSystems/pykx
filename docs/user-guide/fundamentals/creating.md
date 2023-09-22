@@ -15,110 +15,151 @@ Getting the data to a PyKX format provides you with the ability to easily intera
 
 ### Explicitly converting from Pythonic objects to PyKX objects
 
-The most simplistic method of creating a PyKX object is to convert an analagous Pythonic type to a PyKX object. This is facilitated through the use of the functions `pykx.toq` which allows conversions from Python, Numpy, Pandas and PyArrow types to PyKX objects.
+The most simplistic method of creating a PyKX object is to convert an analagous Pythonic type to a PyKX object. This is facilitated through the use of the functions `pykx.toq` which allows conversions from Python, Numpy, Pandas and PyArrow types to PyKX objects, open the tabs which are of interest to you to see some examples of these conversions
 
-**Python:**
+=== "Python"
+
+	```python
+	>>> import pykx as kx
+	>>> pyatom = 2
+	>>> pylist = [1, 2, 3]
+	>>> pydict = {'x': [1, 2, 3], 'y': {'x': 3}}
+	>>>
+	>>> kx.toq(pyatom)
+	pykx.LongAtom(pykx.q('2'))
+	>>> kx.toq(pylist)
+	pykx.List(pykx.q('
+	1
+	2
+	3
+	'))
+	>>> kx.toq(pydict)
+	pykx.Dictionary(pykx.q('
+	x| (1;2;3)
+	y| (,`x)!,3
+	'))
+	```
+
+=== "Numpy"
+
+	```python
+	>>> import pykx as kx
+	>>> import numpy as np
+	>>> nparray1 = np.array([1, 2, 3])
+	>>> nparray2 = np.array(['2007-07-13', '2006-01-13', '2010-08-13'], dtype='datetime64')
+	>>> nparray3 = np.array([[1, 2, 3], [4, 5, 6]], np.int32)
+	>>>
+	>>> kx.toq(nparray1)
+	pykx.LongVector(pykx.q('1 2 3'))
+	>>> kx.toq(nparray2)
+	pykx.DateVector(pykx.q('2007.07.13 2006.01.13 2010.08.13'))
+	>>> kx.toq(nparray3)
+	pykx.List(pykx.q('
+	1 2 3
+	4 5 6
+	'))
+	```
+
+=== "Pandas"
+
+	```python
+	>>> import pykx as kx
+	>>> import pandas as pd
+	>>> import numpy as np
+	>>> pdseries1 = pd.Series([1, 2, 3])
+	>>> pdseries2 = pd.Series([1, 2, 3], dtype=np.int32)
+	>>> df = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
+	>>> kx.toq(pdseries1)
+	pykx.LongVector(pykx.q('1 2 3'))
+	>>> kx.toq(pdseries2)
+	pykx.IntVector(pykx.q('1 2 3i'))
+	>>> kx.toq(df)
+	pykx.Table(pykx.q('
+	x y
+	---
+	1 a
+	2 b
+	'))
+	```
+
+=== "PyArrow"
+
+	```python
+	>>> import pykx as kx
+	>>> import pyarrow as pa
+	>>> arr = pa.array([1, 2, None, 3])
+	>>> nested_arr = pa.array([[], None, [1, 2], [None, 1]])
+	>>> dict_arr = pa.array([{'x': 1, 'y': True}, {'z': 3.4, 'x': 4}])
+	>>> kx.toq(arr)
+	pykx.FloatVector(pykx.q('1 2 0n 3'))
+	>>> kx.toq(nested_arr)
+	pykx.List(pykx.q('
+	`float$()
+	::
+	1 2f
+	0n 1
+	'))
+	>>> kx.toq(dict_arr)
+	pykx.List(pykx.q('
+	x y  z
+	--------
+	1 1b ::
+	4 :: 3.4
+	'))
+	>>>
+	>>> n_legs = pa.array([2, 4, 5, 100])
+	>>> animals = pa.array(["Flamingo", "Horse", "Brittle stars", "Centipede"])
+	>>> names = ["n_legs", "animals"]
+	>>> tab = pa.Table.from_arrays([n_legs, animals], names=names)
+	>>> kx.toq(tab)
+	pykx.Table(pykx.q('
+	n_legs animals      
+	--------------------
+	2      Flamingo     
+	4      Horse        
+	5      Brittle stars
+	100    Centipede    
+	'))
+	```
+
+### Generating data using PyKX inbuilt functions
+
+For users who wish to generate objects directly but who are not familiar with q and want to quickly prototype functionality a number of helper functions can be used.
+
+Create a vector of random floating point precision values
 
 ```python
->>> import pykx as kx
->>> pyatom = 2
->>> pylist = [1, 2, 3]
->>> pydict = {'x': [1, 2, 3], 'y': {'x': 3}}
->>>
->>> kx.toq(pyatom)
-pykx.LongAtom(pykx.q('2'))
->>> kx.toq(pylist)
+>>> kx.random.random(3, 10.0)
+pykx.FloatVector(pykx.q('9.030751 7.750292 3.869818'))
+```
+
+Create a two-dimensional list of random symbol values
+
+```python
+>>> kx.random.random([2, 3], ['a', 'b', 'c'])
 pykx.List(pykx.q('
-1
-2
-3
-'))
->>> kx.toq(pydict)
-pykx.Dictionary(pykx.q('
-x| (1;2;3)
-y| (,`x)!,3
+b b c
+b a b
 '))
 ```
 
-**Numpy:**
+Create a table of tabular data generated using random data
 
 ```python
->>> import pykx as kx
->>> import numpy as np
->>> nparray1 = np.array([1, 2, 3])
->>> nparray2 = np.array(['2007-07-13', '2006-01-13', '2010-08-13'], dtype='datetime64')
->>> nparray3 = np.array([[1, 2, 3], [4, 5, 6]], np.int32)
->>>
->>> kx.toq(nparray1)
-pykx.LongVector(pykx.q('1 2 3'))
->>> kx.toq(nparray2)
-pykx.DateVector(pykx.q('2007.07.13 2006.01.13 2010.08.13'))
->>> kx.toq(nparray3)
-pykx.List(pykx.q('
-1 2 3
-4 5 6
-'))
-```
-
-**Pandas:**
-
-```python
->>> import pykx as kx
->>> import pandas as pd
->>> import numpy as np
->>> pdseries1 = pd.Series([1, 2, 3])
->>> pdseries2 = pd.Series([1, 2, 3], dtype=np.int32)
->>> df = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
->>> kx.toq(pdseries1)
-pykx.LongVector(pykx.q('1 2 3'))
->>> kx.toq(pdseries2)
-pykx.IntVector(pykx.q('1 2 3i'))
->>> kx.toq(df)
+>>> N = 100000
+>>> table = kx.Table(
+...     data = {'sym': kx.random.random(N, ['AAPL', 'MSFT']),
+...             'price': kx.random.random(N, 100.0),
+...             'size': 1+kx.random.random(N, 100)})
+>>> table.head()
 pykx.Table(pykx.q('
-x y
----
-1 a
-2 b
-'))
-```
-
-**PyArrow:**
-
-```python
->>> import pykx as kx
->>> import pyarrow as pa
->>> arr = pa.array([1, 2, None, 3])
->>> nested_arr = pa.array([[], None, [1, 2], [None, 1]])
->>> dict_arr = pa.array([{'x': 1, 'y': True}, {'z': 3.4, 'x': 4}])
->>> kx.toq(arr)
-pykx.FloatVector(pykx.q('1 2 0n 3'))
->>> kx.toq(nested_arr)
-pykx.List(pykx.q('
-`float$()
-::
-1 2f
-0n 1
-'))
->>> kx.toq(dict_arr)
-pykx.List(pykx.q('
-x y  z
---------
-1 1b ::
-4 :: 3.4
-'))
->>>
->>> n_legs = pa.array([2, 4, 5, 100])
->>> animals = pa.array(["Flamingo", "Horse", "Brittle stars", "Centipede"])
->>> names = ["n_legs", "animals"]
->>> tab = pa.Table.from_arrays([n_legs, animals], names=names)
->>> kx.toq(tab)
-pykx.Table(pykx.q('
-n_legs animals      
---------------------
-2      Flamingo     
-4      Horse        
-5      Brittle stars
-100    Centipede    
+sym  price    size
+------------------
+MSFT 49.34749 50  
+MSFT 23.31342 96  
+AAPL 63.1368  36  
+AAPL 98.71169 7   
+AAPL 68.98055 94  
 '))
 ```
 

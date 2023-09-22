@@ -9,7 +9,7 @@ import pytest
 def test_qargs_s_flag(num_threads):
     os.environ['QARGS'] = f'-s {num_threads}'
     import pykx as kx
-    assert kx.q.max_num_threads == num_threads
+    assert kx.q.system.max_num_threads == num_threads
 
 
 @pytest.mark.isolate
@@ -31,29 +31,29 @@ def test_qargs_s_flag_invalid(num_threads):
 def test_num_threads(kx, q):
     with pytest.raises(AttributeError):
         # The max number of threads available to q is fixed on startup
-        q.max_num_threads = 0
+        q.system.max_num_threads = 0
 
-    assert isinstance(q.max_num_threads, int)
-    assert isinstance(q.num_threads, int)
+    assert isinstance(q.system.max_num_threads, int)
+    assert isinstance(q.system.num_threads, int)
 
     if isinstance(q, kx.QConnection):
-        assert q.max_num_threads == 0
-        assert q.num_threads == 0
+        assert q.system.max_num_threads == 0
+        assert q.system.num_threads == 0
         return
 
-    assert q.max_num_threads > 0
+    assert q.system.max_num_threads > 0
 
-    orig_num_threads = q.num_threads
-    assert q.num_threads > 0
-    q.num_threads = 0
-    assert q.num_threads == 0
-    q.num_threads = 2
-    assert q.num_threads == 2
-    q.num_threads = orig_num_threads
-    assert q.num_threads == orig_num_threads
+    orig_num_threads = q.system.num_threads
+    assert q.system.num_threads > 0
+    q.system.num_threads = 0
+    assert q.system.num_threads == 0
+    q.system.num_threads = 2
+    assert q.system.num_threads == 2
+    q.system.num_threads = orig_num_threads
+    assert q.system.num_threads == orig_num_threads
 
     with pytest.raises(ValueError):
-        q.num_threads = 1000000
+        q.system.num_threads = 1000000
 
 
 @pytest.mark.isolate
@@ -78,7 +78,7 @@ def test_system_cd():
 @pytest.mark.isolate
 def test_system_functions():
     import pykx as kx
-    assert all(kx.q.system.functions() == kx.q('enlist `print'))
+    assert kx.q.system.functions() == kx.q('`symbol$()')
     kx.q('\\d .foo')
     kx.q('func: {x + 3}')
     kx.q('\\d .')
@@ -100,8 +100,9 @@ def test_system_variables():
     assert kx.q.system.variables() == kx.q('`$()')
     kx.q('a: 5')
     assert all(kx.q.system.variables() == kx.q('enlist `a'))
-    assert all(kx.q.system.variables('.pykx') == kx.q('`i`pykxDir'))
-    assert all(kx.q.system.variables('pykx') == kx.q('`i`pykxDir'))
+    print(kx.q.system.variables('.pykx'))
+    assert all(kx.q.system.variables('.pykx') == kx.q('`debug`i`pykxDir`util'))
+    assert all(kx.q.system.variables('pykx') == kx.q('`debug`i`pykxDir`util'))
 
 
 @pytest.mark.isolate

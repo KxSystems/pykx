@@ -39,6 +39,8 @@ feature .pykx global set and get
             @[{.pykx.set[`b; til 10; x]; 0b};
                 "x";
                 {x like "rank"}]
+        expect to fail when user attempts to overwrite a reserved Python keyword
+            .[.pykx.set;(`False;1b);{x like "User attempting to overwrite Python keyword: False"}]
 
     should provide useful error message when get is used incorrectly
         expect to fail with helpful error message

@@ -12,6 +12,9 @@ recursive-include tests *.py
 include src/pykx/pykx.q
 include src/pykx/pykx_init.q_
 
+# When adding to this list a user should be conscious
+# to additionally update the ignore pattern files in
+# build/github.py
 exclude **/.gitignore
 exclude .gitlab-ci.yml
 exclude mkdocs.yml

@@ -30,7 +30,7 @@ QARGS='-s 12' python # use 12 secondary threads by default
 
 The value set using `-s` provides both the default, and the maximum available to the process - it cannot be changed after PyKX has been imported.
 
-PyKX exposes this maximum value as [`pykx.Q.max_num_threads`](../../api/embedded_q.md#pykx.embedded_q.Q.max_num_threads), which cannot be assigned to. The current number of secondary threads being used by q is exposed as [`pykx.Q.num_threads`](../../api/embedded_q.md#pykx.embedded_q.Q.num_threads). It is initially equal to [`pykx.Q.max_num_threads`](../../api/embedded_q.md#pykx.embedded_q.Q.max_num_threads), but can be assigned to a lower value.
+PyKX exposes this maximum value as `pykx.q.system.max_num_threads`, which cannot be assigned to. The current number of secondary threads being used by q is exposed as `pykx.q.system.num_threads`. It is initially equal to `pykx.q.system.max_num_threads`, but can be assigned to a lower value.
 
 ### Multi-threading
 
@@ -43,7 +43,7 @@ enable the `PYKX_Q_LOCK` environment variable as well which will add an extra re
 
 ## Peach
 
-Having q use [`peach`](../../api/q/q.md#peach) to call into Python is not supported unless `PYKX_RELEASE_GIL` is enabled, and will hang indefinitely.
+Having q use [`peach`](../../api/pykx-execution/q.md#peach) to call into Python is not supported unless `PYKX_RELEASE_GIL` is enabled, and will hang indefinitely.
 
 For example, calling from Python into q into Python works normally:
 

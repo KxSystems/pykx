@@ -1,4 +1,4 @@
-# Schema
+# Schema generation
 
 ::: pykx.schema
     rendering:

@@ -186,7 +186,6 @@ def keval(code: bytes, k1=None, k2=None, k3=None, k4=None, k5=None, k6=None, k7=
     else:
         return _keval(code, r1k(k1), r1k(k2), r1k(k3), r1k(k4), r1k(k5), r1k(k6), r1k(k7), r1k(k8), handle)
 
-
 def _link_qhome():
     update_marker = pykx_lib_dir/'_update_marker'
     subdirs = ('', 'l64', 'm64', 'w64')
@@ -284,13 +283,7 @@ else:
                 if '--licensed' in qargs:
                     raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}')
                 else:
-                    warn('Failed to initialize PyKX fully licensed functionality.\n'
-                        'To access all functionality of PyKX please download an evaluation license from https://kx.com/kdb-insights-personal-edition-license-download/\n'
-                        'Full installation instructions can be found at https://code.kx.com/pykx/getting-started/installing.html\n'
-                        'Falling back to unlicensed mode, which has limited functionality.\n'
-                        'Refer to https://code.kx.com/pykx/user-guide/advanced/modes.html for more information on licensed vs unlicensed modalities.\n'
-                        f'{_capout_msg}',
-                        PyKXWarning)
+                    warn(f'Failed to initialize PyKX successfully with the following error: {_capout_msg}', PyKXWarning)
                 _libq_path_py = bytes(find_core_lib('e'))
                 _libq_path = _libq_path_py
                 _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
@@ -300,7 +293,12 @@ else:
                 # Only link the user's QHOME to PyKX's QHOME if the user actually set $QHOME.
                 # Note that `pykx.qhome` has a default value of `./q`, as that is the behaviour
                 # employed by q.
-                _link_qhome()
+                try:
+                    _link_qhome()
+                except BaseException:
+                    warn('Failed to link user QHOME directory contents to allow access to PyKX.\n'
+                        'To suppress this warning please set the configuration option "PYKX_IGNORE_QHOME" as outlined at:\n'
+                        'https://code.kx.com/pykx/user-guide/configuration.html')
             _libq_path_py = bytes(_core_q_lib_path)
             _libq_path = _libq_path_py
             _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)

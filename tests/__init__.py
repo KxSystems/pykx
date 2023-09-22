@@ -1,14 +1,25 @@
 from contextlib import contextmanager
 import os
+from pathlib import Path
 from platform import system
 import signal
 import sys
 import threading
 
 import pytest
+import toml
 
 
 os.environ['PYTHONWARNINGS'] = 'ignore:No data was collected,ignore:Module pykx was never imported'
+
+
+# Addition of configuration toml used in testing
+# The configuration values set here are the default values for the PyKX so should not
+# overwrite test behaviour
+config_file = open(Path.home()/".pykx.config", "w")
+config_content = {"default": {"PYKX_KEEP_LOCAL_TIMES", 0}}
+toml.dump(config_content, config_file)
+config_file.close()
 
 
 if system() != 'Windows':

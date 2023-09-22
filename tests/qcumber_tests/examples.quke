@@ -1,0 +1,95 @@
+feature Documentation examples/walkthroughs
+    should test evaluating and executing Python code
+        expect return of a retrieved q vector when executed in Python
+            .pykx.pyexec"import numpy as np";
+            .pykx.pyexec"array=np.array([0, 1, 2, 3])";
+            .qu.compare[0 1 2 3;.pykx.get[`array]`]
+
+        expect user to execute Python code using `.p.e` equivalent to `p)`
+            .p.e"import numpy as np";
+            .p.e"array = np.arange(1, 10, 2)";
+            .qu.compare[1 3 5 7 9;.pykx.get[`array]`]
+
+        expect evaluation of Python code to return q objects directly
+            .qu.compare[3;.pykx.qeval"1+2"]
+
+        expect evaluation of Python code to return a Python object
+            pyval:.pykx.pyeval"1+2";
+            all(112h=type pyval;3~.pykx.wrap[pyval]`)
+
+        expect the evaluation of Python code to return intermediary construct
+            pykxval:.pykx.eval"1+2";
+            all(105h=type pykxval;
+                112h=type pykxval`.;
+                3~pykxval`
+                )
+
+        expect interactions with Python classes to be supported within the interface
+            .pykx.pyexec"class obj:\n\tdef __init__(self,x=0,y=0):\n\t\tself.x=x\n\t\tself.y=y";
+            obj:.pykx.eval"obj(2, 3)";
+            all(2~obj[`:x]`;3~obj[`:y]`)
+
+        expect indexing of PyKX objects to be supported
+            lst:.pykx.eval"[True, 2, 3.0, 'four']";
+            all(
+                1b~lst[@;0]`;
+                `four~lst[@;-1]`;
+                (3f;2;1b;`four)~lst'[@;;`]2 1 0 3
+                )
+
+        expect setting of PyKX objects in Python lists to be supported
+            lst:.pykx.eval"[True, 2, 3.0, 'four']";
+            lst[=;0;0b];
+            lst[=;-1;`last];
+            .qu.compare[(0b;2;3f;`last);lst`]
+
+        expect single argument lambda functions to be supported
+            .pykx.pyexec"a = lambda x: x+1";
+            .qu.compare[6;.pykx.qeval"a(5)"]
+
+        expect multiple argument lambda functions to be supported
+            .pykx.pyexec"a = lambda x, y: x+y";
+            .qu.compare[9;.pykx.qeval"a(4,5)"]
+
+        expect to retrieve an item from Python memory
+            .pykx.set[`test;til 5];
+            .qu.compare[0 1 2 3 4;.pykx.get[`test]`]
+
+        expect to be able to import Python library and store as wrapped object
+            np:.pykx.import`numpy;
+            d:np[`:arange][5]`;
+            .qu.compare[0 1 2 3 4;d]
+
+        expect to wrap and unwrap Python foreign object
+            a:.pykx.pyeval"pykx.Foreign([1, 2, 3])";
+            b:.pykx.wrap a;
+            c:.pykx.unwrap b;
+            .qu.compare[a;c]
+
+        expect to retrieve an attribute from a foreign Python object
+            .pykx.pyexec"aclass = type('TestClass', (object,), {'x': pykx.LongAtom(3), 'y': pykx.toq('hello')})";
+            a:.pykx.get[`aclass]`.;
+            b:.pykx.wrap[.pykx.getattr[a;`y]]`;
+            .qu.compare[`hello;b]
+
+        expect to retrieve existing attribute from Python object
+            a:.pykx.get`aclass;
+            b:a[`:x]`;
+            .qu.compare[3;b]
+
+        expect to set attributes and have them returned
+            a:.pykx.get`aclass;
+            .pykx.setattr[a; `r; til 4];
+            c:a[`:r]`;
+            .qu.compare[0 1 2 3;c]
+        
+        expect to convert a wrapped Python object into q
+            a:.pykx.eval["1+1"];
+            b:.pykx.toq a;
+            .qu.compare[b;2]
+        
+        expect the conversion of unwrapped PyKX foreign objects into q 
+            a:.pykx.eval["1+1"];
+            b:a`.;
+            c:.pykx.toq b;
+            .qu.compare[c;2]

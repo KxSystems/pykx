@@ -1,0 +1,25 @@
+feature Memory Allocation tests
+    before
+        resources::@[{.pykx.import x;1b};`resource;0b];
+        if[resources;.pykx.pyexec"import resource"];
+        pymem::{$[resources;.pykx.qeval"resource.getrusage(resource.RUSAGE_SELF).ru_maxrss";0]};
+        a::til 100;
+        .pykx.set[`bbb;a];
+
+    should not increase memory by above expected amount on usage of PyKX functions
+        expect repeated setting of an object to not increase memory
+            initmem:pymem[];
+            do[10000;.pykx.set[`bbb;a]];
+            10000 > abs initmem-pymem[]
+
+        expect repeated setting of function to not increase memory above expected amount
+            .pykx.set[`bbb;{.z.s,x+y}];
+            initmem:pymem[];
+            do[100000;.pykx.set[`bbb;{.z.x,x+y}]];
+            10000 > abs initmem - pymem[]
+
+        expect repeated calling of a function to not increase memory over expected amount
+            .pykx.eval"bbb(10, 11)";
+            initmem:pymem[];
+            do[100000;.pykx.eval"bbb(10, 100)"];
+            10000 > abs initmem - pymem[]

@@ -1,0 +1,41 @@
+feature .pykx.pycallable
+    before
+        wrapArange   ::.pykx.import[`numpy;`:arange];
+        foreignArange::wrapArange`.;
+
+    should allow users to call Python functions returning the result as Python foreign objects
+        expect to return a foreign when calling a Python function using a wrapped object and contain result
+            result:.pykx.pycallable[wrapArange][1;3];
+            all(
+                .pykx.util.isf result;
+                1 2~.pykx.wrap[result]`
+                )
+
+        expect to return a foreign when calling a Python function using foreign and contain result
+            result:.pykx.pycallable[foreignArange][1;3];
+            all(
+                .pykx.util.isf result;
+                1 2~.pykx.wrap[result]`
+                )
+
+    should raise an error if supplied type is not appropriate
+        expect to raise an error specifying that the supplied function could not be used
+            @[.pykx.pycallable;til 10;like[;"*Python return"]]
+
+feature .pykx.qcallable
+    before
+        wrapArange   ::.pykx.import[`numpy;`:arange];
+        foreignArange::wrapArange`.;
+
+    should allow users to call Python functions returning the result as Python foreign objects
+        expect to return a q object when calling a Python function using a wrapped object
+            result:.pykx.qcallable[wrapArange][1;3];
+            .qu.compare[1 2;result]
+
+        expect to return a q object when calling a Python function using foreign
+            result:.pykx.qcallable[foreignArange][1;3];
+            .qu.compare[1 2;result]
+
+    should raise an error if supplied type is not appropriate
+        expect to raise an error specifying that the supplied function could not be used
+            @[.pykx.qcallable;til 10;like[;"*q return"]]

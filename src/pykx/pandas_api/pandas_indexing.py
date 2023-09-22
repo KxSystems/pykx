@@ -188,9 +188,22 @@ def _iloc(tab, loc):
     return q('{x y}', tab, loc)
 
 
-def _loc(tab, loc):
+def _loc(tab, loc): # noqa
     cols = None
     if isinstance(loc, tuple):
+        if 'Keyed' in str(type(tab)) and len(loc) == len(q.keys(tab)):
+            keys = q.keys(tab).py()
+            where_clause = ''
+            for i, key in enumerate(keys):
+                val = loc[i]
+                if isinstance(val, str):
+                    val = '`' + val
+                elif isinstance(val, bytes):
+                    val = '"' + str(val) + '"'
+                where_clause += f'({key}={val}) and '
+            # drop last ' and '
+            where_clause = where_clause[:-5]
+            return q(f'{{[t] flip value select from t where {where_clause}}}', tab)
         cols = _parse_cols(tab, loc[1])
         loc = loc[0]
         tab = _get(tab, cols, None)
@@ -203,9 +216,24 @@ def _loc(tab, loc):
         or ('Keyed' in str(type(tab)) and type(loc) is str)
     ):
         if 'Keyed' in str(type(tab)):
+            keys = q.keys(tab).py()
+            if not isinstance(keys, list):
+                keys = [keys]
             if type(loc) is str or isinstance(loc, SymbolAtom):
-                return q('{0!x}', tab)[loc]
-            return _get(q('{0!x}', tab), loc, None)
+                if loc in keys:
+                    raise KeyError(f"['{loc}'] is not an index")
+                return q(
+                    f'{{[x; y] (key x)!(flip (enlist `{loc})!(enlist y))}}',
+                    tab,
+                    q('{0!x}', tab)[loc]
+                )
+            if any([x in keys for x in loc]):
+                raise KeyError(f"['{loc}'] is not an index")
+            return q(
+                '{[x; y] (key x)!y}',
+                tab,
+                _get(q('{0!x}', tab), loc, None)
+            )
         return _get(tab, loc, None)
     if isinstance(loc, BooleanVector):
         if len(loc) != len(tab):

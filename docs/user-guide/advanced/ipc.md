@@ -75,12 +75,12 @@ so that you limit the amount of data being converted and transfered between proc
 Functions pulled in over IPC execute locally within PyKX by default using embedded q.
 [Symbolic functions][pykx.SymbolicFunction] can be used to execute in a different context instead,
 such as over IPC in the q instance where the function was originally defined. The
-[context interface](../../api/ctx.md) provides symbolic functions for all functions accessed through it by
+[context interface](../../api/pykx-execution/ctx.md) provides symbolic functions for all functions accessed through it by
 default.
 
 In the following example, `q` is a [`pykx.QConnection`][] instance.
 
-The following call to the q function [`save`](../../api/q/q.md#save) executes locally using embedded q,
+The following call to the q function [`save`](../../api/pykx-execution/q.md#save) executes locally using embedded q,
 because `q('save')` returns a regular [`pykx.Function`][] object.
 
 ```python
@@ -88,11 +88,11 @@ with pykx.SyncQConnection('localhost', 5001) as q:
     q('save')('t') # Executes locally within Embedded q
 ```
 
-When [`save`](../../api/q/q.md#save) is accessed through the [context interface](../../api/ctx.md), it is a
+When [`save`](../../api/pykx-execution/q.md#save) is accessed through the [context interface](../../api/pykx-execution/ctx.md), it is a
 [`pykx.SymbolicFunction`][] object instead, which means it is simultaneously an instance of
 [`pykx.Function`][] and [`pykx.SymbolAtom`][]. When it is executed, the function retrived within
 its execution context using its symbol value, and so it is executed in the q server where
-[`save`](../../api/q/q.md#save) is defined.
+[`save`](../../api/pykx-execution/q.md#save) is defined.
 
 ```python
 with pykx.SyncQConnection('localhost', 5001) as q:
@@ -100,9 +100,9 @@ with pykx.SyncQConnection('localhost', 5001) as q:
 ```
 
 Alternatively, one can simply access & use the function by name manually within a single query.
-This differs from the first case because the query includes the argument for [`save`](../../api/q/q.md#save),
-and so what is returned is the result of calling [`save`](../../api/q/q.md#save) with the argument `t`,
-rather than the [`save`](../../api/q/q.md#save) function itself.
+This differs from the first case because the query includes the argument for [`save`](../../api/pykx-execution/q.md#save),
+and so what is returned is the result of calling [`save`](../../api/pykx-execution/q.md#save) with the argument `t`,
+rather than the [`save`](../../api/pykx-execution/q.md#save) function itself.
 
 ```python
 with pykx.SyncQConnection('localhost', 5001) as q:

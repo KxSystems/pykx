@@ -1,0 +1,40 @@
+package:
+  name: pykx
+  version:  '{{ environ.get("GIT_DESCRIBE_TAG", "0.0.0") | replace("-","") }}'
+source:
+  git_url: ..
+  # git_rev:
+
+build:
+  number: '{{ environ.get("GIT_DESCRIBE_NUMBER", 0) }}'
+  ignore_run_exports:
+    - python_abi
+  missing_dso_whitelist:
+    - "*libkurl.so"
+
+requirements:
+  build:
+    - git
+    - python
+    - setuptools==60.9.3
+    - setuptools_scm[toml]>=6.0.1
+    - cython==3.0.0a11
+    - numpy==1.22.*
+    - tomli>=2.0.1
+    - wheel>=0.36.2
+    - sysroot_linux-64 # [linux64]
+
+  run:
+    - python
+    - numpy>=1.22
+    - pandas>=1.2,<2.0
+    - pytz>=2022.1
+
+test:
+  imports:
+    - pykx
+
+about:
+  license_file: 
+    - LICENSE.txt
+  home: https://code.kx.com/pykx/

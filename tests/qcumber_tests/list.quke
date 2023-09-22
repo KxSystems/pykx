@@ -21,7 +21,7 @@ feature PyKX list assignment, retrieval and indexing
         expect to return an error when the Python object contains no __getitem__ method
             @[{pythonClass[@;x]};
               2;
-              {x like "AttributeError(\"type object 'TestClass' has no attribute '__getitem__'\")"}]
+              {x like "Python object has no attribute __getitem__."}]
 
     should Support setting attributes within a class using q like syntax
         expect to return the correct items when these have overwritten the Python objects
@@ -29,15 +29,16 @@ feature PyKX list assignment, retrieval and indexing
             til[10]~pythonClass[`:pyattr]`
 
     should Support setting and retrieval of Python objects within list items using q syntax
-        expect to set an item within Python and Numpy lists
-            pythonList[=;1;5];     // Set index 1 to value 5
-            numpyList[=;0;5];      // Set index 0 to value 5
+        expect to set an item within Python and Numpy lists and assignment to create a generic null
+            pyRet:pythonList[=;1;5];     // Set index 1 to value 5
+            npRet:numpyList[=;0;5];      // Set index 0 to value 5
             all(
                (1b;5;3f;`four)~pythonList`;
-               5~first numpyList`
+               5~first numpyList`;
+               all (::)~/:(pyRet;npRet)
                )
-
+        
         expect to return an error when the Python object contains no __setitem__ method
             @[{pythonClass[=;1;x]};
               10;
-              {x like "AttributeError(\"type object 'TestClass' has no attribute '__setitem__'\")"}]
+              {x like "Python object has no attribute __setitem__."}];

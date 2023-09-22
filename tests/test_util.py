@@ -123,3 +123,8 @@ def test_dir(kx):
 @pytest.mark.unlicensed
 def test_debug_environment(kx):
     assert kx.util.debug_environment() is None
+
+
+@pytest.mark.unlicensed
+def test_debug_environment_ret(kx):
+    assert isinstance(kx.util.debug_environment(return_info=True), str)

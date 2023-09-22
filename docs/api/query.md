@@ -1,3 +1,3 @@
-# Query
+# Querying
 
 ::: pykx.query

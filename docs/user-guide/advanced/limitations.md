@@ -52,3 +52,4 @@ Attempting to use the timer callback function directly using PyKX will raise an 
 >>> kx.q.z.ts
 AttributeError: ts: .z.ts is not exposed through the context interface because the main loop is inactive in PyKX.
 ```
+

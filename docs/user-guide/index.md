@@ -4,8 +4,9 @@ The user guide provided here covers all the core elements of interacting with an
 
 This user guide is broken into two sections:
 
-1. `Fundamentals` - This defines the basic concepts necessary to interact with PyKX objects, clarifies elements of the libraries usage and some technical considerations which should be made by new users when trying to make the most out of PyKX.
-2. `Advanced usage and performance considerations` - A user should only make use of this section once they are familiar with the fundamentals section of this documentation. This section outlines the usage of advanced features of the library such as running under q and IPC interactions. Additionally it outlines performance enhancements that can be enabled by a user and limitations imposed by embedding q/kdb+ within a Python environment.
+1. `Configuration` - This details all the options of configuration available to PyKX using a configuration file and/or environment variables.
+2. `Fundamentals` - This defines the basic concepts necessary to interact with PyKX objects, clarifies elements of the libraries usage and some technical considerations which should be made by new users when trying to make the most out of PyKX.
+3. `Advanced usage and performance considerations` - A user should only make use of this section once they are familiar with the fundamentals section of this documentation. This section outlines the usage of advanced features of the library such as running under q and IPC interactions. Additionally it outlines performance enhancements that can be enabled by a user and limitations imposed by embedding q/kdb+ within a Python environment.
 
 The following outlines the various topics covered within the above sections:
 
@@ -26,8 +27,7 @@ The following outlines the various topics covered within the above sections:
 | [Communicating via IPC](advanced/ipc.md)                             | How can you interact synchronously and asynchronously with a kdb+/q server. |
 | [Using q functions in a Pythonic way](advanced/context_interface.md) | Evaluating and injecting q code within a Python session using a Pythonic context interface which exposes q objects as first class Python objects. |
 | [Numpy integration](advanced/numpy.md)                               | Description of the various low-level integrations between PyKX and numpy. Principally describing NEP-49 optimisations and the evaluation of numpy functions using PyKX vectors directly. |
-| [Running PyKX under q](advanced/running_under_q.md)                  | An introduction to embedding PyKX functionality inside a q session. This allows users to evaluate Python code on data natively in a q session. |
 | [Modes of operation](advanced/modes.md)                              | A brief description of the modes of operation of PyKX outlining it's usage in the presence and absence of a license and the limitations that this imposes.
 | [Performance considerations](advanced/performance.md)                | Guidance on how to treat management and interactions with PyKX objects to achieve the best performance possible. |
 | [Library limitations](advanced/limitations.md)                       | For users familiar with q/kdb+ and previous Python interfaces what limitations does PyKX impose. |
-| [Modifying PyKX using environment variables](advanced/environment_variables.md) | A list of environment variables which can be used to tune PyKX at run time. |
+

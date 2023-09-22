@@ -19,9 +19,10 @@ is also the `pykx.RawQConnection` class that is a superset of the `pykx.AsyncQCo
 has extra functionality around manually polling the send an receive message queues.
 
 For more examples of usage of the IPC interface you can look at the
-[`interface overview`](../getting-started/interface_overview.html#ipc-communication).
+[`interface overview`](../getting-started/interface_overview.ipynb#ipc-communication).
 """
 
+from enum import Enum
 from abc import abstractmethod
 import asyncio
 from contextlib import nullcontext
@@ -33,6 +34,7 @@ from time import monotonic_ns
 from typing import Any, Callable, Optional, Union
 from warnings import warn
 from weakref import finalize, WeakMethod
+import sys
 
 from . import Q
 from .config import max_error_length, pykx_lib_dir, system
@@ -61,6 +63,13 @@ def __dir__():
 def _init(_q):
     global q
     q = _q
+
+
+class MessageType(Enum):
+    """The message types available to q."""
+    async_msg = 0
+    sync_msg = 1
+    resp_msg = 2
 
 
 class QFuture(asyncio.Future):
@@ -104,7 +113,7 @@ class QFuture(asyncio.Future):
         if self.done():
             return self.result()
         while not self.done():
-            self.q_connection._recv()
+            self.q_connection._recv(acceptAsync=True)
         yield from self
         super().__await__()
         return self.result()
@@ -116,7 +125,7 @@ class QFuture(asyncio.Future):
         if self.done():
             return self.result()
         while not self.done():
-            self.q_connection._recv(locked=True)
+            self.q_connection._recv(locked=True, acceptAsync=True)
         return self.result()
 
     def set_result(self, val: Any) -> None:
@@ -245,9 +254,6 @@ class QConnection(Q):
         -3: 'OpenSSL initialization failed',
     }
 
-    _sync_deprecation_warning = ("The 'sync' parameter is deprecated - use the 'wait'"
-                                 " parameter instead.")
-
     # 65536 is the read size the the c/e libs use internally for IPC requests
     _socket_buffer_size = 65536
 
@@ -268,7 +274,6 @@ class QConnection(Q):
                  large_messages: bool = True,
                  tls: bool = False,
                  unix: bool = False,
-                 sync: bool = None,
                  wait: bool = True,
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
                  no_ctx: bool = False
@@ -290,7 +295,6 @@ class QConnection(Q):
             tls: Whether TLS should be used.
             unix: Whether a Unix domain socket should be used instead of TCP. If set to `True`, the
                 host parameter is ignored. Does not work on Windows.
-            sync: This parameter is deprecated - use `wait` instead.
             wait: Whether the q server should send a response to the query (which this connection
                 will wait to receive). Can be overridden on a per-call basis. If `True`, Python will
                 wait for the q server to execute the query, and respond with the results. If
@@ -404,9 +408,6 @@ class QConnection(Q):
 
     def __repr__(self):
         kwargs = get_default_args(type(self))
-        # TODO: Once `sync` is completely deprecated out this can be removed.
-        if 'sync' in kwargs:
-            del kwargs['sync']
         if 'event_loop' in kwargs:
             del kwargs['event_loop']
         for param_name in tuple(kwargs):
@@ -433,7 +434,6 @@ class QConnection(Q):
                  query: Union[str, bytes, CharVector],
                  *args: Any,
                  wait: Optional[bool] = None,
-                 sync: Optional[bool] = None,
     ) -> K:
         pass # nocov
 
@@ -441,6 +441,7 @@ class QConnection(Q):
               query,
               *params,
               wait: Optional[bool] = None,
+              error=False
     ):
         if self.closed:
             raise RuntimeError("Attempted to use a closed IPC connection")
@@ -452,7 +453,7 @@ class QConnection(Q):
             events = self._writer.select(timeout)
             for key, _mask in events:
                 callback = key.data
-                return callback()(key.fileobj, query, *params, wait=wait)
+                return callback()(key.fileobj, query, *params, wait=wait, error=error)
 
     def _ipc_query_builder(self, query, *params):
         data = bytes(query, 'utf-8') if isinstance(query, str) else query
@@ -466,11 +467,11 @@ class QConnection(Q):
 
                 if not issubclass(a, type(None))\
                    and (issubclass(type(b), Function) or isinstance(b, Foreign)
-                        or (isinstance(b, Composition) and q('{.pykx.i.isw x}', b))
+                        or (isinstance(b, Composition) and q('{.pykx.util.isw x}', b))
                    )\
                    and not issubclass(a, Function)\
                    or issubclass(type(b), Function) and\
-                        isinstance(b, Composition) and q('{.pykx.i.isw x}', b):
+                        isinstance(b, Composition) and q('{.pykx.util.isw x}', b):
                     raise ValueError('Cannot send Python function over IPC')
         return data
 
@@ -479,6 +480,7 @@ class QConnection(Q):
                    query,
                    *params,
                    wait: Optional[bool] = None,
+                   error=False
     ):
         if len(params) > 8:
             raise TypeError('Too many parameters - q queries cannot have more than 8 parameters')
@@ -492,11 +494,16 @@ class QConnection(Q):
         ptr = None
         try:
             k_query = K(query)
-            msg_view = _wrappers._to_bytes(6, k_query, 1 if wait else 0)
+            msg_view = _wrappers._to_bytes(6, k_query, 2 if error else 1 if wait else 0)
             if isinstance(msg_view, tuple):
                 ptr = msg_view[0]
                 msg_view = msg_view[1]
             msg_len = len(msg_view)
+            if error:
+                msg_view = list(bytes(msg_view))
+                msg_view[8] = 128
+                msg_view = memoryview(bytes(msg_view))
+                wait=False
             sent = 0
             while sent < msg_len:
                 try:
@@ -522,7 +529,8 @@ class QConnection(Q):
             if ptr is not None:
                 _ipc.delete_ptr(ptr)
 
-    def _recv(self, locked=False):
+    # flake8: noqa: C901
+    def _recv(self, locked=False, acceptAsync=False):
         timeout = self._connection_info['timeout']
         while self._timeouts > 0:
             events = self._reader.select(timeout)
@@ -541,8 +549,23 @@ class QConnection(Q):
                 events = self._reader.select(timeout)
                 for key, _ in events:
                     callback = key.data
-                    res = callback()(key.fileobj)
-                    return res
+                    msg_type, res = callback()(key.fileobj)
+                    if MessageType.sync_msg.value == msg_type:
+                        print("WARN: Discarding unexpected sync message from handle: "
+                              + str(self.fileno()), file=sys.stderr)
+                        try:
+                            self._send(SymbolAtom("PyKX cannot receive queries in client mode"),
+                                       error=True)
+                        except BaseException:
+                            pass
+                    elif MessageType.async_msg.value == msg_type and not acceptAsync:
+                        print("WARN: Discarding unexpected async message from handle: "
+                              + str(self.fileno()), file=sys.stderr)
+                    elif MessageType.resp_msg.value == msg_type or \
+                            MessageType.async_msg.value == msg_type:
+                        return res
+                    else:
+                        raise RuntimeError('MessageType unknown')
 
     def _recv_socket(self, sock):
         tot_bytes = 0
@@ -586,7 +609,7 @@ class QConnection(Q):
                 # The only way to get here is if we start processing a message before all the data
                 # has been received by the socket
                 pass
-        res = self._create_result(buff)
+        res = chunks[1], self._create_result(buff)
         return res
 
     def _create_error(self, buff):
@@ -679,7 +702,6 @@ class SyncQConnection(QConnection):
                  large_messages: bool = True,
                  tls: bool = False,
                  unix: bool = False,
-                 sync: Optional[bool] = None,
                  wait: bool = True,
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
                  no_ctx: bool = False
@@ -700,7 +722,6 @@ class SyncQConnection(QConnection):
             tls: Whether TLS should be used.
             unix: Whether a Unix domain socket should be used instead of TCP. If set to `True`, the
                 host parameter is ignored. Does not work on Windows.
-            sync: This parameter is deprecated - use `wait` instead.
             wait: Whether the q server should send a response to the query (which this connection
                 will wait to receive). Can be overridden on a per-call basis. If `True`, Python will
                 wait for the q server to execute the query, and respond with the results. If
@@ -747,10 +768,6 @@ class SyncQConnection(QConnection):
         pykx.SyncQConnection(port=5001, unix=True)
         ```
         """
-        # TODO: Once `sync` is completely deprecated out this can be removed.
-        if sync is not None:
-            warn(self._sync_deprecation_warning, DeprecationWarning)
-            wait = sync
         self._init(host,
                    port,
                    *args,
@@ -770,7 +787,6 @@ class SyncQConnection(QConnection):
                  query: Union[str, bytes, CharVector],
                  *args: Any,
                  wait: Optional[bool] = None,
-                 sync: Optional[bool] = None,
     ) -> K:
         """Evaluate a query on the connected q process over IPC.
 
@@ -778,7 +794,6 @@ class SyncQConnection(QConnection):
             query: A q expression to be evaluated.
             *args: Arguments to the q query. Each argument will be converted into a `pykx.K` object.
                 Up to 8 arguments can be provided, as that is the maximum supported by q.
-            sync: This parameter is deprecated - use `wait` instead.
             wait: Whether the q server should execute the query before responding. If `True`,
                 Python will wait for the q server to execute the query, and respond with the
                 results. If `False`, the q server will respond immediately to the query with
@@ -830,10 +845,6 @@ class SyncQConnection(QConnection):
         q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
         """
-        # TODO: Once `sync` is completely deprecated out this can be removed.
-        if sync is not None:
-            warn(self._sync_deprecation_warning, DeprecationWarning)
-            wait = sync
         if wait is None:
             wait = self._connection_info['wait']
         with self._lock if self._lock is not None else nullcontext():
@@ -882,9 +893,12 @@ class SyncQConnection(QConnection):
             self._writer.unregister(self._sock)
             self._reader.close()
             self._writer.close()
-            self._sock.shutdown(socket.SHUT_RDWR)
-            self._sock.close()
-            self._finalizer()
+            try:
+                self._sock.shutdown(socket.SHUT_RDWR)
+                self._sock.close()
+                self._finalizer()
+            except BaseException:
+                pass
 
     def fileno(self) -> int:
         """The file descriptor or handle of the connection."""
@@ -1190,9 +1204,12 @@ class AsyncQConnection(QConnection):
             self._writer.unregister(self._sock)
             self._reader.close()
             self._writer.close()
-            self._sock.shutdown(socket.SHUT_RDWR)
-            self._sock.close()
-            self._finalizer()
+            try:
+                self._sock.shutdown(socket.SHUT_RDWR)
+                self._sock.close()
+                self._finalizer()
+            except BaseException:
+                pass
 
     def fileno(self) -> int:
         """The file descriptor or handle of the connection."""
@@ -1256,9 +1273,12 @@ class _DeferredQConnection(QConnection):
             self._writer.unregister(self._sock)
             self._reader.close()
             self._writer.close()
-            self._sock.shutdown(socket.SHUT_RDWR)
-            self._sock.close()
-            self._finalizer()
+            try:
+                self._sock.shutdown(socket.SHUT_RDWR)
+                self._sock.close()
+                self._finalizer()
+            except BaseException:
+                pass
 
 
 def handshake(conn: socket.socket):
@@ -1622,25 +1642,30 @@ class RawQConnection(QConnection):
             self._send(to_send['query'], *to_send['args'], wait=to_send['wait'])
             count -= 1
 
+    def _serialize_response(self, response, level):
+        ptr = None
+        error = isinstance(response, tuple)
+        if error:
+            response = response[1]
+        try:
+            msg_view = _wrappers._to_bytes(level, response, 2)
+        except QError as e:
+            error = True
+            response = SymbolAtom(f"{e}")
+            msg_view = _wrappers._to_bytes(level, response, 2)
+        if isinstance(msg_view, tuple):
+            ptr = msg_view[0]
+            msg_view = msg_view[1]
+        if error:
+            msg_view = list(bytes(msg_view))
+            msg_view[8] = 128
+            msg_view = memoryview(bytes(msg_view))
+        return ptr, msg_view
+
     def _send_sock_server(self, sock, response, level):
         ptr = None
         try:
-            if isinstance(response, tuple):
-                # Return an error
-                response = response[1]
-                msg_view = _wrappers._to_bytes(level, response, 2)
-                if isinstance(msg_view, tuple):
-                    ptr = msg_view[0]
-                    msg_view = msg_view[1]
-                msg_view = list(bytes(msg_view))
-                msg_view[8] = 128
-                msg_view = memoryview(bytes(msg_view))
-            else:
-                msg_view = _wrappers._to_bytes(level, response, 2)
-                if isinstance(msg_view, tuple):
-                    ptr = msg_view[0]
-                    msg_view = msg_view[1]
-
+            ptr, msg_view = self._serialize_response(response, level)
             msg_len = len(msg_view)
             sent = 0
             while sent < msg_len:
@@ -1703,7 +1728,7 @@ class RawQConnection(QConnection):
                     # sent to the sockets buffer
                     pass
 
-            return _wrappers.deserialize(memoryview(buff).obj)
+            return chunks[1], _wrappers.deserialize(memoryview(buff).obj)
         except ConnectionResetError:
             pass
 
@@ -1726,19 +1751,31 @@ class RawQConnection(QConnection):
                     if count > 1:
                         return
                     continue
+                msg_type, res = res
                 wevents = writer.select(timeout)
                 for key, _ in wevents:
                     callback = key.data
                     try:
-                        # TODO: Check for .z sync message handler
-                        if isinstance(q.z.pg, Composition):
-                            # if .z.pg was overriden to use a python func we must enlist the
+                        if MessageType.sync_msg.value == msg_type:
+                            handler = q.z.pg
+                        elif MessageType.async_msg.value == msg_type:
+                            handler = q.z.ps
+                        elif MessageType.resp_msg.value == msg_type:
+                            raise RuntimeError('MessageType.resp_msg not supported')
+                        else:
+                            raise RuntimeError('MessageType unknown')
+                        if isinstance(handler, Composition) and q('{.pykx.util.isw x}', handler):
+                            # if handler was overriden to use a python func we must enlist the
                             # query or it will be passed through as CharAtom's
                             res = q('enlist', res)
-                        res = q.z.pg(res)
+                        res = handler(res)
                     except QError as e:
-                        res = (True, SymbolAtom(f"{e}"))
-                    callback()(key.fileobj, res, level)
+                        if MessageType.sync_msg.value == msg_type:
+                            res = (True, SymbolAtom(f"{e}"))
+                        elif MessageType.async_msg.value == msg_type:
+                            print(e)
+                    if MessageType.sync_msg.value == msg_type:
+                        callback()(key.fileobj, res, level)
                     count -= 1
                     if count > 1:
                         return
@@ -1841,6 +1878,7 @@ class RawQConnection(QConnection):
                         for key, _ in events:
                             callback = key.data
                             res = callback()(key.fileobj)
+                            res = res[1] if isinstance(res, tuple) else res
                             if count == 1:
                                 return res
                             count -= 1
@@ -1891,9 +1929,12 @@ class RawQConnection(QConnection):
             self._writer.unregister(self._sock)
             self._reader.close()
             self._writer.close()
-            self._sock.shutdown(socket.SHUT_RDWR)
-            self._sock.close()
-            self._finalizer()
+            try:
+                self._sock.shutdown(socket.SHUT_RDWR)
+                self._sock.close()
+                self._finalizer()
+            except BaseException:
+                pass
 
 
 class SecureQConnection(QConnection):
@@ -1907,7 +1948,6 @@ class SecureQConnection(QConnection):
                  large_messages: bool = True,
                  tls: bool = False,
                  unix: bool = False,
-                 sync: Optional[bool] = None,
                  wait: bool = True,
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
                  no_ctx: bool = False
@@ -1929,7 +1969,6 @@ class SecureQConnection(QConnection):
             tls: Whether TLS should be used.
             unix: Whether a Unix domain socket should be used instead of TCP. If set to `True`, the
                 host parameter is ignored. Does not work on Windows.
-            sync: This parameter is deprecated - use `wait` instead.
             wait: Whether the q server should send a response to the query (which this connection
                 will wait to receive). Can be overridden on a per-call basis. If `True`, Python will
                 wait for the q server to execute the query, and respond with the results. If
@@ -1964,10 +2003,6 @@ class SecureQConnection(QConnection):
         pykx.SecureQConnection('127.0.0.1', 5001, timeout=2.0, tls=True)
         ```
         """
-        # TODO: Once `sync` is completely deprecated out this can be removed.
-        if sync is not None:
-            warn(self._sync_deprecation_warning, DeprecationWarning)
-            wait = sync
         self._init(host,
                    port,
                    *args,
@@ -2000,7 +2035,6 @@ class SecureQConnection(QConnection):
                  query: Union[str, bytes, CharVector],
                  *args: Any,
                  wait: Optional[bool] = None,
-                 sync: Optional[bool] = None,
     ) -> K:
         """Evaluate a query on the connected q process over IPC.
 
@@ -2008,7 +2042,6 @@ class SecureQConnection(QConnection):
             query: A q expression to be evaluated.
             *args: Arguments to the q query. Each argument will be converted into a `pykx.K` object.
                 Up to 8 arguments can be provided, as that is the maximum supported by q.
-            sync: This parameter is deprecated - use `wait` instead.
             wait: Whether the q server should execute the query before responding. If `True`,
                 Python will wait for the q server to execute the query, and respond with the
                 results. If `False`, the q server will respond immediately to the query with
@@ -2060,10 +2093,6 @@ class SecureQConnection(QConnection):
         q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
         """
-        # TODO: Once `sync` is completely deprecated out this can be removed.
-        if sync is not None:
-            warn(self._sync_deprecation_warning, DeprecationWarning)
-            wait = sync
         return self._call(query, *args, wait=wait)
 
     def _call(self,

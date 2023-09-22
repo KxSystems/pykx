@@ -2,41 +2,11 @@
 
 This quickstart guide provides first time users with instructions for installing this library and make use of the functionality it contains for the first time.
 
-## Install the library and license
+## Prerequisites
 
-### Installing PyKX via pip
+To complete the quickstart guide below you will need to have completed the following:
 
-Install PyKX using `pip`:
-
-```sh
-pip install pykx
-```
-
-For more installation details, refer to the [installation documentation](installing.md).
-
-!!! note "PyKX only supports Python versions 3.8 to 3.11."
-
-!!! note "Python 3.7 has reached end of life and is no longer actively supported, please consider upgrading"
-
-### Installing a license
-
-=== "Personal Evaluation"
-
-	The following steps outline the process by which a user can gain access to an install a kdb Insights license which provides access to PyKX
-
-	1. Visit https://kx.com/kdb-insights-personal-edition-license-download/ and fill in the attached form following the instructions provided.
-	2. On receipt of an email from KX providing access to your license download this file and save to a secure location on your computer.
-    3. Set an environment variable on your computer pointing to the folder containing the license file (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
-	        * Variable Name: `QLIC`
-	        * Variable Value: `/user/path/to/folder`
-
-=== "Commercial Evaluation"
-
-	1. Visit https://kx.com/kdb-insights-commercial-evaluation-license-download/ and fill in the attached form following the instructions provided.
-	2. On receipt of an email from KX providing access to your license download this file and save to a secure location on your computer.
-    3. Set an environment variable on your computer pointing to the folder containing the license file (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
-	        * Variable Name: `QLIC`
-	        * Variable Value: `/user/path/to/folder`
+- [Install the PyKX library and a license](installing.md).
 
 ## How to import PyKX
 
@@ -54,6 +24,31 @@ The generation of PyKX objects is supported pricipally in two ways
 
 1. Execution of q code to create these entities
 2. Conversion of Python objects to analagous PyKX objects
+
+
+### Creation of PyKX objects using inbuilt PyKX functions
+
+Generation of PyKX objects using `pykx` helper functions
+
+```python
+>>> kx.random.random([3, 4], 10.0)
+pykx.List(pykx.q('
+4.976492 4.087545 4.49731   0.1392076
+7.148779 1.946509 0.9059026 6.203014 
+9.326316 2.747066 0.5752516 2.560658 
+'))
+
+>>> kx.Table(data = {'x': kx.random.random(10, 10.0), 'x1': kx.random.random(10, ['a', 'b', 'c'])})
+pykx.Table(pykx.q('
+x         x1
+------------
+0.8123546 a 
+9.367503  a 
+2.782122  c 
+2.392341  a 
+1.508133  b 
+'))
+```
 
 ### Creation of PyKX objects using q
 
@@ -368,3 +363,8 @@ Objects generated via the PyKX library can be converted where reasonable to `Pyt
     x: [[0.707331785506831,0.03695847895120696,0.7024166621644556,0.3955776423810857,0.7539328513313873]]
     x1: [[4,3,2,3,2]]
     ```
+
+## Next steps
+
+- [Interface Overview Notebook](interface_overview.ipynb)
+- [PyKX User Guide](../user-guide/index.md)

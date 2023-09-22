@@ -21,6 +21,19 @@ feature .pykx.eval
         expect the wrapped object to contain a foreign
             .qu.compare[112h; type .pykx.eval["1 + 1"]`.]
 
+    should allow Path objects to be used as inputs to functions
+        expect a function taking a single argument to allow Path objects as function parameter
+            ret:.pykx.eval["lambda x:x"]`:test;
+            `:test ~ ret`
+
+        expect a function taking multiple arguments to allow a Path object as first function parameter
+            ret:.pykx.eval["lambda x, y:[x, y]"][`:test;1];
+            (`:test;1) ~ ret`
+
+        expect an error to be raised if a Path object is supplied as a parameter when not suitable
+            system"c 2000 2000";
+            @[.pykx.eval"lambda x:x+1";`:test;{x like "*TypeError('can only*"}]
+
     should error appropriately if supplied an incorrect type
         expect to error if input type is non string
             err:@[.pykx.eval;5?0Ng;{x}];

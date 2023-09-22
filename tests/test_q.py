@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import os
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 # Do not import pykx here - use the `kx` fixture instead!
@@ -139,45 +140,6 @@ def test_call_sync(q):
     assert q('steps').py() == b
 
 
-def test_fallback_to_unlicensed_mode_warning(tmp_path):
-    os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
-    pattern = '(?i)Failed to initialize PyKX fully licensed functionality.\n' \
-        'To access all functionality of PyKX please download an evaluation ' \
-        'license from https://kx.com/kdb-insights-personal-edition-license-download/\n' \
-        'Full installation instructions can be found at ' \
-        'https://code.kx.com/pykx/getting-started/installing.html\n' \
-        'Falling back to unlicensed mode, which has limited functionality.\n' \
-        'Refer to https://code.kx.com/pykx/user-guide/advanced/modes.html '\
-        'for more information on licensed vs unlicensed modalities.\n'
-    # Can't use PyKXWarning here because we have to import PyKX after entering the with-block
-    with pytest.warns(Warning, match=pattern):
-        import pykx # noqa: F401
-
-
-def test_fallback_to_unlicensed_mode_error(tmp_path):
-    os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
-    os.environ['QARGS'] = '--licensed'
-    # Can't use PyKXException here because we have to import PyKX after entering the with-block
-    with pytest.raises(Exception, match='(?i)Failed to initialize embedded q'):
-        import pykx # noqa: F401
-
-
-@pytest.mark.parametrize(
-    argnames='QARGS',
-    argvalues=[
-        '--licensed --unlicensed',
-        '--unlicensed --licensed',
-        '--unlicensed -S 987654321 --licensed',
-    ],
-    ids=['A', 'B', 'C'],
-)
-def test_use_both_licensed_and_unlicensed_flags(QARGS):
-    os.environ['QARGS'] = QARGS
-    # Can't use PyKXException here because we have to import PyKX after entering the with-block
-    with pytest.raises(Exception, match='(?i)mutually exclusive'):
-        import pykx # noqa: F401
-
-
 @pytest.mark.unlicensed
 def test_repr(kx):
     assert repr(kx.q) == 'pykx.q'
@@ -188,6 +150,12 @@ def test_repr(kx):
 def test_large_vector(q):
     v = q('til 671088640') # 5 GiB of data
     assert q('sum', v).py() == 225179981032980480
+
+
+def test_path_arguments(q):
+    # KXI-30172: Projections of PyKX functions don't support Path
+    a = q("{[f;x] f x}")(lambda x: x)(Path('test'))
+    assert q('`:test') == a
 
 
 @pytest.mark.ipc

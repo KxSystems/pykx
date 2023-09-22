@@ -1,10 +1,15 @@
-from ..wrappers import SymbolVector
+from ..wrappers import K, SymbolVector
 from . import api_return
 
 
 def _init(_q):
     global q
     q = _q
+
+
+def GTable_init(gtab):
+    global GTable
+    GTable = gtab
 
 
 def __inner_join(
@@ -392,3 +397,67 @@ class PandasMerge:
         if added_idx:
             res = q(f'{len(q.keys(self))}!', res)
         return res
+
+
+def _parse_group_by_cols(tab, by):
+    t = str(type(by)).lower()
+    if not ('list' in t or 'vector' in t):
+        by = [by]
+    keys = q('keys', tab).py()
+    cols = []
+    for x in by:
+        if isinstance(x, int):
+            if x > len(keys):
+                raise KeyError('Index out of range for groupby column.')
+            cols.append(keys[x])
+        else:
+            if issubclass(type(x), K):
+                cols.append(x.py())
+            else:
+                cols.append(x)
+    return SymbolVector(cols)
+
+
+class PandasGroupBy:
+
+    @api_return
+    def groupby(
+        self,
+        by=None,
+        axis=0,
+        level=None,
+        as_index=True,
+        sort=True,
+        group_keys=True,
+        observed=False,
+        dropna=True
+    ):
+        if observed:
+            raise NotImplementedError("'observed' parameter not implemented, please set to False")
+        if axis != 0:
+            raise NotImplementedError(
+                "A non 0 value for the 'axis' parameter is not implemented, please set to 0"
+            )
+        if not group_keys:
+            raise NotImplementedError("'group_keys' parameter not implemented, please set to True")
+        if callable(by):
+            raise NotImplementedError(
+                "Using a callable function for the 'by' parameter not implemented"
+            )
+        if by is not None and level is not None:
+            raise RuntimeError('Cannot use both by and level keyword arguments.')
+        pre_keys = q('keys', self)
+        grouped = _parse_group_by_cols(self, by if by is not None else level)
+        res = q('{y xgroup x}', self, grouped)
+        post_keys = q('keys', res)
+        if len(pre_keys) > 0 and len(pre_keys) != len(post_keys):
+            to_remove = SymbolVector([x for x in pre_keys if x not in post_keys])
+            res = q(f'{{{len(post_keys)}!(y _ (0!x))}}', res, to_remove)
+        if dropna:
+            res = q(
+                '{[t] delete from t where (null value flip key t) 0}',
+                res
+            )
+        if sort:
+            res = q('{[t; b] b xasc t}', res, grouped)
+        return GTable(res, as_index, len(pre_keys) > 0)

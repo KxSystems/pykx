@@ -134,7 +134,9 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             code += '@[get;`.pykx.i.kxic.loadfailed;{()!()}]'
             kxic_loadfailed = self._call(code).py()
             if not no_qce:
-                self._call('if["insights.lib.sql" in " " vs .z.l 4; @[system; "l s.k_";]]')
+                sql = self._call('$["insights.lib.sql" in " " vs .z.l 4; @[system; "l s.k_";{x}];::]').py()  # noqa: E501
+                if sql is not None:
+                    kxic_loadfailed['s.k'] = sql
             for lib, msg in kxic_loadfailed.items():
                 if os.getenv('PYKX_DEBUG_INSIGHTS_LIBRARIES'):
                     warn(f'Failed to load KX Insights Core library {lib!r}: {msg.decode()}',
@@ -206,12 +208,6 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             TypeError: Too many arguments were provided - q queries cannot have more than 8
                 parameters.
         """
-        # TODO: Once `sync` is completely deprecated out this can be removed.
-        if sync is not None:
-            warn('The sync flag has been deprecated, please use the wait flag instead.',  # nocov
-                 DeprecationWarning)                                                      # nocov
-            if wait is None:                                                              # nocov
-                wait = sync                                                               # nocov
         if not licensed:
             raise LicenseException("run q code via 'pykx.q'")
         if len(args) > 8:

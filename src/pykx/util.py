@@ -224,109 +224,111 @@ def get_default_args(f: Callable) -> Dict[str, Any]:
     }
 
 
-def debug_environment(detailed=False):
+def debug_environment(detailed=False, return_info=False):
     """Displays information about your environment to help debug issues."""
-
-    pykx_information()
-    python_information()
-    platform_information()
-    env_information()
-    lic_information(detailed=detailed)
-    q_information()
+    debug_info = ""
+    debug_info += pykx_information()
+    debug_info += python_information()
+    debug_info += platform_information()
+    debug_info += env_information()
+    debug_info += lic_information(detailed=detailed)
+    debug_info += q_information()
+    if return_info:
+        return debug_info
+    print(debug_info)
     return None
 
 
 def pykx_information():
-    print('**** PyKX information ****')
-    print(f"pykx.args: {qargs}")
-    print(f"pykx.qhome: {qhome}")
-    print(f"pykx.qlic: {qlic}")
+    pykx_info = "**** PyKX information ****\n"
+    pykx_info += f"pykx.args: {qargs}\n"
+    pykx_info += f"pykx.qhome: {qhome}\n"
+    pykx_info += f"pykx.qlic: {qlic}\n"
 
     from .config import licensed
-    print(f"pykc.licensed: {licensed}")
-    print(f"pykx.__version__: {__version__}")
-    print(f"pykx.file: {__file__}")
-    return None
+    pykx_info += f"pykx.licensed: {licensed}\n"
+    pykx_info += f"pykx.__version__: {__version__}\n"
+    pykx_info += f"pykx.file: {__file__}\n"
+    return pykx_info
 
 
 def python_information():
-    print('\n**** Python information ****')
+    py_info = '\n**** Python information ****\n'
     try:
         import sys
-        print(f"sys.version: {sys.version}")
+        py_info += f"sys.version: {sys.version}\n"
 
         import importlib.metadata
-        print(f"pandas: {importlib.metadata.version('pandas')}")
-        print(f"numpy: {importlib.metadata.version('numpy')}")
-        print(f"pytz: {importlib.metadata.version('pytz')}")
+        py_info += f"pandas: {importlib.metadata.version('pandas')}\n"
+        py_info += f"numpy: {importlib.metadata.version('numpy')}\n"
+        py_info += f"pytz: {importlib.metadata.version('pytz')}\n"
 
         import shutil
-        print(f"which python: {shutil.which('python')}")
-        print(f"which python3: {shutil.which('python3')}")
+        py_info += f"which python: {shutil.which('python')}\n"
+        py_info += f"which python3: {shutil.which('python3')}\n"
     except Exception:
-        None
-    return None
+        pass
+    return py_info
 
 
 def platform_information():
-    print('\n**** Platform information ****')
-
-    print(f"platform.platform: {platform.platform()}")
-    return None
+    platform_info = '\n**** Platform information ****\n'
+    platform_info += f"platform.platform: {platform.platform()}\n"
+    return platform_info
 
 
 def env_information():
-    print('\n**** Environment Variables ****')
+    env_info = '\n**** Environment Variables ****\n'
 
-    envs = ['IGNORE_QHOME', 'KEEP_LOCAL_TIMES', 'PYKX_ALLOCATOR', 'PYKX_ENABLE_PANDAS_API',
+    envs = ['IGNORE_QHOME', 'PYKX_IGNORE_QHOME', 'PYKX_KEEP_LOCAL_TIMES', 'PYKX_ALLOCATOR',
             'PYKX_GC', 'PYKX_LOAD_PYARROW_UNSAFE', 'PYKX_MAX_ERROR_LENGTH',
             'PYKX_NOQCE', 'PYKX_Q_LIB_LOCATION', 'PYKX_RELEASE_GIL', 'PYKX_Q_LOCK',
-            'QARGS', 'QHOME', 'QLIC', 'PYKX_DEFAULT_CONVERSION', 'SKIP_UNDERQ', 'UNSET_PYKX_GLOBALS'
+            'QARGS', 'QHOME', 'QLIC',
+            'PYKX_DEFAULT_CONVERSION', 'PYKX_SKIP_UNDERQ', 'PYKX_UNSET_GLOBALS',
+            'SKIP_UNDERQ', 'UNSET_PYKX_GLOBALS'    # Deprecated
             ]
 
     for x in envs:
-        print(f"{x}: {os.getenv(x, '')}")
-    return None
+        env_info += f"{x}: {os.getenv(x, '')}\n"
+    return env_info
 
 
 def lic_information(detailed=False):
-    print('\n**** License information ****')
+    lic_info = '\n**** License information ****\n'
 
-    print(f"pykx.qlic directory: {os.path.isdir(qlic)}")
-    print(f"pykx.lic writable: {os.access(qhome, os.W_OK)}")
+    lic_info += f"pykx.qlic directory: {os.path.isdir(qlic)}\n"
+    lic_info += f"pykx.lic writable: {os.access(qhome, os.W_OK)}\n"
 
     if detailed:
-        print(f"pykx.qhome contents: {os.listdir(qhome)}")
-        print(f"pykx.lic contents: {os.listdir(qlic)}")
+        lic_info += f"pykx.qhome contents: {os.listdir(qhome)}\n"
+        lic_info += f"pykx.lic contents: {os.listdir(qlic)}\n"
 
     try:
         import re
         klic = re.compile('k.\\.lic').match
         qhomelics = list(filter(klic, os.listdir(qhome)))
-        print(f"pykx.qhome lics: {qhomelics}")
+        lic_info += f"pykx.qhome lics: {qhomelics}\n"
         qliclics = list(filter(klic, os.listdir(qlic)))
-        print(f"pykx.qlic lics: {qliclics}")
+        lic_info += f"pykx.qlic lics: {qliclics}\n"
     except Exception:
-        None
-    return None
+        pass
+    return lic_info
 
 
 def q_information():
-    print('\n**** q information ****')
+    q_info = '\n**** q information ****\n'
 
     try:
         import shutil
+        import subprocess
         whichq = shutil.which('q')
-        print(f"which q: {whichq}")
+        q_info += f"which q: {whichq}\n"
         if whichq is not None:
-            print('q info: ')
+            q_info += ('q info: \n')
             if platform.system() == 'Windows': # nocov:
-                os.system("powershell -NoProfile -ExecutionPolicy ByPass " # nocov
-                          "\"echo \\\"-1 .Q.s1 (.z.o;.z.K;.z.k);" # nocov
-                          "-1 .Q.s1 .z.l 4;\\\" | q -c 200 200\"" # nocov
-                          ) # nocov
-            else:
-                os.system("echo \"-1 .Q.s1 (.z.o;.z.K;.z.k);-1 .Q.s1 .z.l 4;\" | q -c 200 200")
+                q_info += subprocess.check_output("powershell -NoProfile -ExecutionPolicy ByPass \"echo \\\"-1 .Q.s1 (.z.o;.z.K;.z.k);-1 .Q.s1 .z.l 4;\\\" | q -c 200 200\"", shell=True).decode(encoding='utf-8') # noqa: E501
+            else: # nocov:
+                q_info += subprocess.check_output("echo \"-1 .Q.s1 (.z.o;.z.K;.z.k);-1 .Q.s1 .z.l 4;\" | q -c 200 200", shell=True).decode(encoding='utf-8') # noqa: E501
     except Exception:
-        None
-    return None
+        pass
+    return q_info
