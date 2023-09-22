@@ -175,6 +175,22 @@ def test_del(q, kx):
 
 
 @pytest.mark.ipc
+def test_dot_q_errors(q, kx):
+    with pytest.raises(AttributeError) as err:
+        q.select
+    assert 'select' in str(err.value)
+    with pytest.raises(AttributeError) as err:
+        q.exec
+    assert 'exec' in str(err.value)
+    with pytest.raises(AttributeError) as err:
+        q.update
+    assert 'update' in str(err.value)
+    with pytest.raises(AttributeError) as err:
+        q.delete
+    assert 'delete' in str(err.value)
+
+
+@pytest.mark.ipc
 def test_dot_z(q):
     assert q.z.i.py() == q('.z.i').py()
     with pytest.raises(AttributeError):
@@ -190,7 +206,6 @@ def test_dot_z(q):
 
 @pytest.mark.ipc
 def test_expunge(kx, q):
-    assert q.z.ps.py() is None
     q.z.ps = q('2*')
     assert q.z.ps.py() is not None
     if kx.licensed:

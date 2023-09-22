@@ -224,13 +224,6 @@ def pytest_generate_tests(metafunc): # noqa
                              marks=[pytest.mark.licensed, pytest.mark.nep49]
                 )
             )
-        if 'pandas_api' in markers:
-            kx_fixture_kwargs['argvalues'].pop(0)
-            kx_fixture_kwargs['argvalues'].append(
-                pytest.param('--pandas-api', marks=[pytest.mark.embedded,
-                                                    pytest.mark.licensed,
-                                                    pytest.mark.pandas_api])
-            )
     embedded_argvalue = pytest.param('embedded', marks=[pytest.mark.embedded, pytest.mark.licensed])
     if 'q' in metafunc.fixturenames:
         metafunc.parametrize(

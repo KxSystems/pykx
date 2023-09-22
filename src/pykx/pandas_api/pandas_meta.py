@@ -73,38 +73,67 @@ def preparse_computations(tab, axis=0, skipna=True, numeric_only=False, bool_onl
 # were created from, this decorator is used to remove some code duplication to convert all of those
 # back into a dictionary
 def convert_result(func):
+    @api_return
     def inner(*args, **kwargs):
         res, cols = func(*args, **kwargs)
         return q('{[x; y] y!x}', res, cols)
     return inner
 
 
+# Define the mapping between returns of kx.q.meta and associated data type
+_type_mapping = {'c': b'kx.Char',
+                 's': b'kx.Symbol',
+                 'g': b'kx.GUID',
+                 'c': b'kx.Char',
+                 'b': b'kx.Boolean',
+                 'x': b'kx.Byte',
+                 'h': b'kx.Short',
+                 'i': b'kx.Int',
+                 'j': b'kx.Long',
+                 'e': b'kx.Short',
+                 'f': b'kx.Float',
+                 'p': b'kx.Timestamp',
+                 'd': b'kx.Date',
+                 'z': b'kx.Datetime',
+                 'n': b'kx.Timespan',
+                 'u': b'kx.Minute',
+                 'v': b'kx.Second',
+                 't': b'kx.Time',
+                 '': b'kx.List'}
+
+
 class PandasMeta:
     # Dataframe properties
     @property
     def columns(self):
-        return q('{if[99h~type x; x:value x]; cols x}', self).py()
+        return q('{if[99h~type x; x:value x]; cols x}', self)
 
     @property
     def dtypes(self):
-        return q('{0#x}', self).pd().dtypes
+        return q('''
+                 {a:0!x;
+                  flip `columns`type!(
+                    a[`c];
+                    {$[x~"kx.List";x;x,$[y in .Q.a;"Atom";"Vector"]]}'[y `$/:lower a`t;a`t])}
+                 ''', q.meta(self), _type_mapping)
 
     @property
     def empty(self):
-        return q('{0~count x}', self).py()
+        return q('{0~count x}', self)
 
     @property
     def ndim(self):
-        return 2
+        return q('2')
 
     @property
     def shape(self):
-        return tuple(q('{if[99h~type x; x:value x]; (count x; count cols x)}', self).py())
+        return tuple(q('{if[99h~type x; x:value x]; (count x; count cols x)}', self))
 
     @property
     def size(self):
-        return q('{count[x] * count[cols x]}', self).py()
+        return q('{count[x] * count[cols x]}', self)
 
+    @api_return
     def mean(self, axis: int = 0, numeric_only: bool = False):
         tab = self
         if 'Keyed' in str(type(tab)):
@@ -123,6 +152,7 @@ class PandasMeta:
             tab
         )
 
+    @api_return
     def median(self, axis: int = 0, numeric_only: bool = False):
         tab = self
         if 'Keyed' in str(type(tab)):
@@ -141,6 +171,7 @@ class PandasMeta:
             tab
         )
 
+    @api_return
     def mode(self, axis: int = 0, numeric_only: bool = False, dropna: bool = True):
         tab = self
         if 'Keyed' in str(type(tab)):

@@ -12,9 +12,6 @@ import time
 from uuid import uuid4
 
 
-import psutil
-
-
 # Do not import pykx here - use the `kx` fixture instead!
 import pytest
 
@@ -372,36 +369,6 @@ async def test_uninitialized_connection(kx, q_port):
         q.fileno()
 
 
-# TODO: Once `sync` is completely deprecated out this can be removed.
-@pytest.mark.unlicensed
-def test_sync_deprecation(kx, q_port):
-    with kx.QConnection(port=q_port, wait=True) as q:
-        assert isinstance(q('til 10'), kx.LongVector)
-    with kx.QConnection(port=q_port, wait=False) as q:
-        assert isinstance(q('til 10'), kx.Identity)
-    with kx.QConnection(port=q_port, sync=False, wait=True) as q:
-        assert isinstance(q('til 10'), kx.Identity)
-    with kx.QConnection(port=q_port, sync=True, wait=False) as q:
-        assert isinstance(q('til 10'), kx.LongVector)
-    with kx.QConnection(port=q_port, sync=False) as q:
-        assert isinstance(q('til 10'), kx.Identity)
-    with kx.QConnection(port=q_port, sync=True) as q:
-        assert isinstance(q('til 10'), kx.LongVector)
-    with kx.QConnection(port=q_port) as q:
-        assert isinstance(q('til 10', wait=True), kx.LongVector)
-        assert isinstance(q('til 10', wait=False), kx.Identity)
-        assert isinstance(q('til 10', sync=False, wait=True), kx.Identity)
-        assert isinstance(q('til 10', sync=True, wait=False), kx.LongVector)
-        assert isinstance(q('til 10', sync=False), kx.Identity)
-        assert isinstance(q('til 10', sync=True), kx.LongVector)
-
-    with pytest.warns(DeprecationWarning):
-        q = kx.QConnection(port=q_port, sync=True)
-    with pytest.warns(DeprecationWarning):
-        with kx.QConnection(port=q_port) as q:
-            q('til 10', sync=False)
-
-
 @pytest.mark.unlicensed
 def test_ssl_info(kx):
     if system() == 'Linux':
@@ -601,6 +568,62 @@ def test_tls():
                 assert q('til 10').py() == list(range(10))
 
 
+@pytest.mark.xfail(reason='ToDo: Resolve KXI-30608', strict=False)
+@pytest.mark.isolate
+@pytest.mark.unlicensed
+def test_server(kx):
+    if os.getenv('CI') is not None:
+        from .conftest import random_free_port
+        original_QHOME = os.environ['QHOME']
+        proc = None
+        try:
+            q_init = [b'']
+            port = random_free_port()
+            with kx.PyKXReimport():
+                env_vars = {
+                    **os.environ,
+                    'QHOME': original_QHOME
+                }
+                env_vars.pop('PYKX_Q_LOADED_MARKER', None)
+                env_vars.pop('QARGS', None)
+                proc = subprocess.Popen(
+                    (lambda x: x.split() if system() != 'Windows' else x)
+                    (f'python ./docs/examples/server/server.py {port}'),
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.sys.stdout,
+                    stderr=subprocess.sys.stderr,
+                    start_new_session=True,
+                    env=env_vars,
+                )
+                q_init.append((f'system"kill -USR1 {os.getpid()}"').encode())
+                proc.stdin.write(b'\n'.join((*q_init, b'')))
+                proc.stdin.flush()
+            time.sleep(10)
+            import pykx as kx
+            with kx.QConnection(port=port, no_ctx=True) as q:
+                assert q('til 10').py() == list(range(10))
+            with kx.QConnection(port=port, no_ctx=True, wait=False) as q:
+                assert not q('a:til 10').py()
+            with kx.QConnection(port=port, no_ctx=True, wait=False) as q:
+                assert not q('1+`').py()
+            with kx.QConnection(port=port, no_ctx=True) as q:
+                assert q('a').py() == list(range(10))
+            with kx.QConnection(port=port, no_ctx=True) as q:
+                with pytest.raises(kx.exceptions.QError):
+                    q('1+`')
+            with kx.QConnection(port=port, no_ctx=True) as q:
+                with pytest.raises(kx.exceptions.QError):
+                    q('.pykx.i.repr')
+        finally:
+            if proc is not None:
+                proc.stdin.close()
+                if hasattr(os, 'killpg'):
+                    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+                else:
+                    proc.terminate()
+                proc.wait()
+
+
 @pytest.mark.asyncio
 @pytest.mark.unlicensed
 async def test_async_helpful_error_for_closed_conn(kx, q_port):
@@ -617,11 +640,13 @@ def test_sync_helpful_error_for_closed_conn(kx, q_port):
 
 
 def check_enough_memory(GiB):
+    import psutil
     minimum_memory = GiB
     memory_size = psutil.virtual_memory().available >> 30
     return memory_size >= minimum_memory
 
 
+@pytest.mark.large
 @pytest.mark.unlicensed
 @pytest.mark.timeout(60)
 @pytest.mark.skipif(not check_enough_memory(25), reason='Not enough memory')

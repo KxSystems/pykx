@@ -51,3 +51,13 @@ feature .pykx.py2q
         expect a short atom
             .qu.compare[-5h; type .pykx.py2q .pykx.eval["pykx.ShortAtom(1)"]];
 
+feature .pykx.version
+    should return an appropriate type when executed
+        expect a string
+            .qu.compare[10h;type .pykx.version[]];
+
+feature .pykx.debug
+    should return system information when executed
+        expect a general list with PyKX information as the first element
+            ret:.pykx.debugInfo[];
+            all(0h~type ret;ret[0]like"*PyKX information*")

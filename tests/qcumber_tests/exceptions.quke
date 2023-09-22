@@ -1,0 +1,18 @@
+feature C exceptions
+    before
+        invalidForeign::.pykx.util.load[(`foreign_to_q;1)];
+        .pykx.pyexec"aclass = type('TestClass', (object,), {'x': pykx.LongAtom(3), 'y': pykx.toq('hello')})";
+        aClass:: .pykx.eval"aclass";
+
+    should test that the passing of invalid foreign objects catches in various conditions
+        expect an error if passing to 'toq'
+            @[.pykx.toq;invalidForeign;like[;"Provided foreign object*"]]
+
+        expect an error if passing to 'repr'
+            @[.pykx.repr;invalidForeign;like[;"Provided foreign object*"]]
+
+        expect an error if setting an attribute with an invalid object
+            .[.pykx.setattr;(invalidForeign;`z;10);like[;"Provided foreign object*"]]
+
+        expect an error when passing an object to qeval if it is not a valid Python foreign object
+            @[.pykx.qeval["lambda x: x"];invalidForeign;like[;"Provided foreign object*"]]

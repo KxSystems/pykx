@@ -163,12 +163,15 @@ class Test_K:
         assert str(x).startswith('pykx.List._from_addr(0x')
 
     @pytest.mark.ipc
-    def test_pickling(self, q):
+    def test_pickling(self, kx, q):
         mkt = q('([k1:`a`b`a;k2:100+til 3] x:til 3; y:`multi`keyed`table)')
         pickled_mkt = pickle.dumps(mkt)
         unpickled_mkt = pickle.loads(pickled_mkt)
         assert mkt._addr != unpickled_mkt._addr
         assert q('~', mkt, unpickled_mkt)
+        with pytest.raises(TypeError) as err:
+            pickle.dumps(kx.Foreign(10))
+        assert 'Foreign' in str(err.value)
 
     @pytest.mark.ipc
     def test_is_atom(self, kx, q):
@@ -226,6 +229,8 @@ class Test_K:
         assert (q('(::;1 2 3)') != (None, (1, 8, 3))).any()
         assert not q('(::;1 2 3)') == object()
         assert q('(::;1 2 3)') != object()
+        assert q('5') != None # noqa: E711
+        assert not q('5') == None # noqa: E711
 
 
 class Test_Atom:
@@ -1918,14 +1923,14 @@ class Test_Table:
     q_table_str = '([] a:til 3; b:"xyz"; c:-3?0Ng)'
 
     def test_bool(self, q):
-        assert q(self.q_table_str).any()
-        assert not q(self.q_table_str).all()
-        assert q('([] a:1 2; b:"uv")').any()
-        assert q('([] a:1 2; b:"uv")').all()
-        assert q('([]())').all()
-        assert q('([]();())').all()
-        assert not q('([]())').any()
-        assert not q('([]();())').any()
+        assert q(self.q_table_str).any().any()
+        assert not q(self.q_table_str).all().all()
+        assert q('([] a:1 2; b:"uv")').any().any()
+        assert q('([] a:1 2; b:"uv")').all().all()
+        assert q('([]())').all().all()
+        assert q('([]();())').all().all()
+        assert not q('([]())').any().any()
+        assert not q('([]();())').any().any()
 
     def test_py(self, q):
         t = q(self.q_table_str).py()
@@ -1945,22 +1950,15 @@ class Test_Table:
         assert isinstance(t['b'], kx.CharVector)
         assert t['b'][2] == b'z'
         assert all(isinstance(x, kx.GUIDAtom) for x in t['c'])
-        assert t[q('`b')][0] == b'x'
+        assert t['b'][0] == b'x'
         with pytest.raises(TypeError):
             t[object()]
-        assert t[0]['c'] == t['c'][0]
-        assert t[-1]['a'] == 2
-        assert (t['a', 'b', 'a'] == [[0, 1, 2], b'xyz', [0, 1, 2]]).all()
-        with pytest.raises(IndexError):
-            t[3]
-        with pytest.raises(IndexError):
-            t[-4]
+        assert (t[0]['c'] == t['c'][0]).all()
 
     def test_row_getting(self, q, kx):
         t = q(self.q_table_str)
-        assert (t[0, 1, 2, 2, 1]['b'] == b'xyzzy').all()
-        assert isinstance(t[1], kx.Dictionary)
-        assert {k: v for k, v in t[1].py().items() if k in 'ab'} == {'a': 1, 'b': b'y'}
+        assert isinstance(t[1], kx.Table)
+        assert {k: v for k, v in t[1].py().items() if k in 'ab'} == {'a': [1], 'b': b'y'}
         assert isinstance(t[0:2], kx.Table)
         assert {k: v for k, v in t[:2].py().items() if k in 'ab'} == {'a': [0, 1], 'b': b'xy'}
 
@@ -1994,17 +1992,7 @@ class Test_Table:
             'first_score': [100, 90, np.nan, 95],
             'second_score': [30, 45, 56, np.nan],
             'third_score': [np.nan, 40, 80, 90]})
-        assert (kx.K(df) == df).all()
-
-    def test_warnings(self, q, kx):
-        t = q('([] x: til 10; y: 10 - til 10)')
-        with pytest.warns(DeprecationWarning):
-            t['x']
-        with pytest.warns(DeprecationWarning):
-            try:
-                t['x'] = list(range(10))
-            except BaseException:
-                pass
+        assert (kx.K(df) == df).all().all()
 
     def test_pd_null_time_conversion(self, q, pd):
         w = q('([]a:(03:14:15.900000000;0Nn))').pd()
@@ -2351,19 +2339,6 @@ class Test_KeyedTable:
         with pytest.raises(NotImplementedError):
             q(self.kt).pa()
 
-    def test_warnings(self, q, kx):
-        t = q('([x: til 10] y: 10 - til 10)')
-        with pytest.warns(DeprecationWarning):
-            try:
-                t['x']
-            except BaseException:
-                pass
-        with pytest.warns(DeprecationWarning):
-            try:
-                t['x'] = list(range(10))
-            except BaseException:
-                pass
-
     def test_queries(self, q):
         # test_query does more intensive testsing of the query features. This just helps ensure
         # it works for keyed tables too, as one would expect.
@@ -2424,38 +2399,23 @@ class Test_KeyedTable:
     def test_getting(self, kx, q):
         kt = q(self.kt)
         assert kt[q('404')].py() == {'x': q('0N'), 'y': ''}
-        assert kt[q('100')].py() == kt[q('enlist 100')].py() == {'x': 0, 'y': 'singly'}
-        assert kt[(100,)].py() == {'x': 0, 'y': 'singly'}
-        assert kt[[100]].py() == {'x': 0, 'y': 'singly'}
-        assert kt[(101,)].py() == {'x': 1, 'y': 'keyed'}
-        assert kt[(102,)].py() == {'x': 2, 'y': 'table'}
-        with pytest.raises(KeyError):
-            kt[0xbad]
-        with pytest.raises(KeyError):
-            kt[('too', 'many', 'keys')]
-        with pytest.raises(kx.QError, match='type'):
-            kt[q('`hmmm')]
+        assert kt[q('100')].py() == {'x': 0, 'y': 'singly'}
+        assert kt[q('enlist 100')].py() == {'x': [0], 'y': ['singly']}
+        assert kt[(100,)].py() == {'x': [0], 'y': ['singly']}
+        assert kt[[100]].py() == {'x': [0], 'y': ['singly']}
+        assert kt[(101,)].py() == {'x': [1], 'y': ['keyed']}
+        assert kt[(102,)].py() == {'x': [2], 'y': ['table']}
 
     def test_multi_keyed_getting(self, kx, q):
         mkt = q(self.mkt)
-        assert mkt[q('(`z;404)')].py() == {'x': q('0N'), 'y': ''}
-        assert mkt[q('(`a;100)')].py() == {'x': 0, 'y': 'multi'}
-        assert mkt[('a', 100)].py() == {'x': 0, 'y': 'multi'}
-        assert mkt[('b', 101)].py() == {'x': 1, 'y': 'keyed'}
-        assert mkt[('a', 102)].py() == {'x': 2, 'y': 'table'}
-        with pytest.raises(KeyError):
-            mkt[('bad key with', 'the wrong types')]
-        with pytest.raises(KeyError):
-            mkt[('too', 'many', 'keys')]
-        with pytest.raises(kx.QError, match='length'):
-            mkt[q('`hmmm')]
+        assert mkt[('z', 404)].py() == {'x': [], 'y': []}
+        assert mkt[('a', 100)].py() == {'x': [0], 'y': ['multi']}
+        assert mkt[('b', 101)].py() == {'x': [1], 'y': ['keyed']}
+        assert mkt[('a', 102)].py() == {'x': [2], 'y': ['table']}
 
     def test_attributes(self, q, kx):
         mkt = q(self.mkt)
         assert list(mkt) == [('a', 100), ('b', 101), ('a', 102)]
-        for i, (key, v) in enumerate(mkt.items()):
-            assert key == list(mkt)[i]
-            assert isinstance(v, kx.Dictionary)
         assert mkt.keys() == [('a', 100), ('b', 101), ('a', 102)]
         v1 = mkt.values().py()
         v2 = {

@@ -66,9 +66,11 @@ import datetime
 from ctypes import CDLL
 from inspect import signature
 import math
+import os
 from pathlib import Path
 import pytz
 import sys
+import re
 from types import ModuleType
 from typing import Any, Callable, Optional, Union
 from uuid import UUID, uuid4 as random_uuid
@@ -239,6 +241,8 @@ def _resolve_k_type(ktype: KType) -> Optional[k.K]:
 
 
 def _default_converter(x, ktype: Optional[KType] = None, *, cast: bool = False, handle_nulls: bool = False):
+    if os.environ.get('PYKX_UNDER_Q', '').lower() == "true":
+        return from_pyobject(x, ktype, cast, handle_nulls)
     raise _conversion_TypeError(x, type(x), ktype)
 
 
@@ -1240,6 +1244,8 @@ def from_numpy_ndarray(x: np.ndarray,
             return from_bytes(''.join(x).encode())
         elif str(x.dtype).endswith('S1'):
             return from_bytes(b''.join(x))
+        elif 'S' == x.dtype.char:
+            return from_list(x.tolist(), ktype=k.List, cast=None, handle_nulls=None)
         raise _conversion_TypeError(x, repr('numpy.ndarray'), ktype)
 
     cdef core.J n = x.size
@@ -2533,9 +2539,10 @@ class ToqModule(ModuleType):
                 converter = from_fileno
             elif callable(x): # Check this last because many Python objects are incidentally callable.
                 converter = from_callable
+            elif isinstance(x, k.GroupbyTable):
+                return self(x.tab, ktype=ktype, cast=cast, handle_nulls=handle_nulls)
             else:
                 converter = _default_converter
-
         return converter(x, ktype, cast=cast, handle_nulls=handle_nulls)
 
 

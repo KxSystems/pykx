@@ -393,8 +393,6 @@ def test_from_UUID(kx):
     assert kx.toq(u, kx.GUIDAtom).py() == kx.GUIDAtom(u).py() == u
     if kx.licensed:
         assert str(kx.K(u)) == str(u)
-    with pytest.raises(TypeError):
-        kx.CharVector(u)
 
 
 @pytest.mark.unlicensed
@@ -412,7 +410,6 @@ def test_from_tuple(kx):
 
 @pytest.mark.unlicensed
 @pytest.mark.nep49
-@pytest.mark.xfail(reason="Flaky on windows", strict=False)
 def test_from_list(kx):
     assert kx.K([]).py() == []
     assert kx.K([1, 2]).py() == [1, 2]
@@ -436,7 +433,7 @@ def test_from_list(kx):
     assert isinstance(kx.RealVector(3.14), kx.RealVector)
     assert isinstance(kx.FloatVector(3.14), kx.FloatVector)
     assert isinstance(kx.CharVector('a'), kx.CharVector)
-    assert isinstance(kx.List(['aaa']), kx.List)
+    assert isinstance(kx.List([b'aaa']), kx.List)
     assert isinstance(kx.SymbolVector(['a']), kx.SymbolVector)
     assert isinstance(kx.TimestampVector(np.datetime64(0, 'ns')), kx.TimestampVector)
     assert isinstance(kx.MonthVector(np.datetime64(0, 'M')), kx.MonthVector)
@@ -701,6 +698,8 @@ def test_from_numpy_ndarray_2(kx):
         assert kx.CharVector(np.array([b'K', b'X'])).py() == b'KX'
         assert kx.K(np.array([b'K', b'X'])).py() == b'KX'
         assert kx.K(np.array([b'K', 'X'])).py() == ['K', 'X']
+        assert kx.K(np.array([b'string', b'test'], dtype='|S7')).py() == [b'string', b'test']
+        assert kx.K(np.array([b'string', b'test'], dtype='|S10')).py() == [b'string', b'test']
         assert isinstance(kx.K(np.array(['a', 'b', None, 'c'], dtype=object)), kx.SymbolVector)
         assert kx.K(np.array(['a', 'b', None, 'c'], dtype=object)).py() == ['a', 'b', '', 'c']
         with pytest.raises(TypeError):
@@ -1065,8 +1064,11 @@ def test_null_roundtrip(kx):
     kx.q('nulls:(0Nh;0Ni;0Nj;0Ne;0n;" ";`;0Np;0Nm;0Nd;0Nn;0Nu;0Nv;0Nt)')
     t = kx.q('flip ({`$.Q.t x} each ty)!{enlist nulls[x]} each til count ty')
     for col in t:
-        assert (t[col] == kx.toq(t[col].np(), handle_nulls=True)).all()
-    assert (t == kx.toq(t.pd(), handle_nulls=True)).all()
+        assert (
+            kx.q('{x 0}', kx.q.value(kx.q.flip(t[col])))
+            == kx.toq(kx.q.value(kx.q.flip(t[col])).np(), handle_nulls=True)
+        ).all()
+    assert (t == kx.toq(t.pd(), handle_nulls=True)).all().all()
 
 
 @pytest.mark.unlicensed

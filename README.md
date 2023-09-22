@@ -54,7 +54,7 @@ pip install pykx==<INSERT_VERSION>
 
 ### PyKX License access and enablement
 
-Installation of PyKX via pip provides users with access to the library with limited functional scope, full details of these limitations can be found [here](../user-guide/advanced/modes.md). To access the full functionality of PyKX you must first download and install a kdb+ license, this can be achieved either through use of a personal evaluation license or receipt of a commercial license.
+Installation of PyKX via pip provides users with access to the library with limited functional scope, full details of these limitations can be found [here](docs/user-guide/advanced/modes.md). To access the full functionality of PyKX you must first download and install a kdb+ license, this can be achieved either through use of a personal evaluation license or receipt of a commercial license.
 
 #### Personal Evaluation License
 
@@ -103,7 +103,7 @@ PyKX also has an optional Python dependency of `pyarrow>=3.0.0`, which can be in
 
 #### Optional Non-Python Dependencies
 
-- `libssl` for TLS on [IPC connections](../api/ipc.md).
+- `libssl` for TLS on [IPC connections](docs/api/ipc.md).
 
 #### Windows Dependencies
 

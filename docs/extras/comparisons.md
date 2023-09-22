@@ -8,6 +8,10 @@ There are three historical interfaces which allow interoperability between Pytho
 
 An understanding of the functionality and shortcomings of each of these interfaces provides users of PyKX with the ability to contextualise aspects of this libraries design.
 
+!!! Warning "Interface support"
+
+	Of the interfaces described below both embedPy and PyQ are maintained by KX and are supported on a best efforts basis under the [Fusion](https://code.kx.com/q/interfaces) initiative. qPython is in maintenance mode and not supported by KX. It is suggested that users migrate from using these historical interfaces to using PyKX to pick up the latest updates from KX.
+
 ### EmbedPy
 
 EmbedPy provides an approach for using Python from q, but it does not provide a way to interface with q from Python. The EmbedPy interface was designed specifically for q developers who wish to leverage functionality in Python which is not immediately/easily available to q developers. This includes but is not limited to Machine Learning functionality, statistical methods, and plotting.
@@ -18,7 +22,7 @@ PyQ brings the Python and q interpreters into the same process so that code writ
 
 Because of this, it is impossible to develop Python software that depends on PyQ, unless you are willing to run it in a different process. This barrier reasonably makes Python developers hesitant to use PyQ, as it locks them into using the PyQ binary to execute their program.
 
-PyKX provide a more Pythonic approach to interfacing between Python and q than is offered by PyQ. For one PyKX can be run explicitly from a Python session unlike PyQ which relies on execution of a special binary or initialisation from q. In addition to this PyKX provides a class-based hierarchical type system built atop q's type management system. This allows for sub-classes to be used. PyKX also provides a [context interface](../api/ctx.md) which can be used to load q scripts and interact with q namespaces in a Pythonic manner. Finally the query functionality provided by PyKX allows for more flexibility in the objects used in tabular updates through use of the q functional select, exec, update and delete functions rather than generating a qSQL statement.
+PyKX provide a more Pythonic approach to interfacing between Python and q than is offered by PyQ. For one PyKX can be run explicitly from a Python session unlike PyQ which relies on execution of a special binary or initialisation from q. In addition to this PyKX provides a class-based hierarchical type system built atop q's type management system. This allows for sub-classes to be used. PyKX also provides a [context interface](../api/pykx-execution/ctx.md) which can be used to load q scripts and interact with q namespaces in a Pythonic manner. Finally the query functionality provided by PyKX allows for more flexibility in the objects used in tabular updates through use of the q functional select, exec, update and delete functions rather than generating a qSQL statement.
 
 ### qPython
 

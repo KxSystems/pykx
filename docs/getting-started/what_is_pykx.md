@@ -10,7 +10,7 @@ PyKX supports three principal use cases:
 
 1. It allows users to store, query, manipulate and use q objects within a Python process.
 2. It allows users to query external q processes via an IPC interface.
-3. It allows users to embed Python functionality within a native q session using it's [under q](../user-guide/advanced/running_under_q.md) functionality.
+3. It allows users to embed Python functionality within a native q session using it's [under q](../pykx-under-q/intro.md) functionality.
 
 Users wishing to install the library can do so following the instructions [here](installing.md).
 
@@ -28,3 +28,9 @@ For more information on using q/kdb+ and getting started with see the following 
 
 - [An introduction to q/kdb+](https://code.kx.com/q/learn/tour/)
 - [Tutorial videos introducing kdb+/q](https://code.kx.com/q/learn/q-for-all/)
+
+## Next steps
+
+- [Installation guide](installing.md)
+- [Quickstart guide](quickstart.md)
+- [User guide introduction](../user-guide/index.md)

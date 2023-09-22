@@ -9,7 +9,7 @@ Indexing in q works differently than you may be used to, and that behaviour larg
 - [Indexing with Lists](https://code.kx.com/q4m3/3_Lists/#39-indexing-with-lists)
 - [Elided Indices](https://code.kx.com/q4m3/3_Lists/#310-elided-indices)
 
-Indexes used on K objects in PyKX are converted to equivalent K objects in q using the [toq module](../../api/toq.md), just like any other Python to q conversion. To guarantee that the index used against a K object is what you intend it to be, you may perform the conversion of the index yourself before applying it. When K objects are used as the index for another K object, the index object is applied to the [`pykx.Collection`][pykx.Collection] object as they would be in q; i.e. as described in Q For Mortals.
+Indexes used on K objects in PyKX are converted to equivalent K objects in q using the [toq module](../../api/pykx-q-data/toq.md), just like any other Python to q conversion. To guarantee that the index used against a K object is what you intend it to be, you may perform the conversion of the index yourself before applying it. When K objects are used as the index for another K object, the index object is applied to the [`pykx.Collection`][pykx.Collection] object as they would be in q; i.e. as described in Q For Mortals.
 
 The following provides some examples of applying indexing to various q objects:
 
@@ -81,9 +81,12 @@ pykx.List(pykx.q('
 
 ## Indexing Non Array Objects
 
-In addition to being able to index and slice PyKX vector and list objects it is also possible to apply index and slicing semantics on PyKX Table objects. Applications of slices that return single elements will return `pykx.Dictonary` objects while returns with `N>1` elements will return `pykx.Tables`
+In addition to being able to index and slice PyKX vector and list objects it is also possible to apply index and slicing semantics on PyKX Table objects. Application of slice/index semantics on tabular objects will return table like objects
 
 ```python
+>>> import pandas as pd
+>>> from random import random
+>>> from uuid import uuid4
 >>> df = pd.DataFrame.from_dict({
     'x':  [random() for _ in range(10)],
     'x1': [random() for _ in range(10)],
@@ -106,10 +109,9 @@ x           x1         x2
 0.06670537  0.3186642  cd17ee98-c089-10a3-8992-d437a566f081
 '))
 >>> tab[3]
-pykx.Dictionary(pykx.q('
-x | 0.481804
-x1| 0.7575856
-x2| 4040cd34-c49e-587b-e546-e1342bf1dd85
+x           x1         x2
+-----------------------------------------------------------
+0.481804    0.7575856  4040cd34-c49e-587b-e546-e1342bf1dd85
 '))
 >>> tab[:5]
 pykx.Table(pykx.q('

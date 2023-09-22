@@ -171,7 +171,6 @@ import operator
 from uuid import UUID
 from typing import Any, Optional, Tuple, Union
 import warnings
-from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -179,7 +178,7 @@ import pytz
 
 from . import _wrappers
 from ._pyarrow import pyarrow as pa
-from .config import enable_pandas_api, k_gc, licensed
+from .config import k_gc, licensed
 from .core import keval as _keval
 from .constants import INF_INT16, INF_INT32, INF_INT64, NULL_INT16, NULL_INT32, NULL_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
@@ -278,13 +277,13 @@ class K:
     def __reduce__(self):
         return (_wrappers.k_unpickle, (_wrappers.k_pickle(self),))
 
-    def _compare(self, other, op_str):
+    def _compare(self, other, op_str, *, failure=False):
         try:
             r = q(op_str, self, other)
         except Exception as ex:
             ex_str = str(ex)
             if ex_str.startswith('length') or ex_str.startswith('type'):
-                return q('0b')
+                return q('{x}', failure)
             raise
         else:
             if hasattr(r, '__len__') and len(r) == 0:
@@ -309,7 +308,7 @@ class K:
 
     def __ne__(self, other):
         try:
-            return self._compare(other, '{not x=y}')
+            return self._compare(other, '{not x=y}', failure=True)
         except TypeError:
             return q('1b')
 
@@ -2100,11 +2099,7 @@ class Mapping(Collection, abc.Mapping):
         ))
 
 
-if enable_pandas_api:
-    from .pandas_api import PandasAPI
-else:
-    class PandasAPI:
-        pass
+from .pandas_api import GTable_init, PandasAPI
 
 
 def _col_name_generator():
@@ -2168,34 +2163,16 @@ class Table(PandasAPI, Mapping):
             return int(q('#:', self))
         return int(len(self._values._unlicensed_getitem(0)))
 
+    def ungroup(self):
+        return q.ungroup(self)
+
     def __getitem__(self, key):
-        if enable_pandas_api:
-            res = self.loc[key]
-            if isinstance(res, List) and len(res) == 1:
-                res = q('{raze x}', res)
-            return res
-        warn('The behaviour of Table[] is going to change in a future release, enable the Pandas '
-             'like API to see how the usage will change.', DeprecationWarning)
-        original_key = key
-        if isinstance(key, K):
-            return super().__getitem__(key)
-        try:
-            first = next(iter(key))
-        except TypeError:
-            first = key
-        if isinstance(first, (Integral, slice)):
-            n = len(self)
-            key = _idx_to_k(key, n) # _idx_to_k raises IndexError as appropriate
-        else:
-            key = K(key)
-            _check_k_mapping_key(original_key, key, self._keys)
-        return super().__getitem__(key)
+        res = self.loc[key]
+        if isinstance(res, List) and len(res) == 1:
+            res = q('{raze x}', res)
+        return res
 
     def __setitem__(self, key, val):
-        if not enable_pandas_api:
-            warn('The behaviour of Table[] is going to change in a future release, enable the '
-                 'Pandas like API to see how the usage will change.', DeprecationWarning)
-            raise TypeError("'Table' object does not support item assignment")
         self.loc[key] = val
 
     @property
@@ -2397,6 +2374,9 @@ class SplayedTable(Table):
     def __getitem__(self, key):
         raise NotImplementedError
 
+    def __reduce__(self):
+        raise TypeError('Unable to serialize pykx.SplayedTable objects')
+
     def any(self):
         raise NotImplementedError
 
@@ -2427,6 +2407,9 @@ class PartitionedTable(SplayedTable):
 
     def __getitem__(self, key):
         raise NotImplementedError
+
+    def __reduce__(self):
+        raise TypeError('Unable to serialize pykx.PartitionedTable objects')
 
     def items(self):
         raise NotImplementedError
@@ -2557,6 +2540,31 @@ class KeyedTable(Dictionary, PandasAPI):
         ):
             super().__init__(*args, **kwargs)
 
+    def _compare(self, other, op_str, skip=False):
+        vec = self
+        if not skip:
+            vec = q('{x 0}', q('value', q('flip', q('value', self))))
+        try:
+            r = q(op_str, vec, other)
+        except Exception as ex:
+            ex_str = str(ex)
+            if ex_str.startswith('length') or ex_str.startswith('type'):
+                return q('0b')
+            elif ex_str.startswith('nyi'):
+                return self._compare(other, op_str, skip=True)
+            raise
+        else:
+            if hasattr(r, '__len__') and len(r) == 0:
+                # Handle comparisons of empty objects
+                if op_str == '=':
+                    return q('~', vec, other)
+                elif op_str == '{not x=y}':
+                    return q('{not x~y}', vec, other)
+            return r
+
+    def ungroup(self):
+        return q.ungroup(self)
+
     def any(self) -> bool:
         return any(x.any() for x in self._values._values)
 
@@ -2564,37 +2572,15 @@ class KeyedTable(Dictionary, PandasAPI):
         return all(x.all() for x in self._values._values)
 
     def get(self, key, default=None):
-        if enable_pandas_api:
-            return q('{0!x}', self).get(key, default=default)
-        return super().get(key, default=default)
+        return q('{0!x}', self).get(key, default=default)
 
     def __getitem__(self, key):
-        if enable_pandas_api:
-            res = self.loc[key]
-            if isinstance(res, List) and len(res) == 1:
-                res = q('{raze x}', res)
-            return res
-        warn('The behaviour of Table[] is going to change in a future release, enable the Pandas '
-             'like API to see how the usage will change.', DeprecationWarning)
-        if not isinstance(key, K):
-            original_key = key
-            key = K(key)
-            # Keyed tables with a single key column are handled differently by q
-            valid_keys = (
-                *(self._keys._values._unlicensed_getitem(0) if len(self._keys._keys) == 1 else ()),
-                *zip(*self._keys._values),
-            )
-            if not any((key == x).all() for x in valid_keys):
-                raise KeyError(original_key)
-        # XXX: `KeyedTable` is a subclass of `Dictionary` and `Mapping`, but it has different
-        # indexing semantics, so we skip straight to `Collection.__getitem__`.
-        return Collection.__getitem__(self, key)
+        res = self.loc[key]
+        if isinstance(res, List) and len(res) == 1:
+            res = q('{raze x}', res)
+        return res
 
     def __setitem__(self, key, val):
-        if not enable_pandas_api:
-            warn('The behaviour of Table[] is going to change in a future release, enable the '
-                 'Pandas like API to see how the usage will change.', DeprecationWarning)
-            raise TypeError("'KeyedTable' object does not support item assignment")
         self.loc[key] = val
 
     def __iter__(self):
@@ -2801,6 +2787,37 @@ class KeyedTable(Dictionary, PandasAPI):
                 raise QError('Object does not support the grouped attribute')
             else:
                 raise e
+
+
+class GroupbyTable(PandasAPI):
+
+    def __init__(self, tab, as_index, was_keyed, as_vector=None):
+        self.tab = tab
+        self.as_index = as_index
+        self.was_keyed = was_keyed
+        self.as_vector = as_vector
+
+    def q(self):
+        return self.tab
+
+    def ungroup(self):
+        return q.ungroup(self.tab)
+
+    def __getitem__(self, item):
+        keys = q.keys(self.tab).py()
+        if isinstance(item, list):
+            keys.extend(item)
+        else:
+            keys.append(item)
+        return GroupbyTable(
+            q(f'{len(q.keys(self.tab))}!', self.tab[keys]),
+            True,
+            False,
+            as_vector=item
+        )
+
+
+GTable_init(GroupbyTable)
 
 
 class Function(Atom):
@@ -3106,28 +3123,28 @@ class Composition(Function):
 
     @property
     def params(self):
-        if q('{.pykx.i.isw x}', self).py():
+        if q('{.pykx.util.isw x}', self).py():
             return q('.pykx.unwrap', self).params
         return self.func.params
 
     @property
     def py(self):
-        if q('{.pykx.i.isw x}', self).py():
+        if q('{.pykx.util.isw x}', self).py():
             return q('{x[`]}', self).py()
 
     @property
     def np(self):
-        if q('{.pykx.i.isw x}', self).py():
+        if q('{.pykx.util.isw x}', self).py():
             return q('{x[`]}', self).np()
 
     @property
     def pd(self):
-        if q('{.pykx.i.isw x}', self).py():
+        if q('{.pykx.util.isw x}', self).py():
             return q('{x[`]}', self).pd()
 
     @property
     def pa(self):
-        if q('{.pykx.i.isw x}', self).py():
+        if q('{.pykx.util.isw x}', self).py():
             return q('{x[`]}', self).pa()
 
     @cached_property
@@ -3141,7 +3158,7 @@ class Composition(Function):
     def __call__(self, *args, **kwargs):
         if not licensed:
             raise LicenseException('call a q function in a Python process')
-        if q('{.pykx.i.isw x}', self).py():
+        if q('{.pykx.util.isw x}', self).py():
             args = {i: K(x) for i, x in enumerate(args)}
             if args: # Avoid calling `max` on an empty sequence
                 args = {**{x: ... for x in range(max(args))}, **args}
@@ -3237,6 +3254,9 @@ class EachLeft(AppliedIterator):
 class Foreign(Atom):
     """Wrapper for foreign objects, i.e. wrapped pointers to regions outside of q memory."""
     t = 112
+
+    def __reduce__(self):
+        raise TypeError('Unable to serialize pykx.Foreign objects')
 
     def py(self, stdlib=None):
         """Turns the pointer stored within the Foreign back into a Python Object.

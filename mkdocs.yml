@@ -10,8 +10,8 @@ dev_addr: 'localhost:8080'
 use_directory_urls: false
 
 # Keep commented out until PyKX is open-source
-# repo_url: 'https://gitlab.com/kxdev/kxinsights/python/pykx'
-# edit_uri: 'edit/main/docs/'
+repo_url: 'https://github.com/kxsystems/pykx'
+edit_uri: 'edit/main/docs/'
 
 extra_css:
   - https://code.kx.com/assets/stylesheets/main.b941530a.min.css
@@ -43,6 +43,7 @@ markdown_extensions:
   - abbr
   - admonition
   - attr_list
+  - md_in_html
   - extra
   - def_list
   - meta
@@ -130,12 +131,19 @@ theme:
   custom_dir: custom_theme/
   favicon: https://code.kx.com/favicon.ico
   font: false
+  icon:
+    repo: fontawesome/brands/git-alt
+    edit: material/pencil
+    view: material/eye
   features:
     - content.tabs.link # Insiders
     - header.autohide
     - navigation.tabs
     - content.code.annotate
+    - content.action.edit
     - search.suggest
+    - search.highlight
+    - search.share
   palette:
   - media: "(prefers-color-scheme: light)"
     scheme: kx-light
@@ -167,6 +175,7 @@ nav:
       - Jupyter q Magic Command: getting-started/q_magic_command.ipynb
     - User Guide:
       - Introduction: user-guide/index.md
+      - Configuration: user-guide/configuration.md
       - Fundamentals:
         - Generating PyKX objects: user-guide/fundamentals/creating.md
         - Interacting with PyKX objects: user-guide/fundamentals/evaluating.md
@@ -176,33 +185,34 @@ nav:
       - Advanced usage and performance considerations:
         - Communicating via IPC: user-guide/advanced/ipc.md
         - Using q functions in a Pythonic way: user-guide/advanced/context_interface.md
-        - Running PyKX under q: user-guide/advanced/running_under_q.md
         - Modes of operation: user-guide/advanced/modes.md
         - Numpy integration: user-guide/advanced/numpy.md
+        - Serialization and de-serialization: user-guide/advanced/serialization.md
         - Performance considerations: user-guide/advanced/performance.md
         - Interface limitations: user-guide/advanced/limitations.md
-        - Environment variables: user-guide/advanced/environment_variables.md
         - Pandas API: user-guide/advanced/Pandas_API.ipynb
+        - Attributes: user-guide/advanced/attributes.md
     - API:                       
-      - Q Namespaces:
-        - api/q/q.md
-        # - api/q/Q.md
-        # - api/q/j.md
-        # - api/q/z.md
-      - api/wrappers.md
-      - api/toq.md
-      - api/type_conversions.md
-      - api/query.md
-      - api/ctx.md
-      - api/ipc.md
-      - api/console.md
-      - api/exceptions.md
-      - api/embedded_q.md
-      - api/read.md
-      - api/schema.md
-      - api/write.md
-      - api/pykx_under_q.md
-      - api/reimporting.md
+      - Code execution:
+        - PyKX native functions: api/pykx-execution/q.md
+        - PyKX execution classes: api/pykx-execution/embedded_q.md
+        - Context interface: api/pykx-execution/ctx.md
+        - PyKX console: api/pykx-execution/console.md
+      - Data types and conversions:
+        - Convert Pythonic data to PyKX: api/pykx-q-data/toq.md
+        - PyKX type wrappers: api/pykx-q-data/wrappers.md
+        - PyKX to Pythonic data type mapping: api/pykx-q-data/type_conversions.md
+        - Registering Custom Conversions: api/pykx-q-data/register.md
+      - License management: api/license.md
+      - Random data generation: api/random.md
+      - Querying: api/query.md
+      - IPC: api/ipc.md
+      - PyKX Exceptions: api/exceptions.md
+      - Schema generation: api/schema.md
+      - File loading and saving:
+        - Writing PyKX data to disk: api/pykx-save-load/write.md
+        - Reading PyKX data from disk: api/pykx-save-load/read.md 
+      - Reimporter module: api/reimporting.md
     - Examples:
       - Subscriber: examples/subscriber/readme.md
       - Compression and Encryption: examples/compress_and_encrypt/readme.md
@@ -211,7 +221,14 @@ nav:
       - Multithreaded Execution: examples/threaded_execution/README.md
     - Extras:
       - Comparisons against other Python/q interfaces: extras/comparisons.md
-      - Frequently asked questions: extras/faq.md
       - Known issues: extras/known_issues.md
-    - Release notes: changelog.md
+    - Python interfacing within q:
+      - Overview: pykx-under-q/intro.md
+      - API: pykx-under-q/api.md
+      - Upgrading from embedPy: pykx-under-q/upgrade.md
+    - Release notes:
+      - PyKX: release-notes/changelog.md
+      - PyKX under q: release-notes/underq-changelog.md
+    - Frequently Asked Questions (FAQ): faq.md
+    - Support: support.md
     - License: license.md

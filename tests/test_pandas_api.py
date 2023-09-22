@@ -14,25 +14,24 @@ def check_result_and_type(kx, tab, result):
     return False
 
 
-@pytest.mark.pandas_api
 def test_api_meta_error(kx):
     with pytest.raises(Exception):
         kx.PandasAPI()
 
 
-@pytest.mark.pandas_api
 def test_df_columns(q):
     df = q('([] til 10; 10?10)')
     assert all(df.columns == df.pd().columns)
 
 
-@pytest.mark.pandas_api
 def test_df_dtypes(q):
-    df = q('([] til 10; 10?10)')
-    assert all(df.dtypes == df.pd().dtypes)
+    df = q('([] til 10; 10?0Ng; 10?1f;0f,til 9;10?("abc";"def"))')
+    assert all(df.dtypes.columns == ['columns', 'type'])
+    assert q('{x~y}',
+             q('("kx.LongAtom";"kx.GUIDAtom";"kx.FloatAtom";"kx.List";"kx.CharVector")'),
+             df.dtypes['type'])
 
 
-@pytest.mark.pandas_api
 def test_df_empty(q):
     df = q('([] til 10; 10?10)')
     assert df.empty == df.pd().empty
@@ -40,31 +39,26 @@ def test_df_empty(q):
     assert df.empty == df.pd().empty
 
 
-@pytest.mark.pandas_api
 def test_df_ndim(q):
     df = q('([] til 10; 10?10)')
     assert(df.ndim == df.pd().ndim)
 
 
-@pytest.mark.pandas_api
 def test_df_ndim_multicol(q):
     df = q('([] til 10; 10?10; 10?1f)')
     assert(df.ndim == df.pd().ndim)
 
 
-@pytest.mark.pandas_api
 def test_df_shape(q):
     df = q('([] til 10; 10?10)')
     assert (df.shape == df.pd().shape)
 
 
-@pytest.mark.pandas_api
 def test_df_size(q):
     df = q('([] til 10; 10?10)')
     assert (df.size == df.pd().size)
 
 
-@pytest.mark.pandas_api
 def test_df_head(kx, q):
     df = q('([] til 10; 10 - til 10)')
     assert check_result_and_type(kx, df.head(), q('5 # ([] til 10; 10 - til 10)'))
@@ -74,7 +68,6 @@ def test_df_head(kx, q):
     assert check_result_and_type(kx, df.head(2), q('2 # ([til 10] 10 - til 10)'))
 
 
-@pytest.mark.pandas_api
 def test_df_tail(kx, q):
     df = q('([] til 10; 10 - til 10)')
     assert check_result_and_type(kx, df.tail(), q('5 _ ([] til 10; 10 - til 10)'))
@@ -84,7 +77,6 @@ def test_df_tail(kx, q):
     assert check_result_and_type(kx, df.tail(2), q('8 _ ([til 10] 10 - til 10)'))
 
 
-@pytest.mark.pandas_api
 def test_df_pop(kx, q):
     df = q('([] x: til 10; y: 10 - til 10; z: 10?`a`b`c`d)')
     assert check_result_and_type(kx, df.pop('x'), {'x': [x for x in range(10)]})
@@ -104,7 +96,6 @@ def test_df_pop(kx, q):
     assert check_result_and_type(kx, df, {'x': [x for x in range(10)]})
 
 
-@pytest.mark.pandas_api
 def test_df_get(kx, q):
     df = q('([] x: til 10; y: 10 - til 10; z: 10?`a`b`c)')
     assert check_result_and_type(kx, df.get('x'), {'x': [x for x in range(10)]})
@@ -121,7 +112,6 @@ def test_df_get(kx, q):
     assert df.get(['x', 'r'], default=5) == 5
 
 
-@pytest.mark.pandas_api
 def test_df_get_keyed(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: 10?`a`b`c)')
     assert check_result_and_type(kx, df.get('x'), {'x': [x for x in range(10)]})
@@ -130,15 +120,13 @@ def test_df_get_keyed(kx, q):
         'x': [x for x in range(10)],
         'y': [10 - x for x in range(10)]
     })
-    assert df.get(['y', 'z']).py() == df[['y', 'z']].py()
-    assert df.get(['x', 'y']).py() == df[['x', 'y']].py()
+    assert df.get(['y', 'z']).py() == q.value(df[['y', 'z']]).py()
     assert df.get('r') is None
     assert df.get('r', default=5) == 5
     assert df.get(['x', 'r']) is None
     assert df.get(['x', 'r'], default=5) == 5
 
 
-@pytest.mark.pandas_api
 def test_df_at(q):
     df = q('([] x: til 10; y: 10 - til 10; z: 10?`a`b`c)')
     for i in range(10):
@@ -152,7 +140,6 @@ def test_df_at(q):
         df.at[0] = 5
 
 
-@pytest.mark.pandas_api
 def test_df_at_keyed(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: 10?`a`b`c)')
     for i in range(10):
@@ -170,7 +157,6 @@ def test_df_at_keyed(kx, q):
         df.at[0, 'x'] = 5
 
 
-@pytest.mark.pandas_api
 def test_df_replace_self(q):
     df = q('([x: 0, til 10] y: 0, 10 - til 10; z: 11?`a`b`c)')
     df.replace_self = True
@@ -182,7 +168,6 @@ def test_df_replace_self(q):
     assert df.replace_self
 
 
-@pytest.mark.pandas_api
 def test_df_loc(kx, q):
     df = q('([] x: til 10; y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     assert check_result_and_type(kx, df.loc[0], {'y': 10, 'z': 'a'})
@@ -191,7 +176,6 @@ def test_df_loc(kx, q):
     assert check_result_and_type(kx, df.loc[0, :], {'y': [10, 9], 'z': ['a', 'a']})
 
 
-@pytest.mark.pandas_api
 def test_df_loc_keyed(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     assert check_result_and_type(kx, df.loc[0], {'y': 10, 'z': 'a'})
@@ -200,7 +184,6 @@ def test_df_loc_keyed(kx, q):
     assert check_result_and_type(kx, df.loc[df['y'] < 100], df.py())
 
 
-@pytest.mark.pandas_api
 def test_df_loc_cols(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     assert check_result_and_type(kx, df.loc[[0, 1], 'z':], {'z': ['a', 'a']})
@@ -209,7 +192,6 @@ def test_df_loc_cols(kx, q):
     assert check_result_and_type(kx, df[[0, 1], :2], {'y': [10, 9]})
 
 
-@pytest.mark.pandas_api
 def test_df_getitem(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     assert check_result_and_type(kx, df[0], {'y': 10, 'z': 'a'})
@@ -229,7 +211,6 @@ def test_df_getitem(kx, q):
     )
 
 
-@pytest.mark.pandas_api
 def test_df_loc_set(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     df.loc[df.loc['z'] == 'a', 'y'] = 99
@@ -253,7 +234,6 @@ def test_df_loc_set(kx, q):
         df.loc[df['z'] == 'a', 'y', 'z'] = 99
 
 
-@pytest.mark.pandas_api
 def test_df_set_cols(kx, q):
     qtab = q('([]til 10;10?1f;10?100)')
     df = qtab
@@ -293,7 +273,6 @@ def test_df_set_cols(kx, q):
     )
 
 
-@pytest.mark.pandas_api
 def test_df_iloc_set(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     df.iloc[df.loc['z'] == 'a', 'y'] = 99
@@ -317,7 +296,6 @@ def test_df_iloc_set(kx, q):
         df.iloc[df['z'] == 'a', 'y', 'z'] = 99
 
 
-@pytest.mark.pandas_api
 def test_df_iloc(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     assert check_result_and_type(kx, df.iloc[:], df.py())
@@ -364,7 +342,6 @@ def test_df_iloc(kx, q):
     )
 
 
-@pytest.mark.pandas_api
 def test_df_iloc_with_cols(kx, q):
     df = q('([] x: til 10; y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     assert check_result_and_type(kx, df.iloc[0, 0], {'x': 0, 'z': 'a'})
@@ -426,7 +403,6 @@ def test_df_iloc_with_cols(kx, q):
     assert check_result_and_type(kx, df.loc[df['z']=='a', ['x', 'y']], {'x': [0, 1], 'y': [10, 9]})
 
 
-@pytest.mark.pandas_api
 def test_table_validate(kx):
     # Copy kwarg
     df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
@@ -441,7 +417,6 @@ def test_table_validate(kx):
         tab1.merge(tab2, left_on='lkey', right_on='rkey', validate='1:m')
 
 
-@pytest.mark.pandas_api
 def test_table_merge_copy(kx, q):
     # Copy kwarg
     df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
@@ -461,7 +436,6 @@ def test_table_merge_copy(kx, q):
     assert df1.merge(df2, left_on='lkey', right_on='rkey').equals(tab1.pd())
 
 
-@pytest.mark.pandas_api
 def test_table_inner_merge(kx, q):
     # Merge on keys
     df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
@@ -555,7 +529,7 @@ def test_table_inner_merge(kx, q):
     assert isinstance(res, kx.KeyedTable)
     df_res = df1.merge(df2, left_index=True, right_index=True)
     # assert our index does match properly before removing it
-    assert res['idx'].py() == list(df_res.index)
+    assert q('0!', res)['idx'].py() == list(df_res.index)
     # We have idx as a column so we have to remove it to be equal as it won't convert
     # to the pandas index column automatically
     res = q('{(enlist `idx)_(0!x)}', res)
@@ -564,7 +538,6 @@ def test_table_inner_merge(kx, q):
     assert df_res.equals(res.pd())
 
 
-@pytest.mark.pandas_api
 def test_table_left_merge(kx, q):
     if sys.version_info.minor > 7:
         # Merge on keys
@@ -668,7 +641,7 @@ def test_table_left_merge(kx, q):
         assert isinstance(res, kx.KeyedTable)
         df_res = df1.merge(df2, left_index=True, right_index=True, how='left')
         # assert our index does match properly before removing it
-        assert res['idx'].py() == list(df_res.index)
+        assert q('0!', res)['idx'].py() == list(df_res.index)
         # We have idx as a column so we have to remove it to be equal as it won't convert
         # to the pandas index column automatically
         res = q('{(enlist `idx)_(0!x)}', res).pd()
@@ -692,7 +665,6 @@ def test_table_left_merge(kx, q):
         assert res.equals(df_res)
 
 
-@pytest.mark.pandas_api
 def test_table_right_merge(kx, q):
     if sys.version_info.minor > 7:
         # Merge on keys
@@ -796,7 +768,7 @@ def test_table_right_merge(kx, q):
         assert isinstance(res, kx.KeyedTable)
         df_res = df1.merge(df2, left_index=True, right_index=True, how='right')
         # assert our index does match properly before removing it
-        assert res['idx'].py() == list(df_res.index)
+        assert q('0!', res)['idx'].py() == list(df_res.index)
         # We have idx as a column so we have to remove it to be equal as it won't convert
         # to the pandas index column automatically
         res = q('{(enlist `idx)_(0!x)}', res).pd()
@@ -820,7 +792,6 @@ def test_table_right_merge(kx, q):
         assert res.equals(df_res)
 
 
-@pytest.mark.pandas_api
 def test_table_outer_merge(kx, q):
     if sys.version_info.minor > 7:
         # Merge on keys
@@ -947,7 +918,7 @@ def test_table_outer_merge(kx, q):
         assert isinstance(res, kx.KeyedTable)
         df_res = df1.merge(df2, left_index=True, right_index=True, how='outer')
         # assert our index does match properly before removing it
-        assert res['idx'].py() == list(df_res.index)
+        assert q('0!', res)['idx'].py() == list(df_res.index)
         # We have idx as a column so we have to remove it to be equal as it won't convert
         # to the pandas index column automatically
         res = q('{(enlist `idx)_(0!x)}', res).pd()
@@ -977,7 +948,6 @@ def test_table_outer_merge(kx, q):
         assert df_res.equals(res)
 
 
-@pytest.mark.pandas_api
 def test_cross_merge(kx, q):
     df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
     df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
@@ -990,14 +960,13 @@ def test_cross_merge(kx, q):
     tab2 = kx.q('{1!x}', tab2)
     df_res = df1.merge(df2, how='cross')
     res = tab1.merge(tab2, how='cross')
-    assert res['idx'].py() == list(df_res.index)
+    assert q('0!', res)['idx'].py() == list(df_res.index)
     # We have idx as a column so we have to remove it to be equal as it won't convert
     # to the pandas index column automatically
     res = q('{(enlist `idx)_(0!x)}', res).pd()
     assert df_res.equals(res)
 
 
-@pytest.mark.pandas_api
 def test_merge_errors(kx):
     df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
     df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
@@ -1013,7 +982,6 @@ def test_merge_errors(kx):
         )
 
 
-@pytest.mark.pandas_api
 def test_cross_merge_errors(kx, q):
     df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
     df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
@@ -1039,7 +1007,6 @@ def test_cross_merge_errors(kx, q):
     )
 
 
-@pytest.mark.pandas_api
 def test_api_vs_pandas(kx, q):
     tab = q('([] x: til 10; y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     df = tab.pd()
@@ -1066,7 +1033,6 @@ def test_api_vs_pandas(kx, q):
     )
 
 
-@pytest.mark.pandas_api
 def test_df_astype_vanilla_checks(kx, q):
     df = q('([] c1:1 2 3i; c2:1 2 3j; c3:1 2 3h; c4:1 2 3i)')
     assert check_result_and_type(
@@ -1081,7 +1047,6 @@ def test_df_astype_vanilla_checks(kx, q):
     )
 
 
-@pytest.mark.pandas_api
 def test_df_astype_string_to_sym(kx, q):
     df = q('''([] c1:3#.z.p; c2:`abc`def`ghi; c3:1 2 3j;
             c4:("abc";"def";"ghi");c5:"abc";c6:(1 2 3;4 5 6;7 8 9))''')
@@ -1099,7 +1064,6 @@ def test_df_astype_string_to_sym(kx, q):
     )
 
 
-@pytest.mark.pandas_api
 def test_df_astype_value_errors(kx, q):
     df = q('''([] c1:3#.z.p; c2:`abc`def`ghi; c3:1 2 3j;
             c4:("abc";"def";"ghi");c5:"abc";c6:(1 2 3;4 5 6;7 8 9))''')
@@ -1152,7 +1116,6 @@ def test_df_astype_value_errors(kx, q):
         raise df.astype({'d': kx.SymbolVector})
 
 
-@pytest.mark.pandas_api
 def test_df_select_dtypes(kx, q):
     df = q('([] c1:`a`b`c; c2:1 2 3h; c3:1 2 3j; c4:1 2 3i)')
     assert check_result_and_type(
@@ -1173,7 +1136,6 @@ def test_df_select_dtypes(kx, q):
     )
 
 
-@pytest.mark.pandas_api
 def test_df_select_dtypes_errors(kx, q):
     df = q('([] c1:`a`b`c; c2:1 2 3h; c3:1 2 3j; c4:1 2 3i)')
     with pytest.raises(ValueError, match=r"Expecting either include or"
@@ -1185,7 +1147,6 @@ def test_df_select_dtypes_errors(kx, q):
                          exclude='kx.LongVector')
 
 
-@pytest.mark.pandas_api
 def test_df_drop(kx, q):
     t = q('([] til 10; 10?10; 10?1f; (10 10)#100?" ")')
 
@@ -1372,7 +1333,6 @@ def test_df_drop(kx, q):
     assert(str(e.value) == 'x42, x72 not found.')
 
 
-@pytest.mark.pandas_api
 def test_df_drop_duplicates(kx, q):
     N = 100
     q['N'] = N
@@ -1396,7 +1356,6 @@ def test_df_drop_duplicates(kx, q):
         t.drop_duplicates(ignore_index=True)
 
 
-@pytest.mark.pandas_api
 def test_df_rename(kx, q):
     q('sym:`aaa`bbb`ccc')
     t = q('([] 10?sym; til 10; 10?10; 10?1f)')
@@ -1530,7 +1489,6 @@ def test_df_sample(kx, q):
         t.sample(ignore_index=True)
 
 
-@pytest.mark.pandas_api
 def test_mean(kx, q):
     df = pd.DataFrame(
         {
@@ -1585,7 +1543,6 @@ def test_mean(kx, q):
         q_m = tab.mean(axis=1)
 
 
-@pytest.mark.pandas_api
 def test_median(kx, q):
     df = pd.DataFrame(
         {
@@ -1640,7 +1597,6 @@ def test_median(kx, q):
         q_m = tab.median(axis=1)
 
 
-@pytest.mark.pandas_api
 def test_mode(kx, q): # noqa
     if sys.version_info.minor > 7:
         def compare_q_to_pd(tab, df):
@@ -1741,7 +1697,6 @@ def test_mode(kx, q): # noqa
         assert compare_q_to_pd(q_m, p_m)
 
 
-@pytest.mark.pandas_api
 def test_table_merge_asof(kx, q):
     left = pd.DataFrame({"a": [1, 5, 10], "left_val": ["a", "b", "c"]})
     right = pd.DataFrame({"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]})
@@ -1810,7 +1765,6 @@ def test_table_merge_asof(kx, q):
             == q('0!', q('1!', qleft).merge_asof(q('1!', qright), on='time')).pd()).all().all()
 
 
-@pytest.mark.pandas_api
 def test_pandas_abs(kx, q):
     tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
     ntab = tab[['price', 'ints']]
@@ -1821,7 +1775,6 @@ def test_pandas_abs(kx, q):
         tab.abs()
 
 
-@pytest.mark.pandas_api
 def test_pandas_min(q):
     tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
     df = tab.pd()
@@ -1840,7 +1793,6 @@ def test_pandas_min(q):
         assert float(qmin[i]) == float(pmin[i])
 
 
-@pytest.mark.pandas_api
 def test_pandas_max(q):
     tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
     df = tab.pd()
@@ -1859,7 +1811,6 @@ def test_pandas_max(q):
         assert float(qmax[i]) == float(pmax[i])
 
 
-@pytest.mark.pandas_api
 def test_pandas_all(q):
     tab = q(
         '([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200;'
@@ -1884,7 +1835,6 @@ def test_pandas_all(q):
         assert qall[i] == pall[i]
 
 
-@pytest.mark.pandas_api
 def test_pandas_any(q):
     tab = q(
         '([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200;'
@@ -1909,7 +1859,6 @@ def test_pandas_any(q):
         assert qany[i] == pany[i]
 
 
-@pytest.mark.pandas_api
 def test_pandas_prod(q):
     tab = q('([] sym: 10?`a`b`c; price: 12.25f - 10?25.0f; ints: 10 - 10?20)')
     df = tab.pd()
@@ -1931,7 +1880,6 @@ def test_pandas_prod(q):
         assert str(pprod[i]) == 'nan'
 
 
-@pytest.mark.pandas_api
 def test_pandas_sum(q):
     tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
     df = tab.pd()
@@ -1952,3 +1900,132 @@ def test_pandas_sum(q):
     for i in range(10):
         assert qsum[i] == q('0N')
         assert str(psum[i]) == 'nan'
+
+
+def test_pandas_groupby_errors(kx, q):
+    tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
+
+    with pytest.raises(RuntimeError):
+        tab.groupby(by='sym', level=[1])
+
+    with pytest.raises(NotImplementedError):
+        tab.groupby(by=lambda x: x)
+    with pytest.raises(NotImplementedError):
+        tab.groupby(by='sym', observed=True)
+    with pytest.raises(NotImplementedError):
+        tab.groupby(by='sym', group_keys=False)
+    with pytest.raises(NotImplementedError):
+        tab.groupby(by='sym', axis=1)
+
+    arrays = [['Falcon', 'Falcon', 'Parrot', 'Parrot', 'Parrot'],
+              ['Captive', 'Wild', 'Captive', 'Wild', 'Wild']]
+    index = pd.MultiIndex.from_arrays(arrays, names=('Animal', 'Type'))
+    df = pd.DataFrame({'Max Speed': [390., 350., 30., 20., 25.]},
+                      index=index)
+    tab = kx.toq(df)
+
+    with pytest.raises(KeyError):
+        tab.groupby(level=[0, 4])
+
+
+def test_pandas_groupby(kx, q):
+    df = pd.DataFrame(
+        {
+            'Animal': ['Falcon', 'Falcon', 'Parrot', 'Parrot'],
+            'Max Speed': [380., 370., 24., 26.],
+            'Max Altitude': [570., 555., 275., 300.]
+        }
+    )
+
+    tab = kx.toq(df)
+
+    assert all(
+        df.groupby(['Animal']).mean() == tab.groupby(kx.SymbolVector(['Animal'])).mean().pd()
+    )
+    assert df.groupby(['Animal']).ndim == tab.groupby(kx.SymbolVector(['Animal'])).ndim
+    assert all(
+        df.groupby(['Animal'], as_index=False).mean()
+        == tab.groupby(kx.SymbolVector(['Animal']), as_index=False).mean().pd()
+    )
+    assert all(
+        df.groupby(['Animal']).tail(1).reset_index(drop=True)
+        == tab.groupby(kx.SymbolVector(['Animal'])).tail(1).pd()
+    )
+    assert all(
+        df.groupby(['Animal']).tail(2)
+        == tab.groupby(kx.SymbolVector(['Animal'])).tail(2).pd()
+    )
+
+    df = pd.DataFrame(
+        [
+            ["a", 12, 12],
+            [None, 12.3, 33.],
+            ["b", 12.3, 123],
+            ["a", 1, 1]
+        ],
+        columns=["a", "b", "c"]
+    )
+    tab = kx.toq(df)
+
+    # NaN in column is filled when converted to q this unfills it and re-sorts it
+    assert q(
+        '{[x; y] x:update a:` from x where i=2; x: `a xasc x; x~y}',
+        df.groupby('a', dropna=False).sum(),
+        tab.groupby('a', dropna=False).sum()
+    )
+    assert q(
+        '{[x; y] x:update a:` from x where i=1; x~y}',
+        df.groupby('a', dropna=False, sort=False).sum(),
+        tab.groupby('a', dropna=False, sort=False).sum()
+    )
+    assert all(
+        df.groupby('a', dropna=False, as_index=False).sum()
+        == tab.groupby('a', dropna=False, as_index=False).sum().pd()
+    )
+
+    arrays = [['Falcon', 'Falcon', 'Parrot', 'Parrot', 'Parrot'],
+              ['Captive', 'Wild', 'Captive', 'Wild', 'Wild']]
+    index = pd.MultiIndex.from_arrays(arrays, names=('Animal', 'Type'))
+    df = pd.DataFrame({'Max Speed': [390., 350., 30., 20., 25.]},
+                      index=index)
+    tab = kx.toq(df)
+
+    assert all(
+        df.groupby(['Animal']).mean()
+        == tab.groupby(['Animal']).mean().pd()
+    )
+    assert all(
+        df.groupby(['Animal'], as_index=False).mean()
+        == tab.groupby(['Animal'], as_index=False).mean().pd()
+    )
+
+    assert all(
+        df.groupby(level=[1]).mean()
+        == tab.groupby(level=[1]).mean().pd()
+    )
+    assert all(
+        df.groupby(level=1, as_index=False).mean()
+        == tab.groupby(level=1, as_index=False).mean().pd()
+    )
+
+    assert all(
+        df.groupby(level=[0, 1]).mean()
+        == tab.groupby(level=[0, 1]).mean().pd()
+    )
+    assert all(
+        df.groupby(level=[0, 1], as_index=False).mean()
+        == tab.groupby(level=[0, 1], as_index=False).mean().pd()
+    )
+
+
+def test_keyed_loc_fixes(q):
+    mkt = q('([k1:`a`b`a;k2:100+til 3] x:til 3; y:`multi`keyed`table)')
+    assert q.keys(mkt['x']).py() == ['k1', 'k2']
+    assert q.value(mkt['x']).py() == {'x': [0, 1, 2]}
+    assert mkt[['x', 'y']].pd().equals(mkt.pd()[['x', 'y']])
+    assert mkt['a', 100].py() == {'x': [0], 'y': ['multi']}
+
+    with pytest.raises(KeyError):
+        mkt[['k1', 'y']]
+    with pytest.raises(KeyError):
+        mkt['k1']

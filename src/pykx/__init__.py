@@ -2,6 +2,8 @@
 An interface between Python and q.
 """
 
+import base64
+import logging
 import os
 import sys
 
@@ -17,7 +19,6 @@ if os.environ.get('PYKX_QINIT_CHECK') is None:
         pass
 else: # nocov
     pass
-
 
 from . import reimporter
 # Importing core initializes q if in licensed mode, and loads the q C API symbols. This should
@@ -117,6 +118,8 @@ class Q(metaclass=ABCMeta):
         pass # nocov
 
     def __getattr__(self, key):
+        if key == "__objclass__":
+            raise AttributeError
         # Elevate the q context to the global context, as is done in q normally
         ctx = self.__getattribute__('ctx')
         if key in self.__getattribute__('_q_ctx_keys'):
@@ -242,63 +245,6 @@ class Q(metaclass=ABCMeta):
                 warn(f"Module path '{path!r}' not found", RuntimeWarning)
         object.__setattr__(self, '_paths', resolved)
 
-    @property
-    def max_num_threads(self):
-        """The maximum number of secondary threads available to q.
-
-        This value can be set using the `-s` command-line flag, provided to q via the $QARGS
-        environment variable. For example: `QARGS='-s 8' python`, or `QARGS='-s 0' python`.
-        """
-        warn('The q.max_num_threads property has been deprecated - use q.system.num_threads '
-             'instead.',
-             DeprecationWarning
-        )
-        return self.system.max_num_threads
-
-    @max_num_threads.setter
-    def max_num_threads(self, value):
-        warn('The q.max_num_threads property has been deprecated - use q.system.num_threads '
-             'instead.',
-             DeprecationWarning
-        )
-        self.system.max_num_threads = value
-
-    @property
-    def num_threads(self):
-        """The current number of secondary threads being used by q.
-
-        Computations in q will automatically be parallelized across this number of threads as q
-        deems appropriate.
-
-        This property is meant to be modified on `EmbeddedQ` and `QConnection` instances.
-
-        Examples:
-
-        Set the number of threads for embedded q to use to 8.
-
-        ```
-        kx.q.num_threads = 8
-        ```
-
-        Set the number of threads for a q process being connected to over IPC to 8.
-
-        ```
-        q = kx.SyncQConnection('localhost', 5001)
-        q.num_threads = 8
-        ```
-        """
-        warn('The q.num_threads property has been deprecated - use q.system.num_threads instead.',
-             DeprecationWarning
-        )
-        return self.system.num_threads
-
-    @num_threads.setter
-    def num_threads(self, value):
-        warn('The q.num_threads property has been deprecated - use q.system.num_threads instead.',
-             DeprecationWarning
-        )
-        self.system.num_threads = value
-
 
 # Import order matters here, so the imports are not ordered conventionally.
 from .console import QConsole
@@ -314,6 +260,7 @@ from . import console
 from . import exceptions
 from . import wrappers
 from . import schema
+from . import random
 
 from ._wrappers import _init as _wrappers_init
 _wrappers_init(wrappers)
@@ -335,12 +282,20 @@ from ._ipc import ssl_info
 from .schema import _init as _schema_init
 _schema_init(q)
 
+from .register import _init as _register_init
+_register_init(q)
+
+from .license import _init as _license_init
+_license_init(q)
+from .random import _init as _random_init
+_random_init(q)
+
 if k_allocator:
     from . import _numpy as _pykx_numpy_cext
 
-if config.enable_pandas_api:
-    def merge_asof(left, *args, **kwargs):
-        return left.merge_asof(*args, **kwargs)
+
+def merge_asof(left, *args, **kwargs):
+    return left.merge_asof(*args, **kwargs)
 
 
 if sys.version_info[1] < 8:
@@ -443,6 +398,11 @@ except NameError:
     # Not running under IPython/Jupyter...
     pass
 
+if licensed:
+    days_to_expiry = q('"D"$', q.z.l[1]) - q.z.D
+    if days_to_expiry < 10:
+        logging.warning(f'PyKX license set to expire in {int(days_to_expiry)} days, '
+                        'please consider installing an updated license')
 
 __all__ = sorted([
     'AsyncQConnection',
@@ -456,6 +416,7 @@ __all__ = sorted([
     'QFuture',
     'qhome',
     'QReader',
+    'random',
     'QWriter',
     'qlic',
     'SyncQConnection',
@@ -481,7 +442,6 @@ if not no_sigint:
     try:
         signal.signal(signal.SIGINT, signal.default_int_handler)
     except Exception:
-        import logging
         logging.exception('Failed to set SIGINT handler...')
 
 

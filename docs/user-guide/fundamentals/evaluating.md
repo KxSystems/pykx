@@ -16,7 +16,7 @@ The first three methods evaluate the code locally within the Python process, and
 
 ## PyKX Objects
 
-Calling a q instance or a connection to a q instance will return what is commonly referred to as a *PyKX object*. A PyKX object is an instance of the [`pykx.K`][pykx.K] class, or one of its subclasses. These classes are documented on the [PyKX wrappers API doc](../../api/wrappers.md) page.
+Calling a q instance or a connection to a q instance will return what is commonly referred to as a *PyKX object*. A PyKX object is an instance of the [`pykx.K`][pykx.K] class, or one of its subclasses. These classes are documented on the [PyKX wrappers API doc](../../api/pykx-q-data/wrappers.md) page.
 
 PyKX objects are wrappers around objects in q's memory space within the Python process that PyKX (and your program that uses PyKX) runs in. These wrappers are cheap to make as they do not require copying any data out of q's memory space.
 
@@ -72,7 +72,16 @@ x          x1
 
 ## Using the q console within PyKX
 
-For users more comfortable prototyping q code within a q terminal it is possible within a Python terminal to run an emulation of a q session directly in Python through use of the `kx.console` method.
+For users more comfortable prototyping q code within a q terminal it is possible within a Python terminal to run an emulation of a q session directly in Python through use of the `kx.q.console` method.
+
+```python
+>>> import pykx as kx
+>>> kx.q.console()
+q)til 10
+0 1 2 3 4 5 6 7 8 9
+q)\\
+>>>
+```
 
 !!! Note
 
@@ -86,7 +95,7 @@ Consider the following q function that checks if a given number is prime:
 {$[x in 2 3;1;x<2;0;{min x mod 2_til 1+floor sqrt x}x]}
 ```
 
-We can evaluate it through `q` to obtain a [`pykx.Lambda`](../../api/wrappers.md) object. This object can then be called as a Python function:
+We can evaluate it through `q` to obtain a [`pykx.Lambda`](../../api/pykx-q-data/wrappers.md) object. This object can then be called as a Python function:
 
 ```python
 import pykx as kx
@@ -106,7 +115,7 @@ For instance, we can apply the `each` adverb to `is_prime` and then provide it a
 pykx.LongVector(q('0 0 1 1 0 1 0 1 0 0'))
 ```
 
-Then we could pass that into [`pykx.q.where`](../../api/q/q.md#where)
+Then we could pass that into [`pykx.q.where`](../../api/pykx-execution/q.md#where)
 
 ```python
 >>> kx.q.where(is_prime.each(range(10)))

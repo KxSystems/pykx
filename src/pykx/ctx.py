@@ -86,6 +86,17 @@ class QContext:
         super().__setattr__('no_ctx', no_ctx)
         super().__setattr__('__getattr__', lru_cache(maxsize=None)(self.__getattr__))
 
+    _unsupported_keys_with_msg = {
+        'select': 'Usage of \'select\' function directly via \'q\' context not supported, please '
+                  'consider using \'pykx.q.qsql.select\'',
+        'exec': 'Usage of \'exec\' function directly via \'q\' context not supported, please '
+                'consider using \'pykx.q.qsql.exec\'',
+        'update': 'Usage of \'update\' function directly via \'q\' context not supported, please '
+                  'consider using \'pykx.q.qsql.update\'',
+        'delete': 'Usage of \'delete\' function directly via \'q\' context not supported, please '
+                  'consider using \'pykx.q.qsql.delete\'',
+    }
+
     @property
     def _context_keys(self) -> Tuple[str]:
         return (
@@ -102,8 +113,12 @@ class QContext:
             self.__getattr__.cache_clear()
 
     def __getattr__(self, key): # noqa
+        if key == "__objclass__":
+            raise AttributeError
         if key == 'z' and self._fqn == '':
             return ZContext(proxy(self))
+        elif key in self._unsupported_keys_with_msg:
+            raise AttributeError(f'{key}: {self._unsupported_keys_with_msg[key]}')
         if self._fqn in {'', '.q'} and key in self._q.reserved_words:
             # Reserved words aren't actually part of the `.q` context dict
             if not licensed:
@@ -208,6 +223,7 @@ class ZContext(QContext):
     def __init__(self, global_context: QContext):
         super().__init__(global_context._q, 'z', global_context)
         self._q('@[value;`.z.pg;{.z.pg:value}]')
+        self._q('@[value;`.z.ps;{.z.ps:value}]')
 
     def __getattr__(self, key):
         if key in self._no_default:
