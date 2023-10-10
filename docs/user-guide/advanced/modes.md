@@ -9,7 +9,7 @@ PyKX exists to supersede all previous interfaces between q and Python, this docu
 
 ## PyKX within a Python session
 
-PyKX operating within a Python session is intended to offer a replacement for [qPython](https://github.com/exxeleron/qPython) and [PyQ](https://github.com/kxsystems/pyq). In order to facilitate replacement of qPython PyKX provides a mode of operation for IPC based communication which allows for the creation of IPC connections and the conversion of data from Pythonic representations to kx objects, this IPC only modality is refered to as `"Unlicensed mode"` within the documentation. The following outline the differences between `"Licensed"` and `"Unlicensed"` operation.
+PyKX operating within a Python session is intended to offer a replacement for [qPython](https://github.com/exxeleron/qPython) and [PyQ](https://github.com/kxsystems/pyq). In order to facilitate replacement of qPython PyKX provides a mode of operation for IPC based communication which allows for the creation of IPC connections and the conversion of data from Pythonic representations to kx objects, this IPC only modality is referred to as `"Unlicensed mode"` within the documentation. The following outline the differences between `"Licensed"` and `"Unlicensed"` operation.
 
 The following table outlines some of the key differences between the two operating modes
 
@@ -127,9 +127,9 @@ The following are the differences provided through operation with a valid KX Lic
 	4. kx.q.schema
 	5. kx.q.console
 6. [Pandas API](Pandas_API.ipynb) functionality for interactions with and PyKX Table objects
-6. Keyed tables can be converted to equivalent numpy types
-7. All types can be disambiguited, generic null can be discerned from a projection null, and similar for regular vs splayed tables.
-8. Numpy list object conversion when operating with a valid PyKX license are optimised relative to unlicensed mode.
+6. Keyed tables can be converted to equivalent Numpy types
+7. All types can be disambiguated, generic null can be discerned from a projection null, and similar for regular vs splayed tables.
+8. Numpy list object conversion when operating with a valid PyKX license are optimized relative to unlicensed mode.
 9. The `is_null`, `is_inf`, `has_nulls`, and `has_infs` methods of `K` objects are only supported when using a license.
 
 ### Choosing to run with/without a license
@@ -139,7 +139,7 @@ Users can choose to initialise PyKX under one of these modalities explicitly thr
 
 | Modality argument| Description|
 |------------------|----------|
-| `--unlicensed`   | Starts PyKX in unlicensed mode. No license check will be performed, and no warning will be emitted at startup if embedded q initialization fails. |
+| `--unlicensed`   | Starts PyKX in unlicensed mode. No license check will be performed, and no warning will be emitted at start-up if embedded q initialization fails. |
 | `--licensed`     | Raise a `PyKXException` (as opposed to emitting a `PyKXWarning`) if embedded q initialization fails.
 
 

@@ -17,18 +17,18 @@ static PyObject* symbol_vector_to_np(PyObject* self, PyObject* args) {
     PyArrayObject* arr = PyArray_Zeros(1, dims, descr, 0);
 
     PyObject** data = (PyObject**)PyArray_DATA(arr);
-    S* sl = kS(symbol_vector);
+    char** sl = kS(symbol_vector);
     if (raw == 1) {
         for (int i = 0; i < dims[0]; i++){
             PyObject* py_str = NULL;
-            S str = sl[i];
+            char* str = sl[i];
             py_str = PyBytes_FromString(str);
             data[i] = py_str;
         }
     } else {
         for (int i = 0; i < dims[0]; i++){
             PyObject* py_str = NULL;
-            S str = sl[i];
+            char* str = sl[i];
             py_str = PyUnicode_FromString(str);
             data[i] = py_str;
         }

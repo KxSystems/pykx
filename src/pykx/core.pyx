@@ -42,7 +42,7 @@ def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
     )
 
 
-cdef I _qinit(I (*qinit)(I, C**, C*, C*, C*), qhome_str: str, qlic_str: str, args: List[str]) except *:
+cdef int _qinit(int (*qinit)(int, char**, char*, char*, char*), qhome_str: str, qlic_str: str, args: List[str]) except *:
     normalized_args = _normalize_qargs(args)
     cdef int argc = len(normalized_args)
     cdef char** argv = <char**>PyMem_Malloc(sizeof(char*) * argc)
@@ -70,11 +70,11 @@ qinit_check_data = os.environ.get('PYKX_QINIT_CHECK')
 if qinit_check_data is not None:                                                   # nocov
     _core_q_lib_path, _qhome_str, _qlic_str, _qargs = qinit_check_data.split(';')  # nocov
     import shlex                                                                   # nocov
-    _qargs = list(shlex.split(_qargs))                                            # nocov
+    _qargs = list(shlex.split(_qargs))                                             # nocov
     _libq_path_py = _core_q_lib_path.encode()                                      # nocov
     _libq_path = _libq_path_py                                                     # nocov
     _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)                         # nocov
-    qinit = <I (*)(I, C**, C*, C*, C*)>dlsym(_q_handle, 'qinit')                   # nocov
+    qinit = <int (*)(int, char**, char*, char*, char*)>dlsym(_q_handle, 'qinit')                   # nocov
     os._exit(_qinit(qinit, _qhome_str, _qlic_str, _qargs))                         # nocov
 
 
@@ -291,7 +291,7 @@ else:
         if licensed: # Start in licensed mode
             if 'QHOME' in os.environ and not ignore_qhome:
                 # Only link the user's QHOME to PyKX's QHOME if the user actually set $QHOME.
-                # Note that `pykx.qhome` has a default value of `./q`, as that is the behaviour
+                # Note that `pykx.qhome` has a default value of `./q`, as that is the behavior
                 # employed by q.
                 try:
                     _link_qhome()
@@ -302,7 +302,7 @@ else:
             _libq_path_py = bytes(_core_q_lib_path)
             _libq_path = _libq_path_py
             _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
-            qinit = <I (*)(I, C**, C*, C*, C*)>dlsym(_q_handle, 'qinit')
+            qinit = <int (*)(int, char**, char*, char*, char*)>dlsym(_q_handle, 'qinit')
             qinit_return_code = _qinit(qinit, str(qhome if ignore_qhome else pykx_lib_dir), str(qlic), list(qargs))
             if qinit_return_code:    # nocov
                 dlclose(_q_handle)   # nocov
@@ -317,73 +317,73 @@ if k_gc and not licensed:
 
 
 
-kG = <G* (*)(K x)>dlsym(_q_handle, 'kG')
-kC = <G* (*)(K x)>dlsym(_q_handle, 'kC')
+kG = <unsigned char* (*)(K x)>dlsym(_q_handle, 'kG')
+kC = <unsigned char* (*)(K x)>dlsym(_q_handle, 'kC')
 kU = <U* (*)(K x)>dlsym(_q_handle, 'kU')
-kS = <S* (*)(K x)>dlsym(_q_handle, 'kS')
-kH = <H* (*)(K x)>dlsym(_q_handle, 'kH')
-kI = <I* (*)(K x)>dlsym(_q_handle, 'kI')
-kJ = <J* (*)(K x)>dlsym(_q_handle, 'kJ')
-kE = <E* (*)(K x)>dlsym(_q_handle, 'kE')
-kF = <F* (*)(K x)>dlsym(_q_handle, 'kF')
+kS = <char** (*)(K x)>dlsym(_q_handle, 'kS')
+kH = <short* (*)(K x)>dlsym(_q_handle, 'kH')
+kI = <int* (*)(K x)>dlsym(_q_handle, 'kI')
+kJ = <long long* (*)(K x)>dlsym(_q_handle, 'kJ')
+kE = <float* (*)(K x)>dlsym(_q_handle, 'kE')
+kF = <double* (*)(K x)>dlsym(_q_handle, 'kF')
 kK = <K* (*)(K x)>dlsym(_q_handle, 'kK')
 
-b9 = <K (*)(I mode, K x)>dlsym(_q_handle, 'b9')
+b9 = <K (*)(int mode, K x)>dlsym(_q_handle, 'b9')
 d9 = <K (*)(K x)>dlsym(_q_handle, 'd9')
-dj = <I (*)(I date)>dlsym(_q_handle, 'dj')
-dl = <K (*)(V* f, J n)>dlsym(_q_handle, 'dl')
+dj = <int (*)(int date)>dlsym(_q_handle, 'dj')
+dl = <K (*)(void* f, long long n)>dlsym(_q_handle, 'dl')
 dot = <K (*)(K x, K y) nogil>dlsym(_q_handle, 'dot')
 ee = <K (*)(K x)>dlsym(_q_handle, 'ee')
-ja = <K (*)(K* x, V*)>dlsym(_q_handle, 'ja')
+ja = <K (*)(K* x, void*)>dlsym(_q_handle, 'ja')
 jk = <K (*)(K* x, K y)>dlsym(_q_handle, 'jk')
-js = <K (*)(K* x, S s)>dlsym(_q_handle, 'js')
+js = <K (*)(K* x, char* s)>dlsym(_q_handle, 'js')
 jv = <K (*)(K* x, K y)>dlsym(_q_handle, 'jv')
-k = <K (*)(I handle, const S s, ...) nogil>dlsym(_q_handle, 'k')
+k = <K (*)(int handle, const char* s, ...) nogil>dlsym(_q_handle, 'k')
 cdef extern from 'include/foreign.h':
     K k_wrapper(void* x, char* code, void* a1, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8) nogil
 knogil = k_wrapper
-ka = <K (*)(I t)>dlsym(_q_handle, 'ka')
-kb = <K (*)(I x)>dlsym(_q_handle, 'kb')
-kc = <K (*)(I x)>dlsym(_q_handle, 'kc')
-kclose = <V (*)(I x)>dlsym(_q_handle, 'kclose')
-kd = <K (*)(I x)>dlsym(_q_handle, 'kd')
-ke = <K (*)(F x)>dlsym(_q_handle, 'ke')
-kf = <K (*)(F x)>dlsym(_q_handle, 'kf')
-kg = <K (*)(I x)>dlsym(_q_handle, 'kg')
-kh = <K (*)(I x)>dlsym(_q_handle, 'kh')
-khpunc = <I (*)(S v, I w, S x, I y, I z)>dlsym(_q_handle, 'khpunc')
-ki = <K (*)(I x)>dlsym(_q_handle, 'ki')
-kj = <K (*)(J x)>dlsym(_q_handle, 'kj')
-knk = <K (*)(I n, ...)>dlsym(_q_handle, 'knk')
-knt = <K (*)(J n, K x)>dlsym(_q_handle, 'knt')
-kp = <K (*)(S x)>dlsym(_q_handle, 'kp')
-kpn = <K (*)(S x, J n)>dlsym(_q_handle, 'kpn')
-krr = <K (*)(const S s)>dlsym(_q_handle, 'krr')
-ks = <K (*)(S x)>dlsym(_q_handle, 'ks')
-kt = <K (*)(I x)>dlsym(_q_handle, 'kt')
+ka = <K (*)(int t)>dlsym(_q_handle, 'ka')
+kb = <K (*)(int x)>dlsym(_q_handle, 'kb')
+kc = <K (*)(int x)>dlsym(_q_handle, 'kc')
+kclose = <void (*)(int x)>dlsym(_q_handle, 'kclose')
+kd = <K (*)(int x)>dlsym(_q_handle, 'kd')
+ke = <K (*)(double x)>dlsym(_q_handle, 'ke')
+kf = <K (*)(double x)>dlsym(_q_handle, 'kf')
+kg = <K (*)(int x)>dlsym(_q_handle, 'kg')
+kh = <K (*)(int x)>dlsym(_q_handle, 'kh')
+khpunc = <int (*)(char* v, int w, char* x, int y, int z)>dlsym(_q_handle, 'khpunc')
+ki = <K (*)(int x)>dlsym(_q_handle, 'ki')
+kj = <K (*)(long long x)>dlsym(_q_handle, 'kj')
+knk = <K (*)(int n, ...)>dlsym(_q_handle, 'knk')
+knt = <K (*)(long long n, K x)>dlsym(_q_handle, 'knt')
+kp = <K (*)(char* x)>dlsym(_q_handle, 'kp')
+kpn = <K (*)(char* x, long long n)>dlsym(_q_handle, 'kpn')
+krr = <K (*)(const char* s)>dlsym(_q_handle, 'krr')
+ks = <K (*)(char* x)>dlsym(_q_handle, 'ks')
+kt = <K (*)(int x)>dlsym(_q_handle, 'kt')
 ktd = <K (*)(K x)>dlsym(_q_handle, 'ktd')
-ktj = <K (*)(H _type, J x)>dlsym(_q_handle, 'ktj')
-ktn = <K (*)(I _type, J length)>dlsym(_q_handle, 'ktn')
+ktj = <K (*)(short _type, long long x)>dlsym(_q_handle, 'ktj')
+ktn = <K (*)(int _type, long long length)>dlsym(_q_handle, 'ktn')
 ku = <K (*)(U x)>dlsym(_q_handle, 'ku')
-kz = <K (*)(F x)>dlsym(_q_handle, 'kz')
-m9 = <V (*)()>dlsym(_q_handle, 'm9')
-okx = <I (*)(K x)>dlsym(_q_handle, 'okx')
-orr = <K (*)(const S)>dlsym(_q_handle, 'orr')
-r0 = <V (*)(K k)>dlsym(_q_handle, 'r0')
+kz = <K (*)(double x)>dlsym(_q_handle, 'kz')
+m9 = <void (*)()>dlsym(_q_handle, 'm9')
+okx = <int (*)(K x)>dlsym(_q_handle, 'okx')
+orr = <K (*)(const char*)>dlsym(_q_handle, 'orr')
+r0 = <void (*)(K k)>dlsym(_q_handle, 'r0')
 r1 = <K (*)(K k)>dlsym(_q_handle, 'r1')
-sd0 = <V (*)(I d)>dlsym(_q_handle, 'sd0')
-sd0x = <V (*)(I d, I f)>dlsym(_q_handle, 'sd0x')
-sd1 = <K (*)(I d, f)>dlsym(_q_handle, 'sd1')
-sd1 = <K (*)(I d, f)>dlsym(_q_handle, 'sd1')
-sn = <S (*)(S s, J n)>dlsym(_q_handle, 'sn')
-ss = <S (*)(S s)>dlsym(_q_handle, 'ss')
+sd0 = <void (*)(int d)>dlsym(_q_handle, 'sd0')
+sd0x = <void (*)(int d, int f)>dlsym(_q_handle, 'sd0x')
+sd1 = <K (*)(int d, f)>dlsym(_q_handle, 'sd1')
+sd1 = <K (*)(int d, f)>dlsym(_q_handle, 'sd1')
+sn = <char* (*)(char* s, long long n)>dlsym(_q_handle, 'sn')
+ss = <char* (*)(char* s)>dlsym(_q_handle, 'ss')
 sslInfo = <K (*)(K x)>dlsym(_q_handle, 'sslInfo')
-vak = <K (*)(I x, const S s, va_list l)>dlsym(_q_handle, 'vak')
-vaknk = <K (*)(I, va_list l)>dlsym(_q_handle, 'vaknk')
-ver = <I (*)()>dlsym(_q_handle, 'ver')
+vak = <K (*)(int x, const char* s, va_list l)>dlsym(_q_handle, 'vak')
+vaknk = <K (*)(int, va_list l)>dlsym(_q_handle, 'vaknk')
+ver = <int (*)()>dlsym(_q_handle, 'ver')
 xD = <K (*)(K x, K y)>dlsym(_q_handle, 'xD')
 xT = <K (*)(K x)>dlsym(_q_handle, 'xT')
-ymd = <I (*)(I year, I month, I day)>dlsym(_q_handle, 'ymd')
+ymd = <int (*)(int year, int month, int day)>dlsym(_q_handle, 'ymd')
 
 _r0_ptr = int(<size_t><uintptr_t>r0)
 _k_ptr = int(<size_t><uintptr_t>k)

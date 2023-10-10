@@ -51,7 +51,7 @@ switching contexts.
 
 Note that context switches persists across `pykx.q` calls (but not `pykx.QConnection(...)` calls).
 One should take care when switching contexts, as unexpectedly being in an different context can
-result in undesirable behaviour. `QContext` objects are Python context managers, which means they
+result in undesirable behavior. `QContext` objects are Python context managers, which means they
 can be used with the `with` statement like so:
 
 ```python

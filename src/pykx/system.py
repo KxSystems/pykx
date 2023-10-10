@@ -1,6 +1,6 @@
 """System command wrappers for PyKX."""
 
-from . import Q
+from . import Q, wrappers as k
 from .exceptions import QError
 
 
@@ -20,6 +20,9 @@ class SystemCommands:
 
     def __init__(self, q: Q):
         self._q = q
+
+    def __call__(self, x):
+        return self._q('{system x}', k.CharVector(x))
 
     def tables(self, namespace=None):
         """Lists the tables in the current namespace or in the provided namespace."""

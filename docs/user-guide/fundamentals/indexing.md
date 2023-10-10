@@ -2,7 +2,7 @@
 
 ## An introduction to indexing within PyKX
 
-Indexing in q works differently than you may be used to, and that behaviour largely carries over into PyKX for indexing K objects. For more information about how indexing in q works (and by extension, how indexing K objects in PyKX work), refer to the following sections of the q tutorial book [Q For Mortals](https://code.kx.com/q4m3/):
+Indexing in q works differently than you may be used to, and that behavior largely carries over into PyKX for indexing K objects. For more information about how indexing in q works (and by extension, how indexing K objects in PyKX work), refer to the following sections of the q tutorial book [Q For Mortals](https://code.kx.com/q4m3/):
 
 - [Indexing](https://code.kx.com/q4m3/3_Lists/#34-indexing)
 - [Iterated Indexing and Indexing at Depth](https://code.kx.com/q4m3/3_Lists/#38-iterated-indexing-and-indexing-at-depth)

@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import patch
 
 
-def test_initialisation_using_unlicensed_mode(tmp_path, q):
+def test_initialization_using_unlicensed_mode(tmp_path, q):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     os.environ['QARGS'] = '--unlicensed'
     import pykx as kx

@@ -5,8 +5,11 @@ booleans
 callables
 canonicalized
 changelog
+changelogs
 CPython
 ctx
+ctxa
+ctxb
 dataframe
 dataframes
 dataset
@@ -19,12 +22,14 @@ disambiguated
 docstring
 dtype
 ey
+getattr
 hopen
 hsym
 indexable
 infinities
 introspectable
 ipc
+kx
 localhost
 mul
 namespace
@@ -48,7 +53,9 @@ QHOME
 qPython
 qSQL
 quickstart
+reimporting
 subclasses
+schemas
 symlink
 symlinks
 timedelta

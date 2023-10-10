@@ -16,14 +16,14 @@
 
 static void (*r0_ptr)(K);
 static K (*r1_ptr)(K);
-static K (*ki_ptr)(J);
-static K (*kj_ptr)(J);
-static K (*ks_ptr)(S);
-static K (*ktn_ptr)(I, J);
-static K (*knk_ptr)(I, ...);
-static K (*kpn_ptr)(S, J);
-static K (*kp_ptr)(S);
-static K (*k_ptr)(I, S, ...);
+static K (*ki_ptr)(long long);
+static K (*kj_ptr)(long long);
+static K (*ks_ptr)(char*);
+static K (*ktn_ptr)(int, long long);
+static K (*knk_ptr)(int, ...);
+static K (*kpn_ptr)(char*, long long);
+static K (*kp_ptr)(char*);
+static K (*k_ptr)(int, char*, ...);
 void* q_lib;
 
 static PyObject* builtins;
@@ -54,14 +54,14 @@ EXPORT K k_pykx_init(K k_q_lib_path) {
     q_lib = dlopen(k_q_lib_path->s, RTLD_NOW | RTLD_GLOBAL);
     r0_ptr = (void (*)(K))dlsym(q_lib, "r0");
     r1_ptr = (K (*)(K))dlsym(q_lib, "r1");
-    k_ptr = (K (*)(I, S, ...))dlsym(q_lib, "k");
-    ki_ptr = (K (*)(J))dlsym(q_lib, "ki");
-    kj_ptr = (K (*)(J))dlsym(q_lib, "kj");
-    ks_ptr = (K (*)(S))dlsym(q_lib, "ks");
-    ktn_ptr = (K (*)(I, J))dlsym(q_lib, "ktn");
-    knk_ptr = (K (*)(I, ...))dlsym(q_lib, "knk");
-    kpn_ptr = (K (*)(S, J))dlsym(q_lib, "kpn");
-    kp_ptr = (K (*)(S))dlsym(q_lib, "kp");
+    k_ptr = (K (*)(int, char*, ...))dlsym(q_lib, "k");
+    ki_ptr = (K (*)(long long))dlsym(q_lib, "ki");
+    kj_ptr = (K (*)(long long))dlsym(q_lib, "kj");
+    ks_ptr = (K (*)(char*))dlsym(q_lib, "ks");
+    ktn_ptr = (K (*)(int, long long))dlsym(q_lib, "ktn");
+    knk_ptr = (K (*)(int, ...))dlsym(q_lib, "knk");
+    kpn_ptr = (K (*)(char*, long long))dlsym(q_lib, "kpn");
+    kp_ptr = (K (*)(char*))dlsym(q_lib, "kp");
 
     Py_Initialize();
     PyGILState_STATE gstate;
@@ -125,7 +125,7 @@ K k_py_error() {
     // Build a q error object with the repr of the exception value as its message. The full
     // traceback is provided as the cause to the QError that will be raised.
     PyObject* ex_repr = PyObject_CallMethod(ex_value, "__repr__", NULL);
-    K k = ks_ptr((S)PyUnicode_AsUTF8(ex_repr));
+    K k = ks_ptr((char*)PyUnicode_AsUTF8(ex_repr));
     k->t = -128;
     Py_XDECREF(ex_repr);
 
@@ -416,8 +416,8 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
 }
 
 
-inline J modpow(J base, J exp, J mod) {
-    J result = 1;
+inline long long modpow(long long base, long long exp, long long mod) {
+    long long result = 1;
     while (exp > 0) {
         if (exp & 1) result = (result * base) % mod;
         base = (base * base) % mod;
@@ -444,7 +444,7 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
             result->t = -128;
         } else {
             result = ktn_ptr(7, k_base->n);
-            for (J x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], kJ(k_exp)[x], kJ(k_mod)[x]);
+            for (long long x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], kJ(k_exp)[x], kJ(k_mod)[x]);
         }
     } else if (k_base->t >= 0 && k_exp->t >= 0) {
         if (k_base->n != k_exp->n) {
@@ -453,7 +453,7 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
         }
         else {
             result = ktn_ptr(7, k_base->n);
-            for (J x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], kJ(k_exp)[x], k_mod->j);
+            for (long long x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], kJ(k_exp)[x], k_mod->j);
         }
     } else if (k_base->t >= 0 && k_mod->t >= 0) {
         if (k_base->n != k_mod->n) {
@@ -461,10 +461,10 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
             result->t = -128;
         }
         result = ktn_ptr(7, k_base->n);
-        for (J x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], k_exp->j, kJ(k_mod)[x]);
+        for (long long x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], k_exp->j, kJ(k_mod)[x]);
     } else if (k_base->t >= 0) {
         result = ktn_ptr(7, k_base->n);
-        for (J x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], k_exp->j, k_mod->j);
+        for (long long x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], k_exp->j, k_mod->j);
     } else if (k_exp->t >= 0 && k_mod->t >= 0) {
         if (k_exp->n != k_mod->n) {
             result = ks_ptr("length");
@@ -472,14 +472,14 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
         }
         else {
             result = ktn_ptr(7, k_exp->n);
-            for (J x = 0; x < k_exp->n; ++x) kJ(result)[x] = modpow(k_base->j, kJ(k_exp)[x], kJ(k_mod)[x]);
+            for (long long x = 0; x < k_exp->n; ++x) kJ(result)[x] = modpow(k_base->j, kJ(k_exp)[x], kJ(k_mod)[x]);
         }
     } else if (k_exp->t >= 0) {
         result = ktn_ptr(7, k_exp->n);
-        for (J x = 0; x < k_exp->n; ++x) kJ(result)[x] = modpow(k_base->j, kJ(k_exp)[x], k_mod->j);
+        for (long long x = 0; x < k_exp->n; ++x) kJ(result)[x] = modpow(k_base->j, kJ(k_exp)[x], k_mod->j);
     } else if (k_mod->t >= 0) {
         result = ktn_ptr(7, k_mod->n);
-        for (J x = 0; x < k_mod->n; ++x) kJ(result)[x] = modpow(k_base->j, k_exp->j, kJ(k_mod)[x]);
+        for (long long x = 0; x < k_mod->n; ++x) kJ(result)[x] = modpow(k_base->j, k_exp->j, kJ(k_mod)[x]);
     } else {
         result = kj_ptr(modpow(k_base->j, k_exp->j, k_mod->j));
     }

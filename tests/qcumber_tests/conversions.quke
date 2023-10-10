@@ -40,7 +40,7 @@ feature default conversions
     before each
         t::.pykx.eval["lambda x: bytes(str(type(x)), 'utf-8')"][<];
     after each
-        .pykx.setdefault["numpy"];
+        .pykx.setdefault["default"];
     should support python default
         expect python default
             .pykx.setdefault["python"];
@@ -49,6 +49,9 @@ feature default conversions
         expect numpy default
             .pykx.setdefault["numpy"];
             .qu.compare["<class 'numpy.ndarray'>"; t til 10];
+        expect differences in list support for default and numpy
+            all(t[.pykx.tonp (10?1f;10?1f)]like"<class 'numpy.ndarray'>";
+                t[.pykx.todefault (10?1f;10?1f)]like"<class 'list'>")
     should support pandas default
         expect pandas default
             .pykx.setdefault["pandas"];

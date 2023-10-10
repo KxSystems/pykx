@@ -17,33 +17,54 @@ Examples:
 
 ```python
 >>> import pykx as kx
+>>> import pandas as pd
 >>> kx.toq('grok')
 pykx.SymbolAtom(pykx.q('`grok'))
 >>> kx.toq('grok', ktype=kx.CharVector)
 pykx.CharVector(pykx.q('"grok"'))
+>>> df = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
+>>> kx.toq(df)
+pykx.Table(pykx.q('
+x y
+---
+1 a
+2 b
+'))
+>>> kx.toq(df, ktype={'x': kx.CharVector})
+pykx.Table(pykx.q('
+x    y
+------
+,"1" a
+,"2" b
+'))
 ```
 
 **Parameters:**
 
-+---------------+--------------------------------+---------------------------------------+-------------+
-| **Name**      | **Type**                       | **Description**                       | **Default** |
-+===============+================================+=======================================+=============+
-| `x`           | `Any`                          | A Python object which is to be        | *required*  |
-|               |                                | converted into a `pykx.K` object.     |             |
-+---------------+--------------------------------+---------------------------------------+-------------+
-| `ktype`       | `Optional[Union[pykx.K, int]]` | Desired `pykx.K` subclass (or type    | `None`      |
-|               |                                | number) for the returned value. If    |             |
-|               |                                | `None`, the type is inferred from     |             |
-|               |                                | `x`.                                  |             |
-+---------------+--------------------------------+---------------------------------------+-------------+
-| `cast`        | `bool`                         | Cast the input Python object to the   | `False`     |
-|               |                                | closest conforming Python type before |             |
-|               |                                | converting to a `pykx.K` object.      |             |
-+---------------+--------------------------------+---------------------------------------+-------------+
-| `handle_nulls | `bool`                         | Convert `pd.NaT` to corresponding q   | `False`     |
-|               |                                | null values in Pandas dataframes and  |             |
-|               |                                | Numpy arrays.                         |             |
-+---------------+--------------------------------+---------------------------------------+-------------+
++---------------+---------------------------+---------------------------------------+-------------+
+| **Name**      | **Type**                  | **Description**                       | **Default** |
++===============+===========================+=======================================+=============+
+| `x`           | `Any`                     | A Python object which is to be        | *required*  |
+|               |                           | converted into a `pykx.K` object.     |             |
++---------------+---------------------------+---------------------------------------+-------------+
+| `ktype`       | `Optional[Union[pykx.K,`  | Desired `pykx.K` subclass (or type    | `None`      |
+|               |     `int, dict]]`         | number) for the returned value. If    |             |
+|               |                           | `None`, the type is inferred from     |             |
+|               |                           | `x`. If specified as a dictionary     |             |
+|               |                           | will convert tabular data based on    |             |
+|               |                           | mapping of column name to type. Note  |             |
+|               |                           | that dictionary based conversion is   |             |
+|               |                           | only supported when operating in      |             |
+|               |                           | licensed mode.                        |             |
++---------------+---------------------------+---------------------------------------+-------------+
+| `cast`        | `bool`                    | Cast the input Python object to the   | `False`     |
+|               |                           | closest conforming Python type before |             |
+|               |                           | converting to a `pykx.K` object.      |             |
++---------------+---------------------------+---------------------------------------+-------------+
+| `handle_nulls | `bool`                    | Convert `pd.NaT` to corresponding q   | `False`     |
+|               |                           | null values in Pandas dataframes and  |             |
+|               |                           | Numpy arrays.                         |             |
++---------------+---------------------------+---------------------------------------+-------------+
 
 **Returns:**
 
@@ -74,6 +95,7 @@ import re
 from types import ModuleType
 from typing import Any, Callable, Optional, Union
 from uuid import UUID, uuid4 as random_uuid
+from warnings import warn
 
 import numpy as np
 import pandas as pd
@@ -82,7 +104,7 @@ from . import wrappers as k
 from ._pyarrow import pyarrow as pa
 from .cast import *
 from . import config
-from .config import find_core_lib, k_allocator, licensed, system
+from .config import disable_pandas_warning, find_core_lib, k_allocator, licensed, pandas_2, system
 from .constants import INF_INT16, INF_INT32, INF_INT64, NULL_INT16, NULL_INT32, NULL_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
 from .util import df_from_arrays, slice_to_range
@@ -227,6 +249,8 @@ def _resolve_k_type(ktype: KType) -> Optional[k.K]:
     """Resolve the pykx.K type represented by the ktype parameter."""
     if ktype is None:
         return None
+    elif isinstance(ktype, dict):
+        return ktype
     elif isinstance(ktype, int):
         try:
             return type_number_to_pykx_k_type[ktype]
@@ -834,7 +858,8 @@ def from_list(x: list,
     cdef core.K kx = core.ktn(0, len(x))
     for i, item in enumerate(x):
         # No good way to specify the ktype for nested types
-        (<core.K*>kx.G0)[i] = core.r1(_k(toq(item, cast=cast, handle_nulls=handle_nulls)))
+        kk = toq(item, cast=cast, handle_nulls=handle_nulls)
+        (<core.K*>kx.G0)[i] = core.r1(_k(kk))
     res = factory(<uintptr_t>kx, False)
     if licensed:
         try:
@@ -1248,7 +1273,7 @@ def from_numpy_ndarray(x: np.ndarray,
             return from_list(x.tolist(), ktype=k.List, cast=None, handle_nulls=None)
         raise _conversion_TypeError(x, repr('numpy.ndarray'), ktype)
 
-    cdef core.J n = x.size
+    cdef long long n = x.size
     cdef core.K kx = NULL
     cdef bytes as_bytes
     cdef uintptr_t data
@@ -1358,14 +1383,34 @@ _size_to_nan = {
 }
 
 
-def _to_numpy_or_categorical(x):
+def _to_numpy_or_categorical(x, col_name=None, df=None):
     # Arrays taken from Pandas can come in many forms. If they come from Pandas series, arrays, or
     # indexes, then we need to set an appropriate value to fill in for `pd.NA`.
     if isinstance(x, np.ndarray):
         return x
     elif isinstance(x, (pd.Series, pd.Index)):
         if isinstance(x.values, pd.Categorical):
-            return from_pandas_categorical(x.values, name=x.name)
+            return from_pandas_categorical(
+                x.values,
+                name=col_name if pandas_2 and col_name is not None else x.name
+            )
+        elif pandas_2 and x.dtype == np.dtype('datetime64[s]'):
+            if df is not None and col_name is not None:
+                if (
+                    '_PyKX_base_types' in df.attrs.keys()
+                    and col_name in df.attrs['_PyKX_base_types'].keys()
+                ):
+                    if df.attrs['_PyKX_base_types'][col_name] == 'MonthVector':
+                        return _to_numpy_or_categorical(x.values.astype(np.dtype('<M8[M]')))
+                    elif df.attrs['_PyKX_base_types'][col_name] == 'DateVector':
+                        return _to_numpy_or_categorical(x.values.astype(np.dtype('<M8[D]')))
+            if not disable_pandas_warning:
+                warn(
+                    f'WARN: Type information of column: {col_name} is not known falling back to '
+                    'DayVector type',
+                    RuntimeWarning
+                )
+            return _to_numpy_or_categorical(x.values.astype(np.dtype('<M8[D]')))
         elif isinstance(x.values, pd.core.arrays.ExtensionArray):
             if x.dtype.kind != 'f' and hasattr(x, 'isnull') and x.isnull().values.any():
                 if x.dtype.kind != 'i':
@@ -1427,6 +1472,12 @@ def from_pandas_dataframe(x: pd.DataFrame,
     Raises:
         TypeError: Unsupported `ktype` for `pandas.DataFrame`.
 
+    Warning: Pandas 2.0 has deprecated the `datetime64[D/M]` types.
+        Due to this change it is not always possible to determine if the resulting q Table should
+        use a `MonthVector` or a `DayVector`. In the scenario that it is not possible to determine
+        the expected type a warning will be raised and the `DayVector` type will be used as a
+        default.
+
     Returns:
         An instance of `pykx.Table` or `pykx.KeyedTable`.
     """
@@ -1439,15 +1490,25 @@ def from_pandas_dataframe(x: pd.DataFrame,
             col_names.append('x'+str(i+1))
         x.columns = col_names
 
-    if ktype is None:
-        if pd.Index(np.arange(0, len(x))).equals(x.index):
+    convert_dict = None
+    if type(ktype) == dict:
+        convert_dict = ktype
+        ktype = None
+
+    if ktype is None or type(ktype)==dict or len(x)==0:
+        if not x.index.name is None:
+            ktype = k.KeyedTable
+        elif pd.Index(np.arange(0, len(x))).equals(x.index):
             ktype = k.Table
         else:
             ktype = k.KeyedTable
-
     if ktype is k.Table:
-        kx = core.xT(core.r1(_k(from_dict({k: _to_numpy_or_categorical(x[k]) for k in x.columns},
-                                          cast=cast, handle_nulls=handle_nulls))))
+        kk = from_dict(
+            {k: _to_numpy_or_categorical(x[k], k, x) for k in x.columns},
+            cast=cast,
+            handle_nulls=handle_nulls
+        )
+        kx = core.xT(core.r1(_k(kk)))
         if kx == NULL:
             raise PyKXException('Failed to create table from k dictionary')
     elif ktype is k.KeyedTable:
@@ -1464,7 +1525,9 @@ def from_pandas_dataframe(x: pd.DataFrame,
             raise PyKXException('Failed to create k dictionary (keyed table)')
     else:
         raise _conversion_TypeError(x, repr('pandas.DataFrame'), ktype)
-    return factory(<uintptr_t>kx, False)
+    if convert_dict == None:
+        return factory(<uintptr_t>kx, False)
+    return factory(<uintptr_t>kx, False).astype(convert_dict)
 
 
 def from_pandas_series(x: pd.Series,
@@ -1503,11 +1566,17 @@ def from_pandas_series(x: pd.Series,
         return arr
 
 
-_supported_pandas_index_types_via_numpy = (
-    pd.core.indexes.base.Index,
-    pd.core.indexes.numeric.NumericIndex,
-    pd.core.indexes.extension.NDArrayBackedExtensionIndex,
-)
+if not pandas_2:
+    _supported_pandas_index_types_via_numpy = (
+        pd.core.indexes.base.Index,
+        pd.core.indexes.numeric.NumericIndex,
+        pd.core.indexes.extension.NDArrayBackedExtensionIndex,
+    )
+else:
+    _supported_pandas_index_types_via_numpy = (
+        pd.core.indexes.base.Index,
+        pd.core.indexes.extension.NDArrayBackedExtensionIndex,
+    )
 
 
 def from_pandas_index(x: pd.Index,
@@ -1580,6 +1649,7 @@ def from_pandas_categorical(x: pd.Categorical,
         name: The name of the resulting q enumeration.
         cast: Unused.
         handle_nulls: Unused.
+
     Returns:
         An instance of pykx.EnumVector.
     """
@@ -1769,10 +1839,10 @@ def from_datetime_datetime(x: Any,
 ) -> k.TemporalFixedAtom:
     """Converts a `datetime.datetime` into an instance of a subclass of `pykx.TemporalFixedAtom`.
 
-    Note: Setting environment variable `KEEP_LOCAL_TIMES` will result in the use of local timezones not UTC time.
-        By default this function will convert any `datetime.datetime` objects with timezone
+    Note: Setting environment variable `KEEP_LOCAL_TIMES` will result in the use of local time zones not UTC time.
+        By default this function will convert any `datetime.datetime` objects with time zone
         information to UTC before converting it to `q`. If you set the environment vairable to 1,
-        true or True, then the objects with timezone information will not be converted to UTC and
+        true or True, then the objects with time zone information will not be converted to UTC and
         instead will be converted to `q` with no changes.
 
     Parameters:
@@ -2494,8 +2564,6 @@ _converter_from_python_type = {
     pd.DataFrame: from_pandas_dataframe,
     pd.Series: from_pandas_series,
     pd.Index: from_pandas_index,
-    pd.core.indexes.numeric.Int64Index: from_pandas_index,
-    pd.core.indexes.numeric.Float64Index: from_pandas_index,
     pd.core.indexes.range.RangeIndex: from_pandas_index,
     pd.core.indexes.datetimes.DatetimeIndex: from_pandas_index,
     pd.core.indexes.multi.MultiIndex: from_pandas_index,
@@ -2504,16 +2572,36 @@ _converter_from_python_type = {
 }
 
 
+if not pandas_2:
+    _converter_from_python_type[pd.core.indexes.numeric.Int64Index] = from_pandas_index
+    _converter_from_python_type[pd.core.indexes.numeric.Float64Index] = from_pandas_index
+
+
+
 class ToqModule(ModuleType):
     # TODO: `cast` should be set to False at the next major release (KXI-12945)
     def __call__(self, x: Any, ktype: Optional[KType] = None, *, cast: bool = None, handle_nulls: bool = False) -> k.K:
         ktype = _resolve_k_type(ktype)
 
-        if x is not None and ktype is not None \
-            and issubclass(ktype, k.Vector)    \
-            and not hasattr(x, '__iter__')     \
+        check_ktype = False
+        try:
+            check_ktype = ktype is not None \
+                and issubclass(ktype, k.Vector)
+        except TypeError:
+            check_ktype = False
+
+        if x is not None and check_ktype   \
+            and not hasattr(x, '__iter__') \
             and type(x) is not slice:
             x = [x]
+
+        ktype_conversion=False
+        try:
+            if ktype is not None and ktype in _converter_from_ktype:
+                converter = _converter_from_ktype[ktype]
+                ktype_conversion = True
+        except BaseException:
+            pass
 
         if x is None:
             converter = from_none
@@ -2521,10 +2609,8 @@ class ToqModule(ModuleType):
             converter = from_pandas_nat
         elif isinstance(x, k.K):
             converter = from_pykx_k
-
-        elif ktype is not None and ktype in _converter_from_ktype:
-            converter = _converter_from_ktype[ktype]
-
+        elif ktype_conversion:
+            pass
         else:
             if type(x) in _converter_from_python_type:
                 converter = _converter_from_python_type[type(x)]
@@ -2543,6 +2629,15 @@ class ToqModule(ModuleType):
                 return self(x.tab, ktype=ktype, cast=cast, handle_nulls=handle_nulls)
             else:
                 converter = _default_converter
+        if type(ktype)==dict:
+            if not licensed:
+                raise PyKXException("Use of dictionary based conversion unsupported in unlicensed mode")
+            if pa is not None:
+                if not type(x) in [pd.DataFrame, pa.Table]:
+                    raise TypeError(f"'ktype' not supported as dictionary for {type(x)}")
+            else:
+                if not type(x) == pd.DataFrame:
+                    raise TypeError(f"'ktype' not supported as dictionary for {type(x)}")
         return converter(x, ktype, cast=cast, handle_nulls=handle_nulls)
 
 

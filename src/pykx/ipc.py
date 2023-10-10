@@ -36,7 +36,7 @@ from warnings import warn
 from weakref import finalize, WeakMethod
 import sys
 
-from . import Q
+from . import deserialize, serialize, Q
 from .config import max_error_length, pykx_lib_dir, system
 from .core import licensed
 from .exceptions import FutureCancelled, NoResults, PyKXException, QError, UninitializedConnection
@@ -282,7 +282,7 @@ class QConnection(Q):
 
         Note: Creating an instance of this class returns an instance of `pykx.SyncQConnection`.
             Directly instantiating an instance of `pykx.SyncQConnection` is recommended, but
-            this behaviour will remain for backwards compatibility.
+            this behavior will remain for backwards compatibility.
 
         Parameters:
             host: The host name to which a connection is to be established.
@@ -491,43 +491,35 @@ class QConnection(Q):
         # Find more on IPC and serialization here:
         # - https://code.kx.com/q/basics/ipc/
         # - https://code.kx.com/q/kb/serialization/
-        ptr = None
-        try:
-            k_query = K(query)
-            msg_view = _wrappers._to_bytes(6, k_query, 2 if error else 1 if wait else 0)
-            if isinstance(msg_view, tuple):
-                ptr = msg_view[0]
-                msg_view = msg_view[1]
-            msg_len = len(msg_view)
-            if error:
-                msg_view = list(bytes(msg_view))
-                msg_view[8] = 128
-                msg_view = memoryview(bytes(msg_view))
-                wait=False
-            sent = 0
-            while sent < msg_len:
-                try:
-                    sent += sock.send(msg_view[sent:min(msg_len, sent + self._socket_buffer_size)])
-                except BlockingIOError: # nocov
-                    # The only way to get here is if we send too much data to the socket before it
-                    # can be sent elsewhere, we just need to wait a moment until more data can be
-                    # sent to the sockets buffer
-                    pass
-                except BaseException:  # nocov
-                    raise RuntimeError("Failed to send query on IPC socket")
-            if isinstance(self, SyncQConnection) or isinstance(self, RawQConnection):
-                return
-            if wait:
-                q_future = QFuture(self, self._connection_info['timeout'])
-                self._call_stack.append(q_future)
-                return q_future
-            else:
-                q_future = QFuture(self, self._connection_info['timeout'])
-                q_future.set_result(K(None))
-                return q_future
-        finally:
-            if ptr is not None:
-                _ipc.delete_ptr(ptr)
+        k_query = K(query)
+        msg_view = serialize(k_query, mode=6, wait=2 if error else 1 if wait else 0)
+        msg_len = len(msg_view)
+        if error:
+            msg_view = list(msg_view.copy())
+            msg_view[8] = 128
+            msg_view = memoryview(bytes(msg_view))
+            wait=False
+        sent = 0
+        while sent < msg_len:
+            try:
+                sent += sock.send(msg_view[sent:min(msg_len, sent + self._socket_buffer_size)])
+            except BlockingIOError: # nocov
+                # The only way to get here is if we send too much data to the socket before it
+                # can be sent elsewhere, we just need to wait a moment until more data can be
+                # sent to the sockets buffer
+                pass
+            except BaseException:  # nocov
+                raise RuntimeError("Failed to send query on IPC socket")
+        if isinstance(self, SyncQConnection) or isinstance(self, RawQConnection):
+            return
+        if wait:
+            q_future = QFuture(self, self._connection_info['timeout'])
+            self._call_stack.append(q_future)
+            return q_future
+        else:
+            q_future = QFuture(self, self._connection_info['timeout'])
+            q_future.set_result(K(None))
+            return q_future
 
     # flake8: noqa: C901
     def _recv(self, locked=False, acceptAsync=False):
@@ -628,13 +620,13 @@ class QConnection(Q):
             if int(buff[2]) == 0 and int(buff[8]) == 128:
                 raise self._create_error(buff)
             else:
-                return _wrappers.deserialize(memoryview(buff).obj)
+                return deserialize(memoryview(buff).obj)
         if int(buff[2]) == 0 and int(buff[8]) == 128:
             q_future = self._call_stack.pop(0)
             q_future.set_exception(self._create_error(buff))
         else:
             q_future = self._call_stack.pop(0)
-            q_future.set_result(_wrappers.deserialize(memoryview(buff).obj))
+            q_future.set_result(deserialize(memoryview(buff).obj))
 
     def file_execute(
         self,
@@ -1643,29 +1635,24 @@ class RawQConnection(QConnection):
             count -= 1
 
     def _serialize_response(self, response, level):
-        ptr = None
         error = isinstance(response, tuple)
         if error:
             response = response[1]
         try:
-            msg_view = _wrappers._to_bytes(level, response, 2)
+            msg = serialize(response, mode=level, wait=2)
         except QError as e:
             error = True
             response = SymbolAtom(f"{e}")
-            msg_view = _wrappers._to_bytes(level, response, 2)
-        if isinstance(msg_view, tuple):
-            ptr = msg_view[0]
-            msg_view = msg_view[1]
+            msg = serialize(response, mode=level, wait=2)
         if error:
-            msg_view = list(bytes(msg_view))
+            msg_view = list(msg.copy())
             msg_view[8] = 128
-            msg_view = memoryview(bytes(msg_view))
-        return ptr, msg_view
+            return memoryview(bytes(msg_view))
+        return msg
 
     def _send_sock_server(self, sock, response, level):
-        ptr = None
         try:
-            ptr, msg_view = self._serialize_response(response, level)
+            msg_view = self._serialize_response(response, level)
             msg_len = len(msg_view)
             sent = 0
             while sent < msg_len:
@@ -1680,9 +1667,6 @@ class RawQConnection(QConnection):
                     raise RuntimeError("Failed to send query on IPC socket")
         except BaseException:  # nocov
             pass
-        finally:
-            if ptr is not None:
-                _ipc.delete_ptr(ptr)
 
     def _recv_socket_server(self, sock): # noqa
         tot_bytes = 0
@@ -1728,7 +1712,7 @@ class RawQConnection(QConnection):
                     # sent to the sockets buffer
                     pass
 
-            return chunks[1], _wrappers.deserialize(memoryview(buff).obj)
+            return chunks[1], deserialize(memoryview(buff).obj)
         except ConnectionResetError:
             pass
 
@@ -1800,21 +1784,14 @@ class RawQConnection(QConnection):
 
     def clean_open_connections(self):
         for i in range(len(self.open_cons) - 1, -1, -1):
-            ptr = None
             try:
-                msg_view = _wrappers._to_bytes(self.open_cons[i][3], q('::'), 0)
-                if isinstance(msg_view, tuple):
-                    ptr = msg_view[0]
-                    msg_view = msg_view[1]
-                self.open_cons[i][2].send(bytes(msg_view))
+                msg = serialize(q('::'), mode=self.open_cons[i][3], wait=0)
+                self.open_cons[i][2].send(msg.copy())
             except BaseException:
                 self.open_cons[i][0].unregister(self.open_cons[i][2])
                 self.open_cons[i][1].unregister(self.open_cons[i][2])
                 self.open_cons[i][2].close()
                 self.open_cons.pop(i)
-            finally:
-                if ptr is not None:
-                    _ipc.delete_ptr(ptr)
 
     def poll_recv(self, amount: int = 1):
         """Recieve queries from the process connected to over IPC.

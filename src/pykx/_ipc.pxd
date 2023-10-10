@@ -6,9 +6,5 @@ from pykx cimport core
 
 
 cdef extern from 'k.h':
-    cdef core.I khpunc(core.S hostname,
-                       core.I port,
-                       core.S credentials,
-                       core.I timeout,
-                       core.I capability)
-    cdef core.V kclose(core.I x)
+    cdef int khpunc(char* hostname, int port, char* credentials, int timeout, int capability)
+    cdef void kclose(int x)

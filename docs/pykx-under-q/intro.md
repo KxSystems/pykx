@@ -38,7 +38,7 @@ To facilitate the execution of Python code within a q session a user must first 
     python -c "import pykx;pykx.install_into_QHOME(to_local_folder=True)"
     ```
 
-### Initialisation
+### Initialization
 
 Once installation has been completed a user should be in a position to initialise the library as follows
 
@@ -111,7 +111,7 @@ This interface allows a user to execute Python code a variety of ways:
     $ q pykx.q
     q)\l test.p
     q).pykx.get[`func]
-    {[f;x].pykx.i.pykx[f;x]}[foreign]enlist
+    {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 	```
 
 #### Evaluating Python code
@@ -144,7 +144,7 @@ Finally to return a hybrid representation which can be manipulated to return the
 
 ```q
 q)show b:.pykx.eval"1+2"
-{[f;x].pykx.i.pykx[f;x]}[foreign]enlist
+{[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 q)b`       // Convert to a q object
 3
 q)b`.      // Convert to a Python foreign
@@ -165,14 +165,14 @@ Foreign objects can be stored in variables just like any other q datatype, or as
 
 Foreign objects cannot be directly operated on in q. Instead, Python objects are typically represented as PyKX objects, which wrap the underlying foreign objects. This provides the ability to get and set attributes, index, call or convert the underlying foreign object to a q object.
 
-Use .pykx.wrap to create an PyKX object from a foreign object.
+Use `.pykx.wrap` to create an PyKX object from a foreign object.
 
 ```q
 q)x
 foreign
 q)p:.pykx.wrap x
 q)p           /how an PyKX object looks
-{[f;x].pykx.i.pykx[f;x]}[foreign]enlist
+{[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 ```
 
 More commonly, PyKX objects are retrieved directly from Python using one of the following functions:
@@ -199,7 +199,7 @@ For example:
 ```q
 q)x:.pykx.eval"(1,2,3)"
 q)x
-{[f;x].pykx.i.pykx[f;x]}[foreign]enlist
+{[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 q)x`.
 foreign
 q)x`
@@ -320,10 +320,10 @@ For example
 ```q
 q)np:.pykx.import`numpy
 q)np`:arange
-{[f;x].pykx.i.pykx[f;x]}[foreign]enlist
+{[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 q)arange:np`:arange                   / callable returning PyKX object
 q)arange 12
-{[f;x].pykx.i.pykx[f;x]}[foreign]enlist
+{[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 q)arange[12]`
 0 1 2 3 4 5 6 7 8 9 10 11
 ```
@@ -454,7 +454,15 @@ In particular the following types are supported:
 4. PyArrow objects
 5. PyKX objects
 
-By default when passing a q object to a callable function it will be converted to it's underlying Numpy equivalent representation. This will be the case for all types including tabular structures which are converted to numpy records.
+By default when passing a q object to a callable function it will be converted to the most "natural" analogous types. This is controlled through the setting of `.pykx.util.defaultConv`
+
+- PyKX/q generic list objects will be converted to Python lists
+- PyKX/q table/keyed table objects will be converted to Pandas equivalent DataFrames
+- All other PyKX/q objects will be converted to their analogous PyKX/q types
+
+!!! Warning
+
+	Prior to PyKX 2.1.0 all conversions from q objects to Python would convert to their Numpy equivalent. This behaviour raised a number of issues with migration for users previously operating with embedPy and as such has been migrated to the behaviour described above. If you require the same behaviour as that prior to 2.1.0 please set the environment variable `PYKX_DEFAULT_CONVERSION="np"`
 
 For example:
 
@@ -464,32 +472,35 @@ q)typeFunc 1;
 <class 'numpy.int64'>
 q)typeFunc til 10;
 <class 'numpy.ndarray'>
+q)typeFunc (10?1f;10?1f)
+<class 'list'>
 q)typeFunc ([]100?1f;100?1f);
-<class 'numpy.recarray'>
+<class 'pandas.core.frame.DataFrame'>
 ```
 
-The default behaviour of the conversions which are undertaken when making function/method calls is controlled through the definition of `.pykx.i.defaultConv`
+The default behavior of the conversions which are undertaken when making function/method calls is controlled through the definition of `.pykx.util.defaultConv`
 
 ```q
-q).pykx.i.defaultConv
-"np"
+q).pykx.util.defaultConv
+"default"
 ```
 
 This can have one of the following values:
 
-| Python type | Value |
-|-------------|-------|
-| Python      | "py"  |
-| Numpy       | "np"  |
-| Pandas      | "pd"  |
-| PyArrow     | "pa"  |
-| PyKX        | "k"   |
+| Python type | Value     |
+|-------------|-----------|
+| Default     | "default" |
+| Python      | "py"      |
+| Numpy       | "np"      |
+| Pandas      | "pd"      |
+| PyArrow     | "pa"      |
+| PyKX        | "k"       |
 
-Taking the examples above for numpy we can update the default types across all function calls
+Taking the examples above for Numpy we can update the default types across all function calls
 
 ```q
 q)typeFunc:.pykx.eval"lambda x:print(type(x))"
-q).pykx.i.defaultConv:"py"
+q).pykx.util.defaultConv:"py"
 q)typeFunc 1;
 <class 'int'>
 q)typeFunc til 10;
@@ -497,7 +508,7 @@ q)typeFunc til 10;
 q)typeFunc ([]100?1f;100?1f);
 <class 'dict'>
 
-q).pykx.i.defaultConv:"pd"
+q).pykx.util.defaultConv:"pd"
 q)typeFunc 1;
 <class 'numpy.int64'>
 q)typeFunc til 10;
@@ -505,7 +516,7 @@ q)typeFunc til 10;
 q)typeFunc ([]100?1f;100?1f);
 <class 'pandas.core.frame.DataFrame'>
 
-q).pykx.i.defaultConv:"pa"
+q).pykx.util.defaultConv:"pa"
 q)typeFunc 1;
 <class 'numpy.int64'>
 q)typeFunc til 10;
@@ -513,7 +524,7 @@ q)typeFunc til 10;
 q)typeFunc ([]100?1f;100?1f);
 <class 'pyarrow.lib.Table'>
 
-q).pykx.i.defaultConv:"k"
+q).pykx.util.defaultConv:"k"
 q)typeFunc 1;
 <class 'pykx.wrappers.LongAtom'>
 q)typeFunc til 10;
@@ -550,7 +561,7 @@ q).pykx.qeval"var1"
 42
 q).pykx.set[`var2;{x*2}]
 q)qfunc:.pykx.get[`var2;<]
-{[f;x].pykx.i.pykx[f;x]}[foreign]enlist
+{[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 q)qfunc[3]
 6
 ```

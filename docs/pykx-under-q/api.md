@@ -582,7 +582,7 @@ type | description
 `::` | Returns null on successful execution
 
 ```q
-// Set a q array of guids using default behaviour
+// Set a q array of guids using default behavior
 q).pykx.set[`test;3?0Ng]
 q)print .pykx.get`test
 [UUID('3d13cc9e-f7f1-c0ee-782c-5346f5f7b90e')
@@ -644,7 +644,7 @@ type | description |
 q).pykx.pyexec"aclass = type('TestClass', (object,), {'x': pykx.LongAtom(3), 'y': pykx.toq('hello')})";
 q)a:.pykx.get`aclass
 
-// Retrieve an existing attribute to show defined behaviour
+// Retrieve an existing attribute to show defined behavior
 q)a[`:x]`
 3
 
@@ -670,7 +670,7 @@ q).pykx.print a[`:k]
 0  0.493183  0a3e1784-0125-1b68-5ae7-962d49f2404d  mi
 1  0.578520  5aecf7c8-abba-e288-5a58-0fb6656b5e69  ig
 
-// Attempt to set an attribute against an object which does not support this behaviour
+// Attempt to set an attribute against an object which does not support this behavior
 q)arr:.pykx.eval"[1, 2, 3]"
 q).pykx.setattr[arr;`test;5]
 'AttributeError("'list' object has no attribute 'test'")
@@ -1047,7 +1047,7 @@ pyarglist argList
 
 name       | type   | description
 -----------|--------|------------
-`argList`  | `list` | List of opsitional arguments
+`argList`  | `list` | List of optional arguments
 
 **Return:**
 

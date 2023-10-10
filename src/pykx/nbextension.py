@@ -96,15 +96,15 @@ def q(instructions, code): # noqa
         _q = kx.q
     code = [kx.CharVector(x) for x in code.split('\n')][:-1]
     ret = _q(
-        "{[ld;code;file] value (@';last file;enlist[file],/:value(ld;code))}",
+        "{[ld;code;file] value (@';\"q\";enlist[file],/:value(ld;code))}",
         ld,
         code,
         b'jupyter_cell.q'
     )
     if not kx.licensed:
         ret = ret.py()
-    for r in ret:
-        print(r)
+    for i in range(len(ret)):
+        print(_q('{x y}', ret, i))
     if issubclass(type(_q), kx.QConnection):
         _q.close()
 

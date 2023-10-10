@@ -60,19 +60,19 @@ def test_eval_repr_unlicensed(kx):
 @pytest.mark.embedded
 def test_pykx_q_get(kx, q):
     with pytest.raises(kx.QError):
-        kx.q('.pykx.get`blorp')
+        q('.pykx.get`blorp')
 
 
 @pytest.mark.embedded
 def test_pykx_q_getattr(kx, q):
-    kx.q("af:.pykx.eval\"type('Car', (object,), {'speed': 200, 'color': 'red'})\"")
-    kx.q('af[`:speed]`')
+    q("af:.pykx.eval\"type('Car', (object,), {'speed': 200, 'color': 'red'})\"")
+    q('af[`:speed]`')
     with pytest.raises(kx.QError):
-        kx.q('af[`:boourns]`')
+        q('af[`:boourns]`')
 
-    kx.q('arr:.pykx.eval"[1, 2, 3]"')
+    q('arr:.pykx.eval"[1, 2, 3]"')
     with pytest.raises(kx.QError):
-        kx.q('.pykx.getattr[.pykx.unwrap arr;`foobarbaz]')
+        q('.pykx.getattr[.pykx.unwrap arr;`foobarbaz]')
 
 # TODO: Once PYKX_RELEASE_GIL is fixed this should be uncommented
 # @pytest.mark.embedded
@@ -116,6 +116,7 @@ class Test_K:
         assert q('-16!a') == kx._wrappers.k_r(q('a'))== 1
 
     def test_repr(self, q, kx):
+        q.system.console_size = [25, 80]
         pykx = kx # noqa: F401
         rand_shorts = q('5?0Wh')
         assert all(rand_shorts == eval(repr(rand_shorts), globals(), locals()))
@@ -1999,9 +2000,10 @@ class Test_Table:
         x = q('([]a:(.z.t;0Nt))').pd()
         y = q('([]a:(.z.D;0Nd))').pd()
         z = q('([]a:(2000.01;0Nm))').pd()
+        pandas_2 = pd.__version__.split('.')[0] == 2
         assert w.dtypes['a'] == np.dtype('<m8[ns]')
-        assert x.dtypes['a'] == np.dtype('<m8[ns]')
-        assert y.dtypes['a'] == np.dtype('<M8[ns]')
+        assert x.dtypes['a'] == np.dtype('<m8[ms]') if pandas_2 else np.dtype('<m8[ns]')
+        assert y.dtypes['a'] == np.dtype('datetime64[s]') if pandas_2 else np.dtype('<M8[ns]')
         assert z.dtypes['a'] == np.dtype('O')
         assert pd.isnull(w['a'][1])
         assert pd.isnull(x['a'][1])
@@ -2063,13 +2065,15 @@ class Test_Table:
         assert df['c'].iloc[0] == b' '
         assert df['s'].iloc[0] == ''
 
+        pandas_2 = pd.__version__.split('.')[0] == '2'
         for c, t in [('p', np.dtype('datetime64[ns]')),
-                     ('m', np.dtype('datetime64[ns]')),
-                     ('d', np.dtype('datetime64[ns]')),
+                     ('m', np.dtype('datetime64[s]') if pandas_2 else np.dtype('datetime64[ns]')),
+                     ('d', np.dtype('datetime64[s]') if pandas_2 else np.dtype('datetime64[ns]')),
                      ('n', np.dtype('timedelta64[ns]')),
-                     ('u', np.dtype('timedelta64[ns]')),
-                     ('v', np.dtype('timedelta64[ns]')),
-                     ('t', np.dtype('timedelta64[ns]'))]:
+                     ('u', np.dtype('timedelta64[s]') if pandas_2 else np.dtype('timedelta64[ns]')),
+                     ('v', np.dtype('timedelta64[s]') if pandas_2 else np.dtype('timedelta64[ns]')),
+                     ('t', np.dtype('timedelta64[ms]') if pandas_2 else np.dtype('timedelta64[ns]'))
+        ]:
             assert df[c].dtype == t
             assert pd.isna(df[c].iloc[0])
 
@@ -2135,6 +2139,15 @@ class Test_Table:
                 [9, 1]
             ]
         ).py() == q('([] x: til 10; x1: 10 - til 10)').py()
+
+    def test_table_negative_indexing(self, q):
+        # KXI-31898
+        tab = q('([]til 5)')
+        assert q('(all/)', tab[-1] == q('([]enlist 4)'))
+        with pytest.raises(IndexError):
+            tab[10]
+        with pytest.raises(IndexError):
+            tab[-6]
 
 
 @pytest.mark.filterwarnings('ignore:Splayed tables are not yet implemented')
@@ -2223,9 +2236,9 @@ class Test_Dictionary:
         assert q('`a`b`c!til 3')['b'] == 1
         with pytest.raises(KeyError):
             q('`a`b`c!til 3')['z']
-        assert (q('`a`b`c!til 3')[q('`b`z')] == q('1 0N')).all() # q index -> q behaviour
+        assert (q('`a`b`c!til 3')[q('`b`z')] == q('1 0N')).all() # q index -> q behavior
         with pytest.raises(KeyError):
-            q('`a`b`c!til 3')['b', 'z'] # Python index -> Python behaviour
+            q('`a`b`c!til 3')['b', 'z'] # Python index -> Python behavior
         assert q('`a`b`c!til 3')[q('`a`b')].py() == [0, 1]
 
     def test_py(self, q):
@@ -2373,6 +2386,22 @@ class Test_KeyedTable:
         assert mkt_pd['y'][('a', 100)] == 'multi'
         assert mkt_pd['y'][('b', 101)] == 'keyed'
         assert mkt_pd['y'][('a', 102)] == 'table'
+
+    def test_empty_keyed_table(self, q, kx):
+        q_mkt_empty = q('0#`a xkey ([] a:1 2 3;b:3 4 5)')
+        q_mkt_multi_empty = q('0#`a`b xkey ([] a:1 2 3;b:3 4 5;c:6 7 8)')
+        mkt_empty = q_mkt_empty.pd()
+        mkt_multi_empty = q_mkt_multi_empty.pd()
+        assert len(mkt_empty) == 0
+        assert len(mkt_multi_empty) == 0
+        assert mkt_empty.index.name == 'a'
+        assert mkt_multi_empty.index.names == ['a', 'b']
+        assert list(mkt_empty.columns) == ['b']
+        assert list(mkt_multi_empty.columns) == ['c']
+        assert type(kx.toq(mkt_empty)) == kx.KeyedTable
+        assert type(kx.toq(mkt_multi_empty)) == kx.KeyedTable
+        assert len(kx.toq(mkt_empty)) == 0
+        assert len(kx.toq(mkt_multi_empty)) == 0
 
     def test_py(self, q):
         assert q(self.kt).py() == {
@@ -2787,7 +2816,7 @@ class Test_Function:
 
 
 # Conversions of nested K lists requires a license, We need to be able to call
-# __getitem__ on the list to get correctly typed numpy arrays to use.
+# __getitem__ on the list to get correctly typed Numpy arrays to use.
 @pytest.mark.licensed
 @pytest.mark.nep49
 def test_numpy_ufuncs(kx, q):
@@ -3023,7 +3052,7 @@ def test_numpy_ufuncs_reduceat(kx, q):
 
 
 # Conversions of nested K lists requires a license, We need to be able to call
-# __getitem__ on the list to get correctly typed numpy arrays to use.
+# __getitem__ on the list to get correctly typed Numpy arrays to use.
 @pytest.mark.licensed
 @pytest.mark.nep49
 def test_numpy_functions(kx, q):
@@ -3057,9 +3086,9 @@ def test_numpy_equals(kx, q):
         assert False == (np.array([[1, 2, 3], [4, 5, 6]]) == q('(1 1 1 7;2 2 5 2)')).py()
     else:
         with pytest.raises(kx.QError):
-            assert np.array([[1, 2, 3], [4, 5, 6]]) == kx.q('(1 1 1;2 2 5 2)')
+            assert np.array([[1, 2, 3], [4, 5, 6]]) == q('(1 1 1;2 2 5 2)')
         with pytest.raises(ValueError):
-            assert np.array([[1, 2, 3], [4, 5, 6]]) == kx.q('(1 1 1 7;2 2 5 2)')
+            assert np.array([[1, 2, 3], [4, 5, 6]]) == q('(1 1 1 7;2 2 5 2)')
 
 
 @pytest.mark.licensed
@@ -3217,3 +3246,429 @@ def test_attributes_keyed_table(kx, q):
 
     with pytest.raises(kx.QError):
         tab.parted(['x', 'x1'])
+
+
+def test_apply_vector(q, kx):
+    longvec = q('til 10')
+    assert (longvec.apply(lambda x: x+1) == q('1+til 10')).all()
+    assert longvec.apply(q.sum) == q('45')
+
+    def func(x):
+        return x+1
+    assert (longvec.apply(func) == q('1+til 10')).all()
+    assert longvec.apply(np.sum) == q('45')
+
+    def func_args(x, y):
+        return x+y
+    assert (longvec.apply(func_args, 2) == q('2+til 10')).all()
+    assert (longvec.apply(q('{x+y}'), 2) == q('2+til 10')).all()
+
+    guidvec = q('-10?0Ng')
+    assert 10 == len(guidvec.apply(np.unique))
+    assert 10 == len(guidvec.apply(q.distinct))
+
+    def func(x):
+        return q.string(x)
+    assert isinstance(guidvec.apply(func), kx.List)
+
+    with pytest.raises(RuntimeError):
+        longvec.apply(10)
+
+    with pytest.raises(kx.QError):
+        longvec.apply(q('{x+y}'), y=1)
+
+
+def checkHTML(tab):
+    html = tab._repr_html_()
+    return (html.count('<tr>'), html.count('<th>'), html.count('<td>'))
+
+
+@pytest.mark.licensed
+def test_repr_html(kx, q):
+    H = 10
+    W = 20
+    q.system.console_size = [H, W]
+
+    # Many datatypes
+    q('t:flip {(`$/:t)!2#/:(t:{x where not x in " z"}.Q.t)$\\:()}[]')
+    q('T:flip {(`$/:upper t)!2#/:enlist each 2#/:(t:{x where not x in " z"}.Q.t)$\\:()}[]')
+    q('wideManyDatatypes:t,\'T')
+    tab = q('wideManyDatatypes')
+
+    # (rows, headers, details)
+    assert (3, 44, 40) == checkHTML(tab)
+
+    # Single column table
+    q('singleColTab:([] a:.z.d-til 2000)')
+    tab = q('0#singleColTab')
+    assert (0, 2, 0) == checkHTML(tab)
+    tab = q('1#singleColTab')
+    assert (2, 5, 1) == checkHTML(tab)
+    tab = q('2#singleColTab')
+    assert (3, 6, 2) == checkHTML(tab)
+    tab = q('10#singleColTab')
+    assert (H, 13, 9) == checkHTML(tab)
+    tab = q('11#singleColTab')
+    assert (H+1, 14, 10) == checkHTML(tab)
+
+    # Multi column table
+    q('multiColTab:([] a:.z.d-til 2000; sym:2000?`7)')
+    tab = q('0#multiColTab')
+    assert (0, 3, 0) == checkHTML(tab)
+    tab = q('1#multiColTab')
+    assert (2, 7, 2) == checkHTML(tab)
+    tab = q('2#multiColTab')
+    assert (3, 8, 4) == checkHTML(tab)
+    tab = q('10#multiColTab')
+    assert (H, 15, 18) == checkHTML(tab)
+    tab = q('11#multiColTab')
+    assert (H+1, 16, 20) == checkHTML(tab)
+
+    q('n:-1+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
+    tab = q('0#extraWide')
+    assert (0, 20, 0) == checkHTML(tab)
+    tab = q('1#extraWide')
+    assert (2, 41, 19) == checkHTML(tab)
+    tab = q('2#extraWide')
+    assert (3, 42, 38) == checkHTML(tab)
+    tab = q('10#extraWide')
+    assert (H, 49, 171) == checkHTML(tab)
+    tab = q('11#extraWide')
+    assert (H+1, 50, 190) == checkHTML(tab)
+
+    q('n:last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
+    tab = q('0#extraWide')
+    assert (0, 21, 0) == checkHTML(tab)
+    tab = q('1#extraWide')
+    assert (2, 43, 20) == checkHTML(tab)
+    tab = q('2#extraWide')
+    assert (3, 44, 40) == checkHTML(tab)
+    tab = q('10#extraWide')
+    assert (H, 51, 180) == checkHTML(tab)
+    tab = q('11#extraWide')
+    assert (H+1, 52, 200) == checkHTML(tab)
+
+    q('n:1+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
+    tab = q('0#extraWide')
+    assert (0, 22, 0) == checkHTML(tab)
+    tab = q('1#extraWide')
+    assert (2, 45, 21) == checkHTML(tab)
+    tab = q('2#extraWide')
+    assert (3, 46, 42) == checkHTML(tab)
+    tab = q('10#extraWide')
+    assert (H, 53, 189) == checkHTML(tab)
+    tab = q('11#extraWide')
+    assert (H+1, 54, 210) == checkHTML(tab)
+
+    q('n:50+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
+    tab = q('0#extraWide')
+    assert (0, 22, 0) == checkHTML(tab)
+    tab = q('1#extraWide')
+    assert (2, 45, 21) == checkHTML(tab)
+    tab = q('2#extraWide')
+    assert (3, 46, 42) == checkHTML(tab)
+    tab = q('10#extraWide')
+    assert (H, 53, 189) == checkHTML(tab)
+    tab = q('11#extraWide')
+    assert (H+1, 54, 210) == checkHTML(tab)
+
+    # Many keys
+    tab = q('(-1+last system"c")!0#extraWide')
+    assert (1, 42, 0) == checkHTML(tab)
+    tab = q('(-1+last system"c")!1#extraWide')
+    assert (2, 61, 2) == checkHTML(tab)
+    tab = q('(-1+last system"c")!2#extraWide')
+    assert (3, 80, 4) == checkHTML(tab)
+    tab = q('(-1+last system"c")!10#extraWide')
+    assert (H, 213, 18) == checkHTML(tab)
+    tab = q('(-1+last system"c")!11#extraWide')
+    assert (H+1, 232, 20) == checkHTML(tab)
+
+    tab = q('(last system"c")!0#extraWide')
+    assert (1, 42, 0) == checkHTML(tab)
+    tab = q('(last system"c")!1#extraWide')
+    assert (2, 61, 2) == checkHTML(tab)
+    tab = q('(last system"c")!2#extraWide')
+    assert (3, 80, 4) == checkHTML(tab)
+    tab = q('(last system"c")!10#extraWide')
+    assert (H, 213, 18) == checkHTML(tab)
+    tab = q('(last system"c")!11#extraWide')
+    assert (H+1, 232, 20) == checkHTML(tab)
+
+    tab = q('(1+last system"c")!0#extraWide')
+    assert (1, 42, 0) == checkHTML(tab)
+    tab = q('(1+last system"c")!1#extraWide')
+    assert (2, 61, 2) == checkHTML(tab)
+    tab = q('(1+last system"c")!2#extraWide')
+    assert (3, 80, 4) == checkHTML(tab)
+    tab = q('(1+last system"c")!10#extraWide')
+    assert (H, 213, 18) == checkHTML(tab)
+    tab = q('(1+last system"c")!11#extraWide')
+    assert (H+1, 232, 20) == checkHTML(tab)
+
+    # Dictionaries
+    assert '<p>Empty pykx.Dictionary: ' == q('()!()')._repr_html_()[:26]
+
+    dict = q('(enlist `b)!(enlist 2)')
+    assert (2, 5, 1) == checkHTML(dict)
+    dict = q('(`a`b)!(1 2)')
+    assert (3, 6, 2) == checkHTML(dict)
+    dict = q('(10?`6)!(til 10)')
+    assert (11, 14, 10) == checkHTML(dict)
+    dict = q('(11?`6)!(til 11)')
+    assert (11, 14, 10) == checkHTML(dict)
+
+    dict = q('(enlist `b)!([] a:enlist 1)')
+    assert (2, 5, 1) == checkHTML(dict)
+    dict = q('(enlist `b)!([] a:enlist 1;b:enlist 2)')
+    assert (2, 7, 2) == checkHTML(dict)
+    dict = q('(enlist `b)!([] a:enlist 1;b:enlist 2)')
+    assert (2, 7, 2) == checkHTML(dict)
+
+    dict = q('(9?`6)!flip (`$"col",/:string til 19)!(19#enlist til 9)')
+    assert (10, 49, 171) == checkHTML(dict)
+    dict = q('(10?`6)!flip (`$"col",/:string til 20)!(20#enlist til 10)')
+    assert (11, 52, 200) == checkHTML(dict)
+    dict = q('(11?`6)!flip (`$"col",/:string til 21)!(21#enlist til 11)')
+    assert (11, 52, 200) == checkHTML(dict)
+
+    # Single Key
+    q('singleKeyTab:`sym xkey ([] a:.z.d-til 2000; sym:2000?`7)')
+    tab = q('0#singleKeyTab')
+    assert (1, 4, 0) == checkHTML(tab)
+    tab = q('1#singleKeyTab')
+    assert (2, 5, 1) == checkHTML(tab)
+    tab = q('2#singleKeyTab')
+    assert (3, 6, 2) == checkHTML(tab)
+    tab = q('10#singleKeyTab')
+    assert (H, 13, 9) == checkHTML(tab)
+    tab = q('11#singleKeyTab')
+    assert (H+1, 14, 10) == checkHTML(tab)
+
+    # Multi Key
+    q('multiKeyTab:`sym`blah xkey ([] a:.z.d-til 2000; sym:2000?`7;blah:-2000?1000000)')
+    tab = q('0#multiKeyTab')
+    assert (1, 6, 0) == checkHTML(tab)
+    tab = q('1#multiKeyTab')
+    assert (2, 8, 1) == checkHTML(tab)
+    tab = q('2#multiKeyTab')
+    assert (3, 10, 2) == checkHTML(tab)
+    tab = q('10#multiKeyTab')
+    assert (H, 24, 9) == checkHTML(tab)
+    tab = q('11#multiKeyTab')
+    assert (H+1, 26, 10) == checkHTML(tab)
+
+    # Single column splay table
+    tab = q('{x set 0#([] a:.z.d-til 2000);get x}`:singleColSplay/')
+    assert (0, 2, 0) == checkHTML(tab)
+    tab = q('{x set 1#([] a:.z.d-til 2000);get x}`:singleColSplay/')
+    assert (2, 5, 1) == checkHTML(tab)
+    tab = q('{x set 2#([] a:.z.d-til 2000);get x}`:singleColSplay/')
+    assert (3, 6, 2) == checkHTML(tab)
+    tab = q('{x set 10#([] a:.z.d-til 2000);get x}`:singleColSplay/')
+    assert (H, 13, 9) == checkHTML(tab)
+    tab = q('{x set 11#([] a:.z.d-til 2000);get x}`:singleColSplay/')
+    assert (H+1, 14, 10) == checkHTML(tab)
+
+    # Multi column splay
+    tab = q('{x set 0#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
+    assert (0, 3, 0) == checkHTML(tab)
+    tab = q('{x set 1#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
+    assert (2, 7, 2) == checkHTML(tab)
+    tab = q('{x set 2#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
+    assert (3, 8, 4) == checkHTML(tab)
+    tab = q('{x set 10#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
+    assert (H, 15, 18) == checkHTML(tab)
+    tab = q('{x set 11#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
+    assert (H+1, 16, 20) == checkHTML(tab)
+
+    q('n:-1+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
+    tab = q('{x set y;get x}[`:multiColSplay/]0#extraWide')
+    assert (0, 20, 0) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]1#extraWide')
+    assert (2, 41, 19) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]2#extraWide')
+    assert (3, 42, 38) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
+    assert (H, 49, 171) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    assert (H+1, 50, 190) == checkHTML(tab)
+
+    q('n:last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
+    tab = q('{x set y;get x}[`:multiColSplay/]0#extraWide')
+    assert (0, 21, 0) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]1#extraWide')
+    assert (2, 43, 20) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]2#extraWide')
+    assert (3, 44, 40) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
+    assert (H, 51, 180) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    assert (H+1, 52, 200) == checkHTML(tab)
+
+    q('n:1+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
+    tab = q('{x set y;get x}[`:multiColSplay/]0#extraWide')
+    assert (0, 22, 0) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]1#extraWide')
+    assert (2, 45, 21) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]2#extraWide')
+    assert (3, 46, 42) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
+    assert (H, 53, 189) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    assert (H+1, 54, 210) == checkHTML(tab)
+
+    q('n:50+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
+    tab = q('{x set y;get x}[`:multiColSplay/]0#extraWide')
+    assert (0, 22, 0) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]1#extraWide')
+    assert (2, 45, 21) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]2#extraWide')
+    assert (3, 46, 42) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
+    assert (H, 53, 189) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    assert (H+1, 54, 210) == checkHTML(tab)
+
+    # Syms and enums
+    q('enums:`sym?`aa`cc`bb')
+    q('symsEnums:([] a:(`aa;`aa`bb;enlist `aa`bb;first enums;enums;enlist enums))')
+    q('symsEnums')._repr_html_()
+    q('30#symsEnums')._repr_html_()
+    q('symsEnums (),0')._repr_html_()
+    q('symsEnums (),1')._repr_html_()
+    q('symsEnums (),2')._repr_html_()
+    q('symsEnums (),3')._repr_html_()
+    q('symsEnums (),4')._repr_html_()
+    q('symsEnums (),5')._repr_html_()
+    q('delete sym from `.')
+    q('symsEnums')._repr_html_()
+    q('30#symsEnums')._repr_html_()
+    q('symsEnums (),0')._repr_html_()
+    q('symsEnums (),1')._repr_html_()
+    q('symsEnums (),2')._repr_html_()
+    q('symsEnums (),3')._repr_html_()
+    q('symsEnums (),4')._repr_html_()
+    q('symsEnums (),5')._repr_html_()
+
+    q('`:symsEnumsSplay/ set .Q.en[`:.] symsEnums;get `:symsEnumsSplay/')._repr_html_()
+    q('`:symsEnumsSplay/ set .Q.en[`:.] 30#symsEnums;get `:symsEnumsSplay/')._repr_html_()
+    q('`:symsEnumsSplay/ set .Q.en[`:.] symsEnums (),0;get `:symsEnumsSplay/')._repr_html_()
+    q('`:symsEnumsSplay/ set .Q.en[`:.] symsEnums (),1;get `:symsEnumsSplay/')._repr_html_()
+    q('`:symsEnumsSplay/ set .Q.en[`:.] symsEnums (),2;get `:symsEnumsSplay/')._repr_html_()
+    q('`:symsEnumsSplay/ set .Q.en[`:.] symsEnums (),3;get `:symsEnumsSplay/')._repr_html_()
+    q('`:symsEnumsSplay/ set .Q.en[`:.] symsEnums (),4;get `:symsEnumsSplay/')._repr_html_()
+    q('`:symsEnumsSplay/ set .Q.en[`:.] symsEnums (),5;get `:symsEnumsSplay/')._repr_html_()
+
+    q('keyedSymsEnums:`b xkey update b:i from symsEnums')
+    q('keyedSymsEnums')._repr_html_()
+    q('30#keyedSymsEnums')._repr_html_()
+    q('keyedSymsEnums (),0')._repr_html_()
+    q('keyedSymsEnums (),1')._repr_html_()
+    q('keyedSymsEnums (),2')._repr_html_()
+    q('keyedSymsEnums (),3')._repr_html_()
+    q('keyedSymsEnums (),4')._repr_html_()
+    q('keyedSymsEnums (),5')._repr_html_()
+
+    import os
+    os.makedirs('HDB', exist_ok=True)
+    os.chdir('HDB')
+
+    # Partitioned syms and enums
+    q('(`$":2001.01.02/partitionedTab/") set .Q.en[`:.] 0#symsEnums')
+    q('(`$":2001.01.01/partitionedTab/") set .Q.en[`:.] symsEnums;system"l .";partitionedTab'
+      )._repr_html_()
+    q('(`$":2001.01.01/partitionedTab/") set .Q.en[`:.] 30#symsEnums;system"l .";partitionedTab'
+      )._repr_html_()
+    q('(`$":2001.01.01/partitionedTab/") set .Q.en[`:.] symsEnums (),0;system"l .";partitionedTab'
+      )._repr_html_()
+    q('(`$":2001.01.01/partitionedTab/") set .Q.en[`:.] symsEnums (),1;system"l .";partitionedTab'
+      )._repr_html_()
+    q('(`$":2001.01.01/partitionedTab/") set .Q.en[`:.] symsEnums (),2;system"l .";partitionedTab'
+      )._repr_html_()
+    q('(`$":2001.01.01/partitionedTab/") set .Q.en[`:.] symsEnums (),3;system"l .";partitionedTab'
+      )._repr_html_()
+    q('(`$":2001.01.01/partitionedTab/") set .Q.en[`:.] symsEnums (),4;system"l .";partitionedTab'
+      )._repr_html_()
+    q('(`$":2001.01.01/partitionedTab/") set .Q.en[`:.] symsEnums (),5;system"l .";partitionedTab'
+      )._repr_html_()
+
+    # Partitioned
+    q('(`$":2001.01.01/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (0, 3, 0) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 1#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (2, 7, 2) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 2#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (3, 8, 4) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 10#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H+1, 16, 20) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 11#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H+1, 16, 20) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
+    q('(`$":2001.01.02/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (0, 4, 0) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
+    q('(`$":2001.01.02/partitionedTab/") set 1#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (2, 9, 3) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 10#([] a:.z.d-til 2000;b:til 2000)')
+    q('(`$":2001.01.02/partitionedTab/") set 10#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H+1, 18, 30) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 1#([] a:.z.d-til 2000;b:til 2000)')
+    q('(`$":2001.01.02/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (2, 9, 3) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 35#([] a:.z.d-til 2000;b:til 2000)')
+    q('(`$":2001.01.02/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H+1, 18, 30) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
+    q('(`$":2001.01.02/partitionedTab/") set 35#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H+1, 18, 30) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 11#([] a:.z.d-til 2000;b:til 2000)')
+    q('(`$":2001.01.02/partitionedTab/") set 11#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H+1, 18, 30) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 0#extraWide')
+    q('(`$":2001.01.02/partitionedTab/") set 0#extraWide')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (0, 22, 0) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 5#extraWide')
+    q('(`$":2001.01.02/partitionedTab/") set 0#extraWide')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (6, 49, 105) == checkHTML(tab)

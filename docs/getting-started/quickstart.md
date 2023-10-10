@@ -191,7 +191,19 @@ PyKX objects can be interacted with in a variety of ways, through indexing using
     pykx.FloatVector(pykx.q('0.3992327 1.726329 2.488636 3.653597 4.028107 5.444905 6.542917 7.00628 8.152..'))
     ```
 
-* Pass a PyKX array objects to a numpy functions
+* Apply a Python function on a PyKX Vector
+
+    ```python
+    >>> qvec = kx.random.random(10, 10, seed=42)
+    >>> qvec
+    pykx.LongVector(pykx.q('4 7 2 2 9 4 2 0 8 0'))
+    >>> qvec.apply(lambda x:x+1)
+    pykx.LongVector(pykx.q('5 8 3 3 10 5 3 1 9 1'))
+    ```
+    
+    
+
+* Pass a PyKX array objects to a Numpy functions
 
     ```python
     >>> qarray1 = kx.toq([random() for _ in range(10)], kx.FloatVector)
@@ -265,7 +277,7 @@ PyKX objects can be interacted with in a variety of ways, through indexing using
 
 ## Converting PyKX objects to common Python types
 
-Objects generated via the PyKX library can be converted where reasonable to `Python`, `Numpy`, `Pandas` and `PyArrow` types which are analagous to their underlying q representation. For example q tables are converted to Pandas Dataframes and PyArrow tables respectively. This is facilitated in each case through the use of the `py`, `np`, `pd` and `pa` methods.
+Objects generated via the PyKX library can be converted where reasonable to `Python`, `Numpy`, `Pandas` and `PyArrow` types which are analogous to their underlying q representation. For example q tables are converted to Pandas Dataframes and PyArrow tables respectively. This is facilitated in each case through the use of the `py`, `np`, `pd` and `pa` methods.
 
 * Convert PyKX objects to Python
 

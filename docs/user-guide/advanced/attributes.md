@@ -141,7 +141,7 @@ order.
 
 When attributes are set on PyKX objects various functions can use these attributes to speed up their
 execution, by using different algorithms. For example searching through a list without an attribute
-requires checking every single value, howevver setting the sorted attribute allows a search algorithm
+requires checking every single value, however setting the sorted attribute allows a search algorithm
 to use a binary search in stead and then only a fraction of the values actually need to be checked.
 
 Examples of some functions that can use attributes to speed up execution.

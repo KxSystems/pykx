@@ -35,8 +35,8 @@ static P KEYWORD_ONLY;
 static P VAR_KEYWORD;
 static P error_preamble;
 
-ZP M, errfmt;
-ZV** N;
+static P M, errfmt;
+static void** N;
 
 int pykx_flag = -1;
 
@@ -56,8 +56,8 @@ static void py_destructor(K x) {
     PyGILState_Release(g);
 }
 
-ZS zs(K x) {
-    S s=memcpy(malloc(x->n+1),xG,x->n);
+static char* zs(K x) {
+    char* s=memcpy(malloc(x->n+1),x->G0,x->n);
     return s[x->n]=0,s;
 }
 
@@ -93,9 +93,11 @@ EXPORT K k_pykx_init(K k_q_lib_path) {
 }
 
 EXPORT K k_init_python(K x, K y, K z) {
-    ZI i=0;
-    I f,g;
-    S l,h,hh;
+    static int i=0;
+    int f,g;
+    char* l;
+    char* h;
+    char* hh;
     K n,v;
     P a,b,pyhome;
     P(i,0)l=zs(x),h=zs(y),hh=zs(z);
@@ -157,7 +159,7 @@ K k_py_error() {
     // Build a q error object with the repr of the exception value as its message. The full
     // traceback is provided as the cause to the QError that will be raised.
     P ex_repr = PyObject_CallMethod(ex_value, "__repr__", NULL);
-    K k = ks((S)PyUnicode_AsUTF8(ex_repr));
+    K k = ks((char*)PyUnicode_AsUTF8(ex_repr));
     k->t = -128;
     Py_XDECREF(ex_repr);
 
@@ -309,8 +311,8 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
 }
 
 
-inline J modpow(J base, J exp, J mod) {
-    J result = 1;
+inline long long modpow(long long base, long long exp, long long mod) {
+    long long result = 1;
     while (exp > 0) {
         if (exp & 1) result = (result * base) % mod;
         base = (base * base) % mod;
@@ -337,7 +339,7 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
             result->t = -128;
         } else {
             result = ktn(7, k_base->n);
-            for (J x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], kJ(k_exp)[x], kJ(k_mod)[x]);
+            for (long long x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], kJ(k_exp)[x], kJ(k_mod)[x]);
         }
     } else if (k_base->t >= 0 && k_exp->t >= 0) {
         if (k_base->n != k_exp->n) {
@@ -346,7 +348,7 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
         }
         else {
             result = ktn(7, k_base->n);
-            for (J x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], kJ(k_exp)[x], k_mod->j);
+            for (long long x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], kJ(k_exp)[x], k_mod->j);
         }
     } else if (k_base->t >= 0 && k_mod->t >= 0) {
         if (k_base->n != k_mod->n) {
@@ -354,10 +356,10 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
             result->t = -128;
         }
         result = ktn(7, k_base->n);
-        for (J x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], k_exp->j, kJ(k_mod)[x]);
+        for (long long x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], k_exp->j, kJ(k_mod)[x]);
     } else if (k_base->t >= 0) {
         result = ktn(7, k_base->n);
-        for (J x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], k_exp->j, k_mod->j);
+        for (long long x = 0; x < k_base->n; ++x) kJ(result)[x] = modpow(kJ(k_base)[x], k_exp->j, k_mod->j);
     } else if (k_exp->t >= 0 && k_mod->t >= 0) {
         if (k_exp->n != k_mod->n) {
             result = ks("length");
@@ -365,14 +367,14 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
         }
         else {
             result = ktn(7, k_exp->n);
-            for (J x = 0; x < k_exp->n; ++x) kJ(result)[x] = modpow(k_base->j, kJ(k_exp)[x], kJ(k_mod)[x]);
+            for (long long x = 0; x < k_exp->n; ++x) kJ(result)[x] = modpow(k_base->j, kJ(k_exp)[x], kJ(k_mod)[x]);
         }
     } else if (k_exp->t >= 0) {
         result = ktn(7, k_exp->n);
-        for (J x = 0; x < k_exp->n; ++x) kJ(result)[x] = modpow(k_base->j, kJ(k_exp)[x], k_mod->j);
+        for (long long x = 0; x < k_exp->n; ++x) kJ(result)[x] = modpow(k_base->j, kJ(k_exp)[x], k_mod->j);
     } else if (k_mod->t >= 0) {
         result = ktn(7, k_mod->n);
-        for (J x = 0; x < k_mod->n; ++x) kJ(result)[x] = modpow(k_base->j, k_exp->j, kJ(k_mod)[x]);
+        for (long long x = 0; x < k_mod->n; ++x) kJ(result)[x] = modpow(k_base->j, k_exp->j, kJ(k_mod)[x]);
     } else {
         result = kj(modpow(k_base->j, k_exp->j, k_mod->j));
     }

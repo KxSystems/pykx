@@ -65,7 +65,7 @@ Temporal vectors use `NaT` to represent null values in Numpy and Pandas, `None` 
 
 When converting a table from q to Python with one of the methods above, each column will be transformed as an independent vector as described above.
 
-The following provides an example of the masked array behaviour outlined in the `.np` method described above which is additionally exhibited by the `.pd` method.
+The following provides an example of the masked array behavior outlined in the `.np` method described above which is additionally exhibited by the `.pd` method.
 
 ```python
 >>> import pykx as kx
@@ -99,7 +99,7 @@ x x1
 '))
 ```
 
-For more information on masked numpy arrays and interactions with null representation data in Pandas see the following links
+For more information on masked Numpy arrays and interactions with null representation data in Pandas see the following links
 
 - [Numpy masked arrays](https://numpy.org/doc/stable/reference/maskedarray.generic.html#filling-in-the-missing-data)
 - [Pandas working with missing data](https://pandas.pydata.org/docs/user_guide/missing_data.html)

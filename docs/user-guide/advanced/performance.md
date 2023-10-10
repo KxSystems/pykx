@@ -35,11 +35,11 @@ PyKX exposes this maximum value as `pykx.q.system.max_num_threads`, which cannot
 ### Multi-threading
 
 By default PyKX does not currently support calling into q from multiple threads within a Python process simultaneously.
-The [GIL](https://wiki.python.org/moin/GlobalInterpreterLock) generally prevents this from occuring.
+The [GIL](https://wiki.python.org/moin/GlobalInterpreterLock) generally prevents this from occurring.
 
 However enabling the `PYKX_RELEASE_GIL` environment variable will cause the Python Global Interpreter Lock to be dropped when calling into `q`.
 Caution must be used when calling into q from multiple threads if this environment variable is set as it will no longer be thread safe, you can optionally also
-enable the `PYKX_Q_LOCK` environment variable as well which will add an extra reentrant lock around embedded q to ensure two threads cannot access `q`'s memory in an unsafe manner.
+enable the `PYKX_Q_LOCK` environment variable as well which will add an extra re-entrant lock around embedded q to ensure two threads cannot access `q`'s memory in an unsafe manner.
 
 ## Peach
 
