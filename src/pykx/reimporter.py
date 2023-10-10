@@ -31,6 +31,7 @@ class PyKXReimport:
     """
 
     def __init__(self):
+        self.defaultconv = str(os.getenv('PYKX_DEFAULT_CONVERSION'))
         self.pykxunderq = str(os.getenv('PYKX_UNDER_Q'))
         self.skipunderq = str(os.getenv('SKIP_UNDERQ'))
         self.underpython = str(os.getenv('UNDER_PYTHON'))
@@ -48,6 +49,7 @@ class PyKXReimport:
         Note: It is not reccomended to use this function directly instead use the `with` syntax.
             This will automatically manage setting and restoring the environment variables for you.
         """
+        os.unsetenv("PYKX_DEFAULT_CONVERSION")
         os.unsetenv("PYKX_UNDER_Q")
         os.unsetenv("SKIP_UNDERQ")
         os.unsetenv("UNDER_PYTHON")
@@ -61,6 +63,7 @@ class PyKXReimport:
         Note: It is not reccomended to use this function directly instead use the `with` syntax.
             This will automatically manage setting and restoring the environment variables for you.
         """
+        os.environ['PYKX_DEFAULT_CONVERSION'] = self.defaultconv
         os.environ['PYKX_UNDER_Q'] = self.pykxunderq
         os.environ['SKIP_UNDERQ'] = self.skipunderq
         os.environ['UNDER_PYTHON'] = self.underpython

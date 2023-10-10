@@ -15,7 +15,7 @@ os.environ['PYTHONWARNINGS'] = 'ignore:No data was collected,ignore:Module pykx 
 
 # Addition of configuration toml used in testing
 # The configuration values set here are the default values for the PyKX so should not
-# overwrite test behaviour
+# overwrite test behavior
 config_file = open(Path.home()/".pykx.config", "w")
 config_content = {"default": {"PYKX_KEEP_LOCAL_TIMES", 0}}
 toml.dump(config_content, config_file)

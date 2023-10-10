@@ -16,8 +16,39 @@ typedef ssize_t L;
 #include"k.h"
 #define K3(f) K f(K x,K y,K z)
 
-typedef struct _p _p,*P;struct _p{L r;P t;L n;union{P*p;P v[1];};};typedef struct{L r;P t;G*g;I n;L*c,*s;P*b;struct{L r;P t;P*o;C k,c,b,f;I n,e;}*d;I f;}*A;typedef struct{S n;V*m;I f;S d;}D;
-#define ZP Z P
+typedef struct _p _p,*P;
+struct _p{
+    L r;
+    P t;
+    L n;
+    union{
+        P* p;
+        P v[1];
+    };
+};
+typedef struct{
+    L r;
+    P t;
+    unsigned char* g;
+    int n;
+    L*c,*s;
+    P*b;
+    struct{
+        L r;
+        P t;
+        P*o;
+        char* k,c,b,f;
+        int n,e;
+    }*d;
+    int f;
+}*A;
+typedef struct{
+    char* n;
+    void* m;
+    int f;
+    char* d;
+}D;
+#define ZP static P
 #define PyGILState_STATE int
 #define Py_ssize_t size_t
 #define Py_EQ 2
@@ -30,39 +61,39 @@ typedef struct _p _p,*P;struct _p{L r;P t;L n;union{P*p;P v[1];};};typedef struc
 
 //https://docs.python.org/3/c-api/ https://github.com/python/cpython/blob/3.6/PC/python3.def
 #define PF \
- X(V,Py_InitializeEx,(I))\
- X(V,Py_Finalize,())\
- X(V,Py_DecRef,(P))\
- X(V,Py_IncRef,(P))\
- X(V,PyErr_Clear,())\
- X(V,PyErr_Fetch,(P*,P*,P*))\
- X(V,PyErr_NormalizeException,(P*,P*,P*))\
+ X(void,Py_InitializeEx,(int))\
+ X(void,Py_Finalize,())\
+ X(void,Py_DecRef,(P))\
+ X(void,Py_IncRef,(P))\
+ X(void,PyErr_Clear,())\
+ X(void,PyErr_Fetch,(P*,P*,P*))\
+ X(void,PyErr_NormalizeException,(P*,P*,P*))\
  X(P,PyErr_BadArgument,())\
- X(P,PyErr_SetString,(P,S))\
- X(I,PyGILState_Ensure,())\
- X(V,PyGILState_Release,(I))\
- X(I,PyGILState_Check,())\
- X(V,PyEval_InitThreads,())\
- X(I,PyEval_ThreadsInitialized,())\
- X(V*,PyGILState_GetThisThreadState,())\
- X(V*,PyEval_SaveThread,())\
- X(V,PyEval_RestoreThread,(V*))\
+ X(P,PyErr_SetString,(P,char*))\
+ X(int,PyGILState_Ensure,())\
+ X(void,PyGILState_Release,(int))\
+ X(int,PyGILState_Check,())\
+ X(void,PyEval_InitThreads,())\
+ X(int,PyEval_ThreadsInitialized,())\
+ X(void*,PyGILState_GetThisThreadState,())\
+ X(void*,PyEval_SaveThread,())\
+ X(void,PyEval_RestoreThread,(void*))\
  X(_p,PyExc_RuntimeError,)\
  X(P,PyObject_Str,(P))\
- X(wchar_t*,Py_DecodeLocale,(S,V*))\
- X(V,Py_SetPythonHome,(wchar_t*))\
- X(V,Py_SetProgramName,(wchar_t*))\
- X(P,PyImport_AddModule,(S))\
- X(P,PyImport_ImportModule,(S))\
- X(P,PyObject_GetAttrString,(P,S))\
+ X(wchar_t*,Py_DecodeLocale,(char*,void*))\
+ X(void,Py_SetPythonHome,(wchar_t*))\
+ X(void,Py_SetProgramName,(wchar_t*))\
+ X(P,PyImport_AddModule,(char*))\
+ X(P,PyImport_ImportModule,(char*))\
+ X(P,PyObject_GetAttrString,(P,char*))\
  X(P,PyObject_Type,(P))\
  X(P,PyModule_GetDict,(P))\
- X(P,PyDict_GetItemString,(P,S))\
- X(P,PyDict_SetItemString,(P,S,P))\
+ X(P,PyDict_GetItemString,(P,char*))\
+ X(P,PyDict_SetItemString,(P,char*,P))\
  X(P,PyEval_EvalCode,(P,P,P))\
- X(P,Py_CompileString,(S,S,I))\
- X(P,PyCapsule_New,(V*,S,V*))\
- X(V*,PyCapsule_GetPointer,(P,S))\
+ X(P,Py_CompileString,(char*,char*,int))\
+ X(P,PyCapsule_New,(void*,char*,void*))\
+ X(void*,PyCapsule_GetPointer,(P,char*))\
  X(P,PyCFunction_NewEx,(D*,P,P))\
  X(_p,_Py_TrueStruct,)\
  X(_p,_Py_FalseStruct,)\
@@ -74,61 +105,61 @@ typedef struct _p _p,*P;struct _p{L r;P t;L n;union{P*p;P v[1];};};typedef struc
  X(_p,PyDict_Type,)\
  X(_p,PyUnicode_Type,)\
  X(_p,PyBytes_Type,)\
- X(I,PyType_IsSubtype,(P,P))\
- X(J,PyLong_AsLongLongAndOverflow,(P,I*))\
- X(F,PyFloat_AsDouble,(P))\
- X(I,PyObject_RichCompareBool,(P,P,I))\
- X(S,PyUnicode_AsUTF8AndSize,(P,L*))\
- X(I,PyBytes_AsStringAndSize,(P,S*,L*))\
- X(S,PyBytes_AsString,(P))\
+ X(int,PyType_IsSubtype,(P,P))\
+ X(long long,PyLong_AsLongLongAndOverflow,(P,int*))\
+ X(double,PyFloat_AsDouble,(P))\
+ X(int,PyObject_RichCompareBool,(P,P,int))\
+ X(char*,PyUnicode_AsUTF8AndSize,(P,L*))\
+ X(int,PyBytes_AsStringAndSize,(P,char**,L*))\
+ X(char*,PyBytes_AsString,(P))\
  X(P,PyBool_FromLong,(long))\
  X(P,PyErr_Occurred,())\
- X(V,PyErr_WriteUnraisable,(P))\
- X(I,PyException_SetTraceback,(P,P))\
- X(V*,PyMem_Calloc,(size_t,size_t))\
- X(V,PyMem_Free,(V*))\
- X(V,PyErr_SetObject,(P,P))\
- X(V,PyErr_Print,())\
+ X(void,PyErr_WriteUnraisable,(P))\
+ X(int,PyException_SetTraceback,(P,P))\
+ X(void*,PyMem_Calloc,(size_t,size_t))\
+ X(void,PyMem_Free,(void*))\
+ X(void,PyErr_SetObject,(P,P))\
+ X(void,PyErr_Print,())\
  X(P,PyObject_Repr,(P))\
- X(I,PyObject_Print,(P,FILE*,I))\
- X(P,PyLong_FromLongLong,(J))\
- X(J,PyLong_AsLongLong,(P))\
+ X(int,PyObject_Print,(P,FILE*,int))\
+ X(P,PyLong_FromLongLong,(long long))\
+ X(long long,PyLong_AsLongLong,(P))\
  X(P,PyLong_FromSize_t,(size_t))\
- X(P,PyFloat_FromDouble,(F))\
- X(P,PyUnicode_FromStringAndSize,(S,L))\
- X(P,PyUnicode_FromString,(S))\
- X(P,PyUnicode_AsEncodedString,(P,S,S))\
- X(P,PyBytes_FromStringAndSize,(S,L))\
+ X(P,PyFloat_FromDouble,(double))\
+ X(P,PyUnicode_FromStringAndSize,(char*,L))\
+ X(P,PyUnicode_FromString,(char*))\
+ X(P,PyUnicode_AsEncodedString,(P,char*,char*))\
+ X(P,PyBytes_FromStringAndSize,(char*,L))\
  X(P,PySequence_List,(P))\
- X(P,Py_BuildValue,(S,...))\
+ X(P,Py_BuildValue,(char*,...))\
  X(P,PyTuple_New,(L))\
  X(P,PyList_New,(L))\
  X(P,PyDict_New,())\
  X(size_t,PySequence_Size,(P))\
  X(P,PySequence_GetItem,(P, size_t))\
- X(I,PyList_Append,(P,P))\
+ X(int,PyList_Append,(P,P))\
  X(P,PyList_GetItem,(P,size_t))\
  X(P,PyTuple_GetItem,(P,size_t))\
  X(P,PyDict_GetItemWithError,(P,P))\
  X(P,PyDict_SetItem,(P,P,P))\
- X(I,PyTuple_SetItem,(P,size_t,P))\
+ X(int,PyTuple_SetItem,(P,size_t,P))\
  X(P,PyDict_Keys,(P))\
  X(P,PyDict_Values,(P))\
- X(I,PyDict_Update,(P,P))\
+ X(int,PyDict_Update,(P,P))\
  X(P,PyList_AsTuple,(P))\
  X(P,PyObject_CallFunctionObjArgs,(P,...))\
- X(P,PyObject_CallFunction,(P,S,...))\
- X(P,PyObject_CallMethod,(P,S,S,...))\
+ X(P,PyObject_CallFunction,(P,char*,...))\
+ X(P,PyObject_CallMethod,(P,char*,char*,...))\
  X(P,PyObject_Call,(P,P,P))\
  X(P,PyObject_CallObject,(P,P))\
- X(I,PyObject_HasAttr,(P,P))\
+ X(int,PyObject_HasAttr,(P,P))\
  X(P,PyObject_GetAttr,(P,P))\
- X(I,PyObject_SetAttrString,(P,S,P))\
- X(S,PyUnicode_AsUTF8,(P))\
- X(I,PyCallable_Check,(P))\
- X(P,PyRun_String,(S,I,P,P))\
+ X(int,PyObject_SetAttrString,(P,char*,P))\
+ X(char*,PyUnicode_AsUTF8,(P))\
+ X(int,PyCallable_Check,(P))\
+ X(P,PyRun_String,(char*,int,P,P))\
  X(P,PyImport_Import,(P))\
- X(I,Py_IsInitialized,())\
+ X(int,Py_IsInitialized,())\
 
 //https://docs.scipy.org/doc/numpy/reference/c-api.html https://github.com/numpy/numpy/blob/master/numpy/core/code_generators/numpy_api.py
 #undef PyCFunction_New
@@ -136,24 +167,24 @@ typedef struct _p _p,*P;struct _p{L r;P t;L n;union{P*p;P v[1];};};typedef struc
 #define NF \
  X(_p,PyArray_Type,,2)\
  X(_p,PyGenericArrType_Type,,10)\
- X(A,PyArray_NewCopy,(A,I),85)\
- X(A,PyArray_New,(P,I,L*,I,L*,V*,I,I,P),93)\
- X(I,PyArray_SetBaseObject,(A,P),282)\
+ X(A,PyArray_NewCopy,(A,int),85)\
+ X(A,PyArray_New,(P,int,L*,int,L*,void*,int,int,P),93)\
+ X(int,PyArray_SetBaseObject,(A,P),282)\
  X(A,PyArray_FromScalar,(P,P),61)\
 
-#define X(r,n,a,...) typedef r T##n;Z T##n(*n)a;
+#define X(r,n,a,...) typedef r T##n;static T##n(*n)a;
 PF NF
 #undef X
 
-ZI ta(A a){I c[]={KB,-1,KG,KH,-1,KI,-1,4==sizeof(long)?KI:KJ,-1,KJ,-1,KE,KF,-1,-1,-1,-1,0,-1,-1,-1},t=a->d->n;return t>20?-1:c[t];}
-ZI tk(K x){I c[]={-1,0,-1,-1,-1,3,5,9,11,12,-1,-1,9,5,5,12,9,5,5,5},t=xt>0?xt:-xt;return t>19?-1:c[t];}
+static int ta(A a){int c[]={KB,-1,KG,KH,-1,KI,-1,4==sizeof(long)?KI:KJ,-1,KJ,-1,KE,KF,-1,-1,-1,-1,0,-1,-1,-1},t=a->d->n;return t>20?-1:c[t];}
+static int tk(K x){int c[]={-1,0,-1,-1,-1,3,5,9,11,12,-1,-1,9,5,5,12,9,5,5,5},t=xt>0?xt:-xt;return t>19?-1:c[t];}
 
-ZI pyl(S l){
+static int pyl(char* l){
 #if _WIN32
  HMODULE d=LoadLibrary(l);
 #define X(r,n,a) U(n=(T##n(*)a)GetProcAddress(d,#n))
 #else
- V*d=dlopen(l,RTLD_NOW|RTLD_GLOBAL);
+ void*d=dlopen(l,RTLD_NOW|RTLD_GLOBAL);
 #define X(r,n,a) U(n=dlsym(d,#n))
 #endif
  P(!d,0)PF
@@ -162,7 +193,7 @@ ZI pyl(S l){
 
 #define BUFFSIZE 4096
 
-ZI pyn(V**v){
+static int pyn(void**v){
 #define X(r,n,a,i) U(n=(T##n(*)a)v[i])
  NF
  return 1;}

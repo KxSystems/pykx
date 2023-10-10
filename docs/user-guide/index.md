@@ -26,7 +26,7 @@ The following outlines the various topics covered within the above sections:
 |----------------------------------------------------------------------|-------------|
 | [Communicating via IPC](advanced/ipc.md)                             | How can you interact synchronously and asynchronously with a kdb+/q server. |
 | [Using q functions in a Pythonic way](advanced/context_interface.md) | Evaluating and injecting q code within a Python session using a Pythonic context interface which exposes q objects as first class Python objects. |
-| [Numpy integration](advanced/numpy.md)                               | Description of the various low-level integrations between PyKX and numpy. Principally describing NEP-49 optimisations and the evaluation of numpy functions using PyKX vectors directly. |
+| [Numpy integration](advanced/numpy.md)                               | Description of the various low-level integrations between PyKX and Numpy. Principally describing NEP-49 optimisations and the evaluation of Numpy functions using PyKX vectors directly. |
 | [Modes of operation](advanced/modes.md)                              | A brief description of the modes of operation of PyKX outlining it's usage in the presence and absence of a license and the limitations that this imposes.
 | [Performance considerations](advanced/performance.md)                | Guidance on how to treat management and interactions with PyKX objects to achieve the best performance possible. |
 | [Library limitations](advanced/limitations.md)                       | For users familiar with q/kdb+ and previous Python interfaces what limitations does PyKX impose. |

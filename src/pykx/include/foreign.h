@@ -8,11 +8,11 @@ static PyObject* get_py_ptr(K f) {
 }
 
 
-static K k_wrapper(void* k_fn, S code, void* a1, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8) {
+static K k_wrapper(void* k_fn, char* code, void* a1, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8) {
     int gstate = PyGILState_Ensure();
     K res = NULL;
     Py_BEGIN_ALLOW_THREADS
-    K (*k_func)(I, S, ...) = (K (*)(I, S, ...))k_fn;
+    K (*k_func)(int, char*, ...) = (K (*)(int, char*, ...))k_fn;
     res = k_func(0, code, a1, a2, a3, a4, a5, a6, a7, a8, NULL);
     Py_END_ALLOW_THREADS
     PyGILState_Release(gstate);
@@ -51,5 +51,5 @@ static PyObject* _to_bytes_(K k, char wait) {
     // or if the message should be considered async and no reply is necessary
     // A value of 2 at index 1 implies that the message is a response
     kG(k)[1] = wait;
-    return PyMemoryView_FromMemory((S)kG(k), (Py_ssize_t)k->n, PyBUF_READ);
+    return PyMemoryView_FromMemory((char*)kG(k), (Py_ssize_t)k->n, PyBUF_READ);
 }

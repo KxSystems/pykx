@@ -10,6 +10,7 @@ from warnings import warn
 import webbrowser
 
 import toml
+import pandas as pd
 
 from .exceptions import PyKXWarning
 
@@ -118,7 +119,7 @@ if any(i in qargs_tmp for i in arglist) or not hasattr(sys, 'ps1'): # noqa: C901
 elif not license_located:
     modes_url = "https://code.kx.com/pykx/user-guide/advanced/modes.html"
     lic_url = "https://kx.com/kdb-insights-personal-edition-license-download"
-    unlicensed_message = '\nPyKX unlicensed mode enabled. To set this as your default behaviour '\
+    unlicensed_message = '\nPyKX unlicensed mode enabled. To set this as your default behavior '\
                          "please set the following environment variable 'QARGS=--unlicensed'\n\n"\
                          'For more information on PyKX modes of operation, please visit '\
                          f'{modes_url}.\nTo apply for a PyKX license please visit {lic_url}'
@@ -215,6 +216,9 @@ skip_under_q = _is_enabled('SKIP_UNDERQ', '--skip-under-q') or _is_enabled('PYKX
 no_qce = _is_enabled('PYKX_NOQCE', '--no-qce')
 load_pyarrow_unsafe = _is_enabled('PYKX_LOAD_PYARROW_UNSAFE', '--load-pyarrow-unsafe')
 
+pandas_2 = pd.__version__.split('.')[0] == '2'
+disable_pandas_warning = _is_enabled('PYKX_DISABLE_PANDAS_WARNING')
+
 
 def find_core_lib(name: str) -> Path:
     suffix = '.dll' if system == 'Windows' else '.so'
@@ -266,6 +270,8 @@ __all__ = [
     'load_pyarrow_unsafe',
 
     'find_core_lib',
+
+    'pandas_2',
 ]
 
 

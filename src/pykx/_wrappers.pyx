@@ -139,31 +139,31 @@ cpdef inline k_t(x):
     return (<core.K><uintptr_t>x._addr).t
 
 
-cpdef inline core.I k_r(x):
+cpdef inline int k_r(x):
     return (<core.K><uintptr_t>x._addr).r
 
 
-cpdef inline core.G k_g(x):
+cpdef inline unsigned char k_g(x):
     return (<core.K><uintptr_t>x._addr).g
 
 
-cpdef inline core.H k_h(x):
+cpdef inline short k_h(x):
     return (<core.K><uintptr_t>x._addr).h
 
 
-cpdef inline core.I k_i(x):
+cpdef inline int k_i(x):
     return (<core.K><uintptr_t>x._addr).i
 
 
-cpdef inline core.J k_j(x):
+cpdef inline long long k_j(x):
     return (<core.K><uintptr_t>x._addr).j
 
 
-cpdef inline core.E k_e(x):
+cpdef inline float k_e(x):
     return (<core.K><uintptr_t>x._addr).e
 
 
-cpdef inline core.F k_f(x):
+cpdef inline double k_f(x):
     return (<core.K><uintptr_t>x._addr).f
 
 
@@ -175,7 +175,7 @@ cpdef inline uintptr_t k_k(x):
     return <uintptr_t>(<core.K><uintptr_t>x._addr).k
 
 
-cpdef inline core.J k_n(x):
+cpdef inline long long k_n(x):
     return (<core.K><uintptr_t>x._addr).n
 
 
@@ -226,27 +226,27 @@ def pandas_uuid_type_from_arrow(self, array):
 
 
 def list_unlicensed_getitem(self, Py_ssize_t index):
-    cdef core.J n = (<core.K><uintptr_t>self._addr).n
+    cdef long long n = (<core.K><uintptr_t>self._addr).n
     cdef uintptr_t[:] addrs = <uintptr_t[:n]><uintptr_t*>_k(self).G0
     return factory(addrs[index], True)
 
 
 def guid_vector_unlicensed_getitem(self, Py_ssize_t index):
-    cdef core.J n = (<core.K><uintptr_t>self._addr).n
+    cdef long long n = (<core.K><uintptr_t>self._addr).n
     cdef char[:] vector_as_chars = <char[:n*16]><char*>_k(self).G0
     item_as_bytes = bytes(vector_as_chars[index*16:(index+1)*16])
     return wrappers.GUIDAtom(UUID(bytes=item_as_bytes))
 
 
 def char_vector_unlicensed_getitem(self, Py_ssize_t index):
-    cdef core.J n = (<core.K><uintptr_t>self._addr).n
+    cdef long long n = (<core.K><uintptr_t>self._addr).n
     cdef uint8_t[:] x = <uint8_t[:n]><uint8_t*>_k(self).G0
     cdef core.K kx = core.kc(ord(x[index]))
     return factory(<uintptr_t>kx, False)
 
 
 def symbol_vector_unlicensed_getitem(self, Py_ssize_t index):
-    cdef core.J n = (<core.K><uintptr_t>self._addr).n
+    cdef long long n = (<core.K><uintptr_t>self._addr).n
     cdef uintptr_t[:] addrs = <uintptr_t[:n]><uintptr_t*>_k(self).G0
     return wrappers.SymbolAtom(str(<char*>addrs[index], 'utf-8'))
 
@@ -311,8 +311,8 @@ def guid_atom_py(self, bint raw, bint has_nulls, bint stdlib):
 def list_np(self, bint raw, bint has_nulls):
     cdef uintptr_t[:] addrs, razed_addrs
     cdef Py_ssize_t i
-    cdef core.J n = (<core.K><uintptr_t>self._addr).n
-    cdef core.J n0 = 1
+    cdef long long n = (<core.K><uintptr_t>self._addr).n
+    cdef long long n0 = 1
     if raw:
         # Should use `np.NPY_UINTP`, but that isn't defined for whatever reason. It's just a
         # typedef for `np.NPY_UINT`, so we'll use that instead.
@@ -443,6 +443,10 @@ cpdef decref_numpy_allocated_data(x):
     # this gets the backing numpy array without incrementing the refcount and then drops it
     # decrementing the refcount.
     get_numpy_array(x)
+
+
+cpdef decref(x):
+    core.r0(<core.K><uintptr_t>x)
 
 
 cdef bint is_pnull(core.K val):

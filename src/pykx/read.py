@@ -15,6 +15,28 @@ def __dir__():
     return __all__
 
 
+_type_mapping = {
+    'List': "*",
+    'GUID': "G",
+    'Boolean': "B",
+    'Byte': "X",
+    'Short': "H",
+    'Int': "I",
+    'Long': "J",
+    'Real': "E",
+    'Float': "F",
+    'Char': "C",
+    'Symbol': "S",
+    'Timestamp': "P",
+    'Month': "M",
+    'Date': "D",
+    'Datetime': "Z",
+    'Timespan': "N",
+    'Minute': "U",
+    'Second': "V",
+    'Time': "T",
+}
+
 JSONKTypes = Union[
     k.Table, k.Dictionary, k.BooleanAtom, k.BooleanVector, k.FloatAtom, k.FloatVector,
     k.CharVector, k.List
@@ -26,6 +48,23 @@ class QReader:
 
     def __init__(self, q):
         self._q = q
+
+    def update_types(self, types):
+        upd_types = []
+        for i in types:
+            t = str(i)
+            if len(t) == 1:
+                upd_types.append(i)
+            else:
+                found = False
+                for key in _type_mapping.keys():
+                    if key in t:
+                        found = True
+                        upd_types.append(_type_mapping[key])
+                        break
+                if not found:
+                    raise TypeError(f'Unsupported type: {type(i)} supplied')
+        return upd_types
 
     def csv(self,
             path: Union[str, Path, k.SymbolAtom],
@@ -39,8 +78,9 @@ class QReader:
 
         Parameters:
             path: The path to the CSV file.
-            types: A `str`-like object of uppercase characters representing the types. Space is
-                used to drop a column. If `None`, the types will be guessed using `.csvutil.info`.
+            types: Can be a dictionary of columns and their types or a `str`-like object of
+                uppercase characters representing the types. Space is used to drop a column.
+                If `None`, the types will be guessed using `.csvutil.info`.
             delimiter: A single character representing the delimiter between values.
             as_table: `True` if the first line of the CSV file should be treated as column names,
                 in which case a `pykx.Table` is returned. If `False` a `pykx.List` of
@@ -74,25 +114,41 @@ class QReader:
         ```python
         table = q.read.csv('example.csv', None, None, False)
         ```
+
+        Read a comma separated CSV file specifying the type of the three columns
+        named `x1`, `x2` and `x3` to be of type `Integer`, `GUID` and `Timestamp`.
+
+        ```python
+        table = q.read.csv('example.csv', {'x1':kx.IntAtom,'x2':kx.GUIDAtom,'x3':kx.TimestampAtom})
+        ```
         """
         as_table = 'enlist' if as_table else ''
-        if types is None:
+        dict_conversion = None
+        if types is None or isinstance(types, dict):
             if not licensed:
                 raise LicenseException('guess CSV column types')
             if isinstance(self._q, QConnection):
                 raise ValueError('Cannot guess types of CSV columns over IPC.')
+            if isinstance(types, dict):
+                dict_conversion = types
+                types = None
             types = self._q.csvutil.info(k.SymbolAtom(path))['t']
         elif isinstance(types, k.CharAtom):
             # Because of the conversion to `CharVector` later, converting the char atom to bytes
             # here essentially causes `types` to be enlisted without executing any q code.
             types = bytes(types)
-        return self._q(
+        elif isinstance(types, list):
+            types = self.update_types(types)
+        res = self._q(
             f'{{(x; {as_table} y) 0: hsym z}}',
             k.CharVector(types),
             k.CharAtom(delimiter),
             k.SymbolAtom(path),
             wait=True,
         )
+        if dict_conversion is not None:
+            return res.astype(dict_conversion)
+        return res
 
     def splayed(self,
                 root: Union[str, Path, k.SymbolAtom],

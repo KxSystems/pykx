@@ -38,6 +38,21 @@ def test_read_csv(kx, q, tmp_csv_path_1, tmp_csv_path_2):
     assert isinstance(q.read.csv(tmp_csv_path_2, kx.CharAtom('J')), kx.Table)
     assert isinstance(q.read.csv(tmp_csv_path_2, b'J', b','), kx.Table)
     assert isinstance(q.read.csv(tmp_csv_path_2, kx.CharVector('J'), b',', False), kx.List)
+    assert isinstance(q.read.csv(tmp_csv_path_1, [kx.LongAtom, kx.LongAtom, kx.LongAtom]), kx.Table)
+    if not kx.licensed:
+        ctx = pytest.raises(kx.LicenseException)
+    elif isinstance(q, kx.QConnection):
+        ctx = pytest.raises(ValueError)
+    else:
+        ctx = nullcontext()
+    with ctx:
+        assert isinstance(
+            q.read.csv(tmp_csv_path_1, {'a': kx.LongAtom, 'b': kx.LongAtom, 'c': kx.LongAtom}),
+            kx.Table
+        )
+        tab = q.read.csv(tmp_csv_path_1, [kx.LongAtom, ' ', kx.LongAtom])
+        assert isinstance(tab, kx.Table)
+        assert len(tab.columns) == 2
 
 
 @pytest.mark.ipc

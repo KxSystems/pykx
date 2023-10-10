@@ -9,4 +9,3 @@ if[(.z.o~`l64)&$[0=#.z.x;1b;~"-nokurl"in .z.x];
    lf' (!d) @ & (.:d) in " "\:.z.l 4; / only load enabled features
  }[]
  ];
-{@[.:;"\\l ",$[#e:getenv`QINIT;e;"q.q"];::]}[];

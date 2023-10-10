@@ -5,6 +5,11 @@ import pytest
 
 
 @pytest.mark.isolate
+def test_system_call(q):
+    assert (q.system('echo "1"') == q('"1"')).all()
+
+
+@pytest.mark.isolate
 @pytest.mark.parametrize('num_threads', range(3))
 def test_qargs_s_flag(num_threads):
     os.environ['QARGS'] = f'-s {num_threads}'

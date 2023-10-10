@@ -31,7 +31,9 @@ def init_handle(host, port, credentials, unix, tls, timeout, large_messages):
             ':',
             credentials
         )
-        return int(q.hopen((q.hsym(''.join(parts)), int(timeout * 1000))))
+        sym = q.hsym(''.join(parts))
+        hsym = (sym, int(timeout * 1000))
+        return int(q.hopen(hsym))
     else:
         host = b'0.0.0.0' if unix else normalize_to_bytes(host, 'Host')
         return core.khpunc(

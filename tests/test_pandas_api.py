@@ -25,10 +25,10 @@ def test_df_columns(q):
 
 
 def test_df_dtypes(q):
-    df = q('([] til 10; 10?0Ng; 10?1f;0f,til 9;10?("abc";"def"))')
+    df = q('([] til 10; 10?0Ng; 10?1f;0f,til 9;10?("abc";"def");10?1e)')
     assert all(df.dtypes.columns == ['columns', 'type'])
     assert q('{x~y}',
-             q('("kx.LongAtom";"kx.GUIDAtom";"kx.FloatAtom";"kx.List";"kx.CharVector")'),
+             q('("kx.LongAtom";"kx.GUIDAtom";"kx.FloatAtom";"kx.List";"kx.CharVector";"kx.RealAtom")'), # noqa: E501
              df.dtypes['type'])
 
 

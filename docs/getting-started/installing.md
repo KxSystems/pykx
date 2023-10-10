@@ -154,6 +154,7 @@ PyKX depends on the following third-party Python packages:
 - `pandas~=1.2`
 - `numpy~=1.22`
 - `pytz~=2022.1`
+- `toml~=0.10.2`
 
 They are installed automatically by `pip` when PyKX is installed.
 

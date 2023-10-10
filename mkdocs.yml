@@ -139,6 +139,10 @@ theme:
     - content.tabs.link # Insiders
     - header.autohide
     - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.path
+    - navigation.top
+    - navigation.tracking
     - content.code.annotate
     - content.action.edit
     - search.suggest
@@ -181,6 +185,7 @@ nav:
         - Interacting with PyKX objects: user-guide/fundamentals/evaluating.md
         - Querying data: user-guide/fundamentals/querying.md
         - Indexing PyKX objects: user-guide/fundamentals/indexing.md
+        - Text Representation in PyKX: user-guide/fundamentals/text.md
         - Handling nulls and infinities: user-guide/fundamentals/nulls_and_infinities.md
       - Advanced usage and performance considerations:
         - Communicating via IPC: user-guide/advanced/ipc.md
@@ -213,6 +218,7 @@ nav:
         - Writing PyKX data to disk: api/pykx-save-load/write.md
         - Reading PyKX data from disk: api/pykx-save-load/read.md 
       - Reimporter module: api/reimporting.md
+      - Serialization: api/serialize.md
     - Examples:
       - Subscriber: examples/subscriber/readme.md
       - Compression and Encryption: examples/compress_and_encrypt/readme.md

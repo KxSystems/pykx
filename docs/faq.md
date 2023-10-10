@@ -5,7 +5,7 @@
 ```
 >>> import pykx as kx
 <frozen importlib._bootstrap>:228: PyKXWarning: Failed to initialize embedded q; falling back to unlicensed mode, which has limited functionality. Refer to https://code.kx.com/pykx/user-guide/advanced/modes.html for more information. Captured output from initialization attempt:
-    '2022.09.15T10:32:13.419 licence error: cores
+    '2022.09.15T10:32:13.419 license error: cores
 ```
 
 This error indicates your license is limited to a given number of cores but PyKX tried to use more cores than the license allows.

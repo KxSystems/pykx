@@ -15,7 +15,11 @@ Getting the data to a PyKX format provides you with the ability to easily intera
 
 ### Explicitly converting from Pythonic objects to PyKX objects
 
-The most simplistic method of creating a PyKX object is to convert an analagous Pythonic type to a PyKX object. This is facilitated through the use of the functions `pykx.toq` which allows conversions from Python, Numpy, Pandas and PyArrow types to PyKX objects, open the tabs which are of interest to you to see some examples of these conversions
+The most simplistic method of creating a PyKX object is to convert an analogous Pythonic type to a PyKX object. This is facilitated through the use of the functions `pykx.toq` which allows conversions from Python, Numpy, Pandas and PyArrow types to PyKX objects, open the tabs which are of interest to you to see some examples of these conversions
+
+??? Note "Specifying target types"
+
+	When converting Pythonic objects to PyKX types users can make use of the `ktype` named argument. Users converting lists/atomic elements should use [PyKX types](../../api/pykx-q-data/type_conversions.md), if converting Pandas DataFrames or PyArrow Tables users can make use of the `ktype` argument with a dictionary input mapping the column name to the [PyKX type](../../api/pykx-q-data/type_conversions.md).
 
 === "Python"
 
@@ -28,11 +32,9 @@ The most simplistic method of creating a PyKX object is to convert an analagous 
 	>>> kx.toq(pyatom)
 	pykx.LongAtom(pykx.q('2'))
 	>>> kx.toq(pylist)
-	pykx.List(pykx.q('
-	1
-	2
-	3
-	'))
+	pykx.LongVector(pykx.q('1 2 3'))
+	>>> kx.toq(pylist, kx.FloatVector)
+	pykx.FloatVector(pykx.q('1 2 3f'))
 	>>> kx.toq(pydict)
 	pykx.Dictionary(pykx.q('
 	x| (1;2;3)
@@ -51,6 +53,8 @@ The most simplistic method of creating a PyKX object is to convert an analagous 
 	>>>
 	>>> kx.toq(nparray1)
 	pykx.LongVector(pykx.q('1 2 3'))
+ 	>>> kx.toq(nparray1, kx.FloatVector)
+	pykx.FloatVector(pykx.q('1 2 3f'))
 	>>> kx.toq(nparray2)
 	pykx.DateVector(pykx.q('2007.07.13 2006.01.13 2010.08.13'))
 	>>> kx.toq(nparray3)
@@ -71,6 +75,8 @@ The most simplistic method of creating a PyKX object is to convert an analagous 
 	>>> df = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
 	>>> kx.toq(pdseries1)
 	pykx.LongVector(pykx.q('1 2 3'))
+	>>> kx.toq(pdseries1, kx.FloatVector)
+	pykx.FloatVector(pykx.q('1 2 3f'))
 	>>> kx.toq(pdseries2)
 	pykx.IntVector(pykx.q('1 2 3i'))
 	>>> kx.toq(df)
@@ -79,6 +85,20 @@ The most simplistic method of creating a PyKX object is to convert an analagous 
 	---
 	1 a
 	2 b
+	'))
+	>>> kx.toq(df).dtypes
+	pykx.Table(pykx.q('
+	columns type           
+	-----------------------
+	x       "kx.LongAtom"  
+	y       "kx.SymbolAtom"
+	'))
+	>>> kx.toq(df, ktype={'x': kx.FloatVector}).dtypes
+	pykx.Table(pykx.q('
+	columns type           
+	-----------------------
+	x       "kx.FloatAtom" 
+	y       "kx.SymbolAtom"
 	'))
 	```
 
@@ -119,6 +139,20 @@ The most simplistic method of creating a PyKX object is to convert an analagous 
 	4      Horse        
 	5      Brittle stars
 	100    Centipede    
+	'))
+	>>> kx.toq(tab).dtypes
+	pykx.Table(pykx.q('
+	columns type           
+	-----------------------
+	n_legs  "kx.LongAtom"  
+	animals "kx.SymbolAtom"
+	'))
+	>>> kx.toq(tab, {'animals': kx.CharVector}).dtypes
+	pykx.Table(pykx.q('
+	columns type           
+	-----------------------
+	n_legs  "kx.LongAtom"  
+	animals "kx.CharVector"
 	'))
 	```
 

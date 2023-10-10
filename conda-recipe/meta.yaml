@@ -18,7 +18,7 @@ requirements:
     - python
     - setuptools==60.9.3
     - setuptools_scm[toml]>=6.0.1
-    - cython==3.0.0a11
+    - cython==3.0.0
     - numpy==1.22.*
     - tomli>=2.0.1
     - wheel>=0.36.2
@@ -29,6 +29,7 @@ requirements:
     - numpy>=1.22
     - pandas>=1.2,<2.0
     - pytz>=2022.1
+    - toml>=0.10.2
 
 test:
   imports:

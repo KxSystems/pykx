@@ -4,15 +4,161 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
-## PyKX 2.0.1
+## PyKX 2.1.0
+
+#### Release Date
+
+2023-10-09
+
+### Additions
+
+- Added functionality to the CSV Reader to allow for the input of data structures while defining column types. For example,
+the following reads a CSV file and specifies the types of the three columns named `x1`, `x2` and `x3` to be of type `Integer`, `GUID` and `Timestamp`.
+
+	```python
+	>>> table = q.read.csv('example.csv', {'x1':kx.IntAtom,'x2':kx.GUIDAtom,'x3':kx.TimestampAtom})
+	```
+
+- Conversions from Pandas Dataframes and PyArrow tables using `pykx.toq` can now specify the `ktype` argument as a dictionary allowing selective type conversions for defined columns
+
+	```python
+	>>> import pykx as kx
+	>>> import pandas as pd
+	>>> df = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
+	>>> kx.toq(df).dtypes
+	pykx.Table(pykx.q('
+	columns type           
+	-----------------------
+	x       "kx.LongAtom"  
+	y       "kx.SymbolAtom"
+	'))
+	>>> kx.toq(df, ktype={'x': kx.FloatAtom}).dtypes
+	pykx.Table(pykx.q('
+	columns type           
+	-----------------------
+	x       "kx.FloatAtom" 
+	y       "kx.SymbolAtom"
+	'))
+	```
+
+- Addition of the ability for users to run an `apply` method on vector objects within PyKX allowing the application of Python/PyKX functionality on these vectors directly
+
+	```python
+	>>> import pykx as kx
+	>>> random_vec = kx.random.random(2, 10.0, seed=100)
+	>>> random_vec
+	pykx.FloatVector(pykx.q('8.909647 3.451941'))
+	>>> random_vec.apply(lambda x:x+1)
+	pykx.FloatVector(pykx.q('9.909647 4.451941'))
+	>>> def func(x, y):
+	...     return x+y
+	>>> random_vec.apply(func, y=2)
+	pykx.FloatVector(pykx.q('10.909647 5.451941'))
+	```
+
+- Notebooks will HTML print tables and dictionaries through the addition of `_repr_html_`. Previous `q` style output is still available using `print`.
+- Added [`serialize` and `deserialize`](../api/serialize.html) as base methods to assist with the serialization of `K` objects for manual use over IPC.
+- Added support for `pandas` version `2.0`.
+
+!!! Warning "Pandas 2.0 has deprecated the `datetime64[D/M]` types."
+
+    Due to this change it is not always possible to determine if the resulting q Table should
+    use a `MonthVector` or a `DayVector`. In the scenario that it is not possible to determine
+    the expected type a warning will be raised and the `DayVector` type will be used as a
+    default.
 
 ### Fixes and Improvements
 
-- User input based license initialisation introduced in 2.0.0 no longer expects user input when operating in a non-interactive modality, use of PyKX in this mode will revert to previous behaviour
+- Empty PyKX keyed tables can now be converted to Pandas DataFrames, previously this would raise a `ValueError`
+
+	```python
+	>>> import pykx as kx
+	>>> df = kx.q('0#`a xkey ([]a:1 2 3;b:3 4 5)').pd()
+	>>> df
+	Empty DataFrame
+	Columns: [b]
+	Index: []
+	>>> df.index.name
+	'a'
+	>>> kx.toq(df)
+	pykx.KeyedTable(pykx.q('
+	a| b
+	-| -
+	'))
+	```
+
+- Fix to issue introduced in 2.0.0 where indexing of `pykx.Table` returned incorrect values when passed negative/out of range values
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.Table(data={"c1": list(range(3))})
+		>>> tbl[-1]
+		pykx.Table(pykx.q('
+		c1
+		--
+		
+		'))
+		>>> tab[-4]
+		pykx.Table(pykx.q('
+		c1
+		--
+		
+		'))
+		>>> tab[3]
+		pykx.Table(pykx.q('
+		c1
+		--
+		
+		'))
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.Table(data={"c1": list(range(3))})
+		>>> tab[-1]
+		pykx.Table(pykx.q('
+		c1
+		--
+		2 
+		'))
+		>>> tab[-4]
+		...
+		IndexError: index out of range
+		>>> tab[3]
+		...
+		IndexError: index out of range
+		```
+
+- Fix to issue where PyKX would not initialize when users with a [`QINIT`](https://code.kx.com/q/basics/by-topic/#environment) environment variable set which pointed to a file contained a `show` statement
+- Retrieval of `dtypes` with tables containing `real` columns will now return `kx.RealAtom` for the type rather than incorrectly returning `kx.ShortAtom`
+- Users with [`QINIT`](https://code.kx.com/q/basics/by-topic/#environment) environment variable would previously load twice on initialization within PyKX
+- Users installing PyKX under q on Windows had been missing installation of required files using `pykx.install_into_QHOME()`
+
+### Dependency Updates
+
+- The version of `Cython` used to build `PyKX` was updated to the full `3.0.x` release version.
+
+## PyKX 2.0.1
+
+#### Release Date
+
+2023-09-21
+
+### Fixes and Improvements
+
+- User input based license initialization introduced in 2.0.0 no longer expects user input when operating in a non-interactive modality, use of PyKX in this mode will revert to previous behavior
 - Use of the environment variables `QARGS='--unlicensed'` or `QARGS='--licensed'` operate correctly following regression in 2.0.0
 - Fix to issue where `OSError` would be raised when `close()` was called on an IPC connection which has already disconnected server side
 
 ## PyKX 2.0.0
+
+#### Release Date
+
+2023-09-18
 
 - PyKX 2.0.0 major version increase is required due to the following major changes which are likely to constitute breaking changes
 	- Pandas API functionality is enabled permanently which will modify data indexing and retrieval of `pykx.Table` objects. Users should ensure to review and test their codebase before upgrading.
@@ -73,7 +219,7 @@
 	pykx.FloatVector(pykx.q('1 2f'))
 	```
 
-- Support for fixed length string dtype with numpy arrays
+- Support for fixed length string dtype with Numpy arrays
 
 	```python
 	>>> import pykx as kx
@@ -91,7 +237,7 @@
 - Return of Pandas API functions `dtypes`, `columns`, `empty`, `ndim`, `size` and `shape` return `kx` objects rather than Pythonic objects
 - Removed GLIBC_2.34 dependency for conda installs
 - Removed the ability for users to incorrectly call `pykx.q.{select/exec/update/delete}` with error message now suggesting usage of `pykx.q.qsql.{function}`
-- Fixed behaviour of `loc` when used on `KeyedTable` objects to match the pandas behaviour.
+- Fixed behavior of `loc` when used on `KeyedTable` objects to match the pandas behavior.
 - Addition of warning on failure to link the content of a users `QHOME` directory pointing users to documentation for warning suppression
 - Update to PyKX foreign function handling to support application of Path objects as first argument i.e. ```q("{[f;x] f x}")(lambda x: x)(Path('test'))```
 - SQL interface will attempt to automatically load on Windows and Mac
@@ -99,7 +245,7 @@
 - Messages mistakenly sent to a PyKX client handle are now gracefully ignored.
 - Application of Pandas API `dtypes` operations return a table containing `column` to `type` mappings with `PyKX` object specific types rather than Pandas/Python types
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> table = kx.Table([[1, 'a', 2.0, b'testing', b'b'], [2, 'b', 3.0, b'test', b'a']])
@@ -117,7 +263,7 @@
 		dtype: object
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> table = kx.Table([[1, 'a', 2.0, b'testing', b'b'], [2, 'b', 3.0, b'test', b'a']])
@@ -140,7 +286,7 @@
 
 - Fixed an issue where inequality checks would return `False` incorrectly
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import pykx as kx
@@ -148,7 +294,7 @@
 		pykx.q('0b')
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import pykx as kx
@@ -162,20 +308,26 @@
 
 ## PyKX 1.6.3
 
+#### Release Date
+
+2023-08-18
+
 ### Additions
 
 - Addition of argument `return_info` to `pykx.util.debug_environment` allowing user to optionally return the result as a `str` rather than to stdout
 
-## PyKX 1.6.3
-
 ### Fixes and Improvements
 
-- Fixed Pandas API use of `ndim` functionality which should return `2` when interacting with tables following the expected Pandas behaviour.
+- Fixed Pandas API use of `ndim` functionality which should return `2` when interacting with tables following the expected Pandas behavior.
 - Fixed an error when using the Pandas API to update a column with a `Symbols`, `Characters`, and `Generic Lists`.
 - Prevent attempting to pass wrapped Python functions over IPC.
 - Support IPC payloads over 4GiB.
 
 ## PyKX 1.6.2
+
+#### Release Date
+
+2023-08-15
 
 ### Additions
 
@@ -193,11 +345,15 @@
 
 ## PyKX 1.6.1
 
+#### Release Date
+
+2023-07-19
+
 ### Additions
 
 - Added `sorted`, `grouped`, `parted`, and `unique`. As methods off of `Tables` and `Vectors`.
 - Added `PyKXReimport` class to allow subprocesses to reimport `PyKX` safely.
-    - Also includes `.pykx.safeReimport` in `pykx.q` to allows this behaviour when running under q as well.
+    - Also includes `.pykx.safeReimport` in `pykx.q` to allows this behavior when running under q as well.
 - Added environment variables to specify a path to `libpython` in the case `pykx.q` cannot find it.
 
 ### Fixes and Improvements
@@ -210,9 +366,13 @@
 - Updated insights libraries to 4.0.2
 - Fixed `pykx.q` functionality when run on Windows.
 - Fixed an issue where reimporting `PyKX` when run under q would cause a segmentation fault.
-- Updated the warning message for the insights core libraries failing to load to make it more clear that no error has occured.
+- Updated the warning message for the insights core libraries failing to load to make it more clear that no error has occurred.
 
 ## PyKX 1.6.0
+
+#### Release Date
+
+2023-06-16
 
 ### Additions
 
@@ -225,7 +385,7 @@
 - q vector type promotion in licensed mode.
 - Added `.pykx.toraw` to `pykx.q` to enable raw conversions (e.g. `kx.toq(x, raw=True)`)
 - Added support for Python `3.11`.
-    - Support for pyarrow in this python version is currently in Beta.
+    - Support for PyArrow in this python version is currently in Beta.
 - Added the ability to use `kx.RawQConnection` as a Python based `q` server using `kx.RawQConnection(port=x, as_server=True)`.
     - More documentation around using this functionality can be found [here](../examples/server/server.md).
 
@@ -262,6 +422,10 @@
 
 ## PyKX 1.5.3
 
+#### Release Date
+
+2023-05-18
+
 ### Additions
 
 - Added support for Pandas `Float64Index`.
@@ -269,11 +433,19 @@
 
 ## PyKX 1.5.2
 
+#### Release Date
+
+2023-04-30
+
 ### Additions
 
 - Added support for ARM 64 Linux.
 
 ## PyKX 1.5.1
+
+#### Release Date
+
+2023-04-28
 
 ### Fixes and Improvements
 
@@ -281,6 +453,10 @@
 - Fixed an issue when using `.pykx.get` and `.pykx.getattr` that caused multiple calls to be made.
 
 ## PyKX 1.5.0
+
+#### Release Date
+
+2023-04-17
 
 ### Additions
 
@@ -303,19 +479,31 @@
 
 ## PyKX 1.4.2
 
+#### Release Date
+
+2023-03-08
+
 ### Fixes and Improvements
 
 - Fixed an issue that would cause `EmbeddedQ` to fail to load.
 
 ## PyKX 1.4.1
 
+#### Release Date
+
+2023-03-06
+
 ### Fixes and Improvements
 
 - Added constructors for `Table` and `KeyedTable` objects to allow creation of these objects from dictionaries and list like objects.
 - Fixed a memory leak around calling wrapped `Foreign` objects in `pykx.q`.
-- Fixed an issue around the `tls` keyword argument when creating `QConnection` instances, as well as a bug in the unlicensed behaviour of `SecureQConnection`'s.
+- Fixed an issue around the `tls` keyword argument when creating `QConnection` instances, as well as a bug in the unlicensed behavior of `SecureQConnection`'s.
 
 ## PyKX 1.4.0
+
+#### Release Date
+
+2023-01-23
 
 ### Additions
 
@@ -336,8 +524,8 @@
 - Improved error output of `kx.QConnection` objects when an error is raised within the context interface.
 - Fixed `.py()` conversion of nested `k.Dictionary` objects and keyed `k.Dictionary` objects.
 - Fixed unclear error message when querying a `QConnection` instance that has been closed.
-- Added support for conversions of non C contiguous numpy arrays.
-- Fixed conversion of null `GUIDAtom`'s to and from numpy types.
+- Added support for conversions of non C contiguous Numpy arrays.
+- Fixed conversion of null `GUIDAtom`'s to and from Numpy types.
 - Improved performance of converting `q` enums to pandas Categoricals.
 
 ### Beta Features
@@ -347,11 +535,19 @@
 
 ## PyKX 1.3.2
 
+#### Release Date
+
+2023-01-06
+
 ### Features and Fixes
 
 - Fixed support for using TLS with `SyncQConnection` instances.
 
 ## PyKX 1.3.1
+
+#### Release Date
+
+2022-11-16
 
 ### Features and Fixes
 
@@ -372,9 +568,13 @@
 
 ## PyKX 1.3.0
 
+#### Release Date
+
+2022-10-20
+
 ### Features and Fixes
 
-- Support for converting `datetime.datetime` objects with timezone information into `pykx.TimestampAtom`s and `pykx.TimestampVector`s.
+- Support for converting `datetime.datetime` objects with time zone information into `pykx.TimestampAtom`s and `pykx.TimestampVector`s.
 - Added a magic command to run cells of q code in a Jupyter Notebook. The addition of `%%q` at the start of a Jupyter Notebook cell will allow a user to execute q code locally similarly to loading a q file.
 - Added `no_ctx` key word argument to `pykx.QConnection` instances to disable sending extra queries to/from q to manage the context interface.
 - Improvements to SQL interface for PyKX including the addition of support for prepared statements, execution of these statements and retrieval of inputs see [here](../api/query.md#pykx.query.SQL) for more information.
@@ -383,15 +583,23 @@
 
 ### Beta Features
 
-- EmbedPy replacement functionality `pykx.q` updated significantly to provide parity with embedPy from a syntax perspective. Documentation of the interface [here](../pykx-under-q/intro.md) provides API usage. Note that initialisation requires the first version of Python to be retrieved on a users `PATH` to have PyKX installed. Additional flexibility with respect to installation location is expected in `1.4.0` please provide any feedback to `pykx@kx.com`
+- EmbedPy replacement functionality `pykx.q` updated significantly to provide parity with embedPy from a syntax perspective. Documentation of the interface [here](../pykx-under-q/intro.md) provides API usage. Note that initialization requires the first version of Python to be retrieved on a users `PATH` to have PyKX installed. Additional flexibility with respect to installation location is expected in `1.4.0` please provide any feedback to `pykx@kx.com`
 
 ## PyKX 1.2.2
 
+#### Release Date
+
+2022-10-01
+
 ### Features and Fixes
 
-- Fixed an issue causing the timeout argument for `QConnection` instances to not work work properly.
+- Fixed an issue causing the timeout argument for `QConnection` instances to not work properly.
 
 ## PyKX 1.2.1
+
+#### Release Date
+
+2022-09-27
 
 ### Features and Fixes
 
@@ -400,35 +608,47 @@
 
 ## PyKX 1.2.0
 
+#### Release Date
+
+2022-09-01
+
 ### Features and Fixes
 
 - Support for converting any python type to a `q` Foreign object has been added.
 - Support for converting Pandas categorical types into `pykx.EnumVector` type objects.
 - Support for q querying against Pandas/PyArrow tables through internal conversion to q representation and subsequent query. `kx.q.qsql.select(<pd.DataFrame>)`
 - Support for casting Python objects prior to converting into K objects. (e.g. `kx.IntAtom(3.14, cast=True)` or `kx.toq("3.14", ktype=kx.FloatAtom, cast=True)`).
-- Support usage of numpy [`__array_ufunc__`'s](https://numpy.org/doc/stable/reference/ufuncs.html) directly on `pykx.Vector` types.
-- Support usage of numpy `__array_function__`'s directly on `pykx.Vector` types (Note: these will return a numpy ndarray object not an analogous `pykx.K` object).
+- Support usage of Numpy [`__array_ufunc__`'s](https://numpy.org/doc/stable/reference/ufuncs.html) directly on `pykx.Vector` types.
+- Support usage of Numpy `__array_function__`'s directly on `pykx.Vector` types (Note: these will return a Numpy ndarray object not an analogous `pykx.K` object).
 - Improved performance of `pykx.SymbolVector` conversion into native Python type (e.g. `.py()` conversion for `pykx.SymbolVector`'s).
 - Improved performance and memory usage of various comparison operators between `K` types.
 - Improved performance of various `pykx.toq` conversions.
 - `pykx.Vector` types will now automatically enlist atomic types instead of erroring.
-- Fixed conversions of numpy float types into `pykx.FloatAtom` and `pykx.RealAtom` types.
+- Fixed conversions of Numpy float types into `pykx.FloatAtom` and `pykx.RealAtom` types.
 - Fixed conversion of `None` Python objects into analogous null `K` types if a `ktype` is specified.
 - Added `event_loop` parameter to `pykx.AsyncQConnection` that takes a running event loop as a parameter and allows the event loop to manage `pykx.QFuture` objects.
 
 ### Beta Features
 
 - Added extra functionality to `pykx.q` related to the calling and use of python foreign objects directly within a `q` process.
-- Support for [NEP-49](https://numpy.org/neps/nep-0049.html), which allows numpy arrays to be converted into `q` Vectors without copying the underlying data. This behaviour is opt-in and you can do so by setting the environment variable `PYKX_ALLOCATOR` to 1, "1" or True or by adding the flag `--pykxalloc` to the `QARGS` environment variable. Note: This feature also requires a python version of at least 3.8.
+- Support for [NEP-49](https://numpy.org/neps/nep-0049.html), which allows Numpy arrays to be converted into `q` Vectors without copying the underlying data. This behavior is opt-in and you can do so by setting the environment variable `PYKX_ALLOCATOR` to 1, "1" or True or by adding the flag `--pykxalloc` to the `QARGS` environment variable. Note: This feature also requires a python version of at least 3.8.
 - Support the ability to trigger early garbage collection of objects in the `q` memory space by adding `--pykxgc` to the QARGS environment variable, or by setting the `PYKX_GC` environment variable to 1, "1" or True.
 
 ## PyKX 1.1.1
+
+#### Release Date
+
+2022-06-13
 
 ### Features & Fixes
 
 - Added ability to skip symlinking `$QHOME` to `PyKX`'s local `$QHOME` by setting the environment variable `IGNORE_QHOME`.
 
 ## PyKX 1.1.0
+
+#### Release Date
+
+2022-06-07
 
 ### Dependencies
 
@@ -461,6 +681,10 @@
 
 ## PyKX 1.0.1
 
+#### Release Date
+
+2022-03-18
+
 ### Deprecations & Removals
 
 - The `sync` parameter for `pykx.QConnection` and `pykx.QConnection.__call__` has been renamed to the less confusing name `wait`. The `sync` parameter remains, but its usage will result in a `DeprecationWarning` being emitted. The `sync` parameter will be removed in a future version.
@@ -479,6 +703,10 @@
 - Misc doc updates.
 
 ## PyKX 1.0.0
+
+#### Release Date
+
+2022-02-14
 
 ### Migration Notes
 

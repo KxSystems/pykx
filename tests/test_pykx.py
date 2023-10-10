@@ -39,6 +39,23 @@ def test_qargs_q_flag():
     assert kx.q('2 + 2') == 4
 
 
+@pytest.mark.isolate
+def test_qinit_startup():
+    # PyKX would not initialise appropriately if QINIT was set to a file containing show statement
+    os.environ['QINIT'] = 'tests/qinit.q'
+    import pykx as kx
+    assert kx.q('2 + 2') == 4
+
+
+@pytest.mark.isolate
+def test_qinit_qq_startup():
+    # PyKX would not initialise appropriately if q.q exists in QHOME containing a show statement
+    shutil.copy('tests/qinit.q', os.environ['QHOME']+'/q.q')
+    import pykx as kx
+    os.remove(os.environ['QHOME']+'/q.q')
+    assert kx.q('2 + 2') == 4
+
+
 @disposable_env_only
 @pytest.mark.isolate
 def test_QHOME_symlinks():

@@ -789,6 +789,7 @@ def test_from_pandas_dataframe(kx, pd):
 
 @pytest.mark.nep49
 def test_from_pandas_dataframe_licensed(q, kx):
+    q.system.console_size = [25, 80]
     t = q('([] a:til 4; b:"abcd"; c:`w`x`y`z; d:100+til 4)').pd()
     assert t.equals(kx.K(t).pd())
 
@@ -807,6 +808,19 @@ def test_from_pandas_dataframe_licensed(q, kx):
     assert nested_tab.equals(kx.K(nested_tab).pd())
     time_tab = q('([]a:1 2 3;b:("a";"ab";"abc");(1;"t"$1 2;("abc";`a)))').pd()
     assert time_tab.equals(kx.K(time_tab).pd())
+
+
+@pytest.mark.nep49
+def test_from_pandas_dataframe_licensed_warning(q, kx):
+    if pd.__version__.split('.')[0] == '2':
+        q('N:100')
+        gen_q_datatypes_table(q, 'dset_1D', int(q('N')))
+        q('gen_names:{"dset_",/:x,/:string til count y}')
+        type_tab = q('flip (`$gen_names["tab";dset_1D])!N#\'dset_1D')
+        df = type_tab.pd()
+        del df.attrs['_PyKX_base_types']
+        with pytest.warns(RuntimeWarning):
+            kx.K(df)
 
 
 @pytest.mark.unlicensed
@@ -991,6 +1005,51 @@ def test_from_pandas_categorical(q, kx, pd):
         rez = kx.toq(df)
 
     assert kx.toq.ENUMS == ['enum0', 'cat', 'index', 'series', 'sym']
+
+
+@pytest.mark.nep49
+def test_toq_pd_tabular_ktype(q, kx):
+    df = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
+    assert kx.toq(df).dtypes['type'].py() == [b'kx.LongAtom', b'kx.SymbolAtom']
+    kval = {'x': kx.FloatVector}
+    assert kx.toq(df, ktype=kval).dtypes['type'].py() == [b'kx.FloatAtom', b'kx.SymbolAtom']
+    kval = {'x': kx.FloatVector, 'y': kx.CharVector}
+    assert kx.toq(df, ktype=kval).dtypes['type'].py() == [b'kx.FloatAtom', b'kx.CharVector']
+    with pytest.raises(ValueError, match="Column name passed in dictionary not present in df table"): # noqa: E501
+        kx.toq(df, ktype={'x1': kx.FloatVector})
+    with pytest.raises(kx.QError, match="Not supported:.*"):
+        kx.toq(df, ktype={'x': kx.GUIDVector})
+
+
+@pytest.mark.nep49
+def test_toq_pa_tabular_ktype(q, kx, pa):
+    pdtab = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
+    df = pa.Table.from_pandas(pdtab)
+    assert kx.toq(df).dtypes['type'].py() == [b'kx.LongAtom', b'kx.SymbolAtom']
+    kval = {'x': kx.FloatVector}
+    assert kx.toq(df, ktype=kval).dtypes['type'].py() == [b'kx.FloatAtom', b'kx.SymbolAtom']
+    kval = {'x': kx.FloatVector, 'y': kx.CharVector}
+    assert kx.toq(df, ktype=kval).dtypes['type'].py() == [b'kx.FloatAtom', b'kx.CharVector']
+    with pytest.raises(ValueError, match="Column name passed in dictionary not present in df table"): # noqa: E501
+        kx.toq(df, ktype={'x1': kx.FloatVector})
+    with pytest.raises(kx.QError, match="Not supported:.*"):
+        kx.toq(df, ktype={'x': kx.GUIDVector})
+
+
+@pytest.mark.unlicensed
+def test_toq_dict_error(q, kx):
+    pdSeries = q('1 2 3').pd()
+    with pytest.raises(TypeError, match=r"'ktype' .*"):
+        kx.toq(pdSeries, {'x': kx.LongVector})
+    paArray = q('1 2 3').pa()
+    with pytest.raises(TypeError, match=r"'ktype' .*"):
+        kx.toq(paArray, {'x': kx.LongVector})
+    npArray = q('1 2 3').np()
+    with pytest.raises(TypeError, match=r"'ktype' .*"):
+        kx.toq(npArray, {'x': kx.LongVector})
+    pydict = {'x': 1, 'y': 2}
+    with pytest.raises(TypeError, match=r"'ktype' .*"):
+        kx.toq(pydict, {'x': kx.LongVector})
 
 
 # TODO: Add this mark back once this test is consitently passing again, adding more calls to it

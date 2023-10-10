@@ -1,4 +1,4 @@
-from ..wrappers import BooleanVector, IntVector, K, List, LongVector, ShortVector, SymbolAtom, SymbolVector # noqa
+from ..wrappers import BooleanVector, IntVector, K, List, LongVector, ShortVector, SymbolAtom, SymbolVector, _idx_to_k # noqa
 from ..exceptions import QError
 from . import api_return, MetaAtomic
 
@@ -190,6 +190,8 @@ def _iloc(tab, loc):
 
 def _loc(tab, loc): # noqa
     cols = None
+    if isinstance(loc, int):
+        loc = _idx_to_k(loc, len(tab))
     if isinstance(loc, tuple):
         if 'Keyed' in str(type(tab)) and len(loc) == len(q.keys(tab)):
             keys = q.keys(tab).py()

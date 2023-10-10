@@ -14,8 +14,8 @@
 #define k_from_buf(x) (K)(x - offsetof(struct k0, G0))
 
 static void (*r0_ptr)(K);
-static K (*k_ptr)(I, const S, ...);
-static K (*ktn_ptr)(I, J);
+static K (*k_ptr)(int, const char*, ...);
+static K (*ktn_ptr)(int, long long);
 void* q_lib;
 
 
@@ -72,7 +72,7 @@ uintptr_t k_realloc(Allocator* ctx, uintptr_t p, npy_uintp sz) {
     k->t = KG;
 
     // Calculate the size of the vector in bytes, and temporarily set k->n to that.
-    J prev_size;
+    long long prev_size;
     assert(t < 20 && 0 <= t);
     prev_size = k->n * k_type_to_size[t];
     k->n = prev_size;

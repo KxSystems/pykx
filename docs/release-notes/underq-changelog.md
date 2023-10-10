@@ -6,13 +6,41 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 2.1.0
+
+### Fixes and Improvements
+
+- Update to default conversion logic for q objects passed to PyKX functions to more closely match embedPy based conversion expectations.For version <=2.0 conversions of KX lists would produce N Dimensional Numpy arrays of singular type. This results in issues when applying to many analytic libraries which rely on lists of lists rather than singular N Dimensional arrays. Additionally q tables and keyed tables would be converted to numpy recarrays, these are now converted to Pandas DataFrames. To maintain previous behaviour please set the following environment variable `PYKX_DEFAULT_CONVERSION="np"`.
+
+	=== "Behaviour prior to change"
+
+		```q
+		q).pykx.eval["lambda x:print(type(x))"](10?1f;10?1f)
+		<class 'numpy ndarray'>
+		q).pykx.eval["lambda x:print(type(x))"]([]10?1f;10?1f)
+		<class 'numpy.recarray'>
+		```
+
+	=== "Behaviour post change"
+
+		```q
+		q).pykx.eval["lambda x:print(type(x))"](10?1f;10?1f)
+		<class 'list'>
+		q).pykx.eval["lambda x:print(type(x))"]([]10?1f;10?1f)
+		<class 'pandas.core.frame.DataFrame'>
+		```
+
 ## PyKX 2.0.0
+
+#### Release Date
+
+2023-09-18
 
 ### Additions
 
-- Addition of `.pykx.qcallable` and `.pykx.pycallable` fucntions which allow wrapping of a foreign Python callable function returning the result as q or Python foreign respectively.
-- Addition of `.pykx.version` allowing users to programatically access their version from a q process.
-- Addition of `.pykx.debug` namespace containing copies of useful process initialisation information specific to usage within a q enviroment
+- Addition of `.pykx.qcallable` and `.pykx.pycallable` functions which allow wrapping of a foreign Python callable function returning the result as q or Python foreign respectively.
+- Addition of `.pykx.version` allowing users to programmatically access their version from a q process.
+- Addition of `.pykx.debug` namespace containing copies of useful process initialization information specific to usage within a q environment
 - Addition of function `.pykx.debugInfo` which returns a string representation of useful information when debugging issues with the the use of PyKX within the q environment
 - Added the ability for users to print the return of a `conversion` object
 

@@ -136,7 +136,7 @@ class Q(metaclass=ABCMeta):
                 raise attribute_error from inner_error
 
     # __setattr__ takes precedence over data descriptors, so we implement a custom one that uses
-    # the default behaviour for select keys
+    # the default behavior for select keys
     def __setattr__(self, key, value):
         if key in self.__dict__ or key in Q.__dict__:
             object.__setattr__(self, key, value)
@@ -247,6 +247,7 @@ class Q(metaclass=ABCMeta):
 
 
 # Import order matters here, so the imports are not ordered conventionally.
+from .serialize import deserialize, serialize
 from .console import QConsole
 from .ctx import default_paths, QContext
 from .query import Insert, QSQL, SQL, Upsert
@@ -287,6 +288,7 @@ _register_init(q)
 
 from .license import _init as _license_init
 _license_init(q)
+
 from .random import _init as _random_init
 _random_init(q)
 
@@ -318,13 +320,15 @@ def install_into_QHOME(overwrite_embedpy=False, to_local_folder=False) -> None:
         Returns:
             None
     """
-    dest = Path(".") if to_local_folder else qhome
+    dest = Path('.') if to_local_folder else qhome
     p = Path(dest)/'p.k'
     if not p.exists() or overwrite_embedpy:
         shutil.copy(Path(__file__).parent/'p.k', p)
     shutil.copy(Path(__file__).parent/'pykx.q', dest/'p.q' if overwrite_embedpy else dest)
     shutil.copy(Path(__file__).parent/'pykx_init.q_', dest)
     if platform.system() == 'Windows':
+        if dest == qhome:
+            dest = dest/'w64'
         shutil.copy(Path(__file__).parent/'lib/w64/q.dll', dest)
 
 
@@ -408,6 +412,7 @@ __all__ = sorted([
     'AsyncQConnection',
     'EmbeddedQ',
     'EmbeddedQFuture',
+    'PyKXSerialized',
     'Q',
     'qargs',
     'QConnection',

@@ -5,7 +5,7 @@
 // @end
 
 // @private
-// @desc Process context prior to PyKX initialisation
+// @desc Process context prior to PyKX initialization
 .pykx.util.prevCtx:system"d";
 
 \d .pykx
@@ -29,18 +29,20 @@ util.os:first string .z.o;
 // @type {dict}
 util.startup:.Q.opt .z.x
 
+util.whichPython:()
+
 // @private
-// @desc Retrieval of PyKX initialisation directory on first initialisation
-if[not "true"~getenv`PYKX_LOADED_UNDER_Q;
+// @desc Retrieval of PyKX initialization directory on first initialization
+if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
   util.redirect:"\" 2>",$[util.os="w";"nul <nul";"/dev/null"];
   util.dirCommand:"-c \"import pykx; print(pykx.config.pykx_dir)",util.redirect;
-  if[not "true"~pykxDir:getenv`PYKX_DIR;
+  if[not count pykxDir:getenv`PYKX_DIR;
     pykxDir:@[{ret:system"python ",x;util.whichPython:"python";ret};
       util.dirCommand;
       {ret:system"python3 ",util.dirCommand;util.whichPython:"python3";ret}
       ];
-    pykxDir:ssr[;"\\";"/"]first pykxDir
-    ]
+    pykxDir:ssr[;"\\";"/"]last pykxDir
+    ];
   ];
 
 // @private
@@ -63,8 +65,8 @@ if["true"~getenv`UNDER_PYTHON;
   ];
 
 // @private
-// @desc Load PyKX initialisation script if not previously initialised
-if[not "true"~getenv`PYKX_LOADED_UNDER_Q;
+// @desc Load PyKX initialization script if not previously initialised
+if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
   util.pyEnvInfo:("None"; "None"; "");
   if[0=count getenv`PYKX_Q_LOADED_MARKER;
     @[system"l ",;"pykx_init.q_";{system"l ",pykxDir,"/pykx_init.q_"}];
@@ -123,8 +125,8 @@ util.CFunctions:flip `qname`cname`args!flip (
 // This is set to numpy by default to facilitate migration from numpy
 util.defaultConv:$[
   ""~util.conversion:getenv`PYKX_DEFAULT_CONVERSION;
-  "np";
-  $[util.conversion in ("py";"np";"pd";"pa";"k");
+  "default";
+  $[util.conversion in ("py";"np";"pd";"pa";"k";"raw";"default");
     util.conversion;
     '"Unknown default conversion type"
     ]
@@ -177,11 +179,13 @@ util.convertArg:{
 // @desc Convert a supplied argument to the default q -> Python type
 util.toDefault:{
   $[util.isconv x;(::);
-    "py"~util.defaultConv;topy;
-    "np"~util.defaultConv;tonp;
-    "pd"~util.defaultConv;topd;
-    "pa"~util.defaultConv;topa;
-    "k" ~util.defaultConv;tok;
+    "py"      ~ util.defaultConv;topy;
+    "np"      ~ util.defaultConv;tonp;
+    "pd"      ~ util.defaultConv;topd;
+    "pa"      ~ util.defaultConv;topa;
+    "k"       ~ util.defaultConv;tok;
+    "raw"     ~ util.defaultConv;toraw;
+    "default" ~ util.defaultConv;todefault;
     (::)
     ]x
   };
@@ -637,6 +641,48 @@ tok: {x y}(`..k;;)
 // ```
 toraw: {x y}(`..raw;;)
 
+// @name .pykx.todefault
+// @category api
+// @overview
+// _Tag a q object to be indicate a raw conversion when called in Python_
+//
+// ```q
+// .pykx.todefault[qObject]
+// ```
+//
+// **Parameters:**
+//
+// name      | type    | description |
+// ----------|---------|-------------|
+// `qObject` | `any`   | A q object which is to be converted to a default form in Python. |
+//
+// **Return:**
+//
+// type         | description
+// -------------|------------
+// `projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a raw object. |
+//
+// !!! Note
+//     The `todefault` conversion is used to match embedPy conversion logic, in particular it converts q lists to Python lists when dealing with contiguous datatypes rather than to nested single value array types. Additionally it converts q tables to Pandas DataFrames
+//
+// ```q
+// // Denote that a q object once passed to Python should be managed as a Numpy object
+// q).pykx.toraw til 10
+// enlist[`..raw;;][0 1 2 3 4 5 6 7 8 9]
+//
+// // Pass a q object to Python with default conversions and return type
+// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.tonp (til 10;til 10)
+// <class 'numpy.ndarray'>
+//
+// // Pass a q object to Python treating the Python object as a raw Object
+// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault (til 10;til 10)
+// <class 'list'>
+//
+// // Pass a q Table to Python treating the Python table as a Pandas DataFrame
+// q)
+// ```
+todefault:{$[0h=type x;toraw x;$[99h~type x;98h=type each(key x;value x);0b]|98h=type x;topd x;tonp x]}
+
 // @kind function
 // @name .pykx.wrap
 // @category api
@@ -745,6 +791,8 @@ unwrap:{$[util.isw x;$[104 105h~type each u:get x;(last u)`.;x`.];x]}
 //     [Python](https://docs.python.org/3/library/datatypes.html)     | `"py", "python", "Python"`   |
 //     [PyArrow](https://arrow.apache.org/docs/python/index.html)     | `"pa", "pyarrow", "PyArrow"` |
 //     [K](type_conversions.md)                                       | `"k", "q"`                   |
+//     raw                                                            | `"raw"`                      |
+//     default                                                        | `"default"`                  |
 //
 //
 // ```q
@@ -760,13 +808,16 @@ unwrap:{$[util.isw x;$[104 105h~type each u:get x;(last u)`.;x`.];x]}
 setdefault:{
   x:lower x;
   util.defaultConv:$[
-    x in ("np";"numpy");"np";
-    x in ("py";"python");"py";
+    x in ("np";"numpy")        ;"np";
+    x in ("py";"python")       ;"py";
     x in (enlist"k" ;enlist"q");"k";
-    x in ("pd";"pandas");"pd";
-    x in ("pa";"pyarrow");"pa";
+    x in ("pd";"pandas")       ;"pd";
+    x in ("pa";"pyarrow")      ;"pa";
+    x in enlist["raw"]         ;"raw";
+    x in enlist "default"      ;"default";
     '"unknown conversion type: ",x
-    ]
+    ];
+  setenv[`PYKX_DEFAULT_CONVERSION;$[-10h=type util.defaultConv;enlist;]util.defaultConv];
   }
 
 // @kind function
@@ -1175,7 +1226,7 @@ version:{pyexec"import pykx as kx";string qeval"kx.__version__"}
 // `::` | Returns null on successful execution
 //
 // ```q
-// // Set a q array of guids using default behaviour
+// // Set a q array of guids using default behavior
 // q).pykx.set[`test;3?0Ng]
 // q)print .pykx.get`test
 // [UUID('3d13cc9e-f7f1-c0ee-782c-5346f5f7b90e')
@@ -1287,7 +1338,7 @@ version:{pyexec"import pykx as kx";string qeval"kx.__version__"}
 // q).pykx.pyexec"aclass = type('TestClass', (object,), {'x': pykx.LongAtom(3), 'y': pykx.toq('hello')})";
 // q)a:.pykx.get`aclass
 // 
-// // Retrieve an existing attribute to show defined behaviour
+// // Retrieve an existing attribute to show defined behavior
 // q)a[`:x]`
 // 3
 // 
@@ -1313,7 +1364,7 @@ version:{pyexec"import pykx as kx";string qeval"kx.__version__"}
 // 0  0.493183  0a3e1784-0125-1b68-5ae7-962d49f2404d  mi
 // 1  0.578520  5aecf7c8-abba-e288-5a58-0fb6656b5e69  ig
 // 
-// // Attempt to set an attribute against an object which does not support this behaviour
+// // Attempt to set an attribute against an object which does not support this behavior
 // q)arr:.pykx.eval"[1, 2, 3]"
 // q).pykx.setattr[arr;`test;5]
 // 'AttributeError("'list' object has no attribute 'test'")
@@ -1552,5 +1603,5 @@ console:{pyexec"pykx.console.PyConsole().interact(banner='', exitmsg='')"};
 // needed to ensure loading PyKX multiple times does not result in unexpected errors
 finalise[];
 
-// @desc Restore context used at initialisation of script
+// @desc Restore context used at initialization of script
 system"d ",string .pykx.util.prevCtx;

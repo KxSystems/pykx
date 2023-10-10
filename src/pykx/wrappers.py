@@ -178,7 +178,7 @@ import pytz
 
 from . import _wrappers
 from ._pyarrow import pyarrow as pa
-from .config import k_gc, licensed
+from .config import k_gc, licensed, pandas_2
 from .core import keval as _keval
 from .constants import INF_INT16, INF_INT32, INF_INT64, NULL_INT16, NULL_INT32, NULL_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
@@ -214,7 +214,7 @@ def _idx_to_k(key, n):
             raise IndexError('index out of range')
     elif isinstance(key, slice) and key.stop is None:
         # ensure slices have a stop set
-        # TODO: Ensure this produces index k objects from slices whose behaviour matches indexing
+        # TODO: Ensure this produces index k objects from slices whose behavior matches indexing
         # Python lists (KXI-9723).
         key = slice(key.start,
                     n if (key.step or 1) > 0 else -1,
@@ -980,7 +980,7 @@ class IntegralNumericAtom(NumericAtom, Integral):
     def _py_null_or_inf(self, default, raw: bool):
         if not raw and (self.is_null or self.is_inf):
             # By returning the wrapper around the q null/inf when a Python object is requested, we
-            # propagate q's behaviour around them - for better and for worse. Notably this ensures
+            # propagate q's behavior around them - for better and for worse. Notably this ensures
             # symmetric conversions.
             return self
         return default
@@ -1217,6 +1217,32 @@ class Vector(Collection, abc.Sequence):
         if pa is None:
             raise PyArrowUnavailable # nocov
         return pa.array(self.np(raw=raw, has_nulls=has_nulls))
+
+    def apply(self, func, *args, **kwargs):
+        if not callable(func):
+            raise RuntimeError("Provided value 'func' is not callable")
+
+        return q(
+            '{[f; data; args; kwargs] '
+            '  func: $[.pykx.util.isw f;'
+            '    f[; pyarglist args; pykwargs kwargs];'
+            '    ['
+            '      if[0<count kwargs;'
+            '        \'"ERROR: Passing key word arguments to q is not supported"'
+            '      ];'
+            '      {[data; f; args]'
+            '        r: f[data];'
+            '        $[104h~type r; r . args; r]'
+            '      }[; f; args]'
+            '    ]'
+            '  ];'
+            '  func data'
+            '}',
+            func,
+            self,
+            args,
+            kwargs
+        )
 
     def index(self, x, start=None, end=None):
         for i in slice_to_range(slice(start, end), _wrappers.k_n(self)):
@@ -2191,11 +2217,21 @@ class Table(PandasAPI, Mapping):
             v = [PandasUUIDArray(x) if x.dtype == complex else x for x in v]
         else:
             v = [x.np(raw=raw, has_nulls=has_nulls) for x in self._values]
+        if pandas_2:
+            # The current behavior is a bug and will raise an error in the future, this change
+            # proactively fixes that for us
+            for i in range(len(v)):
+                if v[i].dtype == np.dtype('datetime64[D]'):
+                    v[i] = v[i].astype(np.dtype('datetime64[s]'))
+                elif v[i].dtype == np.dtype('datetime64[M]'):
+                    v[i] = v[i].astype(np.dtype('datetime64[s]'))
         df = df_from_arrays(pd.Index(self._keys), v, pd.RangeIndex(len(self)))
-        if not raw:
-            for i, v in enumerate(self._values):
-                if isinstance(v, EnumVector):
-                    df.iloc[:, i] = df.iloc[:, i].astype('category')
+        _pykx_base_types = {}
+        for i, v in enumerate(self._values):
+            if not raw and isinstance(v, EnumVector):
+                df = df.astype({self._keys.py()[i]: 'category'})
+            _pykx_base_types[self._keys.py()[i]] = str(type(v)).split('.')[-1]
+        df.attrs['_PyKX_base_types'] = _pykx_base_types
         return df
 
     def pa(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
@@ -2363,6 +2399,49 @@ class Table(PandasAPI, Mapping):
             else:
                 raise e
 
+    def _repr_html_(self):
+        if not licensed:
+            return self.__repr__()
+        console = q.system.console_size.py()
+        qtab = q('''{[c;t]
+                 n:count t;
+                 cls:$[c[1]<count cls:cols t;((c[1]-1)sublist cls),last cls;cls];
+                 h:.j.j $[c[1]<count cols t;
+                 {[t]c:count cls:cols t;#[(c-1) sublist cls;t],'
+                 (flip(enlist `$"...")!enlist count[t]#enlist "..."),'#[-1 sublist cls;t]};(::)]
+                 $[c[0]<n;{(-2 _ x),(enlist {"..."} each flip 0#x),(-1 sublist x)};::]
+                 {flip {{$[11h~type x;
+                  string x;
+                 (enlist 11h)~distinct type each x;
+                 sv[" "]each string x;
+                 (enlist 20h)~distinct type each x;
+                 sv[" "]each string @[{value each x};x;x];
+                 .Q.s1 each x]}$[20h~type x;@[value;x;x];x]}
+                  each flip x}
+                 {i:til c:count y;if[c;i[c-1]:x];
+                 (flip enlist[`pykxTableIndex]!enlist(i)),'y}[$[n=c[0];n-2;-1+n]]
+                 ?[t;enlist(<;`i;c[0]-1);0b;{x!x}cls],
+                $[n>c[0];?[t;enlist(=;`i;(last;`i));0b;{x!x}cls];()];
+                 h
+                 }''', console, self)
+        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+                          convert_dates=False, dtype=False)
+        if len(df) == 0:
+            columns = self.columns.py()
+            if len(columns)>console[1]:
+                columns = (lambda x: x[:console[1]-1] + ['...'] + [x[-1]])(columns)
+            df = pd.DataFrame(columns=columns)
+        else:
+            df.set_index(['pykxTableIndex'], inplace=True)
+            df.index.names = ['']
+        ht = CharVector(df.to_html())
+        ht = q('''{[c;t;h]
+               $[c[0]<n:count t;
+                 h,"\n<p>",{reverse "," sv 3 cut reverse string x}[n]," rows × ",
+               {reverse "," sv 3 cut reverse string x}[count cols t]," columns</p>";h]
+               }''', console, self, ht).py().decode("utf-8")
+        return ht
+
 
 class SplayedTable(Table):
     """Wrapper for q splayed tables."""
@@ -2399,6 +2478,48 @@ class SplayedTable(Table):
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         raise NotImplementedError
 
+    def _repr_html_(self):
+        if not licensed:
+            return self.__repr__()
+        console = q.system.console_size.py()
+        qtab = q('''{[c;t]
+              n:count t;
+              cls:$[c[1]<count cls:cols t;((c[1]-1)sublist cls),last cls;cls];
+              h:.j.j $[c[1]<count cols t;
+              {[t]c:count cls:cols t;#[(c-1) sublist cls;t],'
+              (flip(enlist `$"...")!enlist count[t]#enlist "..."),'#[-1 sublist cls;t]};(::)]
+              $[c[0]<n;{(-2 _ x),(enlist {"..."} each flip 0#x),(-1 sublist x)};::]
+              {flip {{$[11h~type x;
+                  string x;
+                 (enlist 11h)~distinct type each x;
+                 sv[" "]each string x;
+                 (enlist 20h)~distinct type each x;
+                 sv[" "]each string @[{value each x};x;x];
+                 .Q.s1 each x]}$[20h~type x;@[value;x;x];x]} each flip x}
+                 {i:til c:count y;if[c;i[c-1]:x];
+                 (flip enlist[`pykxTableIndex]!enlist(i)),'y}[$[n=c[0];n-2;-1+n]]
+                 ?[t;enlist(<;`i;c[0]-1);0b;{x!x}cls],
+                $[n>c[0];?[t;enlist(=;`i;(last;`i));0b;{x!x}cls];()];
+              h
+              }''', console, self)
+        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+                          convert_dates=False, dtype=False)
+        if len(df) == 0:
+            columns = self.columns.py()
+            if len(columns)>console[1]:
+                columns = (lambda x: x[:console[1]-1] + ['...'] + [x[-1]])(columns)
+            df = pd.DataFrame(columns=columns)
+        else:
+            df.set_index(['pykxTableIndex'], inplace=True)
+            df.index.names = ['']
+        ht = CharVector(df.to_html())
+        ht = q('''{[c;t;h]
+               $[c[0]<n:count t;
+                 h,"\n<p>",{reverse "," sv 3 cut reverse string x}[n]," rows × ",
+               {reverse "," sv 3 cut reverse string x}[count cols t]," columns</p>";h]
+               }''', console, self, ht).py().decode("utf-8")
+        return ht
+
 
 class PartitionedTable(SplayedTable):
     """Wrapper for q partitioned tables."""
@@ -2427,6 +2548,70 @@ class PartitionedTable(SplayedTable):
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         raise NotImplementedError
 
+    def _repr_html_(self):
+        if not licensed:
+            return self.__repr__()
+        console = q.system.console_size.py()
+        qtab = q('''{[c;t]
+                t:value flip t;
+                if[not count .Q.pn t;.Q.cn get t];
+                ps:sums .Q.pn t;n:last ps;
+                cls:$[c[1]<count cls:cols t;((c[1]-1)sublist cls),last cls;cls];
+                if[c[0]>=n;:.j.j $[c[1]<count cols t;
+                 {[t]c:count cls:cols t;#[(c-1) sublist cls;t],'
+                 (flip(enlist `$"...")!enlist count[t]#enlist "..."),'#[-1 sublist cls;t]};(::)]
+                {flip {{$[11h~type x;
+                  string x;
+                 (enlist 11h)~distinct type each x;
+                 sv[" "]each string x;
+                 (enlist 20h)~distinct type each x;
+                 sv[" "]each string @[{value each x};x;x];
+                 .Q.s1 each x]}$[20h~type x;@[value;x;x];x]}each flip x}
+                 {i:til c:count y;if[c;i[c-1]:x];(flip enlist[`pykxTableIndex]!enlist(i)),'y}[-1+n]
+                 ?[t;();0b;{x!x}cls]];
+                fp:first where ps>=c[0];r:();
+                if[fp~0;r:?[t;((=;.Q.pf;first .Q.pv);(<;`i;c[0]-1));0b;{x!x}cls]];
+                if[fp>0;
+                 r:?[t;enlist(in;.Q.pf;fp#.Q.pv);0b;{x!x}cls];
+                 r:r,?[t;((=;.Q.pf;.Q.pv fp);(<;`i;-1+c[0]-ps[fp-1]));0b;{x!x}cls];
+                 ];
+                if[c[0]<n;
+                 r:r,?[t;((=;.Q.pf;last .Q.pv{last where not x=0}.Q.pn t);
+                 (=;`i;(last;`i)));0b;{x!x}cls]];
+                r:{i:til c:count y;if[c;i[c-1]:x];
+                 (flip enlist[`pykxTableIndex]!enlist(i)),'y}[$[n=c[0];n-2;-1+n]]r;
+                h:.j.j $[c[1]<count cols t;
+                 {[t]c:count cls:cols t;#[(c-1) sublist cls;t],'
+                 (flip(enlist `$"...")!enlist count[t]#enlist "..."),'#[-1 sublist cls;t]};(::)]
+                 {(-2 _ x),(enlist {"..."} each flip 0#x),(-1 sublist x)}
+                {flip {{$[11h~type x;
+                  string x;
+                 (enlist 11h)~distinct type each x;
+                 sv[" "]each string x;
+                 (enlist 20h)~distinct type each x;
+                 sv[" "]each string @[{value each x};x;x];
+                 .Q.s1 each x]}$[20h~type x;@[value;x;x];x]}
+                  each flip x}  r;
+                h
+                }''', console, self)
+        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+                          convert_dates=False, dtype=False)
+        if len(df) == 0:
+            columns = self.columns.py()
+            if len(columns)>console[1]:
+                columns = (lambda x: x[:console[1]-1] + ['...'] + [x[-1]])(columns)
+            df = pd.DataFrame(columns=columns)
+        else:
+            df.set_index(['pykxTableIndex'], inplace=True)
+            df.index.names = ['']
+        ht = CharVector(df.to_html())
+        ht = q('''{[c;t;h]
+               $[c[0]<n:count t;
+                 h,"\n<p>",{reverse "," sv 3 cut reverse string x}[n]," rows × ",
+               {reverse "," sv 3 cut reverse string x}[count cols t]," columns</p>";h]
+               }''', console, self, ht).py().decode("utf-8")
+        return ht
+
 
 class Dictionary(Mapping):
     """Wrapper for q dictionaries, including regular dictionaries, and keyed tables."""
@@ -2454,6 +2639,46 @@ class Dictionary(Mapping):
             key = K(key)
             _check_k_mapping_key(original_key, key, self._keys)
         return super().__getitem__(key)
+
+    def _repr_html_(self):
+        if not licensed:
+            return self.__repr__()
+        if 0 == len(self.keys()):
+            return '<p>Empty pykx.Dictionary: ' + q('.Q.s1', self).py().decode("utf-8") + '</p>'
+        console = q.system.console_size.py()
+        qtab = q('''{[c;d]
+                 $[98h=type value d;
+                 t:([] pykxDictionaryKeys:key d),'value d;
+                 t:([] pykxDictionaryKeys:key d;pykxDictionaryValues:value d)];
+                 cls:$[c[1]<count cls:cols t;((c[1]-1)sublist cls),last cls;cls];
+                 n:count t;
+                 h:.j.j $[c[1]<count cols t;
+                 {[t]c:count cls:cols t;#[(c-1) sublist cls;t],'
+                 (flip(enlist `$"...")!enlist count[t]#enlist "..."),'#[-1 sublist cls;t]};(::)]
+                 $[c[0]<n;
+                 {(-1 _ x),(enlist {"..."} each flip 0#x)};::]
+                 {flip {{$[11h~type x;
+                  string x;
+                 (enlist 11h)~distinct type each x;
+                 sv[" "]each string x;
+                 (enlist 20h)~distinct type each x;
+                 sv[" "]each string @[{value each x};x;x];
+                 .Q.s1 each x]}$[20h~type x;@[value;x;x];x]}
+                  each flip x} ?[t;enlist(<;`i;c[0]);0b;{x!x}cls];
+                 h
+                 }''', console, self)
+        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+                          convert_dates=False, dtype=False)
+        df.set_index('pykxDictionaryKeys', inplace=True)
+        if df.columns.values[0] == 'pykxDictionaryValues':
+            df.columns.values[0] = ''
+        df.index.names = ['']
+        ht = CharVector(df.to_html())
+        ht = q('''{[c;t;h]
+               $[c[0]<n:count t;
+                 h,"\n<p>",{reverse "," sv 3 cut reverse string x}[n]," keys</p>";h]
+               }''', console, self, ht).py().decode("utf-8")
+        return ht
 
 
 def _idx_col_name_generator():
@@ -2599,6 +2824,10 @@ class KeyedTable(Dictionary, PandasAPI):
         vk = self._values._keys
         kvg = self._keys._values._unlicensed_getitem
         vvg = self._values._values._unlicensed_getitem
+        if len(self) == 0:
+            df = pd.DataFrame(columns=kk.py() + vk.py())
+            df = df.set_index(kk.py())
+            return df
         idx = [np.stack(kvg(i).np(raw=raw, has_nulls=has_nulls)).reshape(-1)
                for i in range(len(kk))]
         cols = [vvg(i).np(raw=raw, has_nulls=has_nulls)
@@ -2607,14 +2836,18 @@ class KeyedTable(Dictionary, PandasAPI):
         columns = idx + cols
         index = pd.Index(np.arange(len(self)))
         df = df_from_arrays(column_names, columns, index)
-        if not raw:
-            for i, col in enumerate(kk.py()):
-                if isinstance(kvg(i), EnumVector):
-                    df[col] = df[col].astype('category')
-            for i, col in enumerate(vk.py()):
-                if isinstance(vvg(i), EnumVector):
-                    df[col] = df[col].astype('category')
+
+        _pykx_base_types = {}
+        for i, col in enumerate(kk.py()):
+            if not raw and isinstance(kvg(i), EnumVector):
+                df[col] = df[col].astype('category')
+            _pykx_base_types[col] = str(type(kvg(i))).split('.')[-1]
+        for i, col in enumerate(vk.py()):
+            if not raw and isinstance(vvg(i), EnumVector):
+                df[col] = df[col].astype('category')
+            _pykx_base_types[col] = str(type(vvg(i))).split('.')[-1]
         df.set_index(kk.py(), inplace=True)
+        df.attrs['_PyKX_base_types'] = _pykx_base_types
         return df
 
     def pa(self):
@@ -2787,6 +3020,48 @@ class KeyedTable(Dictionary, PandasAPI):
                 raise QError('Object does not support the grouped attribute')
             else:
                 raise e
+
+    def _repr_html_(self):
+        if not licensed:
+            return self.__repr__()
+        keys = q('{cols key x}', self).py()
+        console = q.system.console_size.py()
+        qtab=q('''{[c;t]
+               n:count t:t;
+               cls:$[c[1]<count cls:cols t;((c[1]-1)sublist cls),last cls;cls];
+               h:.j.j $[c[1]<count cols t;
+                 {[t]c:count cls:cols t;#[(c-1) sublist cls;t],'
+                 (flip(enlist `$"...")!enlist count[t]#enlist "..."),'#[-1 sublist cls;t]};(::)]
+               $[c[0]<n;{(-2 _ x),(enlist {"..."} each flip 0#x),(-1 sublist x)};::]
+               {flip {{$[11h~type x;
+                  string x;
+                 (enlist 11h)~distinct type each x;
+                 sv[" "]each string x;
+                 (enlist 20h)~distinct type each x;
+                 sv[" "]each string @[{value each x};x;x];
+                 .Q.s1 each x]}$[20h~type x;@[value;x;x];x]}
+                  each flip x}
+                 ?[t;enlist(<;`i;c[0]-1);0b;{x!x}cls],
+                $[n>c[0];?[t;enlist(=;`i;(last;`i));0b;{x!x}cls];()];
+               h
+               }''', console, self)
+        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+                          convert_dates=False, dtype=False)
+        columns = q('cols', self).py()
+        if len(keys)>=console[1]:
+            keys = keys[:console[1]-1]
+        if len(df) == 0:
+            if len(columns)>console[1]:
+                columns = (lambda x: x[:console[1]-1] + ['...'] + [x[-1]])(columns)
+            df = pd.DataFrame(columns=columns)
+        df.set_index(keys, inplace=True)
+        ht = CharVector(df.to_html())
+        ht = q('''{[c;t;h]
+               $[c[0]<n:count t;
+                 h,"\n<p>",{reverse "," sv 3 cut reverse string x}[n]," rows × ",
+               {reverse "," sv 3 cut reverse string x}[count cols t]," columns</p>";h]
+               }''', console, self, ht).py().decode("utf-8")
+        return ht
 
 
 class GroupbyTable(PandasAPI):
@@ -3262,7 +3537,7 @@ class Foreign(Atom):
         """Turns the pointer stored within the Foreign back into a Python Object.
 
         Note: The resulting object is a reference to the same memory location as the initial object.
-            This can result in unexpected behaviour and it is recommended to only modify the
+            This can result in unexpected behavior and it is recommended to only modify the
             original python object passed into the `Foreign`
         """
         return _wrappers.from_foreign_to_pyobject(self)

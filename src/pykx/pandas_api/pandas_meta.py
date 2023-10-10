@@ -90,7 +90,7 @@ _type_mapping = {'c': b'kx.Char',
                  'h': b'kx.Short',
                  'i': b'kx.Int',
                  'j': b'kx.Long',
-                 'e': b'kx.Short',
+                 'e': b'kx.Real',
                  'f': b'kx.Float',
                  'p': b'kx.Timestamp',
                  'd': b'kx.Date',
@@ -99,6 +99,7 @@ _type_mapping = {'c': b'kx.Char',
                  'u': b'kx.Minute',
                  'v': b'kx.Second',
                  't': b'kx.Time',
+                 'm': b'kx.Month',
                  '': b'kx.List'}
 
 
