@@ -1,5 +1,6 @@
 # Auto-generated files
 *.c
+!_pykx_helpers.c
 !_numpy.c
 !python.c
 !pykx.c
