@@ -171,6 +171,7 @@ import operator
 from uuid import UUID
 from typing import Any, Optional, Tuple, Union
 import warnings
+from io import StringIO
 
 import numpy as np
 import pandas as pd
@@ -182,7 +183,7 @@ from .config import k_gc, licensed, pandas_2
 from .core import keval as _keval
 from .constants import INF_INT16, INF_INT32, INF_INT64, NULL_INT16, NULL_INT32, NULL_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
-from .util import cached_property, df_from_arrays, slice_to_range
+from .util import cached_property, classproperty, df_from_arrays, slice_to_range
 
 
 q_initialized = False
@@ -228,6 +229,55 @@ def _rich_convert(x: 'K', stdlib: bool = True):
     if isinstance(x, Mapping):
         return x.pd()
     return x.np()
+
+
+def _null_gen(x):
+    def null():
+        """Generate the pykx null representation associated with an atom type
+
+        Examples:
+
+        ```python
+        >>> import pykx as kx
+        >>> kx.TimeAtom.null
+        pykx.TimeAtom(pykx.q('0Nt'))
+        >>> kx.GUIDAtom.null
+        pykx.GUIDAtom(pykx.q('00000000-0000-0000-0000-000000000000'))
+        ```
+        """
+        if licensed and x is not None:
+            return q(f'{x}')
+        elif not licensed:
+            raise QError('Generation of null data not supported in unlicensed mode')
+        else:
+            raise NotImplementedError('Retrieval of null values not supported for this type')
+    return null
+
+
+def _inf_gen(x):
+    def inf(neg=False):
+        """Generate the pykx infinite value associated with an atom type
+
+        Parameters:
+            neg: Should the return value produce the negative infinity value
+
+        Examples:
+
+        ```python
+        >>> import pykx as kx
+        >>> kx.TimeAtom.inf
+        pykx.TimeAtom(pykx.q('0Wt'))
+        >>> kx.TimeAtom.inf(neg=True)
+        pykx.TimeAtom(pykx.q('-0Wt'))
+        ```
+        """
+        if licensed and x is not None:
+            return q('{[p]$[p;neg;]'+f'{x}'+'}', neg)
+        elif not licensed:
+            raise QError('Generation of infinite data not supported in unlicensed mode')
+        else:
+            raise NotImplementedError('Retrieval of infinite values not supported for this type')
+    return inf
 
 
 # HACK: This gets overwritten by the toq module to avoid a circular import error.
@@ -616,11 +666,21 @@ class TemporalFixedAtom(TemporalAtom):
 class TimeAtom(TemporalSpanAtom):
     """Wrapper for q time atoms."""
     t = -19
+    _null = '0Nt'
+    _inf = '0Wt'
     _np_type = 'ms'
     _np_dtype = 'timedelta64[ms]'
 
     def _prototype(self=None):
         return TimeAtom(np.timedelta64(59789214, 'ms'))
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls):  # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -634,11 +694,21 @@ class TimeAtom(TemporalSpanAtom):
 class SecondAtom(TemporalSpanAtom):
     """Wrapper for q second atoms."""
     t = -18
+    _null = '0Nv'
+    _inf = '0Wv'
     _np_type = 's'
     _np_dtype = 'timedelta64[s]'
 
     def _prototype(self=None):
         return SecondAtom(np.timedelta64(13019, 's'))
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -652,11 +722,21 @@ class SecondAtom(TemporalSpanAtom):
 class MinuteAtom(TemporalSpanAtom):
     """Wrapper for q minute atoms."""
     t = -17
+    _null = '0Nu'
+    _inf ='0Wu'
     _np_type = 'm'
     _np_dtype = 'timedelta64[m]'
 
     def _prototype(self=None):
         return MinuteAtom(np.timedelta64(216, 'm'))
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -670,11 +750,21 @@ class MinuteAtom(TemporalSpanAtom):
 class TimespanAtom(TemporalSpanAtom):
     """Wrapper for q timespan atoms."""
     t = -16
+    _null = '0Nn'
+    _inf = '0Wn'
     _np_type = 'ns'
     _np_dtype = 'timedelta64[ns]'
 
     def _prototype(self=None):
         return TimespanAtom(np.timedelta64(3796312051664551936, 'ns'))
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -693,7 +783,17 @@ class DatetimeAtom(TemporalFixedAtom):
         using it whenever possible.
     """
     t = -15
+    _null = '0Nz'
+    _inf = '0Wz'
     _np_dtype = None
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     def __init__(self, *args, **kwargs):
         warnings.warn('The q datetime type is deprecated', DeprecationWarning)
@@ -716,11 +816,21 @@ class DateAtom(TemporalFixedAtom):
     """Wrapper for q date atoms."""
     t = -14
     _np_type = 'D'
+    _null = '0Nd'
+    _inf = '0Wd'
     _epoch_offset = DATE_OFFSET
     _np_dtype = 'datetime64[D]'
 
     def _prototype(self=None):
         return DateAtom(np.datetime64('1972-05-31', 'D'))
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -734,12 +844,22 @@ class DateAtom(TemporalFixedAtom):
 class MonthAtom(TemporalFixedAtom):
     """Wrapper for q month atoms."""
     t = -13
+    _null = '0Nm'
+    _inf = '0Wm'
     _np_type = 'M'
     _epoch_offset = MONTH_OFFSET
     _np_dtype = 'datetime64[M]'
 
     def _prototype(self=None):
         return MonthAtom(np.datetime64('1972-05', 'M'))
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -753,12 +873,22 @@ class MonthAtom(TemporalFixedAtom):
 class TimestampAtom(TemporalFixedAtom):
     """Wrapper for q timestamp atoms."""
     t = -12
+    _null = '0Np'
+    _inf = '0Wp'
     _np_type = 'ns'
     _epoch_offset = TIMESTAMP_OFFSET
     _np_dtype = 'datetime64[ns]'
 
     def _prototype(self=None):
         return TimestampAtom(datetime(2150, 10, 22, 20, 31, 15, 70713))
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -767,6 +897,38 @@ class TimestampAtom(TemporalFixedAtom):
     @property
     def is_inf(self) -> bool:
         return abs(_wrappers.k_j(self)) == INF_INT64
+
+    @property
+    def date(self):
+        return q('{`date$x}', self)
+
+    @property
+    def time(self):
+        return q('{`time$x}', self)
+
+    @property
+    def year(self):
+        return IntAtom(q('{`year$x}', self))
+
+    @property
+    def month(self):
+        return IntAtom(q('{`mm$x}', self))
+
+    @property
+    def day(self):
+        return IntAtom(q('{`dd$x}', self))
+
+    @property
+    def hour(self):
+        return IntAtom(q('{`hh$x}', self))
+
+    @property
+    def minute(self):
+        return IntAtom(q('{`uu$x}', self))
+
+    @property
+    def second(self):
+        return IntAtom(q('{`ss$x}', self))
 
     def py(self,
            *,
@@ -809,10 +971,20 @@ class SymbolAtom(Atom):
         [`pykx.CharVector`][]
     """
     t = -11
+    _null = '`'
+    _inf = None
     _np_dtype = None
 
     def _prototype(self=None):# noqa
         return SymbolAtom('')
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -852,10 +1024,20 @@ class SymbolAtom(Atom):
 class CharAtom(Atom):
     """Wrapper for q char (i.e. 8 bit ASCII value) atoms."""
     t = -10
+    _null = '" "'
+    _inf = None
     _np_dtype = None
 
     def _prototype(self=None):
         return CharAtom(b' ')
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -867,6 +1049,16 @@ class CharAtom(Atom):
 
     def __bytes__(self):
         return self.py()
+
+    def __len__(self):
+        return 1
+
+    def __getitem__(self, key):
+        if not licensed:
+            raise LicenseException('index into K object')
+        if key != 0:
+            raise IndexError('index out of range')
+        return q('first', self)
 
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         if raw:
@@ -926,10 +1118,20 @@ class NonIntegralNumericAtom(NumericAtom, Real):
 class FloatAtom(NonIntegralNumericAtom):
     """Wrapper for q float (i.e. 64 bit float) atoms."""
     t = -9
+    _null = '0n'
+    _inf = '0w'
     _np_dtype = np.float64
 
     def _prototype(self=None):
         return FloatAtom(0.0)
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         return _wrappers.k_f(self)
@@ -941,10 +1143,20 @@ class FloatAtom(NonIntegralNumericAtom):
 class RealAtom(NonIntegralNumericAtom):
     """Wrapper for q real (i.e. 32 bit float) atoms."""
     t = -8
+    _null = '0Ne'
+    _inf = '0We'
     _np_dtype = np.float32
 
     def _prototype(self=None):
         return RealAtom(0.0)
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         return _wrappers.k_e(self)
@@ -997,10 +1209,20 @@ class IntegralNumericAtom(NumericAtom, Integral):
 class LongAtom(IntegralNumericAtom):
     """Wrapper for q long (i.e. 64 bit signed integer) atoms."""
     t = -7
+    _null = '0Nj'
+    _inf = '0Wj'
     _np_dtype = np.int64
 
     def _prototype(self=None):
         return LongAtom(0)
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -1020,10 +1242,20 @@ class LongAtom(IntegralNumericAtom):
 class IntAtom(IntegralNumericAtom):
     """Wrapper for q int (i.e. 32 bit signed integer) atoms."""
     t = -6
+    _null = '0Ni'
+    _inf = '0Wi'
     _np_dtype = np.int32
 
     def _prototype(self=None):
         return IntAtom(0)
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -1043,10 +1275,20 @@ class IntAtom(IntegralNumericAtom):
 class ShortAtom(IntegralNumericAtom):
     """Wrapper for q short (i.e. 16 bit signed integer) atoms."""
     t = -5
+    _null = '0Nh'
+    _inf = '0Wh'
     _np_dtype = np.int16
 
     def _prototype(self=None):
         return ShortAtom(0)
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -1066,10 +1308,20 @@ class ShortAtom(IntegralNumericAtom):
 class ByteAtom(IntegralNumericAtom):
     """Wrapper for q byte (i.e. 8 bit unsigned integer) atoms."""
     t = -4
+    _null = None
+    _inf = None
     _np_dtype = np.uint8
 
     def _prototype(self=None):
         return ByteAtom(0)
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -1089,10 +1341,20 @@ class ByteAtom(IntegralNumericAtom):
 class GUIDAtom(Atom):
     """Wrapper for q GUID atoms."""
     t = -2
+    _null = '0Ng'
+    _inf = None
     _np_dtype = None
 
     def _prototype(self=None):
         return GUIDAtom(UUID(int=0))
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -1109,10 +1371,20 @@ class GUIDAtom(Atom):
 class BooleanAtom(IntegralNumericAtom):
     """Wrapper for q boolean atoms."""
     t = -1
+    _null = None
+    _inf = None
     _np_dtype = None
 
     def _prototype(self=None):
         return BooleanAtom(True)
+
+    @classproperty
+    def null(cls): # noqa: B902
+        return _null_gen(cls._null)()
+
+    @classproperty
+    def inf(cls): # noqa: B902
+        return _inf_gen(cls._inf)()
 
     @property
     def is_null(self) -> bool:
@@ -1194,6 +1466,17 @@ class Vector(Collection, abc.Sequence):
         for i in reversed(range(_wrappers.k_n(self))):
             yield self._unlicensed_getitem(i)
 
+    def __setitem__(self, key, val):
+        try:
+            update_assign = q('{@[x;y;:;z]}', self, _idx_to_k(key, _wrappers.k_n(self)), val)
+        except QError as err:
+            if 'type' == str(err):
+                raise QError(f'Failed to assign value of type: {type(val)} '
+                             f'to list of type: {type(self)}')
+            else:
+                raise QError(str(err))
+        self.__dict__.update(update_assign.__dict__)
+
     def __array__(self):
         # The `__array__` method must return a `np.ndarray`, not a `np.ma.masked_array`. As a
         # result, the null check we currently perform (by default) is a waste of time and memory,
@@ -1243,6 +1526,185 @@ class Vector(Collection, abc.Sequence):
             args,
             kwargs
         )
+
+    def sum(self):
+        return q.sum(self)
+
+    def prod(self):
+        return q.prod(self)
+
+    def min(self):
+        return q.min(self)
+
+    def max(self):
+        return q.max(self)
+
+    def mean(self):
+        return q.avg(self)
+
+    def median(self):
+        return q.med(self)
+
+    def mode(self):
+        return q('{where max[c]=c:count each d:group x}', self)
+
+    def append(self, data):
+        """Append object to the end of a vector.
+
+        Parameters:
+            self: PyKX Vector/List object
+            data: Data to be used when appending to a list/vector, when
+                appending to a typed list this must be an object with a
+                type which converts to an equivalent vector type.
+                When appending to a List any type object can be appended.
+
+        Raises:
+            PyKXException: When dealing with typed vectors appending to this vector
+                with data of a different type is unsupported and will raise an
+                error
+
+        Examples:
+
+        Append to a vector object with an atom
+
+        ```python
+        >>> import pykx as kx
+        >>> qvec = kx.q.til(3)
+        >>> qvec
+        pykx.LongVector(pykx.q('0 1 2'))
+        >>> qvec.append(3)
+        >>> qvec
+        pykx.LongVector(pykx.q('0 1 2 3'))
+        ```
+
+        Attempt to append a vector object with an incorrect type:
+
+        ```python
+        >>> import pykx as kx
+        >>> qvec = kx.q.til(3)
+        >>> qvec.append([1, 2, 3])
+        Traceback (most recent call last):
+          File "<stdin>", line 1, in <module>
+          File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/wrappers.py", line 1262, ...
+            raise QError(f'Appending data of type: {type(data)} '
+        pykx.exceptions.QError: Appending data of type: <class 'pykx.wrappers.LongVector'> ...
+        ```
+
+        Append to a list object with an atom and list:
+
+        ```python
+        >>> import pykx as kx
+        >>> qlist = kx.toq([1, 2.0])
+        >>> qlist
+        pykx.List(pykx.q('
+        1
+        2f
+        '))
+        >>> qlist.append('a')
+        >>> qlist
+        pykx.List(pykx.q('
+        1
+        2f
+        `a
+        '))
+        >>> qlist.append([1, 2])
+        >>> qlist
+        pykx.List(pykx.q('
+        1
+        2f
+        `a
+        1 2
+        '))
+        ```
+        """
+        if not isinstance(self, List):
+            if not q('{(0>type[y])& type[x]=abs type y}', self, data):
+                raise QError(f'Appending data of type: {type(K(data))} '
+                             f'to vector of type: {type(self)} not supported')
+        append_vec = q('{[orig;app]orig,$[0<type app;enlist;]app}', self, data)
+        self.__dict__.update(append_vec.__dict__)
+
+    def extend(self, data):
+        """Extend a vector by appending supplied values to the vector.
+
+        Parameters:
+            self: PyKX Vector/List object
+            data: Data to be used when extending the a list/vector, this can
+                be data of any type which can be converted to a PyKX object.
+
+        Raises:
+            PyKXException: When dealing with typed vectors extending this vector
+                with data of a different type is unsupported and will raise an
+                error
+
+        Examples:
+
+        Extend a vector object with an atom and list
+
+        ```python
+        >>> import pykx as kx
+        >>> qvec = kx.q.til(3)
+        >>> qvec
+        pykx.LongVector(pykx.q('0 1 2'))
+        >>> qvec.extend(3)
+        >>> qvec
+        pykx.LongVector(pykx.q('0 1 2 3'))
+        >>> qvec.extend([4, 5, 6])
+        >>> qvec
+        pykx.LongVector(pykx.q('0 1 2 3 4 5 6'))
+        ```
+
+        Attempt to extend a vector object with an incorrect type:
+
+        ```python
+        >>> import pykx as kx
+        >>> qvec = kx.q.til(3)
+        >>> qvec.extend('a')
+        Traceback (most recent call last):
+          File "<stdin>", line 1, in <module>
+          File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/wrappers.py", line 1271, ...
+            raise QError(f'Extending data of type: {type(data)} '
+          pykx.exceptions.QError: Extending data of type: <class 'pykx.wrappers.SymbolAtom'> ...
+        ```
+
+        Extend a list object with an atom and list:
+
+        ```python
+        >>> import pykx as kx
+        >>> qlist = kx.toq([1, 2.0])
+        >>> qlist
+        pykx.List(pykx.q('
+        1
+        2f
+        '))
+        >>> qlist.extend('a')
+        >>> qlist
+        pykx.List(pykx.q('
+        1
+        2f
+        `a
+        '))
+        >>> qlist.extend([1, 2])
+        >>> qlist
+        pykx.List(pykx.q('
+        1
+        2f
+        `a
+        1
+        2
+        '))
+        ```
+        """
+        if not isinstance(self, List):
+            if q('{type[x]<>abs type y}', self, data):
+                raise QError(f'Extending data of type: {type(K(data))} '
+                             f'to vector of type: {type(self)} not supported')
+        extend_vec = q('''
+            {[orig;ext]
+              ret:t!t:orig,$[type[ext]in 99 98h;enlist;]ext;
+              value $[9h~type first t;count[t]#0x0;]ret}
+            ''', self, data)
+        self.__dict__.update(extend_vec.__dict__)
 
     def index(self, x, start=None, end=None):
         for i in slice_to_range(slice(start, end), _wrappers.k_n(self)):
@@ -1895,6 +2357,38 @@ class TimestampVector(TemporalFixedVector):
             datetime(2150, 10, 22, 20, 31, 15, 70713)]
         )
 
+    @property
+    def date(self):
+        return q('{`date$x}', self)
+
+    @property
+    def time(self):
+        return q('{`time$x}', self)
+
+    @property
+    def year(self):
+        return IntVector(q('{`year$x}', self))
+
+    @property
+    def month(self):
+        return IntVector(q('{`mm$x}', self))
+
+    @property
+    def day(self):
+        return IntVector(q('{`dd$x}', self))
+
+    @property
+    def hour(self):
+        return IntVector(q('{`hh$x}', self))
+
+    @property
+    def minute(self):
+        return IntVector(q('{`uu$x}', self))
+
+    @property
+    def second(self):
+        return IntVector(q('{`ss$x}', self))
+
     def py(self,
            *,
            raw: bool = False,
@@ -2424,7 +2918,7 @@ class Table(PandasAPI, Mapping):
                 $[n>c[0];?[t;enlist(=;`i;(last;`i));0b;{x!x}cls];()];
                  h
                  }''', console, self)
-        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+        df = pd.read_json(StringIO(qtab.py().decode("utf-8")), orient='records',
                           convert_dates=False, dtype=False)
         if len(df) == 0:
             columns = self.columns.py()
@@ -2502,7 +2996,7 @@ class SplayedTable(Table):
                 $[n>c[0];?[t;enlist(=;`i;(last;`i));0b;{x!x}cls];()];
               h
               }''', console, self)
-        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+        df = pd.read_json(StringIO(qtab.py().decode("utf-8")), orient='records',
                           convert_dates=False, dtype=False)
         if len(df) == 0:
             columns = self.columns.py()
@@ -2594,7 +3088,7 @@ class PartitionedTable(SplayedTable):
                   each flip x}  r;
                 h
                 }''', console, self)
-        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+        df = pd.read_json(StringIO(qtab.py().decode("utf-8")), orient='records',
                           convert_dates=False, dtype=False)
         if len(df) == 0:
             columns = self.columns.py()
@@ -2640,6 +3134,11 @@ class Dictionary(Mapping):
             _check_k_mapping_key(original_key, key, self._keys)
         return super().__getitem__(key)
 
+    def __setitem__(self, key, val):
+        if isinstance(key, tuple):
+            raise NotImplementedError("pykx.Dictionary objects do not support tuple key assignment")
+        self.__dict__.update(q('{x,((),y)!((),z)}', self, key, val).__dict__)
+
     def _repr_html_(self):
         if not licensed:
             return self.__repr__()
@@ -2667,7 +3166,7 @@ class Dictionary(Mapping):
                   each flip x} ?[t;enlist(<;`i;c[0]);0b;{x!x}cls];
                  h
                  }''', console, self)
-        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+        df = pd.read_json(StringIO(qtab.py().decode("utf-8")), orient='records',
                           convert_dates=False, dtype=False)
         df.set_index('pykxDictionaryKeys', inplace=True)
         if df.columns.values[0] == 'pykxDictionaryValues':
@@ -2698,7 +3197,6 @@ class KeyedTable(Dictionary, PandasAPI):
     Mortals](https://code.kx.com/q4m3/8_Tables/#84-primary-keys-and-keyed-tables) for more
     information about q keyed tables.
     """
-
     # TODO: `cast` should be set to False at the next major release (KXI-12945)
     def __new__(cls, *args, cast: bool = None, **kwargs):
         tab = None
@@ -3045,7 +3543,7 @@ class KeyedTable(Dictionary, PandasAPI):
                 $[n>c[0];?[t;enlist(=;`i;(last;`i));0b;{x!x}cls];()];
                h
                }''', console, self)
-        df = pd.read_json(qtab.py().decode("utf-8"), orient='records',
+        df = pd.read_json(StringIO(qtab.py().decode("utf-8")), orient='records',
                           convert_dates=False, dtype=False)
         columns = q('cols', self).py()
         if len(keys)>=console[1]:
@@ -3065,7 +3563,6 @@ class KeyedTable(Dictionary, PandasAPI):
 
 
 class GroupbyTable(PandasAPI):
-
     def __init__(self, tab, as_index, was_keyed, as_vector=None):
         self.tab = tab
         self.as_index = as_index
@@ -3077,6 +3574,20 @@ class GroupbyTable(PandasAPI):
 
     def ungroup(self):
         return q.ungroup(self.tab)
+
+    def apply(self, func, *args, **kwargs):
+        tab = self.q()
+        key = q.key(tab)
+        data = q.value(tab)
+        return q('{[k; t; f]'
+                 '  ff:flip t;'
+                 '  d:value ff;'
+                 '  agg:{[row; f] f each row}[;f] each d;'
+                 'k!((key ff)!/:(flip agg))}',
+                 key,
+                 data,
+                 func
+        )
 
     def __getitem__(self, item):
         keys = q.keys(self.tab).py()
@@ -3193,6 +3704,10 @@ class Lambda(Function):
     """
     t = 100
 
+    @property
+    def __name__(self):
+        return 'pykx.Lambda'
+
     @cached_property
     def params(self):
         # Strip "PyKXParam" from all param names if it is a prefix for all
@@ -3211,6 +3726,10 @@ class UnaryPrimitive(Function):
         [`pykx.Identity`][]
     """
     t = 101
+
+    @property
+    def __name__(self):
+        return 'pykx.UnaryPrimitive'
 
     def __call__(self, *args, **kwargs):
         if kwargs:
@@ -3397,6 +3916,10 @@ class Composition(Function):
     t = 105
 
     @property
+    def __name__(self):
+        return 'pykx.Composition'
+
+    @property
     def params(self):
         if q('{.pykx.util.isw x}', self).py():
             return q('.pykx.unwrap', self).params
@@ -3475,6 +3998,10 @@ class AppliedIterator(Function):
     themselves are of the type [`pykx.Iterator`][], but when applied to a function a new type
     (which is a subclass of `AppliedIterator`) is created depending on what iterator was used.
     """
+    @property
+    def __name__(self):
+        return 'pykx.AppliedIterator'
+
     @cached_property
     def params(self):
         return self.func.params
@@ -3562,6 +4089,10 @@ class Foreign(Atom):
 
 class SymbolicFunction(Function, SymbolAtom):
     """Special wrapper type representing a symbol atom that can be used as a function."""
+    @property
+    def __name__(self):
+        return 'pykx.SymbolicFunction'
+
     def __init__(self, *args, **kwargs):
         self.execution_ctx = q # Default to executing in the embedded q instance.
         super().__init__(*args, **kwargs)

@@ -27,7 +27,7 @@ requirements:
   run:
     - python
     - numpy>=1.22
-    - pandas>=1.2,<2.0
+    - pandas>=1.2
     - pytz>=2022.1
     - toml>=0.10.2
 

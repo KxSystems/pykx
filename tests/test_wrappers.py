@@ -235,6 +235,15 @@ class Test_K:
 
 
 class Test_Atom:
+    def test_char_atom(self, kx, q):
+        atom = kx.CharAtom('a')
+        assert 1 == len(atom)
+        assert atom[0].py() == b'a'
+        with pytest.raises(IndexError):
+            atom[1]
+        with pytest.raises(IndexError):
+            atom[-1]
+
     def test_boolean_atom(self, q):
         t, f = q('1b'), q('0b')
         assert t == True    # noqa
@@ -247,6 +256,71 @@ class Test_Atom:
         assert f.py(raw=True) == 0
         assert bool(t) is True
         assert bool(f) is False
+
+    def test_null_gen_lic(self, kx):
+        qtypes = [kx.GUIDAtom, kx.ShortAtom, kx.IntAtom,
+                  kx.LongAtom, kx.RealAtom, kx.FloatAtom,
+                  kx.CharAtom, kx.SymbolAtom, kx.TimestampAtom,
+                  kx.MonthAtom, kx.DateAtom, kx.DatetimeAtom,
+                  kx.TimespanAtom, kx.MinuteAtom, kx.SecondAtom,
+                  kx.TimeAtom]
+        for i in qtypes:
+            null_val = getattr(i, 'null') # noqa: B009
+            assert type(null_val) == i
+            assert null_val.is_null
+
+    def test_inf_pos_lic(self, kx):
+        qtypes = [kx.ShortAtom, kx.IntAtom,
+                  kx.LongAtom, kx.RealAtom, kx.FloatAtom,
+                  kx.TimestampAtom, kx.MonthAtom, kx.DateAtom,
+                  kx.DatetimeAtom, kx.TimespanAtom, kx.MinuteAtom,
+                  kx.SecondAtom, kx.TimeAtom]
+        for i in qtypes:
+            inf_val = getattr(i, 'inf') # noqa: B009
+            assert type(inf_val) == i
+            assert inf_val>0
+            assert inf_val.is_inf
+
+    def test_inf_neg_lic(self, kx):
+        qtypes = [kx.ShortAtom, kx.IntAtom,
+                  kx.LongAtom, kx.RealAtom, kx.FloatAtom,
+                  kx.TimestampAtom, kx.MonthAtom, kx.DateAtom,
+                  kx.DatetimeAtom, kx.TimespanAtom, kx.MinuteAtom,
+                  kx.SecondAtom, kx.TimeAtom]
+        for i in qtypes:
+            inf_val = -getattr(i, 'inf') # noqa: B009
+            assert type(inf_val) == i
+            assert inf_val<0
+            assert inf_val.is_inf
+
+    def test_null_fail(self, kx):
+        qtypes = [kx.BooleanAtom, kx.ByteAtom]
+        for i in qtypes:
+            with pytest.raises(NotImplementedError) as err:
+                getattr(i, 'null') # noqa: B009
+            assert 'Retrieval of null values' in str(err)
+
+    def test_inf_fail(self, kx):
+        qtypes = [kx.BooleanAtom, kx.ByteAtom, kx.GUIDAtom,
+                  kx.CharAtom, kx.SymbolAtom]
+        for i in qtypes:
+            with pytest.raises(NotImplementedError) as err:
+                getattr(i, 'inf') # noqa: B009
+            assert 'Retrieval of infinite values' in str(err)
+
+    @pytest.mark.unlicensed(unlicensed_only=True)
+    def test_null_inf_unlic(self, kx):
+        qtypes = [kx.ByteAtom, kx.GUIDAtom, kx.ShortAtom,
+                  kx.IntAtom, kx.LongAtom, kx.RealAtom,
+                  kx.FloatAtom, kx.CharAtom, kx.SymbolAtom,
+                  kx.TimestampAtom, kx.MonthAtom, kx.DateAtom,
+                  kx.DatetimeAtom, kx.TimespanAtom, kx.MinuteAtom,
+                  kx.SecondAtom, kx.TimeAtom]
+        for i in qtypes:
+            for j in ['null', 'inf']:
+                with pytest.raises(kx.QError) as err:
+                    getattr(i, j)()
+                assert 'not supported in unlicensed mode' in str(err)
 
     def test_is_null_and_is_inf(self, q):
         assert q('0Ng').is_null
@@ -874,6 +948,67 @@ class Test_Vector:
         assert f[q('1 2')].py() == [2.0, 3.0]
         assert f._unlicensed_getitem(-1) == 3.0
 
+    def test_setting(self, q, kx):
+        v = q.til(10)
+        with pytest.raises(IndexError):
+            v[10] = 10
+        with pytest.raises(IndexError):
+            v[-11] = 10
+        with pytest.raises(kx.QError) as err:
+            v[2] = 'a'
+        assert "Failed to assign value of type: <class 'str'>" in str(err)
+        for i in range(3):
+            v[0]+=i
+        assert v[0]>0
+        v[1] = 2
+        assert v[1] == 2
+        v[-1] = 20
+        assert v[9] == 20
+        vlist = kx.List([1, 0.1, 3])
+        vlist[2] = 'a'
+        assert vlist[2] == 'a'
+        vlist[:2] = 0.1
+        assert vlist[0] == 0.1
+        assert vlist[1] == 0.1
+
+    def test_append(self, q, kx):
+        p0 = [1, 2, 3]
+        q0 = kx.toq(p0)
+        p0.append(1)
+        q0.append(1)
+        assert all(p0 == q0)
+        with pytest.raises(kx.QError) as err:
+            q0.append(2.0)
+        assert "Appending data of type: <class 'pykx.wrappers.FloatAtom'" in str(err)
+
+        p1 = [1, 2.0, 3]
+        q1 = kx.toq(p1)
+        p1.append('a')
+        p1.append([1, 2, 3])
+        q1.append('a')
+        q1.append([1, 2, 3])
+        assert q('{x~y}', p1, q1)
+        assert 5 == len(q1)
+
+    def test_extend(self, q, kx):
+        p0 = [1, 2, 3]
+        q0 = kx.toq(p0)
+        p0.extend([1])
+        q0.extend([1])
+        assert all(p0 == q0)
+        with pytest.raises(kx.QError) as err:
+            q0.extend([1, 2.0])
+        assert "Extending data of type: <class 'pykx.wrappers.List'" in str(err)
+
+        p1 = [1, 2.0, 3]
+        q1 = kx.toq(p1)
+        p1.extend(['a'])
+        p1.extend([1, 2, 3])
+        q1.extend(['a'])
+        q1.extend([1, 2, 3])
+        assert q('{x~y}', p1, q1)
+        assert 7 == len(q1)
+
     def test_count(self, q):
         v = q('1 2 1 2 3 2 2 1')
         assert v.count(1) == 3
@@ -1282,6 +1417,12 @@ def test_deserialize(kx):
         assert 'access' in str(err.value)
 
 
+def test_deserialize_unsupported_message(kx):
+    with pytest.raises(kx.QError) as err:
+        kx.deserialize(b'unsupported message format')
+    assert 'Failed to deserialize supplied non PyKX IPC' in str(err.value)
+
+
 class Test_GUIDVector:
     guid_strings = [
         '7a964b5c-0185-6160-a4ff-d94bc7df5f62',
@@ -1599,6 +1740,28 @@ class Test_TimestampVector:
     def test_empty_vector(self, q):
         assert q('"p"$()').np().dtype == np.dtype('datetime64[ns]')
         assert q('"p"$()').np(raw=True).dtype == np.int64
+
+    def test_extracting_date_and_time(self, kx):
+        ts = kx.q('2023.10.25D16:42:01.292070013')
+        assert ts.date == kx.DateAtom(kx.q('2023.10.25'))
+        assert ts.time == kx.TimeAtom(kx.q('16:42:01.292'))
+        assert ts.year == kx.IntAtom(kx.q('2023i'))
+        assert ts.month == kx.IntAtom(kx.q('10i'))
+        assert ts.day == kx.IntAtom(kx.q('25i'))
+        assert ts.hour == kx.IntAtom(kx.q('16i'))
+        assert ts.minute == kx.IntAtom(kx.q('42i'))
+        assert ts.second == kx.IntAtom(kx.q('1i'))
+
+        ts_2 = kx.q('2018.11.09D12:21:08.456123789')
+        tsv = kx.q('enlist', ts, ts_2)
+        assert (tsv.date == kx.DateVector(kx.q('2023.10.25 2018.11.09'))).all()
+        assert (tsv.time == kx.TimeVector(kx.q('16:42:01.292 12:21:08.456'))).all()
+        assert (tsv.year == kx.IntVector(kx.q('2023 2018i'))).all()
+        assert (tsv.month == kx.IntVector(kx.q('10 11i'))).all()
+        assert (tsv.day == kx.IntVector(kx.q('25 9i'))).all()
+        assert (tsv.hour == kx.IntVector(kx.q('16 12i'))).all()
+        assert (tsv.minute == kx.IntVector(kx.q('42 21i'))).all()
+        assert (tsv.second == kx.IntVector(kx.q('1 8i'))).all()
 
 
 class Test_MonthVector:
@@ -2295,6 +2458,24 @@ class Test_Dictionary:
         assert single_nested == q('`a`b!(("";()!();1);("";()!();2))').py()
         assert double_nested == q('`a`b!((""; (`c`d)!((9; 4); (7; 6)); 1);'
                                   '(""; (`c`d)!((19; 14); (17; 16)); 2))').py()
+
+    def test_dict_setting(self, kx, q):
+        pykx_dict = kx.toq({'x': 1})
+        assert all('x' == pykx_dict.keys())
+        assert pykx_dict['x'] == 1
+        pykx_dict['x'] = 2
+        assert pykx_dict['x'] != 1
+        assert pykx_dict['x'] == 2
+        for i in range(3):
+            pykx_dict['x'] += i
+        assert pykx_dict['x'] == 5
+        pykx_dict['x1'] = 10
+        assert all(['x', 'x1'] == pykx_dict.keys())
+        assert 10 == pykx_dict['x1']
+        isinstance(pykx_dict.values(), kx.LongVector)
+        pykx_dict['x2'] = 'a'
+        assert all(['x', 'x1', 'x2'] == pykx_dict.keys())
+        isinstance(pykx_dict.values(), kx.List)
 
     def test_nested_keyed_dict(self, q):
         single_nested = {

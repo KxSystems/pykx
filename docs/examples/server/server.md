@@ -7,11 +7,14 @@ To follow along with this example please feel free to download this <a href="./a
 
 ## Quick start
 
-To run this example simply run the `server.py` script and it will launch a `PyKX` server on port 5000.
+To run this example simply run the `server.py` script and it will launch a `PyKX` server on port 5000 or
+you can run `server_async.py` to run an asyncronous version of the server.
 The server will print out any queries it receives as well as the result of executing the query before replying.
 
 ```bash
 python server.py
+// or
+python server_async.py
 ```
 
 ## Extra Configuration Options

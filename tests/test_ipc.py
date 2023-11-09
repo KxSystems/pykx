@@ -655,3 +655,71 @@ def test_large_IPC(kx, q_port):
         size = 4294967296 # Exceed 32 bit unsigned
         res = q('{x#0x0}', size)
         assert size == len(res)
+
+
+@pytest.mark.unlicensed
+def test_debug_kwarg(kx, q_port):
+    with kx.SyncQConnection(port=q_port) as q:
+        assert q('til 10', debug=True).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            q('til "asd"')
+            assert '[1]' in str(e)
+        assert q('{[x] til x}', 10, debug=True).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            q('{[x] til x}', b'asd')
+            assert '[1]' in str(e)
+        assert q('{[x; y] .[mavg; (x; til y)]}', 3, 10, debug=True).py() ==\
+            [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+        with pytest.raises(kx.QError) as e:
+            q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
+            assert '[1]' in str(e)
+    with kx.SecureQConnection(port=q_port) as q:
+        assert q('til 10', debug=True).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            q('til "asd"')
+            assert '[1]' in str(e)
+        assert q('{[x] til x}', 10, debug=True).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            q('{[x] til x}', b'asd')
+            assert '[1]' in str(e)
+        assert q('{[x; y] .[mavg; (x; til y)]}', 3, 10, debug=True).py() ==\
+            [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+        with pytest.raises(kx.QError) as e:
+            q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
+            assert '[1]' in str(e)
+
+
+@pytest.mark.asyncio
+@pytest.mark.unlicensed
+async def test_debug_kwarg_async(kx, q_port):
+    async with kx.AsyncQConnection(port=q_port) as q:
+        assert (await q('til 10', debug=True)).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            await q('til "asd"')
+            assert '[1]' in str(e)
+        assert (await q('{[x] til x}', 10, debug=True)).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            await q('{[x] til x}', b'asd')
+            assert '[1]' in str(e)
+        assert (await q('{[x; y] .[mavg; (x; til y)]}', 3, 10, debug=True)).py()\
+            == [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+        with pytest.raises(kx.QError) as e:
+            await q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
+            assert '[1]' in str(e)
+
+
+@pytest.mark.embedded
+async def test_debug_kwarg_embedded(kx, q):
+    assert q('til 10', debug=True).py() == list(range(10))
+    with pytest.raises(kx.QError) as e:
+        q('til "asd"')
+        assert '[1]' in str(e)
+    assert q('{[x] til x}', 10, debug=True).py() == list(range(10))
+    with pytest.raises(kx.QError) as e:
+        q('{[x] til x}', b'asd')
+        assert '[1]' in str(e)
+    assert q('{[x; y] .[mavg; (x; til y)]}', 3, 10, debug=True).py() ==\
+        [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+    with pytest.raises(kx.QError) as e:
+        q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
+        assert '[1]' in str(e)

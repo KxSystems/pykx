@@ -117,7 +117,7 @@ class QContext:
             raise AttributeError
         if key == 'z' and self._fqn == '':
             return ZContext(proxy(self))
-        elif key in self._unsupported_keys_with_msg:
+        elif self._fqn in {'', '.q'} and key in self._unsupported_keys_with_msg:
             raise AttributeError(f'{key}: {self._unsupported_keys_with_msg[key]}')
         if self._fqn in {'', '.q'} and key in self._q.reserved_words:
             # Reserved words aren't actually part of the `.q` context dict

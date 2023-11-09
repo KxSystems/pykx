@@ -6,11 +6,66 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 2.2.0
+
+### Additions
+
+- Addition of `PYKX_EXECUTABLE` environment/configuration variable to allow control of which Python executable is used under q.
+
+### Fixes and Improvements
+
+- Failure to access and load PyKX resulting in an `os` error now returns Python backtrace outlining the underlying Python error allowing for easier debugging
+
+	=== "Behavior prior to change"
+
+		```q
+		q)\l pykx.q
+		'os
+		  [4]  \python3 -c "import pykx; print(pykx.config.pykx_dir)" 2>/dev/null
+		       ^
+		```
+
+	=== "Behavior post change"
+
+		```q
+		q)\l pykx.q
+		Traceback (most recent call last):
+		  File "<string>", line 1, in <module>
+		  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/__init__.py", line 27, in <module>
+		    from . import core
+		  File "pykx/core.pyx", line 6, in init pykx.core
+		    from .util import num_available_cores
+		  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py", line 8, in <module>
+		    import pandas as pd
+		  File "/usr/local/anaconda3/lib/python3.8/site-packages/pandas/__init__.py", line 16, in <module>
+		    raise ImportError(
+		ImportError: Unable to import required dependencies:
+		numpy: cannot import name 'SystemRandom' from 'random' (/Users/projects/pykx/src/pykx/random.py)
+		Traceback (most recent call last):
+		  File "<string>", line 1, in <module>
+		  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/__init__.py", line 27, in <module>
+		    from . import core
+		  File "pykx/core.pyx", line 6, in init pykx.core
+		    from .util import num_available_cores
+		  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py", line 8, in <module>
+		    import pandas as pd
+		  File "/usr/local/anaconda3/lib/python3.8/site-packages/pandas/__init__.py", line 16, in <module>
+		    raise ImportError(
+		ImportError: Unable to import required dependencies:
+		numpy: cannot import name 'SystemRandom' from 'random' (/Users/projects/pykx/src/pykx/random.py)
+		'os
+		  [4]  \python3 -c "import pykx; print('PYKX_DIR: ' + str(pykx.config.pykx_dir))"
+		```
+
+- Fixed `type` error if converting dictionaries or keyed tables with conversion set to `default`
+- On load now sets `PYKX_SKIP_UNDERQ` rather than deprecated `SKIP_UNDERQ`
+- `safeReimport` now additionally unsets/resets: `PYKX_DEFAULT_CONVERSION`, `PYKX_SKIP_UNDERQ`, `PYKX_EXECUTABLE`, `PYKX_DIR`
+
 ## PyKX 2.1.0
 
 ### Fixes and Improvements
 
-- Update to default conversion logic for q objects passed to PyKX functions to more closely match embedPy based conversion expectations.For version <=2.0 conversions of KX lists would produce N Dimensional Numpy arrays of singular type. This results in issues when applying to many analytic libraries which rely on lists of lists rather than singular N Dimensional arrays. Additionally q tables and keyed tables would be converted to numpy recarrays, these are now converted to Pandas DataFrames. To maintain previous behaviour please set the following environment variable `PYKX_DEFAULT_CONVERSION="np"`.
+- Update to default conversion logic for q objects passed to PyKX functions to more closely match embedPy based conversion expectations.For version <=2.0 conversions of KX lists would produce N Dimensional Numpy arrays of singular type. This results in issues when applying to many analytic libraries which rely on lists of lists rather than singular N Dimensional arrays. Additionally q tables and keyed tables would be converted to Numpy recarrays, these are now converted to Pandas DataFrames. To maintain previous behavior please set the following environment variable `PYKX_DEFAULT_CONVERSION="np"`.
 
 	=== "Behaviour prior to change"
 

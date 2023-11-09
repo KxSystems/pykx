@@ -13,7 +13,7 @@ Indexes used on K objects in PyKX are converted to equivalent K objects in q usi
 
 The following provides some examples of applying indexing to various q objects:
 
-## Basic Array Indexing
+## Basic Vectors Indexing
 
 Indexing in PyKX spans elements `0` to element `N-1` where `N` is the length of the object being indexed. 
 
@@ -27,6 +27,11 @@ Single element indexing works similarly to any other standard Python sequence. S
 pykx.LongAtom(pykx.q('2'))
 >>> x[-2]
 pykx.LongAtom(pykx.q('8'))
+>>> y = kx.CharVector('abcdefg')
+>>> y[0]
+pykx.CharAtom(pykx.q('"a"'))
+>>> y[-2]
+pykx.CharAtom(pykx.q('"f"')) 
 ```
 
 Similar to Numpy indexing an array out of bounds will result in an `IndexError` being raised.
@@ -43,7 +48,7 @@ Traceback (most recent call last):
 IndexError: index out of range
 ```
 
-N Dimensional list arrays can also be manipulated using single element indexing as follows
+N Dimensional list vectors can also be manipulated using single element indexing as follows
 
 ```python
 >>> x = kx.q('4 4#16?1f')
@@ -60,7 +65,7 @@ pykx.FloatAtom(pykx.q('0.6919531'))
 
 ### Slicing
 
-Slicing arrays in PyKX is more simplistic than the functionality provided by Numpy. Arrays of N dimensions are indexed using `obj[start:stop:step]` semantics. This slice syntax operates where `start` is the starting index, `stop` is the stopping index and `step` is the number of steps between the elements where `step` is non zero
+Slicing vectors in PyKX is more simplistic than the functionality provided by Numpy. Vectors of N dimensions are indexed using `obj[start:stop:step]` semantics. This slice syntax operates where `start` is the starting index, `stop` is the stopping index and `step` is the number of steps between the elements where `step` is non zero
 
 ```python
 >>> x = kx.q.til(10)
@@ -77,9 +82,118 @@ pykx.List(pykx.q('
 0.1477547 0.274227  0.5635053 0.883823 
 0.2439194 0.6718125 0.8639591 0.8439807
 '))
+
+>>> y = kx.CharVector('abcdefg')
+>>> y[2:4]
+pykx.CharVector(pykx.q('"cd"'))
+>>> y[3:]
+pykx.CharVector(pykx.q('"defg"'))
+>>> y[:6:2]
+pykx.CharVector(pykx.q('"ace"'))
 ```
 
-## Indexing Non Array Objects
+## Assigning and Adding Values to Vectors/Lists
+
+Vector assignment in PyKX operates similarly to that provided by Numpy and operations supported on basic Python lists. As with the previous sections this functionality supports both individual element assignment and slice assignment as follows:
+
+```python
+>>> vec = kx.q.til(10)
+>>> vec
+pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+>>> vec[1] = 15
+>>> vec
+pykx.LongVector(pykx.q('0 15 2 3 4 5 6 7 8 9'))
+>>> vec[-1] = 10
+>>> vec
+pykx.LongVector(pykx.q('0 15 2 3 4 5 6 7 8 10'))
+>>> vec[:5] = 0
+>>> vec
+pykx.LongVector(pykx.q('0 0 0 0 0 5 6 7 8 10'))
+```
+
+??? Note "N-Dimensional vector element assignment not supported"
+
+	```python
+	>>> x = kx.q('4 4#16?1f')
+	>>> x
+	pykx.List(pykx.q('
+	0.3927524  0.5170911 0.5159796 0.4066642
+	0.1780839  0.3017723 0.785033  0.5347096
+	0.7111716  0.411597  0.4931835 0.5785203
+	0.08388858 0.1959907 0.375638  0.6137452
+	'))
+        >>> x[0][2] = 3.0
+	>>> x
+	pykx.List(pykx.q('
+        0.3927524  0.5170911 0.5159796 0.4066642
+        0.1780839  0.3017723 0.785033  0.5347096
+        0.7111716  0.411597  0.4931835 0.5785203
+        0.08388858 0.1959907 0.375638  0.6137452
+        '))
+	```
+
+In addition to positional assignment users can make use of the `append` and `extend` methods for `pykx.*Vector` and `pykx.List` objects. When appending objects to a list this can be achieved for single item assignments, while extend will look to add multiple elements to a Vector or List object. The following tabbed section shows the use of append and extend operations including failing cases.
+
+=== "pykx.*Vector"
+
+	```python
+	>>> import pykx as kx
+	>>> qvec = kx.random.random(3, 1.0, seed = 42)
+	>>> qvec
+	pykx.FloatVector(pykx.q('0.7742128 0.7049724 0.5212126'))
+	>>> qvec.append(1.1)
+	>>> qvec
+	pykx.FloatVector(pykx.q('0.7742128 0.7049724 0.5212126 1.1'))
+	>>>
+	>>> qvec.append([1.2, 1.3, 1.4])
+	Traceback (most recent call last):
+	  File "<stdin>", line 1, in <module>
+	  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/wrappers.py", line 1262, in append
+	    raise QError(f'Appending data of type: {type(data)} '
+	pykx.exceptions.QError: Appending data of type: <class 'pykx.wrappers.FloatVector'> to vector of type: <class 'pykx.wrappers.FloatVector'> not supported
+	>>>
+	>>> qvec.extend([1.2, 1.3, 1.4])
+	pykx.FloatVector(pykx.q('0.7742128 0.7049724 0.5212126 1.1 1.2 1.3 1.4'))
+	>>>
+	>>> qvec.extend([1, 2, 3])
+	Traceback (most recent call last):
+	  File "<stdin>", line 1, in <module>
+	  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/wrappers.py", line 1271, in extend
+	    raise QError(f'Extending data of type: {type(data)} '
+	pykx.exceptions.QError: Extending data of type: <class 'pykx.wrappers.LongVector'> to vector of type: <class 'pykx.wrappers.FloatVector'> not supported
+	```
+
+=== "pykx.List"
+
+	```python
+	>>> qlist = kx.toq([1, 2, 1.3])
+	>>> qlist
+	pykx.List(pykx.q('
+	1
+	2
+	1.3
+	'))
+	>>> qlist.append({'x': 1})
+	>>> qlist
+	pykx.List(pykx.q('
+	1
+	2
+	1.3
+	(,`x)!,1
+	'))
+	>>> qlist.extend([1, 2])
+	>>> qlist
+	pykx.List(pykx.q('
+	1
+	2
+	1.3
+	(,`x)!,1
+	1
+	2
+	'))
+	```
+
+## Indexing Non Vector Objects
 
 In addition to being able to index and slice PyKX vector and list objects it is also possible to apply index and slicing semantics on PyKX Table objects. Application of slice/index semantics on tabular objects will return table like objects
 

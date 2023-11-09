@@ -1,4 +1,5 @@
-from pykx.pandas_api import api_return
+from . import api_return
+from ..exceptions import QError
 
 
 def _init(_q):
@@ -60,7 +61,7 @@ def preparse_computations(tab, axis=0, skipna=True, numeric_only=False, bool_onl
         '{[tab;skipna;axis]'
         'r:value flip tab;'
         'if[not axis~0;r:flip r];'
-        'if[skipna;r:{x where not null x} peach r];'
+        'if[skipna;r:{x where not null x} each r];'
         'r}',
         tab,
         skipna,
@@ -255,3 +256,58 @@ class PandasMeta:
             res,
             min_count
         ), cols)
+
+    def agg(self, func, axis=0, *args, **kwargs): # noqa: C901
+        if 'KeyedTable' in str(type(self)):
+            raise NotImplementedError("'agg' method not presently supported for KeyedTable")
+        if 'GroupbyTable' not in str(type(self)):
+            if 0 == len(self):
+                raise QError("Application of 'agg' method not supported for on tabular data with 0 rows") # noqa: E501
+        keyname = q('()')
+        data = q('()')
+        if axis != 0:
+            raise NotImplementedError('axis parameter only presently supported for axis=0')
+        if isinstance(func, str):
+            return getattr(self, func)()
+        elif callable(func):
+            return self.apply(func, *args, **kwargs)
+        elif isinstance(func, list):
+            for i in func:
+                if isinstance(i, str):
+                    keyname = q('{x,y}', keyname, i)
+                    data = q('{x, enlist y}', data, getattr(self, i)())
+                elif callable(i):
+                    keyname = q('{x,y}', keyname, i.__name__)
+                    data = q('{x, enlist y}', data, self.apply(i, *args, **kwargs))
+            if 'GroupbyTable' in str(type(self)):
+                return q('{x!y}', keyname, data)
+        elif isinstance(func, dict):
+            if 'GroupbyTable' in str(type(self)):
+                raise NotImplementedError('Dictionary input func not presently supported for GroupbyTable') # noqa: E501
+            data = q('{(flip enlist[`function]!enlist ())!'
+                     'flip ($[1~count x;enlist;]x)!'
+                     '$[1~count x;enlist;]count[x]#()}', self.keys())
+            for key, value in func.items():
+                data_name = [key]
+                if isinstance(value, str):
+                    valname = value
+                    keyname = q('{x, y}', keyname, value)
+                    exec_data = getattr(self[data_name], value)()
+                elif callable(value):
+                    valname = value.__name__
+                    keyname = q('{x, y}', keyname, valname)
+                    exec_data = self[data_name].apply(value, *args, **kwargs)
+                else:
+                    raise NotImplementedError(f"Unsupported type '{type(value)}' supplied as dictionary value") # noqa: E501
+                data = q('{[x;y;z;k]x upsert(enlist enlist[`function]!enlist[k])!enlist z}',
+                         data,
+                         self.keys(),
+                         exec_data,
+                         valname)
+            return data
+        else:
+            raise NotImplementedError(f"func type: {type(func)} unsupported")
+        if 'GroupbyTable' in str(type(self)):
+            return data
+        else:
+            return (q('{(flip enlist[`function]!enlist x)!y}', keyname, data))

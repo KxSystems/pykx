@@ -40,11 +40,38 @@ def test_qargs_q_flag():
 
 
 @pytest.mark.isolate
+def test_no_sql():
+    os.environ['QARGS'] = '--no-sql'
+    import pykx as kx
+    with pytest.raises(kx.QError) as err:
+        kx.q.sql('select 42')
+    assert '.s.sp' in str(err)
+
+
+@pytest.mark.isolate
+@pytest.mark.skipif(not sys.platform.startswith('linux'), reason="qlog only supported on Linux")
+def test_no_qlog():
+    os.environ['QARGS'] = '--no-qlog'
+    import pykx as kx
+    with pytest.raises(kx.QError) as err:
+        kx.q('.qlog')
+    assert '.qlog' in str(err)
+
+
+@pytest.mark.isolate
 def test_qinit_startup():
     # PyKX would not initialise appropriately if QINIT was set to a file containing show statement
     os.environ['QINIT'] = 'tests/qinit.q'
     import pykx as kx
     assert kx.q('2 + 2') == 4
+
+
+@pytest.mark.isolate
+def test_unlicensed_env():
+    os.environ['PYKX_UNLICENSED'] = 'true'
+    import pykx as kx
+    assert not kx.licensed
+    assert 1 == kx.toq(1).py()
 
 
 @pytest.mark.isolate
@@ -193,3 +220,14 @@ def test_pykx_safe_reimport():
             text=True,
         ).stdout.strip()
         assert output.split('\n')[-1] == "0 1 2 3 4 5 6 7 8 9"
+
+
+@pytest.mark.isolate
+def test_pykx_star():
+    output = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c', 'from pykx import *; print(q("til 10"))'),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    ).stdout.strip()
+    assert output.split('\n')[-1] == "0 1 2 3 4 5 6 7 8 9"
