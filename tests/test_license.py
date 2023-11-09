@@ -1,6 +1,7 @@
 import base64
 from io import StringIO
 import os
+import shutil
 import re
 
 # Do not import pykx here - use the `kx` fixture instead!
@@ -107,6 +108,13 @@ def test_use_both_licensed_and_unlicensed_flags(QARGS):
         import pykx # noqa: F401
 
 
+def test_env_combination():
+    os.environ['QARGS'] = '--licensed'
+    os.environ['PYKX_UNLICENSED'] = 'true'
+    with pytest.raises(Exception, match="(?i)'licensed' and 'unlicensed' behaviour"):
+        import pykx # noqa: F401
+
+
 def test_check_license_invalid_file(kx):
     with patch('sys.stdout', new=StringIO()) as test_out:
         kx.license.check('/test/test.blah')
@@ -136,6 +144,28 @@ def test_check_license_success_b64(kx):
     with open(os.environ['QHOME'] + '/kc.lic', 'rb') as f:
         license = base64.encodebytes(f.read())
     assert kx.license.check(license, format='STRING')
+
+
+@pytest.mark.xfail(reason="Manual testing works correctly, seems to be a persistance issue")
+@pytest.mark.skipif('KDB_LICENSE_EXPIRED' not in os.environ,
+                    reason='Test required KDB_LICENSE_EXPIRED environment variable to be set')
+def test_exp_license(kx):
+    exp_lic = os.environ['KDB_LICENSE_EXPIRED']
+    lic_folder = '/tmp/license'
+    os.makedirs(lic_folder, exist_ok=True)
+    with open(lic_folder + '/k4.lic', 'wb') as binary_file:
+        binary_file.write(base64.b64decode(exp_lic))
+    qhome_loc = os.environ['QHOME']
+    os.environ['QLIC'] = os.environ['QHOME'] = lic_folder
+    pattern = re.compile('Your PyKX license has now.*')
+    with patch('sys.stdout', new=StringIO()) as test_out:
+        try:
+            import pykx  # noqa: F401
+        except Exception as e:
+            assert str(e) == "EOF when reading a line"
+    shutil.rmtree(lic_folder)
+    os.environ['QLIC'] = os.environ['QHOME'] = qhome_loc
+    assert pattern.match(test_out.getvalue())
 
 
 def test_check_license_invalid(kx):

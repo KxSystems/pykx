@@ -8,46 +8,26 @@ For Python developers, PyKX unlocks the speed and power of kdb+ for data process
 
 For q developers, PyKX brings together Python's data science ecosystem and the power of kdb+'s vector and time-series analytics. This makes them available in both q and Python environments. You can use it to run q code within a Python environment or embed Python analytics within your q session.
 
-To begin your journey with PyKX follow the sections in the grid below.
+To begin your journey with PyKX follow the sections below.
 
-<div class="grid cards" markdown>
+## Documentation Breakdown
 
--   :material-run-fast:{ .lg .middle } __Getting Started__
+### [Getting Started](getting-started/what_is_pykx.md)
 
-    ---
+Documentation for users new to PyKX! Contains installation instructions alongside quickstart guides and sample getting started notebooks.
 
-    Documentation for users new to PyKX! Contains installation instructions
-    alongside quickstart guides and sample getting started notebooks.
-    
+### [User Guide](user-guide/index.md)
 
-    [:octicons-arrow-right-24: Getting started](getting-started/what_is_pykx.md)
+Useful information allowing users to understand the key concepts behind PyKX. Including how the library is intended to be used and examples of this functionality.
 
--   :material-book-open-variant:{ .lg .middle } __User Guide__
+### [API](api/pykx-execution/q.md)
 
-    ---
+Detailed descriptions of the functions, modules and objects managed by PyKX. Using the API reference assumes you have an understanding of how PyKX is intended to be used through the getting started and user guide.
 
-    Useful information allowing users to understand the key concepts that behind PyKX.
-    Including how the library is intended to be used and examples of this fucntionality.
-    
+### [Release Notes](release-notes/changelog.md)
 
-    [:octicons-arrow-right-24: User Guide](user-guide/index.md)
+The latest additions and fixes for PyKX alongside historical changes.
 
--   :material-api:{ .lg .middle } __API Reference__
+### [Roadmap](roadmap.md)
 
-    ---
-
-    Detailed descriptions of the functions, modules and objects managed by PyKX. Using
-    the API reference assumes you have an understanding of how PyKX is intended to be used
-    through the getting started and user guide.
-
-    [:octicons-arrow-right-24: API reference](api/pykx-execution/q.md)
-
--   :material-alert-decagram:{ .lg .middle } __Release Notes__
-
-    ---
-
-    The latest additions and fixes for PyKX alongside historical changes.
-
-    [:octicons-arrow-right-24: Release notes](release-notes/changelog.md)
-
-</div>
+What to look out for in the next weeks, months and years from the PyKX team.

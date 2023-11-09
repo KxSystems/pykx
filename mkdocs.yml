@@ -139,15 +139,8 @@ theme:
     - content.tabs.link # Insiders
     - header.autohide
     - navigation.tabs
-    - navigation.tabs.sticky
-    - navigation.path
-    - navigation.top
-    - navigation.tracking
     - content.code.annotate
     - content.action.edit
-    - search.suggest
-    - search.highlight
-    - search.share
   palette:
   - media: "(prefers-color-scheme: light)"
     scheme: kx-light
@@ -235,6 +228,8 @@ nav:
     - Release notes:
       - PyKX: release-notes/changelog.md
       - PyKX under q: release-notes/underq-changelog.md
+    - Roadmap: roadmap.md
+    - Troubleshooting: troubleshooting.md
     - Frequently Asked Questions (FAQ): faq.md
     - Support: support.md
     - License: license.md

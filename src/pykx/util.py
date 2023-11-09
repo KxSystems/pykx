@@ -16,6 +16,8 @@ from .exceptions import PyKXException
 __all__ = [
     'num_available_cores',
     'BlockManagerUnconsolidated',
+    'ClassPropertyDescriptor',
+    'classproperty',
     'attr_as',
     'cached_property',
     'debug_environment',
@@ -163,6 +165,36 @@ def once(f):
     return wrapper
 
 
+class ClassPropertyDescriptor(object):
+
+    def __init__(self, fget, fset=None):
+        self.fget = fget
+        self.fset = fset
+
+    def __get__(self, obj, klass=None):
+        if klass is None:
+            klass = type(obj)
+        return self.fget.__get__(obj, klass)()
+
+    def __set__(self, obj, value):
+        if not self.fset:
+            raise AttributeError("can't set attribute")
+        type_ = type(obj)
+        return self.fset.__get__(obj, type_)(value)
+
+    def setter(self, func):
+        if not isinstance(func, (classmethod, staticmethod)):
+            func = classmethod(func)
+        self.fset = func
+        return self
+
+
+def classproperty(func):
+    if not isinstance(func, (classmethod, staticmethod)):
+        func = classmethod(func)
+    return ClassPropertyDescriptor(func)
+
+
 class BlockManagerUnconsolidated(BlockManager):
     """BlockManager that does not consolidate blocks, thus avoiding copying."""
 
@@ -268,6 +300,11 @@ def python_information():
         py_info += f"which python3: {shutil.which('python3')}\n"
     except Exception:
         pass
+    try:
+        import find_libpython
+        py_info += f"find_libpython: {find_libpython.find_libpython()}\n"
+    except BaseException:
+        pass
     return py_info
 
 
@@ -278,17 +315,30 @@ def platform_information():
 
 
 def env_information():
-    env_info = '\n**** Environment Variables ****\n'
+    env_info = '\n**** PyKX Environment Variables ****\n'
 
-    envs = ['IGNORE_QHOME', 'PYKX_IGNORE_QHOME', 'PYKX_KEEP_LOCAL_TIMES', 'PYKX_ALLOCATOR',
+    envs = ['PYKX_IGNORE_QHOME', 'PYKX_KEEP_LOCAL_TIMES', 'PYKX_ALLOCATOR',
             'PYKX_GC', 'PYKX_LOAD_PYARROW_UNSAFE', 'PYKX_MAX_ERROR_LENGTH',
             'PYKX_NOQCE', 'PYKX_Q_LIB_LOCATION', 'PYKX_RELEASE_GIL', 'PYKX_Q_LOCK',
-            'QARGS', 'QHOME', 'QLIC',
             'PYKX_DEFAULT_CONVERSION', 'PYKX_SKIP_UNDERQ', 'PYKX_UNSET_GLOBALS',
-            'SKIP_UNDERQ', 'UNSET_PYKX_GLOBALS'    # Deprecated
+            'PYKX_DEBUG_INSIGHTS_LIBRARIES', 'PYKX_EXECUTABLE', 'PYKX_PYTHON_LIB_PATH',
+            'PYKX_PYTHON_BASE_PATH', 'PYKX_PYTHON_HOME_PATH', 'PYKX_DIR',
+            'PYKX_UNLICENSED', 'PYKX_LICENSED'
             ]
 
     for x in envs:
+        env_info += f"{x}: {os.getenv(x, '')}\n"
+
+    env_info += '\n**** PyKX Deprecated Environment Variables ****\n'
+    deps = ['SKIP_UNDERQ', 'UNSET_PYKX_GLOBALS', 'KEEP_LOCAL_TIMES', 'IGNORE_QHOME']
+
+    for x in deps:
+        env_info += f"{x}: {os.getenv(x, '')}\n"
+
+    env_info += '\n**** q Environment Variables ****\n'
+    qenv = ['QARGS', 'QHOME', 'QLIC', 'QINIT']
+
+    for x in qenv:
         env_info += f"{x}: {os.getenv(x, '')}\n"
     return env_info
 
@@ -297,7 +347,7 @@ def lic_information(detailed=False):
     lic_info = '\n**** License information ****\n'
 
     lic_info += f"pykx.qlic directory: {os.path.isdir(qlic)}\n"
-    lic_info += f"pykx.lic writable: {os.access(qhome, os.W_OK)}\n"
+    lic_info += f"pykx.qhome writable: {os.access(qhome, os.W_OK)}\n"
 
     if detailed:
         lic_info += f"pykx.qhome contents: {os.listdir(qhome)}\n"

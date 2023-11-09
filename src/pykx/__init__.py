@@ -410,9 +410,9 @@ if licensed:
 
 __all__ = sorted([
     'AsyncQConnection',
+    'deserialize',
     'EmbeddedQ',
     'EmbeddedQFuture',
-    'PyKXSerialized',
     'Q',
     'qargs',
     'QConnection',
@@ -424,6 +424,7 @@ __all__ = sorted([
     'random',
     'QWriter',
     'qlic',
+    'serialize',
     'SyncQConnection',
     'RawQConnection',
     'activate_numpy_allocator',

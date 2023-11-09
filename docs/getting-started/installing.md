@@ -151,14 +151,17 @@ KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX 
 
 PyKX depends on the following third-party Python packages:
 
-- `pandas~=1.2`
+- `pandas>=1.2`
 - `numpy~=1.22`
-- `pytz~=2022.1`
+- `pytz>=2022.1`
 - `toml~=0.10.2`
 
 They are installed automatically by `pip` when PyKX is installed.
 
-PyKX also has an optional Python dependency of `pyarrow>=3.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`
+### Optional Python Dependencies
+
+- `pyarrow>=3.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`.
+- `find-libpython~=0.2`, which can be included by installing the `debug` extra, e.g. `pip install pykx[debug]`. This dependency can be used to help find `libpython` in the scenario that `pykx.q` fails to find it.
 
 !!! Warning
 

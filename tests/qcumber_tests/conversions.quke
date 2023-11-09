@@ -41,6 +41,15 @@ feature default conversions
         t::.pykx.eval["lambda x: bytes(str(type(x)), 'utf-8')"][<];
     after each
         .pykx.setdefault["default"];
+    should support default default
+        expect default for LongVector
+            .qu.compare["<class 'numpy.ndarray'>"; t til 10];
+        expect default for dict
+            .qu.compare["<class 'dict'>"; t `a`b!1 2];
+        expect default for table
+            .qu.compare["<class 'pandas.core.frame.DataFrame'>"; t ([]a:2 3; b:4 5)];
+        expect default for keyed table
+            .qu.compare["<class 'pandas.core.frame.DataFrame'>"; t ([a:2 3] b:4 5)];
     should support python default
         expect python default
             .pykx.setdefault["python"];

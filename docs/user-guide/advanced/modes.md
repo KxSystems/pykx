@@ -136,14 +136,14 @@ The following are the differences provided through operation with a valid KX Lic
 
 Users can choose to initialise PyKX under one of these modalities explicitly through the use of the `QARGS` environment variable as follows:
 
-
 | Modality argument| Description|
 |------------------|----------|
 | `--unlicensed`   | Starts PyKX in unlicensed mode. No license check will be performed, and no warning will be emitted at start-up if embedded q initialization fails. |
 | `--licensed`     | Raise a `PyKXException` (as opposed to emitting a `PyKXWarning`) if embedded q initialization fails.
 
-
 In addition to the PyKX specific start-up arguments `QARGS` also can be used to set the standard [q command-line arguments](https://code.kx.com/q/basics/cmdline/).
+
+Alternatively for users who wish to make use of PyKX in unlicensed mode they can set the environment variable `PYKX_UNLICENSED="true"` or define this in their `.pykx-config` file as outlined [here](../configuration.md).
 
 
 ## PyKX within a q session

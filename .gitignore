@@ -223,3 +223,10 @@ coverage.xml
 
 # CCLS files
 .ccls-cache/*
+
+# HDB Test files
+HDB/**
+multiColSplay/**
+singleColSplay/**
+sym
+symsEnumsSplay/**

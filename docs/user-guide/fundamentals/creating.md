@@ -167,6 +167,15 @@ Create a vector of random floating point precision values
 pykx.FloatVector(pykx.q('9.030751 7.750292 3.869818'))
 ```
 
+Additionally, users when generating random data can use PyKX null/infinite data to create data across larger data ranges as follows
+
+```python
+>>> kx.random.random(2, kx.GUIDAtom.null)
+pykx.GUIDVector(pykx.q('8c6b8b64-6815-6084-0a3e-178401251b68 5ae7962d-49f2-404d-5aec-f7c8abbae288'))
+>>> kx.random.random(3, kx.IntAtom.inf)
+pykx.IntVector(pykx.q('986388794 824432196 2022020141i'))
+```
+
 Create a two-dimensional list of random symbol values
 
 ```python

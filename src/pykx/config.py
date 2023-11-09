@@ -72,6 +72,7 @@ for path in pykx_config_locs:
 
 pykx_dir = Path(__file__).parent.resolve(strict=True)
 os.environ['PYKX_DIR'] = str(pykx_dir)
+os.environ['PYKX_EXECUTABLE'] = sys.executable
 pykx_lib_dir = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_dir/'lib'))
 pykx_platlib_dir = pykx_lib_dir/q_lib_dir_name
 lib_prefix = '' if system == 'Windows' else 'lib'
@@ -111,26 +112,26 @@ for loc in (_pwd, _qlic, qhome):
 if not license_located:
     qlic = Path(qhome)
 
-qargs_tmp = tuple(shlex.split(_get_config_value('QARGS', '')))
+qargs = tuple(shlex.split(_get_config_value('QARGS', '')))
 
-arglist = ['--unlicensed', '--licensed']
-if any(i in qargs_tmp for i in arglist) or not hasattr(sys, 'ps1'): # noqa: C901
-    pass
-elif not license_located:
+
+def _license_install(intro=None, return_value=False): # noqa: 
     modes_url = "https://code.kx.com/pykx/user-guide/advanced/modes.html"
     lic_url = "https://kx.com/kdb-insights-personal-edition-license-download"
     unlicensed_message = '\nPyKX unlicensed mode enabled. To set this as your default behavior '\
-                         "please set the following environment variable 'QARGS=--unlicensed'\n\n"\
-                         'For more information on PyKX modes of operation, please visit '\
+                         "please set the following environment variable 'PYKX_UNLICENSED='true'"\
+                         '\n\nFor more information on PyKX modes of operation, please visit '\
                          f'{modes_url}.\nTo apply for a PyKX license please visit {lic_url}'
-    continue_license = input('\nThank you for installing PyKX!\n\n'
-                             'We have been unable to locate your license for PyKX. '
-                             'Running PyKX in unlicensed mode has reduced functionality.\n'
-                             'Would you like to continue with license installation? [Y/n]: ')
-
+    first_user = '\nThank you for installing PyKX!\n\n'\
+                 'We have been unable to locate your license for PyKX. '\
+                 'Running PyKX in unlicensed mode has reduced functionality.\n'\
+                 'Would you like to continue with license installation? [Y/n]: '
+    continue_license = input(first_user if intro is None else intro)
     if continue_license in ('n', 'N'):
-        os.environ['QARGS']='--unlicensed'
+        os.environ['PYKX_UNLICENSED']='true'
         print(unlicensed_message)
+        if return_value:
+            return False
 
     elif continue_license in ('y', 'Y', ''):
         redirect = input(f'\nTo apply for a PyKX license, please visit {lic_url}.\n'
@@ -181,10 +182,22 @@ elif not license_located:
                 binary_file.write(lic)
 
             print('PyKX license successfully installed!\n')
+        elif install_type == '3':
+            if return_value:
+                return False
     else:
         raise Exception('Invalid input provided please try again')
+    if return_value:
+        return True
 
-qargs = tuple(shlex.split(_get_config_value('QARGS', '')))
+
+_arglist = ['--unlicensed', '--licensed']
+_licenvset = _is_enabled('PYKX_LICENSED', '--licensed') or _is_enabled('PYKX_UNLICENSED', '--unlicensed') # noqa: E501
+if any(i in qargs for i in _arglist) or _licenvset or not hasattr(sys, 'ps1'): # noqa: C901
+    pass
+elif not license_located:
+    _license_install()
+
 licensed = False
 
 under_q = _is_enabled('PYKX_UNDER_Q')

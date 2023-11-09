@@ -1,18 +1,19 @@
 import pykx as kx
-
+from IPython.display import display
 
 def q(instructions, code): # noqa
     ld = kx.SymbolAtom('.Q.pykxld')
+    host = 'localhost'
+    port = None
+    username = ''
+    password = ''
+    timeout = 0.0
+    large_messages = True
+    tls = False
+    unix = False
+    no_ctx = False
+    displayRet = False
     if len(instructions)>0:
-        host = 'localhost'
-        port = None
-        username = ''
-        password = ''
-        timeout = 0.0
-        large_messages = True
-        tls = False
-        unix = False
-        no_ctx = False
 
         instructions = instructions.split(' ')
         while True:
@@ -59,15 +60,16 @@ def q(instructions, code): # noqa
                 no_ctx = True
                 instructions.pop(0)
                 continue
+            elif instructions[0] == '--display':
+                displayRet = True
+                instructions.pop(0)
+                continue
             else:
                 raise kx.QError(
-                    f'Received unknown argument {instructions[0]} for construction of '
-                    'IPC connection in magic command.'
+                    f'Received unknown argument "{instructions[0]}" in %%q magic command'
                 )
 
-        if port is None:
-            raise kx.QError('--port must be set to create IPC connection in magic command.')
-
+    if port is not None:
         _q = kx.SyncQConnection(
             host,
             port,
@@ -96,15 +98,18 @@ def q(instructions, code): # noqa
         _q = kx.q
     code = [kx.CharVector(x) for x in code.split('\n')][:-1]
     ret = _q(
-        "{[ld;code;file] value (@';\"q\";enlist[file],/:value(ld;code))}",
+        "{[ld;code;file] {x where not (::)~/:x} value (@';\"q\";enlist[file],/:value(ld;code))}",
         ld,
         code,
         b'jupyter_cell.q'
     )
     if not kx.licensed:
         ret = ret.py()
-    for i in range(len(ret)):
-        print(_q('{x y}', ret, i))
+        for r in ret:
+            display(r) if displayRet else print(r)
+    else:
+        for i in range(len(ret)):
+            display(_q('{x y}', ret, i)) if displayRet else print(_q('{x y}', ret, i))
     if issubclass(type(_q), kx.QConnection):
         _q.close()
 

@@ -28,7 +28,7 @@ class serialize:
             If you need a copy of the data instead you can use the `copy` method.
 
         Warning: Passing just the `data` property of this class to a function may invalidate data.
-            This can be avoided by passing the whole `PyKXSerialized` object instead.
++            This can be avoided by passing the whole `serialize` object instead.
 
         Examples:
 
