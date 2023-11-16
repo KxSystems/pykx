@@ -1543,6 +1543,69 @@ def test_mean(kx, q):
         q_m = tab.mean(axis=1)
 
 
+def test_std(kx, q):
+    df = pd.DataFrame(
+        {
+            'a': [1, 2, 2, 4],
+            'b': [1, 2, 6, 7],
+            'c': [7, 8, 9, 10],
+            'd': [7, 11, 14, 14]
+        }
+    )
+    tab = kx.toq(df)
+    p_m = df.std()
+    q_m = tab.std()
+    for c in q.key(q_m).py():
+        assert p_m[c] == q_m[c].py()
+    p_m = df.std(axis=1)
+    q_m = tab.std(axis=1)
+    for c in range(len(q.cols(tab))):
+        assert p_m[c] == q_m[q('{`$string x}', c)].py()
+    p_m = df.std(ddof=0)
+    q_m = tab.std(ddof=0)
+    for c in q.key(q_m).py():
+        assert p_m[c] == q_m[c].py()
+
+    p_m = df.std(ddof=4)
+    q_m = tab.std(ddof=4)
+    for c in q.key(q_m).py():
+        assert np.isnan(p_m[c]) == np.isnan(q_m[c].py())
+
+    q['tab'] = kx.toq(df)
+    tab = q('1!`idx xcols update idx: til count tab from tab')
+    p_m = df.std()
+    q_m = tab.std()
+    for c in q.key(q_m).py():
+        assert p_m[c] == q_m[c].py()
+    p_m = df.std(axis=1)
+    q_m = tab.std(axis=1)
+    for c in range(len(q.cols(tab)) - 1):
+        assert p_m[c] == q_m[q('{`$string x}', c)].py()
+
+    df = pd.DataFrame(
+        {
+            'a': [1, 2, 2, 4],
+            'b': [1, 2, 6, 7],
+            'c': [7, 8, 9, 10],
+            'd': ['foo', 'bar', 'baz', 'qux']
+        }
+    )
+    tab = kx.toq(df)
+    p_m = df.std(numeric_only=True)
+    q_m = tab.std(numeric_only=True)
+    for c in q.key(q_m).py():
+        assert p_m[c] == q_m[c].py()
+    p_m = df.std(axis=1, numeric_only=True)
+    q_m = tab.std(axis=1, numeric_only=True)
+    for c in range(len(q.cols(tab))):
+        assert p_m[c] == q_m[q('{`$string x}', c)].py()
+
+    with pytest.raises(kx.QError):
+        q_m = tab.std()
+    with pytest.raises(kx.QError):
+        q_m = tab.std(axis=1)
+
+
 def test_median(kx, q):
     df = pd.DataFrame(
         {
@@ -2029,3 +2092,4 @@ def test_keyed_loc_fixes(q):
         mkt[['k1', 'y']]
     with pytest.raises(KeyError):
         mkt['k1']
+

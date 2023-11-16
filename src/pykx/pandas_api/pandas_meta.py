@@ -154,6 +154,29 @@ class PandasMeta:
         )
 
     @api_return
+    def std(self, axis: int = 0, ddof: int = 1, numeric_only: bool = False):
+        tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q('{(keys x) _ 0!x}', tab)
+        if numeric_only:
+            tab = _get_numeric_only_subtable(tab)
+        key_str = '' if axis == 0 else '`$string '
+        val_str = '' if axis == 0 else '"f"$value '
+        query_str = 'cols[tab]' if axis == 0 else 'til[count[tab]]'
+        where_str = ' where not (::)~/:r[;1]'
+
+        res = q(f'{{[tab]{query_str}!count[{query_str}]#0n}}', tab)
+        if ddof != len(tab.pd()):
+            res = q(
+                '{[tab]'
+                f'r:{{[tab; x] ({key_str}x; {{avg sqrt (sum xexp[x-(avg x);2]) % count[x]-{ddof}}} {val_str}tab[x])}}[tab;] each {query_str};'
+                f'(,/) {{(enlist x 0)!(enlist x 1)}} each r{where_str}}}',
+                tab
+            )
+        return res
+
+
+    @api_return
     def median(self, axis: int = 0, numeric_only: bool = False):
         tab = self
         if 'Keyed' in str(type(tab)):
