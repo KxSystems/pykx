@@ -2,18 +2,38 @@
 
 ## License issues
 
-The following section outlines issues and potential solutions when dealing with failures to initialise PyKX with a `license error`
+The following section outlines practical information useful when dealing with getting access to and managing licenses for PyKX.
 
-### Failing to start PyKX with an error after following email based installation guide
+### Accessing a license valid for PyKX
 
-If on initially completing the installation guide for PyKX [here](getting-started/installing.md) you receive the following error
+A number of trial and enterprise type licenses exist for q/kdb+. Not all licenses for q/kdb+ however are valid for PyKX. In particular users require access to a license which contains the feature flags `pykx` and `embedq` which provide access to the PyKX functionality. The following locations can be used for the retrieval of evaluation/personal licenses
 
+- For non-commercial personal users you can access a 12 month kdb+ license with PyKX enabled [here](https://kx.com/kdb-insights-personal-edition-license-download).
+- For commercial evaluation you can download a 30 day PyKX license [here](https://kx.com/kdb-insights-commercial-evaluation-license-download/).
+
+For non-personal or non-commercial usage please contact sales@kx.com.
+
+Once you have access to your license you can install the license following the walkthrough provided [here](getting-started/installing.md) or through installation using the function `kx.license.install` as follows
+
+```python
+>>> import pykx as kx
+>>> kx.license.install('/path/to/downloaded/kc.lic')
 ```
+
+### Initialization failing with a 'embedq' error
+
+Failure to initialize PyKX while raising an error `embedq` indicates that the license you are attempting to use for PyKX in [licensed modality](modes.md) does not have the sufficient feature flags necessary to run PyKX. To access a license which does allow for running PyKX in this modality please following the instructions [here](#accessing-a-license-valid-for-pykx) to get a new license with appropriate feature flags.
+
+### Initialization failing with a 'kc.lic' error
+
+If after initially completing the installation guide for PyKX [here](getting-started/installing.md) you receive the following error:
+
+```python
 pykx.exceptions.PyKXException: Failed to initialize embedded q. Captured output from initialization attempt:
     '2023.09.02T21:28:45.699 licence error: kc.lic
 ```
 
-It is usually indicates that your license was not correctly written to disk, to check that the installed license matches the license you expect. To do this please have to hand the email you received on sign up for PyKX.
+It usually indicates that your license was not correctly written to disk or a license could not be found, to check that the installed license matches the license you expect.
 
 === "License file based checking"
 

@@ -61,19 +61,22 @@ doc = [
     "black==22.1.0", # Used by mkdocstrings to format function signatures
     "griffe==0.14.0", # Force-install a newer version of griffe (mkdocstrings backend/dep) to get a required bugfix
     "jupyter==1.0.0",
-    "mkdocs==1.4.3",
+    "mkdocs~=1.5.0",
     "markdown==3.3.7",
     "markdown-grid-tables==0.0.1",
     "mkdocs-autorefs==0.4.1",
     "mkdocs-click==0.5.0",
     "mkdocs-exclude==1.0.2",
-    "mkdocs-jupyter==0.20.0",
-    "mkdocs-material==8.1.10",
+    "mkdocs-jupyter~=0.24",
+    "mkdocs-material~=9.4.5",
     "mkdocs-render-swagger-plugin==0.0.3",
     "mkdocs-spellcheck==0.2.0",
     "mkdocstrings[python]==0.18.0",
-    "pygments==2.11",
-    "pymdown-extensions==9.3",
+    "pygments~=2.12",
+    "pymdown-extensions>=9.3",
+]
+debug = [
+    "find-libpython~=0.2",
 ]
 lint = [
     "flake8==4.0.1",

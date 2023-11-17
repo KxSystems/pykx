@@ -11,7 +11,7 @@ from . import Q
 from . import toq
 from . import wrappers
 from . import schema
-from .config import find_core_lib, licensed, no_qce, pykx_dir, skip_under_q
+from .config import find_core_lib, licensed, no_qce, pykx_dir, qargs, skip_under_q
 from .core import keval as _keval
 from .exceptions import FutureCancelled, LicenseException, NoResults, PyKXException, PyKXWarning, QError # noqa
 from ._wrappers import _factory as factory
@@ -132,9 +132,9 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                 code += f'2:[`$"{pykx_qlib_path}q";(`k_pykx_init; 1)][`$"{find_core_lib("q").as_posix()}"];'  # noqa: E501
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
             code += '@[get;`.pykx.i.kxic.loadfailed;{()!()}]'
-            kxic_loadfailed = self._call(code).py()
-            if not no_qce:
-                sql = self._call('$["insights.lib.sql" in " " vs .z.l 4; @[system; "l s.k_";{x}];::]').py()  # noqa: E501
+            kxic_loadfailed = self._call(code, debug=False).py()
+            if (not no_qce) and ('--no-sql' not in qargs):
+                sql = self._call('$[("insights.lib.sql" in " " vs .z.l 4)&not `s in key`; @[system; "l s.k_";{x}];::]', debug=False).py()  # noqa: E501
                 if sql is not None:
                     kxic_loadfailed['s.k'] = sql
             for lib, msg in kxic_loadfailed.items():
@@ -147,9 +147,9 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                 and os.getenv('PYKX_UNDER_Q') is None
             ):
                 os.environ['PYKX_Q_LOADED_MARKER'] = 'loaded'
-                self._call('setenv[`PYKX_Q_LOADED_MARKER; "loaded"]')
+                self._call('setenv[`PYKX_Q_LOADED_MARKER; "loaded"]', debug=False)
                 try:
-                    self._call('.Q.ld')
+                    self._call('.Q.ld', debug=False)
                 except QError as err:
                     if '.Q.ld' in str(err):
                         # .Q.ld is not defined on the server so we define it here
@@ -157,12 +157,12 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                             lines = f.readlines()
                         for line in lines:
                             if 'pykxld:' in line:
-                                self._call('k).Q.' + line)
+                                self._call('k).Q.' + line, debug=False)
                                 break
                     else:
                         raise err
                 pykx_qini_path = (Path(__file__).parent.absolute()/'pykx_init.q_')
-                self._call(f'\l {pykx_qini_path}') # noqa
+                self._call(f'\l {pykx_qini_path}', debug=False) # noqa
                 pykx_q_path = (Path(__file__).parent.absolute()/'pykx.q')
                 with open(pykx_q_path, 'r') as f:
                     code = f.read()
@@ -170,9 +170,9 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                 self._call(
                     "{[code;file] value (@';last file;enlist[file],/:.Q.pykxld code)}",
                     code,
-                    b'pykx.q'
+                    b'pykx.q', debug=False
                 )
-                self._call('.pykx.setdefault[enlist"k"]')
+                self._call('.pykx.setdefault[enlist"k"]', debug=False)
         super().__init__()
 
     def __repr__(self):
@@ -182,7 +182,8 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                  query: Union[str, bytes, wrappers.CharVector],
                  *args: Any,
                  wait: Optional[bool] = None,
-                 sync: Optional[bool] = None
+                 debug: bool = False,
+                 **kwargs # since sync got removed this is added to ensure it doesn't break
     ) -> wrappers.K:
         """Run code in the q instance.
 
@@ -212,7 +213,15 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             raise LicenseException("run q code via 'pykx.q'")
         if len(args) > 8:
             raise TypeError('Too many arguments - q queries cannot have more than 8 parameters')
-        result = _keval(bytes(wrappers.CharVector(query)), *[wrappers.K(x) for x in args])
+        if debug:
+            result = _keval(
+                bytes(wrappers.CharVector(
+                    '{[pykxquery] .Q.trp[value; pykxquery; {2@"backtrace:\n",.Q.sbt y;\'x}]}'
+                )),
+                wrappers.List([bytes(wrappers.CharVector(query)), *[wrappers.K(x) for x in args]])
+            )
+        else:
+            result = _keval(bytes(wrappers.CharVector(query)), *[wrappers.K(x) for x in args])
         if wait is None or wait:
             return factory(result, False)
         return self('::', wait=True)

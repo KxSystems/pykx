@@ -10,6 +10,65 @@ For example, the q null short integer `0Nh` is stored as the value `-32768` (i.e
 
 Due to the design of nulls and infinites in q, there are some technical considerations - detailed on this page - regarding converting nulls and infinities between Python and q in either direction.
 
+## Generation of null and infinite values
+
+To facilitate the generation of null and infinite values there are a number of properties for `pykx.Atom` objects which allow this to be completed Pythonically. In all cases this requires access to [licensed mode](../advanced/modes.md). The following examples show the generation of various null and infinite values.
+
+### Null generation
+
+Where possible null values can be returned to you as follows:
+
+```python
+>>> import pykx as kx
+>>> kx.LongAtom.null
+pykx.LongAtom(pykx.q('0N'))
+>>> kx.TimespanAtom.null
+pykx.TimespanAtom(pykx.q('0Nn'))
+>>> kx.GUIDAtom.null
+pykx.GUIDAtom(pykx.q('00000000-0000-0000-0000-000000000000'))
+>>> kx.SymbolAtom.null
+pykx.SymbolAtom(pykx.q('`'))
+```
+
+Unsupported values will return a `NotImplemetedError` as follows:
+
+```python
+>>> import pykx as kx
+>>> kx.ByteAtom.null
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/wrappers.py", line 250, in null
+    raise NotImplementedError('Retrieval of null values not supported for this type')
+NotImplementedError: Retrieval of null values not supported for this type
+```
+
+### Infinite generation
+
+Where possible positive and negative infinite values can be returned to you as follows:
+
+```python
+>>> import pykx as kx
+>>> kx.TimeAtom.inf
+pykx.TimeAtom(pykx.q('0Wt'))
+>>> -kx.TimeAtom.inf
+pykx.TimeAtom(pykx.q('-0Wt'))
+>>> kx.IntAtom.inf
+pykx.IntAtom(pykx.q('0Wi'))
+>>> -kx.IntAtom.inf
+pykx.IntAtom(pykx.q('-0Wi'))
+```
+
+Unsupported values will return a `NotImplementedError` as follows:
+
+```python
+>>> kx.SymbolAtom.inf
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/wrappers.py", line 274, in inf
+    raise NotImplementedError('Retrieval of infinite values not supported for this type')
+NotImplementedError: Retrieval of infinite values not supported for this type
+```
+
 ## Checking for nulls and infinities
 
 [The q function named null](https://code.kx.com/q/ref/null/) can be applied to most PyKX objects, and will return if the object is null by returning `1b`, or if it contains nulls by returning a collection of booleans whose shape matches the object. Like with any function from the `.q` namespace, it can be accessed via the [context interface](../../api/pykx-execution/ctx.md): [`q.null`](../../api/pykx-execution/q.md#null)).

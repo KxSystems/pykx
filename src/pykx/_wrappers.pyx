@@ -130,6 +130,9 @@ def k_str(self):
 
 cpdef inline deserialize(x):
     cdef core.K buff = core.kpn(<char*>x, len(x))
+    if 0 == core.okx(buff):
+        core.r0(buff)
+        raise QError('Failed to deserialize supplied non PyKX IPC serialized format object')
     cdef core.K kx = core.ee(core.d9(buff))
     core.r0(buff)
     return factory(<uintptr_t>kx, False)

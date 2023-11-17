@@ -26,7 +26,7 @@ from enum import Enum
 from abc import abstractmethod
 import asyncio
 from contextlib import nullcontext
-from multiprocessing import Lock as multiprocessing_lock
+from multiprocessing import Lock as multiprocessing_lock, RawValue
 import selectors
 import socket
 from threading import Lock as threading_lock
@@ -92,12 +92,14 @@ class QFuture(asyncio.Future):
     _exception = None
     _callbacks = []
 
-    def __init__(self, q_connection, timeout):
+    def __init__(self, q_connection, timeout, debug, poll_recv=None):
         self.q_connection = q_connection
         self._done = False
         self._cancelled = False
         self._cancelled_message = ''
         self._timeout = timeout
+        self.poll_recv = poll_recv
+        self._debug = debug
         super().__init__()
 
     def __await__(self) -> Any:
@@ -113,12 +115,33 @@ class QFuture(asyncio.Future):
         if self.done():
             return self.result()
         while not self.done():
-            self.q_connection._recv(acceptAsync=True)
+            if self.poll_recv is not None:
+                try:
+                    res = self.q_connection.poll_recv()
+                    if res is not None:
+                        self.set_result(res)
+                except BaseException as e:
+                    self.set_exception(QError(str(e)))
+            else:
+                self.q_connection._recv(acceptAsync=True)
         yield from self
         super().__await__()
         return self.result()
 
     async def __async_await__(self) -> Any:
+        if self.done():
+            return self.result()
+        while not self.done():
+            await asyncio.sleep(0)
+            if self.poll_recv is not None:
+                try:
+                    res = self.q_connection.poll_recv()
+                    if res is not None:
+                        self.set_result(res)
+                except BaseException as e:
+                    self.set_exception(QError(str(e)))
+            else:
+                self.q_connection._recv(acceptAsync=True)
         return await self
 
     def _await(self) -> Any:
@@ -167,6 +190,12 @@ class QFuture(asyncio.Future):
         if self._cancelled:
             raise FutureCancelled(self._cancelled_message)
         if self._result is not None:
+            if self._debug:
+                if self._result._unlicensed_getitem(0).py() == True:
+                    print((self._result._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
+                    raise QError(self._result._unlicensed_getitem(2).py().decode())
+                else:
+                    return self._result._unlicensed_getitem(1)
             return self._result
         raise NoResults()
 
@@ -434,6 +463,7 @@ class QConnection(Q):
                  query: Union[str, bytes, CharVector],
                  *args: Any,
                  wait: Optional[bool] = None,
+                 debug: bool = False,
     ) -> K:
         pass # nocov
 
@@ -441,7 +471,8 @@ class QConnection(Q):
               query,
               *params,
               wait: Optional[bool] = None,
-              error=False
+              error=False,
+              debug=False
     ):
         if self.closed:
             raise RuntimeError("Attempted to use a closed IPC connection")
@@ -453,7 +484,20 @@ class QConnection(Q):
             events = self._writer.select(timeout)
             for key, _mask in events:
                 callback = key.data
-                return callback()(key.fileobj, query, *params, wait=wait, error=error)
+                if debug:
+                    return callback()(
+                        key.fileobj,
+                        bytes(CharVector(
+                            '{[pykxquery] .Q.trp[{[x] (0b; value x)}; pykxquery;'
+                            '{(1b;"backtrace:\n",.Q.sbt y;x)}]}'
+                        )),
+                        CharVector(query) if len(params) == 0 else List((CharVector(query), *params)),
+                        wait=wait,
+                        error=error,
+                        debug=debug
+                    )
+                else:
+                    return callback()(key.fileobj, query, *params, wait=wait, error=error, debug=debug)
 
     def _ipc_query_builder(self, query, *params):
         data = bytes(query, 'utf-8') if isinstance(query, str) else query
@@ -480,7 +524,8 @@ class QConnection(Q):
                    query,
                    *params,
                    wait: Optional[bool] = None,
-                   error=False
+                   error=False,
+                   debug=False
     ):
         if len(params) > 8:
             raise TypeError('Too many parameters - q queries cannot have more than 8 parameters')
@@ -513,11 +558,11 @@ class QConnection(Q):
         if isinstance(self, SyncQConnection) or isinstance(self, RawQConnection):
             return
         if wait:
-            q_future = QFuture(self, self._connection_info['timeout'])
+            q_future = QFuture(self, self._connection_info['timeout'], debug)
             self._call_stack.append(q_future)
             return q_future
         else:
-            q_future = QFuture(self, self._connection_info['timeout'])
+            q_future = QFuture(self, self._connection_info['timeout'], debug)
             q_future.set_result(K(None))
             return q_future
 
@@ -779,6 +824,7 @@ class SyncQConnection(QConnection):
                  query: Union[str, bytes, CharVector],
                  *args: Any,
                  wait: Optional[bool] = None,
+                 debug: bool = False,
     ) -> K:
         """Evaluate a query on the connected q process over IPC.
 
@@ -840,17 +886,25 @@ class SyncQConnection(QConnection):
         if wait is None:
             wait = self._connection_info['wait']
         with self._lock if self._lock is not None else nullcontext():
-            return self._call(query, *args, wait=wait)
+            return self._call(query, *args, wait=wait, debug=debug)
 
     def _call(self,
               query: Union[str, bytes],
               *args: Any,
               wait: Optional[bool] = None,
+              debug: bool = False,
     ) -> K:
-        self._send(query, *args, wait=wait)
+        self._send(query, *args, wait=wait, debug=debug)
         if not wait:
             return K(None)
-        return self._recv(locked=True)
+        res = self._recv(locked=True)
+        if not debug:
+            return res
+        if res._unlicensed_getitem(0).py() == True:
+            print((res._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
+            raise QError(res._unlicensed_getitem(2).py().decode())
+        else:
+            return res._unlicensed_getitem(1)
 
     def __enter__(self):
         return self
@@ -1059,6 +1113,7 @@ class AsyncQConnection(QConnection):
                  *args: Any,
                  wait: bool = True,
                  reuse: bool = True,
+                 debug: bool = False,
     ) -> QFuture:
         """Evaluate a query on the connected q process over IPC.
 
@@ -1134,7 +1189,7 @@ class AsyncQConnection(QConnection):
                                         unix=self._stored_args['unix'],
                                         wait=self._stored_args['wait'],
                                         no_ctx=self._stored_args['no_ctx'])
-            q_future = conn(query, *args, wait=wait)
+            q_future = conn(query, *args, wait=wait, debug=debug)
             q_future.add_done_callback(lambda x: conn.close())
             if self._loop is None:
                 return q_future
@@ -1143,7 +1198,7 @@ class AsyncQConnection(QConnection):
             if not self._initialized:
                 raise UninitializedConnection()
             with self._lock if self._lock is not None else nullcontext():
-                q_future = self._send(query, *args, wait=wait)
+                q_future = self._send(query, *args, wait=wait, debug=debug)
                 if self._loop is None:
                     return q_future
                 return self._loop.create_task(q_future.__async_await__())
@@ -1152,9 +1207,10 @@ class AsyncQConnection(QConnection):
               query: Union[str, bytes],
               *args: Any,
               wait: Optional[bool] = None,
+              debug: bool = False,
     ):
         with self._lock if self._lock is not None else nullcontext():
-            return self._send(query, *args, wait=wait)._await()
+            return self._send(query, *args, wait=wait, debug=debug)._await()
 
     async def __aenter__(self):
         return await self
@@ -1243,15 +1299,17 @@ class _DeferredQConnection(QConnection):
                  query: Union[str, bytes, CharVector],
                  *args: Any,
                  wait: Optional[bool] = None,
+                 debug: bool = False,
     ) -> K:
-        return self._send(query, *args, wait=wait)
+        return self._send(query, *args, wait=wait, debug=debug)
 
     def _call(self,
               query: Union[str, bytes],
               *args: Any,
               wait: Optional[bool] = None,
+              debug: bool = False,
     ):
-        return self._send(query, *args, wait=wait)._await()
+        return self._send(query, *args, wait=wait, debug=debug)._await()
 
     def close(self) -> None:
         if not self.closed: # nocov
@@ -1488,6 +1546,7 @@ class RawQConnection(QConnection):
                  query: Union[str, bytes, CharVector],
                  *args: Any,
                  wait: bool = True,
+                 debug: bool = False,
     ) -> QFuture:
         """Evaluate a query on the connected q process over IPC.
 
@@ -1557,8 +1616,8 @@ class RawQConnection(QConnection):
         """
         if not self._initialized:
             raise UninitializedConnection()
-        res = QFuture(self, self._connection_info['timeout'])
-        self._send_stack.append({'query': query, 'args': args, 'wait': wait})
+        res = QFuture(self, self._connection_info['timeout'], debug)
+        self._send_stack.append({'query': query, 'args': args, 'wait': wait, 'debug': debug})
         self._call_stack.append(res)
         return res
 
@@ -1566,6 +1625,7 @@ class RawQConnection(QConnection):
               query: Union[str, bytes],
               *args: Any,
               wait: Optional[bool] = None,
+              debug: bool = False,
     ):
         conn = _DeferredQConnection(self._stored_args['host'],
                                     self._stored_args['port'],
@@ -1578,7 +1638,7 @@ class RawQConnection(QConnection):
                                     unix=self._stored_args['unix'],
                                     wait=self._stored_args['wait'],
                                     no_ctx=self._stored_args['no_ctx'])
-        q_future = conn(query, *args, wait=wait)
+        q_future = conn(query, *args, wait=wait, debug=debug)
         q_future.add_done_callback(lambda x: conn.close())
         return q_future._await()
 
@@ -1631,7 +1691,7 @@ class RawQConnection(QConnection):
             if len(self._send_stack) == 0:
                 return
             to_send = self._send_stack.pop(0)
-            self._send(to_send['query'], *to_send['args'], wait=to_send['wait'])
+            self._send(to_send['query'], *to_send['args'], wait=to_send['wait'], debug=to_send['debug'])
             count -= 1
 
     def _serialize_response(self, response, level):
@@ -1792,6 +1852,29 @@ class RawQConnection(QConnection):
                 self.open_cons[i][1].unregister(self.open_cons[i][2])
                 self.open_cons[i][2].close()
                 self.open_cons.pop(i)
+
+    def poll_recv_async(self):
+        """Asynchronously recieve a query from the process connected to over IPC.
+
+        Raises:
+            QError: Query timed out, may be raised if the time taken to make or receive a query goes
+                over the timeout limit.
+
+        Examples:
+
+        Receive a single queued message.
+
+        ```python
+        q = await pykx.RawQConnection(host='localhost', port=5002)
+        q_fut = q('til 10') # not sent yet
+        q.poll_send() # message is sent
+        await q.poll_recv_async() # message response is received
+        ```
+        """
+        q_future = QFuture(self, self._connection_info['timeout'], False, poll_recv=True)
+        if self._loop is not None:
+            return self._loop.create_task(q_future.__async_await__())
+        return q_future
 
     def poll_recv(self, amount: int = 1):
         """Recieve queries from the process connected to over IPC.
@@ -2012,6 +2095,7 @@ class SecureQConnection(QConnection):
                  query: Union[str, bytes, CharVector],
                  *args: Any,
                  wait: Optional[bool] = None,
+                 debug: bool = False,
     ) -> K:
         """Evaluate a query on the connected q process over IPC.
 
@@ -2070,12 +2154,13 @@ class SecureQConnection(QConnection):
         q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
         """
-        return self._call(query, *args, wait=wait)
+        return self._call(query, *args, wait=wait, debug=debug)
 
     def _call(self,
               query: Union[str, bytes],
               *args: Any,
               wait: Optional[bool] = None,
+              debug: bool = False,
     ) -> K:
         if wait is None:
             wait = self._connection_info['wait']
@@ -2090,7 +2175,24 @@ class SecureQConnection(QConnection):
             if issubclass(b, Function) and not issubclass(a, Function):
                 raise ValueError('Cannot send Python function over IPC')
         handler = self._licensed_call if licensed else self._unlicensed_call
+
         with self._lock if self._lock is not None else nullcontext():
+            if debug:
+                res = handler(
+                    handle, 
+                    normalize_to_bytes(
+                        '{[pykxquery] .Q.trp[{[x] (0b; value x)}; pykxquery;'
+                        '{(1b; "backtrace:\n",.Q.sbt y; x)}]}',
+                        'Query'
+                    ),
+                    [K(normalize_to_bytes(query, 'Query'))] if len(args) == 0 else [List([K(normalize_to_bytes(query, 'Query')), *args])],
+                    wait,
+                )
+                if res._unlicensed_getitem(0).py() == True:
+                    print((res._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
+                    raise QError(res._unlicensed_getitem(2).py().decode())
+                else:
+                    return res._unlicensed_getitem(1)
             return handler(handle, normalize_to_bytes(query, 'Query'), args, wait)
 
     def __enter__(self):

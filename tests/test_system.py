@@ -106,8 +106,8 @@ def test_system_variables():
     kx.q('a: 5')
     assert all(kx.q.system.variables() == kx.q('enlist `a'))
     print(kx.q.system.variables('.pykx'))
-    assert all(kx.q.system.variables('.pykx') == kx.q('`debug`i`pykxDir`util'))
-    assert all(kx.q.system.variables('pykx') == kx.q('`debug`i`pykxDir`util'))
+    assert all(kx.q.system.variables('.pykx') == kx.q('`debug`i`pykxDir`pykxExecutable`util'))
+    assert all(kx.q.system.variables('pykx') == kx.q('`debug`i`pykxDir`pykxExecutable`util'))
 
 
 @pytest.mark.isolate

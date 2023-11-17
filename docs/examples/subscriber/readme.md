@@ -26,6 +26,8 @@ q)
 ```bash
 // run the subscriber which will automatically connect
 $ python subscriber.py
+// you can also run the asnychronous example with
+$ python subscriber_async.py
 ```
 
 ### Outcome

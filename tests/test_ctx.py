@@ -85,6 +85,15 @@ def test_find_namespace_in_q_file(q, tmp_path):
         assert q.testnamespace.true
 
 
+def test_reserved_in_ctx(q, tmp_path):
+    with pytest.raises(AttributeError):
+        q.testnamespace
+    with cd(tmp_path):
+        with open('name.q', 'w') as f:
+            f.write('.name.test.update:{x+1}\n')
+        assert q.name.test.update(1) == 2
+
+
 def test_python_keyword_as_q_fn(q):
     assert q.except_ == q('except')
     assert q._except == q('except')

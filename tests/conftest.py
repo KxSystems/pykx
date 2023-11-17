@@ -54,10 +54,26 @@ def kx(request):
 @pytest.fixture
 def q(request, kx, q_init):
     if request.param == 'embedded':
+        kx.q._inter_test_q = kx.q.__call__
+        kx.q.__call__ = (
+            lambda *args, **kwargs: kx.q._inter_test_q(
+                *args,
+                **kwargs,
+                debug=True if randint(0, 1) == 0 else False
+            )
+        )
         yield kx.q
     elif request.param == 'ipc':
         with q_proc(q_init) as port:
             with kx.QConnection(port=port) as conn:
+                _inter_test_q = conn.__call__
+                conn.__call__ = (
+                    lambda *args, **kwargs: _inter_test_q(
+                        *args,
+                        **kwargs,
+                        debug=True if randint(0, 1) == 0 else False
+                    )
+                )
                 yield conn
 
 
@@ -142,7 +158,7 @@ def isolate_test(item):
     out_pipe, in_pipe = mp_ctx.Pipe(duplex=False)
     proc = mp_ctx.Process(target=isolated_test_runner, args=(item, in_pipe))
     proc.start()
-    timeout = 20.0
+    timeout = 50.0
     for x in item.own_markers:
         if x.name == 'timeout':
             timeout = x.args[0]

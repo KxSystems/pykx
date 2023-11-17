@@ -130,6 +130,16 @@ PyKX objects can be interacted with in a variety of ways, through indexing using
     pykx.FloatVector(pykx.q('0.08123546 0.9367503 0.2782122'))
     ```
 
+* Assign objects to PyKX lists
+
+    ```python
+    >>> qarray = kx.random.random(3, 10.0, seed=10)
+    pykx.FloatVector(pykx.q('0.891041 8.345194 3.621949'))
+    >>> qarray[1] = 0.1
+    >>> qarray
+    pykx.FloatVector(pykx.q('0.891041 0.1 3.621949'))
+    ```
+
 * Create a PyKX table and manipulate using Pythonic syntax
 
     ```python

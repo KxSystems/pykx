@@ -2,9 +2,11 @@ import os, platform
 from pathlib import Path
 from threading import RLock
 from typing import List, Tuple
+import re
+import sys
 
 from .util import num_available_cores
-from .config import _is_enabled
+from .config import _is_enabled, _license_install
 
 
 def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
@@ -93,7 +95,10 @@ from .exceptions import PyKXException, PyKXWarning
 
 if '--licensed' in qargs and '--unlicensed' in qargs:
     raise PyKXException("$QARGS includes mutually exclusive flags '--licensed' and '--unlicensed'")
-
+elif ('--unlicensed' in qargs or _is_enabled('PYKX_UNLICENSED', '--unlicensed')) & \
+     ('--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed')):
+    raise PyKXException("User specified options for setting 'licensed' and 'unlicensed' behaviour "
+                        "resulting in conflicts")
 
 class QLock:
     def __init__(self, timeout):
@@ -241,7 +246,7 @@ if under_q: # nocov
     licensed = True # nocov
 else:
     # To make Cython happy, we indirectly assign Python values to `_libq_path`
-    if '--unlicensed' in qargs:
+    if '--unlicensed' in qargs or _is_enabled('PYKX_UNLICENSED', '--unlicensed'):
         _libq_path_py = bytes(find_core_lib('e'))
         _libq_path = _libq_path_py
         _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
@@ -251,7 +256,7 @@ else:
             from ctypes.util import find_library # nocov
             if find_library("msvcr100.dll") is None: # nocov
                 msvcrMSG = "Needed dependency msvcr100.dll missing. See: https://code.kx.com/pykx/getting-started/installing.html" # nocov
-                if '--licensed' in qargs: # nocov
+                if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', --licensed): # nocov
                     raise PyKXException(msvcrMSG)  # nocov
                 else: # nocov
                     warn(msvcrMSG, PyKXWarning) # nocov
@@ -275,12 +280,34 @@ else:
                 }
             )
             _qinit_output = '    ' + '    '.join(_qinit_check_proc.stdout.strip().splitlines(True))
+            _license_message = False
             if _qinit_check_proc.returncode: # Fallback to unlicensed mode
                 if _qinit_output != '    ':
-                    _capout_msg = f' Captured output from initialization attempt:\n{_qinit_output}'
+                    _capout_msg = f'Captured output from initialization attempt:\n{_qinit_output}'
                 else:
                     _capout_msg = '' # nocov - this can only occur under extremely weird circumstances.
-                if '--licensed' in qargs:
+                if hasattr(sys, 'ps1'):
+                    if re.compile('exp').search(_capout_msg):
+                        _exp_license = 'Your PyKX license has now expired.\n\n'\
+                                       f'{_capout_msg}\n\n'\
+                                       'Would you like to renew your license? [Y/n]: '
+                        _license_message = _license_install(_exp_license, True)
+                    elif re.compile('embedq').search(_capout_msg):
+                        _ce_license = 'You appear to be using a non kdb Insights license.\n\n'\
+                                      f'{_capout_msg}\n\n'\
+                                      'Running PyKX in the absence of a kdb Insights license '\
+                                      'has reduced functionality.\nWould you like to install '\
+                                      'a kdb Insights personal license? [Y/n]: '
+                        _license_message = _license_install(_ce_license, True)
+                    elif re.compile('upd').search(_capout_msg):
+                        _upd_license = 'Your installed license is out of date for this version'\
+                                       ' of PyKX and must be updated.\n\n'\
+                                       f'{_capout_msg}\n\n'\
+                                       'Would you like to install an updated kdb '\
+                                       'Insights personal license? [Y/n]: '
+                        _license_message = _license_install(_upd_license, True)
+            if (not _license_message) and _qinit_check_proc.returncode:
+                if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed'):
                     raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}')
                 else:
                     warn(f'Failed to initialize PyKX successfully with the following error: {_capout_msg}', PyKXWarning)

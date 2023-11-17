@@ -29,19 +29,17 @@ util.os:first string .z.o;
 // @type {dict}
 util.startup:.Q.opt .z.x
 
-util.whichPython:()
-
 // @private
 // @desc Retrieval of PyKX initialization directory on first initialization
 if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
-  util.redirect:"\" 2>",$[util.os="w";"nul <nul";"/dev/null"];
-  util.dirCommand:"-c \"import pykx; print(pykx.config.pykx_dir)",util.redirect;
+  util.whichPython:$[count pykxExecutable:getenv`PYKX_EXECUTABLE;pykxExecutable;()];
+  util.dirCommand:"-c \"import pykx; print('PYKX_DIR: ' + str(pykx.config.pykx_dir))\"";
   if[not count pykxDir:getenv`PYKX_DIR;
-    pykxDir:@[{ret:system"python ",x;util.whichPython:"python";ret};
-      util.dirCommand;
-      {ret:system"python3 ",util.dirCommand;util.whichPython:"python3";ret}
+    util.dirSysCall:{ret:system x," ",util.dirCommand;util.whichPython:x;ret};
+    pykxDir:$[count util.whichPython;util.dirSysCall[util.whichPython];
+      @[util.dirSysCall;"python";{util.dirSysCall["python3"]}]
       ];
-    pykxDir:ssr[;"\\";"/"]last pykxDir
+    pykxDir:ssr[;"\\";"/"]last vs["PYKX_DIR: "]last pykxDir
     ];
   ];
 
@@ -681,7 +679,7 @@ toraw: {x y}(`..raw;;)
 // // Pass a q Table to Python treating the Python table as a Pandas DataFrame
 // q)
 // ```
-todefault:{$[0h=type x;toraw x;$[99h~type x;98h=type each(key x;value x);0b]|98h=type x;topd x;tonp x]}
+todefault:{$[0h=type x;toraw x;$[99h~type x;all 98h=type each(key x;value x);0b]|98h=type x;topd x;tonp x]}
 
 // @kind function
 // @name .pykx.wrap
@@ -1498,21 +1496,22 @@ qcallable :{$[util.isw x;x(<);util.isf x;wrap[x](<);'"Could not convert provided
 
 safeReimport:{[x]
   pyexec["pykx_internal_reimporter = pykx.PyKXReimport()"];
-  pykxunderq: getenv`PYKX_UNDER_Q;
-  skipunderq: getenv`SKIP_UNDERQ;
-  underpython: getenv`UNDER_PYTHON;
-  pykxloadedunderq: getenv`PYKX_LOADED_UNDER_Q;
-  pykxqloadedmarker: getenv`PYKX_Q_LOADED_MARKER;
+  envlist:(`PYKX_DEFAULT_CONVERSION;
+    `PYKX_UNDER_Q;
+    `SKIP_UNDERQ;
+    `PYKX_SKIP_UNDERQ;
+    `UNDER_PYTHON;
+    `PYKX_LOADED_UNDER_Q;
+    `PYKX_Q_LOADED_MARKER;
+    `PYKX_EXECUTABLE;
+    `PYKX_DIR);
+  envvals:getenv each envlist;
 
   .pykx.eval["pykx_internal_reimporter.reset()"];
   r: x[];
 
   pyexec["del pykx_internal_reimporter"];
-  setenv[`PYKX_UNDER_Q;pykxunderq];
-  setenv[`SKIP_UNDERQ;skipunderq];
-  setenv[`UNDER_PYTHON;underpython];
-  setenv[`PYKX_Q_LOADED_MARKER;pykxqloadedmarker];
-  setenv[`PYKX_LOADED_UNDER_Q;pykxloadedunderq];
+  setenv'[envlist;envvals];
   r
   }
 

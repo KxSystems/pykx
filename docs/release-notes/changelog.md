@@ -4,6 +4,348 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+## PyKX 2.2.0
+
+#### Release Date
+
+2023-11-09
+
+!!! Warning
+
+	PyKX 2.2.0 presently does not include a Python 3.11 release for MacOS x86 and Linux x86 architectures, this will be rectified in an upcoming patch release.
+
+### Additions
+
+- Addition of `agg` method for application of aggregation functions on `pykx.Table` and `pykx.GroupbyTable` objects
+
+	```python
+	>>> import pykx as kx
+	>>> import numpy as np
+	>>> import statistics
+        >>> def mode(x):
+	...     return statistics.mode(x)
+	>>> tab = kx.Table(data={
+	...     'x': kx.random.random(1000, 10),
+	...     'x1': kx.random.random(1000, 10.0)})
+	>>> tab.agg(mode)
+	pykx.Dictionary(pykx.q('
+	x | 6
+	x1| 2.294631
+	'))
+	>>> tab.agg(['min', 'mean'])
+	pykx.KeyedTable(pykx.q('
+	function| x     x1         
+	--------| -----------------
+	min     | 0     0.009771725
+	mean    | 4.588 5.152194   
+	'))
+	>>> 
+	>>> group_tab = kx.Table(data={
+	...     'x': kx.random.random(1000, ['a', 'b']),
+	...     'y': kx.random.random(1000, 10.0)})
+	>>> group_tab.groupby('x').agg('mean')
+	pykx.KeyedTable(pykx.q('
+	x| y       
+	-| --------
+	a| 5.239048
+	b| 4.885599
+	'))
+	>>> group_tab.groupby('x').agg(mode)
+	pykx.KeyedTable(pykx.q('
+	x| y       
+	-| --------
+	a| 1.870281
+	b| 4.46898 
+	'))
+	```
+
+- Addition of the ability for users to run `min`, `max`, `mean`, `median`, `sum` and `mode` methods on vector objects within PyKX.
+
+	```python
+	>>> import pykx as kx
+	>>> random_vec = kx.random.random(5, 3, seed=20)
+	pykx.LongVector(pykx.q('0 1 0 1 1'))
+	>>> random_vec.mode()
+	pykx.LongVector(pykx.q(',1'))
+	>>> random_vec.mean()
+	pykx.FloatAtom(pykx.q('0.6'))
+	```
+
+- Addition of the ability for users to assign objects to `pykx.*Vector` and `pykx.List` objects
+
+	```python
+	>>> import pykx as kx
+	>>> qvec = kx.q.til(10)
+	>>> qvec
+	pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+	>>> qvec[3] = 45
+	>>> qvec
+	pykx.LongVector(pykx.q('0 1 2 45 4 5 6 7 8 9'))
+	>>> qvec[-1] = 20
+	>>> qvec
+	pykx.LongVector(pykx.q('0 1 2 45 4 5 6 7 8 20'))
+	```
+
+- Users can now assign/update keys of a `pykx.Dictionary` object using an in-built `__setitem__` method as follows
+
+	```python
+	>>> import pykx as kx
+	>>> pykx_dict = kx.toq({'x': 1})
+	>>> pykx_dict
+	pykx.Dictionary(pykx.q('x| 1'))
+	>>> pykx_dict['x1'] = 2
+	>>> pykx_dict
+	pykx.Dictionary(pykx.q('
+	x | 1
+	x1| 2
+	'))
+	>>> for i in range(3):
+	...     pykx_dict['x']+=i
+	...
+	>>> pykx_dict
+	pykx.Dictionary(pykx.q('
+	x | 4
+	x1| 2
+	'))
+	```
+
+- Addition of `null` and `inf` properties for `pykx.Atom` objects allowing for Pythonic retrieval of nulls and infinities
+
+	```python
+	>>> import pykx as kx
+	>>> kx.FloatAtom.null
+	pykx.FloatAtom(pykx.q('0n'))
+	>>> kx.GUIDAtom.null
+	pykx.GUIDAtom(pykx.q('00000000-0000-0000-0000-000000000000'))
+	>>> kx.IntAtom.inf
+	pykx.IntAtom(pykx.q('0Wi'))
+	>>> -kx.IntAtom.inf
+	pykx.IntAtom(pykx.q('-0Wi'))
+	```
+
+- Users can now use the environment variables `PYKX_UNLICENSED="true"` or `PYKX_LICENSED="true"` set this as part of configuration within their `.pykx-config` file to allow `unlicensed` or `licensed` mode to be the default behaviour on initialisation for example:
+
+	```python
+	>>> import os
+	>>> os.environ['PYKX_UNLICESED'] = "true"
+	>>> import pykx as kx
+	>>> kx.toq([1, 2, 3])
+	pykx.List._from_addr(0x7fee46000a00)
+	```
+
+- Addition of `append` and `extend` methods to `pykx.*Vector` and `pykx.List` objects
+
+	```python
+	>>> import pykx as kx
+	>>> qvec = kx.q.til(5)
+	>>> qvec.append(100)
+	>>> qvec
+	pykx.LongVector(pykx.q('0 1 2 3 4 100'))
+	>>> qvec.extend([1, 2, 3])
+	>>> qvec
+	pykx.LongVector(pykx.q('0 1 2 3 4 100 1 2 3'))
+	```
+
+- Addition of `debug` keyword argument to the `__call__` method on `EmbeddedQ` and `QConnection` objects to provide backtraces on `q` code.
+
+	```python
+	>>> import pykx as kx
+	>>> kx.q('{[x] a: 5; b: til a; c: til x; b,c}', b'foo', debug=True)
+	backtrace:
+	  [3]  (.q.til)
+
+	  [2]  {[x] a: 5; b: til a; c: til x; b,c}
+	                               ^
+	  [1]  (.Q.trp)
+
+	      [0]  {[pykxquery] .Q.trp[value; pykxquery; {2@"backtrace:
+	                    ^
+	",.Q.sbt y;'x}]}
+	Traceback (most recent call last):
+	  File "<stdin>", line 1, in <module>
+	  File "...\site-packages\pykx\embedded_q.py", line 226, in __call__
+	    return factory(result, False)
+	  File "pykx\\_wrappers.pyx", line 504, in pykx._wrappers._factory
+	  File "pykx\\_wrappers.pyx", line 497, in pykx._wrappers.factory
+	pykx.exceptions.QError: type
+	```
+
+- Added feature to extract individual elements of both `TimestampAtom` and `TimestampVector` in a pythonic way including:
+  
+	* `date` - DateAtom / DateVector
+	* `time` - TimeAtom / TimeVector
+	* `year` - IntAtom / IntVector
+	* `month` - IntAtom / IntVector
+	* `day` - IntAtom / IntVector
+	* `hour` - IntAtom / IntVector
+	* `minute` - IntAtom / IntVector
+	* `second` - IntAtom / IntVector
+
+	```python
+	>>> timestamp_atom = kx.q('2023.10.25D16:42:01.292070013')
+	
+	>>> timestamp_atom.time
+	pykx.TimeAtom(pykx.q('16:42:01.292'))
+	>>> timestamp_atom.date
+	pykx.DateAtom(pykx.q('2023.10.25'))
+	>>> timestamp_atom.minute
+	pykx.IntAtom(pykx.q('42i'))
+
+	>>> timestamp_atom_2 = kx.q('2018.11.09D12:21:08.456123789')
+	>>> timestamp_vector = kx.q('enlist', timestamp_atom, timestamp_atom_2)
+	
+	>>> timestamp_vector.time
+	pykx.TimeVector(pykx.q('16:42:01.292 12:21:08.456'))
+	>>> timestamp_vector.date
+	pykx.DateVector(pykx.q('2023.10.25 2018.11.09'))
+	>>> timestamp_vector.hour
+	pykx.IntVector(pykx.q('16 12i'))
+	```
+
+- Addition of `poll_recv_async` to `RawQConnection` objects to support asynchronous polling.
+
+### Fixes and Improvements
+
+- Fix to allow users to use Python functions when operating on a `pykx.GroupbyTable` with an `apply` function
+
+	```python
+	>>> import pykx as kx
+	>>> import statistics
+	>>> def mode(x):
+	...    return statistics.mode(x)
+	>>> tab = kx.q('([]sym:`a`b`a`a;1 1 0 0)')
+	>>> tab.groupby('sym').apply(mode)
+	pykx.KeyedTable(pykx.q('
+	sym| x
+	---| -
+	a  | 0
+	b  | 1
+	'))
+	```
+
+- Added debug dependency for `find-libpython` that can be installed using `pip install "pykx[debug]"`. This dependency can be used to help find `libpython` in the scenario that `pykx.q` fails to find it.
+- Usage of the `QARGS` to enable/disable various elements of kdb Insights functionality has been formalised, outlined [here](../user-guide/configuration.md). For example users can now use `QARGS="--no-objstor"` to disable object storage capabilities.
+
+- Failure to initialise PyKX with `exp` or `embedq` license errors will now prompt users to ask if they wish to download an appropriate license following expiry or use of an invalid license
+
+	=== "'exp' License Prompt"
+
+		```python
+		Your PyKX license has now expired.
+
+		Captured output from initialization attempt:
+		    '2023.10.18T13:27:59.719 licence error: exp
+
+		Would you like to renew your license? [Y/n]:
+		```
+
+	=== "'embedq' License Prompt"
+
+		```python
+		You appear to be using a non kdb Insights license.
+
+		Captured output from initialization attempt:
+		    '2023.10.18T13:27:59.719 licence error: embedq
+
+		Running PyKX in the absence of a kdb Insights license has reduced functionality.
+		Would you like to install a kdb Insights personal license? [Y/n]:
+		```
+
+	=== "'upd' License Prompt"
+
+		```python
+		Your installed license is out of date for this version of PyKX and must be updated.
+
+		Captured output from initialization attempt:
+		    '2023.10.18T13:27:59.719 licence error: upd
+
+		Would you like to install an updated kdb Insights personal license? [Y/n]:
+		```
+
+- PyKX sets `PYKX_EXECUTABLE` to use when loading embedded q to prevent errors if launched using a different Python executable than that which will be found in `PATH`
+
+- Jupyter Notebook:
+	- Removal of `FutureWarning` when displaying tables and dictionaries.
+	- Revert issue causing results to be displayed as pointer references rather than Python objects in unlicensed mode.
+	- `%%q` magic now suppresses displaying of `::`. 
+	- `%%q` magic addition of `--display` option to have `display` be called on returned items in place of the default `print`.
+
+- `PyKXReimport` now additionally unsets/resets: `PYKX_SKIP_UNDERQ`, `PYKX_EXECUTABLE`, `PYKX_DIR`
+- When attempting to deserialize unsupported byte representations `pykx.deserialize` would result in a segmentation fault, this has been updated such that an error message is now raised.
+
+	```python
+	>>> import pykx as kx
+	>>> kx.deserialize(b'invalid byte string')
+	Traceback (most recent call last):
+	  File "<stdin>", line 1, in <module>
+	  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/serialize.py", line 123, in deserialize
+	    return _deserialize(data)
+	  File "pykx/_wrappers.pyx", line 131, in pykx._wrappers.deserialize
+	  File "pykx/_wrappers.pyx", line 135, in pykx._wrappers.deserialize
+	pykx.exceptions.QError: Failed to deserialize supplied non PyKX IPC serialized format object
+	```
+
+- Fixed an issue when using multiple asynchronous `QConnection` connected to multiple servers.
+- Users can now access the length of and index into `pykx.CharAtom` objects to align with Pythonic equivalent data
+
+	```python
+	>>> qatom = kx.CharAtom('a')
+	>>> len(qatom)
+	1
+	>>> qatom[0]
+	pykx.CharAtom(pykx.q('"a"'))
+	```
+
+## PyKX 2.1.2
+
+#### Release Date
+
+2023-10-24
+
+### Fixes and Improvements
+
+- Fix to issue where functions retrieved using the Context Interface with names `update/delete/select/exec` would result in an `AttributeError`
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> kx.q.test
+		<pykx.ctx.QContext of .test with [ctx]>
+		>>> kx.q.test.ctx.update(1)
+		Traceback (most recent call last):
+		  File "<stdin>", line 1, in <module>
+		  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/ctx.py", line 121, in __getattr__
+		    raise AttributeError(f'{key}: {self._unsupported_keys_with_msg[key]}')
+		AttributeError: update: Usage of 'update' function directly via 'q' context not supported, please consider using 'pykx.q.qsql.update'
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		>>> kx.q.test
+		<pykx.ctx.QContext of .test with [ctx]>
+		>>> kx.q.test.ctx.update(1)
+		pykx.LongAtom(pykx.q('2'))
+		```
+
+## PyKX 2.1.1
+
+#### Release Date
+
+2023-10-10
+
+### Fixes and Improvements
+
+- Fix to regression in PyKX 2.1.0 where execution of `from pykx import *` would result in the following behaviour
+
+	```
+	>>> from pykx import *
+	...
+	AttributeError: module 'pykx' has no attribute 'PyKXSerialized'
+	```
+
 ## PyKX 2.1.0
 
 #### Release Date
@@ -27,16 +369,16 @@ the following reads a CSV file and specifies the types of the three columns name
 	>>> df = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
 	>>> kx.toq(df).dtypes
 	pykx.Table(pykx.q('
-	columns type           
+	columns type
 	-----------------------
-	x       "kx.LongAtom"  
+	x       "kx.LongAtom"
 	y       "kx.SymbolAtom"
 	'))
 	>>> kx.toq(df, ktype={'x': kx.FloatAtom}).dtypes
 	pykx.Table(pykx.q('
-	columns type           
+	columns type
 	-----------------------
-	x       "kx.FloatAtom" 
+	x       "kx.FloatAtom"
 	y       "kx.SymbolAtom"
 	'))
 	```
@@ -98,19 +440,19 @@ the following reads a CSV file and specifies the types of the three columns name
 		pykx.Table(pykx.q('
 		c1
 		--
-		
+
 		'))
 		>>> tab[-4]
 		pykx.Table(pykx.q('
 		c1
 		--
-		
+
 		'))
 		>>> tab[3]
 		pykx.Table(pykx.q('
 		c1
 		--
-		
+
 		'))
 		```
 
@@ -123,7 +465,7 @@ the following reads a CSV file and specifies the types of the three columns name
 		pykx.Table(pykx.q('
 		c1
 		--
-		2 
+		2
 		'))
 		>>> tab[-4]
 		...
@@ -183,7 +525,7 @@ the following reads a CSV file and specifies the types of the three columns name
 	...       })
 	>>> tab.groupby('sym').apply(kx.q.sum)
 	pykx.KeyedTable(pykx.q('
-	sym| price   
+	sym| price
 	---| --------
 	a  | 166759.4
 	b  | 166963.6
@@ -192,7 +534,7 @@ the following reads a CSV file and specifies the types of the three columns name
 	```
 
 - Addition of a new module `pykx.random` which provides functionality for the generation of random data and setting of random seeds. For more information see [here](../api/random.md)
-	
+
 	```python
 	>>> import pykx as kx
 	>>> kx.random.random(5, 1.0, seed=123)

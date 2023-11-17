@@ -224,6 +224,22 @@ in order until one is found to exist, or they have all been checked:
 	AttributeError: 'pykx.ctx.QContext' object has no attribute 'test_extension'
 	```
 
+### Adding context interface search locations
+
+In addition to the default search locations users can add additional locations to be searched through appending of additional search paths to the `kx.q.paths` list which underpins the search. The following shows a practical example of this accessing a file `my_context.q` at a new location `/tmp/files`, in this example we attempt initially to access the namespace without this location set for search
+
+```python
+>>> import pykx as kx
+>>> from pathlib import Path
+>>> kx.q.my_context
+Traceback (most recent call last):
+  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/__init__.py", line 132, in __getattr__
+..
+>>> kx.q.paths.append(Path('/tmp/files'))
+>>> kx.q.my_context
+<pykx.ctx.QContext of .my_context with [func]>
+```
+
 ## Best Practices
 
 To take full advantage of the automatic script loading one should ensure that every q/k script
