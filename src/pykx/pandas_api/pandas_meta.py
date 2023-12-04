@@ -1,5 +1,6 @@
 from . import api_return
 from ..exceptions import QError
+from typing import Union, Dict
 
 
 def _init(_q):
@@ -209,6 +210,27 @@ class PandasMeta:
         if numeric_only:
             tab = _get_numeric_only_subtable(self)
         return q.abs(tab)
+
+    @api_return
+    def round(self, decimals: Union[int, Dict[str, int]] = 0):
+        tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q('{(keys x) _ 0!x}', tab)
+
+        return q("""{[t;d]
+            generate_ops:{[vdic]
+                tuples:{flip(2;count[x])#key[x],value[x]}[vdic];
+                key[vdic]!({(({"F"$.Q.f[y]x}[;x[1]])';x[0])}')tuples};
+            get_float_cols:{(key[ct]@where 9=value[ct:abs type each first x])};
+            fcols:get_float_cols[t];
+            ops:$[-7h=type d;
+                [$[0=d;
+                    fcols!({(_:';x)}')fcols;
+                    [vdic:fcols!count[fcols]#d;
+                        generate_ops vdic]]];
+                    [vdic:(key[d]i)!value[d]i:where key[d] in fcols;
+                        generate_ops vdic]];
+            ![t;();0b;ops]}""", tab, decimals)
 
     @convert_result
     def all(self, axis=0, bool_only=False, skipna=True):

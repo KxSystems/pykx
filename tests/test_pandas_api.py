@@ -1815,6 +1815,22 @@ def test_pandas_abs(kx, q):
     with pytest.raises(kx.QError):
         tab.abs()
 
+def test_pandas_round(kx, q):
+    q_tab = q('([]c1:1.0 .1 .01 .001 .0001 .00001;'
+              'c2:1.0 1.2 1.02 1.002 1.0002 1.00002;'
+              'c3:til 6;'
+              'c4:`a`b`c`d`e`f)')
+    pd_tab = q_tab.pd()
+    round_dict = {'c1': 0, 'c2': 2}
+
+    assert all(pd_tab.round() == q_tab.round().pd())
+    assert all(q_tab.round(0).pd() == q_tab.round().pd())
+    assert all(pd_tab.round(2) == q_tab.round(2).pd())
+    assert all(pd_tab.round(round_dict) == q_tab.round(round_dict).pd())
+
+    round_dict_non_numerical = {'c1': 0, 'c3': 2, 'c4': 2}
+    assert all(pd_tab.round(round_dict_non_numerical) == q_tab.round(round_dict_non_numerical).pd())
+
 
 def test_pandas_min(q):
     tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
