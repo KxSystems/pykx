@@ -2070,3 +2070,29 @@ def test_keyed_loc_fixes(q):
         mkt[['k1', 'y']]
     with pytest.raises(KeyError):
         mkt['k1']
+
+def test_pandas_count(q):
+    tab = q('([] k1: 0n 2 0n 2 0n ; k2: (`a;`;`b;`;`c))')
+    df = tab.pd()
+
+    # Assert axis = 1
+    qcount = tab.count(axis=1).py()
+    pcount = df.count(axis=1)
+
+    print(pcount)
+    assert int(qcount[0]) == int(pcount[0])
+    assert int(qcount[1]) == 1
+
+    # Assert axis = 0
+    qcount = tab.count().py()
+    pcount = df.count()
+    
+    assert int(qcount["k1"]) == int(pcount["k1"])
+    assert int(qcount["k2"]) == 3
+
+    # Assert only numeric
+    qcount = tab.count(numeric_only = True).py()
+    pcount = df.count(numeric_only = True)
+    
+    assert int(qcount["k1"]) == int(pcount["k1"])
+
