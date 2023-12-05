@@ -2022,6 +2022,16 @@ def test_pandas_sum(q):
         assert str(psum[i]) == 'nan'
 
 
+def test_pandas_skew(q):
+    tab = q('([] price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
+    df = tab.pd()
+
+    qskew = tab.skew().py()
+    pskew = df.skew()
+    assert round(float(qskew['price']), 6) == round(float(pskew['price']), 6)
+    assert round(float(qskew['ints']), 6) == round(float(pskew['ints']), 6)
+
+
 def test_pandas_groupby_errors(kx, q):
     tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
 

@@ -291,6 +291,17 @@ class PandasMeta:
         ), cols)
 
     @convert_result
+    def skew(self, axis=0, skipna=True, numeric_only=False):
+        res, cols = preparse_computations(self, axis, skipna, numeric_only)
+        return (q(
+            '{[row]'
+            'm:{(sum(y-avg y)xexp x)%count y};'
+            'u:{sqrt[n*n-1]%neg[2]+n:count x};'
+            '{[u;m;x](u[x]*m[3][x]%(m[2][x]xexp 3%2))}[u;m]each row}',
+            res
+        ), cols)
+
+    @convert_result
     def sum(self, axis=0, skipna=True, numeric_only=False, min_count=0):
         res, cols = preparse_computations(self, axis, skipna, numeric_only)
         return (q(
