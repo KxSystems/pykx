@@ -311,3 +311,8 @@ class PandasMeta:
             return data
         else:
             return (q('{(flip enlist[`function]!enlist x)!y}', keyname, data))
+
+    @convert_result
+    def count(self, axis=0, numeric_only=False):
+        res, cols = preparse_computations(self, axis, True, numeric_only)
+        return (q('count each', res), cols)
