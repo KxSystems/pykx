@@ -155,6 +155,31 @@ class PandasMeta:
         )
 
     @api_return
+    def std(self, axis: int = 0, ddof: int = 1, numeric_only: bool = False):
+        tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q('{(keys x) _ 0!x}', tab)
+        if numeric_only:
+            tab = _get_numeric_only_subtable(tab)
+
+        key_str = '' if axis == 0 else '`$string '
+        val_str = '' if axis == 0 else '"f"$value '
+        query_str = 'cols[tab]' if axis == 0 else 'til[count[tab]]'
+        where_str = ' where not (::)~/:r[;1]'
+        x_dev_str = f'{{avg sqrt (sum xexp[x-avg x;2]) % count[x]-{ddof}}}'
+        dev_str = 'dev' if ddof == 0 else 'sdev' if ddof == 1 else x_dev_str
+
+        if ddof == len(tab):
+            return q(f'{{[tab]{query_str}!count[{query_str}]#0n}}', tab)
+
+        return q(
+            '{[tab]'
+            f'r:{{[tab; x] ({key_str}x; {dev_str} {val_str}tab[x])}}[tab;] each {query_str};'
+            f'(,/) {{(enlist x 0)!(enlist x 1)}} each r{where_str}}}',
+            tab
+        )
+
+    @api_return
     def median(self, axis: int = 0, numeric_only: bool = False):
         tab = self
         if 'Keyed' in str(type(tab)):
@@ -243,6 +268,18 @@ class PandasMeta:
             '{[row; minc] {$[y > 0; $[y>count[x]; 0N; prd x]; prd x]}[;minc] each row}',
             res,
             min_count
+        ), cols)
+
+    @convert_result
+    def skew(self, axis=0, skipna=True, numeric_only=False):
+        res, cols = preparse_computations(self, axis, skipna, numeric_only)
+        return (q(
+            '{[row]'
+            # adjusted Fisher-Pearson standardized moment
+            'm:{(sum (x - avg x) xexp y) % count x};'
+            'g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];'
+            '{[g1;x]g1[x] * sqrt[n * n-1] % neg[2] + n:count x}[g1] each row}',
+            res
         ), cols)
 
     @convert_result
