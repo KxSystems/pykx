@@ -2094,11 +2094,31 @@ def test_df_add_suffix(kx, q):
 def test_pandas_skew(q):
     tab = q('([] price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
     df = tab.pd()
-
     qskew = tab.skew().py()
     pskew = df.skew()
     assert round(float(qskew['price']), 6) == round(float(pskew['price']), 6)
     assert round(float(qskew['ints']), 6) == round(float(pskew['ints']), 6)
+
+    tab = q('^', q('([]sym:100?`foo`bar`baz`qux)'), tab)
+    df = tab.pd()
+    qskew = tab.skew(numeric_only=True).py()
+    pskew = df.skew(numeric_only=True)
+    assert round(float(qskew['price']), 6) == round(float(pskew['price']), 6)
+    assert round(float(qskew['ints']), 6) == round(float(pskew['ints']), 6)
+
+    tab = q('^', q('([]foo:(5#0n),95?500.0f)'), tab)
+    df = tab.pd()
+    qskew = tab.skew(numeric_only=True, skipna=True).py()
+    pskew = df.skew(numeric_only=True, skipna=True)
+    assert round(float(qskew['foo']), 6) == round(float(pskew['foo']), 6)
+
+    tab = q('_', 5, tab) # discard rows with null "foo"s
+    df = tab.pd()
+    qskew = tab.skew(numeric_only=True, axis=1).py()
+    pskew = df.skew(numeric_only=True, axis=1)
+    print(q('~', qskew, pskew))
+    for r in range(len(qskew)):
+        assert round(float(qskew[r]), 6) == round(float(pskew[r]), 6)
 
 
 def test_std(kx, q):
