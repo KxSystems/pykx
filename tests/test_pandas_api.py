@@ -2035,22 +2035,18 @@ def test_pandas_count(q):
     tab = q('([] k1: 0n 2 0n 2 0n ; k2: (`a;`;`b;`;`c))')
     df = tab.pd()
 
-    # Assert axis = 1
     qcount = tab.count(axis=1).py()
     pcount = df.count(axis=1)
-
-    print(pcount)
+    
     assert int(qcount[0]) == int(pcount[0])
     assert int(qcount[1]) == 1
 
-    # Assert axis = 0
     qcount = tab.count().py()
     pcount = df.count()
 
     assert int(qcount["k1"]) == int(pcount["k1"])
     assert int(qcount["k2"]) == 3
 
-    # Assert only numeric
     qcount = tab.count(numeric_only=True).py()
     pcount = df.count(numeric_only=True)
 
@@ -2058,38 +2054,40 @@ def test_pandas_count(q):
 
 
 def test_df_add_prefix(kx, q):
-    q('sym:`aaa`bbb`ccc')
-    t = q('([] 10?sym; til 10; 10?10; 10?1f)')
+    t = q('([] til 5; 5?5; 5?1f; (5;5)#100?" ")')
 
     q_add_prefix = t.add_prefix("col_", axis=1)
 
-    assert(q('{x~y}', q_add_prefix, t.pd().add_prefix("col_")))
+    assert(q('~', q_add_prefix, t.pd().add_prefix("col_", axis=1)))
 
     kt = kx.q('([idx:til 5] til 5; 5?5; 5?1f; (5;5)#100?" ")')
 
     q_add_prefix = kt.add_prefix("col_", axis=1)
-    assert(q('{x~y}', q_add_prefix, kt.pd().add_prefix("col_")))
+    assert(q('~', q_add_prefix, kt.pd().add_prefix("col_", axis=1)))
 
     with pytest.raises(ValueError):
         t.add_prefix("col_", axis=0)
-
+    
+    with pytest.raises(ValueError):
+        t.add_suffix("col_", axis=3)
 
 def test_df_add_suffix(kx, q):
-    q('sym:`aaa`bbb`ccc')
-    t = q('([] 10?sym; til 10; 10?10; 10?1f)')
+    t = q('([] til 5; 5?5; 5?1f; (5;5)#100?" ")')
 
     q_add_suffix = t.add_suffix("_col", axis=1)
 
-    assert(q('{x~y}', q_add_suffix, t.pd().add_suffix("_col")))
+    assert(q('~', q_add_suffix, t.pd().add_suffix("_col", axis=1)))
 
     kt = kx.q('([idx:til 5] til 5; 5?5; 5?1f; (5;5)#100?" ")')
 
     q_add_suffix = kt.add_suffix("_col", axis=1)
-    assert(q('{x~y}', q_add_suffix, kt.pd().add_suffix("_col")))
+    assert(q('~', q_add_suffix, kt.pd().add_suffix("_col", axis=1)))
 
     with pytest.raises(ValueError):
         t.add_suffix("_col", axis=0)
-
+    
+    with pytest.raises(ValueError):
+        t.add_suffix("_col", axis=3)
 
 def test_pandas_skew(q):
     tab = q('([] price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
