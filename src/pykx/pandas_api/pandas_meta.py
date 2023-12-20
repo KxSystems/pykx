@@ -158,7 +158,7 @@ class PandasMeta:
     def std(self, axis: int = 0, ddof: int = 1, numeric_only: bool = False):
         tab = self
         if 'Keyed' in str(type(tab)):
-            tab = q('value', tab)
+            tab = q.value(tab)
         if numeric_only:
             tab = _get_numeric_only_subtable(tab)
 
