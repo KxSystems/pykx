@@ -2065,11 +2065,14 @@ def test_df_add_prefix(kx, q):
     q_add_prefix = kt.add_prefix("col_", axis=1)
     assert(q('~', q_add_prefix, kt.pd().add_prefix("col_", axis=1)))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as err:
         t.add_prefix("col_", axis=0)
+        assert 'nyi' in str(err)
     
-    with pytest.raises(ValueError):
-        t.add_suffix("col_", axis=3)
+    with pytest.raises(ValueError) as err:
+        t.add_prefix("col_", axis=3)
+        assert 'No axis named 3' in str(err)
+
 
 def test_df_add_suffix(kx, q):
     t = q('([] til 5; 5?5; 5?1f; (5;5)#100?" ")')
@@ -2083,11 +2086,14 @@ def test_df_add_suffix(kx, q):
     q_add_suffix = kt.add_suffix("_col", axis=1)
     assert(q('~', q_add_suffix, kt.pd().add_suffix("_col", axis=1)))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as err:
         t.add_suffix("_col", axis=0)
-    
-    with pytest.raises(ValueError):
+        assert 'nyi' in str(err)
+        
+    with pytest.raises(ValueError) as err:
         t.add_suffix("_col", axis=3)
+        assert 'No axis named 3' in str(err)
+
 
 def test_pandas_skew(q):
     tab = q('([] price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
