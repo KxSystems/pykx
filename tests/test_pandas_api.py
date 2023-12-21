@@ -2029,3 +2029,11 @@ def test_keyed_loc_fixes(q):
         mkt[['k1', 'y']]
     with pytest.raises(KeyError):
         mkt['k1']
+
+def test_values(q):
+    col1 = q('10?100')
+    col2 = q('10?`a`b`c`d')
+    col3 = q('10?`x`y`z`1`2`3')
+    matrix = q('{[r1; r2; r3] flip enlist[r1; r2; r3]}', col1, col2, col3)
+    tab = q('{[price; sym; id] ([]p: price; s: sym; i: id)}', col1, col2, col3)
+    assert tab.values().py() == matrix.py()

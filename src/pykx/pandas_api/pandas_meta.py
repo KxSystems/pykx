@@ -257,6 +257,11 @@ class PandasMeta:
             min_count
         ), cols)
 
+    @api_return
+    def values(self, skipna = True, numeric_only = False):
+        tab = self
+        return q('{[table] flip value flip table}', tab)
+    
     def agg(self, func, axis=0, *args, **kwargs): # noqa: C901
         if 'KeyedTable' in str(type(self)):
             raise NotImplementedError("'agg' method not presently supported for KeyedTable")
