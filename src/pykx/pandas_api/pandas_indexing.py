@@ -453,12 +453,14 @@ class PandasReindexing:
                 t = _rename_columns(t, columns)
 
         return t
-    
+
     def add_suffix(self, suffix, axis=0):
         t = self
         if axis == 1:
-            c_str = 'cols value' if "Keyed" in str(type(t)) else 'cols'
-            t = q(f'{{(c!`$string[c:{c_str} y],\:string x)xcol y}}', suffix, t)
+            t = q('''{[s;t]
+                  c:$[99h~type t;cols value@;cols] t;
+                  (c!`$string[c],\\:string s) xcol t
+                  }''', suffix, t)
         elif axis == 0:
             raise ValueError('nyi')
         else:
@@ -468,8 +470,10 @@ class PandasReindexing:
     def add_prefix(self, prefix, axis=0):
         t = self
         if axis == 1:
-            c_str = 'cols value' if "Keyed" in str(type(t)) else 'cols'
-            t = q(f'{{(c!`$string[x],/:string c:{c_str} y)xcol y}}', prefix, t)
+            t = q('''{[s;t]
+                  c:$[99h~type t;cols value@;cols] t;
+                  (c!`$string[s],/:string[c]) xcol t
+                  }''', prefix, t)
         elif axis == 0:
             raise ValueError('nyi')
         else:

@@ -2037,7 +2037,7 @@ def test_pandas_count(q):
 
     qcount = tab.count(axis=1).py()
     pcount = df.count(axis=1)
-    
+
     assert int(qcount[0]) == int(pcount[0])
     assert int(qcount[1]) == 1
 
@@ -2068,7 +2068,7 @@ def test_df_add_prefix(kx, q):
     with pytest.raises(ValueError) as err:
         t.add_prefix("col_", axis=0)
         assert 'nyi' in str(err)
-    
+
     with pytest.raises(ValueError) as err:
         t.add_prefix("col_", axis=3)
         assert 'No axis named 3' in str(err)
@@ -2089,7 +2089,7 @@ def test_df_add_suffix(kx, q):
     with pytest.raises(ValueError) as err:
         t.add_suffix("_col", axis=0)
         assert 'nyi' in str(err)
-        
+
     with pytest.raises(ValueError) as err:
         t.add_suffix("_col", axis=3)
         assert 'No axis named 3' in str(err)
