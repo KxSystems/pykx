@@ -1810,6 +1810,15 @@ def test_pandas_max(q):
     for i in range(100):
         assert float(qmax[i]) == float(pmax[i])
 
+    ktab = q('{1!x}', tab)
+    df = ktab.pd()
+
+    qmax = ktab.max().py()
+    pmax = df.max()
+
+    assert float(pmax['price']) == qmax['price']
+    assert float(pmax['ints']) == qmax['ints']
+
 
 def test_pandas_all(q):
     tab = q(
