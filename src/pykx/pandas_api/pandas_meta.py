@@ -50,9 +50,9 @@ def _get_bool_only_subtable(tab):
 
 
 def preparse_computations(tab, axis=0, skipna=True, numeric_only=False, bool_only=False):
-    cols = q('cols', tab)
     if 'Keyed' in str(type(tab)):
-        tab = q('{(keys x) _ 0!x}', tab)
+        tab = tab.values()
+    cols = tab.columns
     if numeric_only:
         (tab, cols) = _get_numeric_only_subtable_with_bools(tab)
     if bool_only:
