@@ -2038,3 +2038,160 @@ def test_keyed_loc_fixes(q):
         mkt[['k1', 'y']]
     with pytest.raises(KeyError):
         mkt['k1']
+
+
+def test_pandas_count(q):
+    tab = q('([] k1: 0n 2 0n 2 0n ; k2: (`a;`;`b;`;`c))')
+    df = tab.pd()
+
+    qcount = tab.count(axis=1).py()
+    pcount = df.count(axis=1)
+
+    assert int(qcount[0]) == int(pcount[0])
+    assert int(qcount[1]) == 1
+
+    qcount = tab.count().py()
+    pcount = df.count()
+
+    assert int(qcount["k1"]) == int(pcount["k1"])
+    assert int(qcount["k2"]) == 3
+
+    qcount = tab.count(numeric_only=True).py()
+    pcount = df.count(numeric_only=True)
+
+    assert int(qcount["k1"]) == int(pcount["k1"])
+
+
+def test_df_add_prefix(kx, q):
+    t = q('([] til 5; 5?5; 5?1f; (5;5)#100?" ")')
+
+    q_add_prefix = t.add_prefix("col_", axis=1)
+
+    assert(q('~', q_add_prefix, t.pd().add_prefix("col_", axis=1)))
+
+    kt = kx.q('([idx:til 5] til 5; 5?5; 5?1f; (5;5)#100?" ")')
+
+    q_add_prefix = kt.add_prefix("col_", axis=1)
+    assert(q('~', q_add_prefix, kt.pd().add_prefix("col_", axis=1)))
+
+    with pytest.raises(ValueError) as err:
+        t.add_prefix("col_", axis=0)
+        assert 'nyi' in str(err)
+
+    with pytest.raises(ValueError) as err:
+        t.add_prefix("col_", axis=3)
+        assert 'No axis named 3' in str(err)
+
+
+def test_df_add_suffix(kx, q):
+    t = q('([] til 5; 5?5; 5?1f; (5;5)#100?" ")')
+
+    q_add_suffix = t.add_suffix("_col", axis=1)
+
+    assert(q('~', q_add_suffix, t.pd().add_suffix("_col", axis=1)))
+
+    kt = kx.q('([idx:til 5] til 5; 5?5; 5?1f; (5;5)#100?" ")')
+
+    q_add_suffix = kt.add_suffix("_col", axis=1)
+    assert(q('~', q_add_suffix, kt.pd().add_suffix("_col", axis=1)))
+
+    with pytest.raises(ValueError) as err:
+        t.add_suffix("_col", axis=0)
+        assert 'nyi' in str(err)
+
+    with pytest.raises(ValueError) as err:
+        t.add_suffix("_col", axis=3)
+        assert 'No axis named 3' in str(err)
+
+
+def test_pandas_skew(q):
+    tab = q('([] price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
+    df = tab.pd()
+    qskew = tab.skew().py()
+    pskew = df.skew()
+    assert round(float(qskew['price']), 6) == round(float(pskew['price']), 6)
+    assert round(float(qskew['ints']), 6) == round(float(pskew['ints']), 6)
+
+    tab = q('^', q('([]sym:100?`foo`bar`baz`qux)'), tab)
+    df = tab.pd()
+    qskew = tab.skew(numeric_only=True).py()
+    pskew = df.skew(numeric_only=True)
+    assert round(float(qskew['price']), 6) == round(float(pskew['price']), 6)
+    assert round(float(qskew['ints']), 6) == round(float(pskew['ints']), 6)
+
+    tab = q('^', q('([]foo:(5#0n),95?500.0f)'), tab)
+    df = tab.pd()
+    qskew = tab.skew(numeric_only=True, skipna=True).py()
+    pskew = df.skew(numeric_only=True, skipna=True)
+    assert round(float(qskew['foo']), 6) == round(float(pskew['foo']), 6)
+
+    tab = q('_', 5, tab) # discard rows with null "foo"s
+    df = tab.pd()
+    qskew = tab.skew(numeric_only=True, axis=1).py()
+    pskew = df.skew(numeric_only=True, axis=1)
+    print(q('~', qskew, pskew))
+    for r in range(len(qskew)):
+        assert round(float(qskew[r]), 6) == round(float(pskew[r]), 6)
+
+
+def test_std(kx, q):
+    df = pd.DataFrame(
+        {
+            'a': [1, 2, 2, 4],
+            'b': [1, 2, 6, 7],
+            'c': [7, 8, 9, 10],
+            'd': [7, 11, 14, 14]
+        }
+    )
+    tab = kx.toq(df)
+    p_m = df.std()
+    q_m = tab.std()
+    for c in q.key(q_m).py():
+        assert p_m[c] == q_m[c].py()
+    p_m = df.std(axis=1)
+    q_m = tab.std(axis=1)
+    for c in range(len(q.cols(tab))):
+        assert p_m[c] == q_m[q('{`$string x}', c)].py()
+    p_m = df.std(ddof=0)
+    q_m = tab.std(ddof=0)
+    for c in q.key(q_m).py():
+        assert p_m[c] == q_m[c].py()
+
+    p_m = df.std(ddof=4)
+    q_m = tab.std(ddof=4)
+    for c in q.key(q_m).py():
+        assert np.isnan(p_m[c]) == np.isnan(q_m[c].py())
+
+    q['tab'] = kx.toq(df)
+    tab = q('1!`idx xcols update idx: til count tab from tab')
+    p_m = df.std()
+    q_m = tab.std()
+    for c in q.key(q_m).py():
+        assert p_m[c] == q_m[c].py()
+    p_m = df.std(axis=1)
+    q_m = tab.std(axis=1)
+    for c in range(len(q.cols(tab)) - 1):
+        assert p_m[c] == q_m[q('{`$string x}', c)].py()
+
+    df = pd.DataFrame(
+        {
+            'a': [1, 2, 2, 4],
+            'b': [1, 2, 6, 7],
+            'c': [7, 8, 9, 10],
+            'd': ['foo', 'bar', 'baz', 'qux']
+        }
+    )
+    tab = kx.toq(df)
+    p_m = df.std(numeric_only=True)
+    q_m = tab.std(numeric_only=True)
+    for c in q.key(q_m).py():
+        assert p_m[c] == q_m[c].py()
+    p_m = df.std(axis=1, numeric_only=True)
+    q_m = tab.std(axis=1, numeric_only=True)
+    for c in range(len(q.cols(tab))):
+        assert p_m[c] == q_m[q('{`$string x}', c)].py()
+
+    with pytest.raises(kx.QError):
+        q_m = tab.std()
+    with pytest.raises(kx.QError):
+        q_m = tab.std(axis=1)

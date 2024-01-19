@@ -454,6 +454,32 @@ class PandasReindexing:
 
         return t
 
+    def add_suffix(self, suffix, axis=0):
+        t = self
+        if axis == 1:
+            t = q('''{[s;t]
+                  c:$[99h~type t;cols value@;cols] t;
+                  (c!`$string[c],\\:string s) xcol t
+                  }''', suffix, t)
+        elif axis == 0:
+            raise ValueError('nyi')
+        else:
+            raise ValueError(f'No axis named {axis}')
+        return t
+
+    def add_prefix(self, prefix, axis=0):
+        t = self
+        if axis == 1:
+            t = q('''{[s;t]
+                  c:$[99h~type t;cols value@;cols] t;
+                  (c!`$string[s],/:string[c]) xcol t
+                  }''', prefix, t)
+        elif axis == 0:
+            raise ValueError('nyi')
+        else:
+            raise ValueError(f'No axis named {axis}')
+        return t
+
     def sample(self, n=None, frac=None, replace=False, weights=None,
                random_state=None, axis=None, ignore_index=False):
         if n is None and frac is None:
