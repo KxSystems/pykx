@@ -206,6 +206,17 @@ AAPL 68.98055 94
 '))
 ```
 
+Additionally for retrieval of current temporal information users can make calls to the `date`, `time` and `timestamp` type objects respectively as follows
+
+```python
+>>> kx.DateAtom('today')
+pykx.DateAtom(pykx.q('2024.01.05'))
+>>> kx.TimeAtom('now')
+pykx.TimeAtom(pykx.q('16:22:12.178'))
+>>> kx.TimestampAtom('now')
+pykx.TimestampAtom(pykx.q('2024.01.05T16:22:21.012631000'))
+```
+
 ### Evaluating q code using `kx.q`
 
 For users more familiar with q it is possible to evaluate q code to generate PyKX objects, this can be done as follows
@@ -313,7 +324,10 @@ dtype: int64
   4
 ]
 >>>
->>> qtab = kx.q('([]5?1f;5?1f)')
+>>> qtab = kx.Table(data={
+...     'x': kx.random.random(5, 1.0),
+...     'x1': kx.random.random(5, 1.0),
+... })
 >>> qtab
 pykx.Table(pykx.q('
 x         x1       
@@ -348,9 +362,9 @@ x1: double
 
 		```python
 		>>> import pykx as kx
-		>>> qtime = kx.q('first 1?0p')
+		>>> qtime = kx.TimestampAtom('now')
 		>>> qtime
-		pykx.TimestampAtom(pykx.q('2001.08.17D03:16:23.736627552'))
+		pykx.TimestampAtom(pykx.q('2024.01.05D03:16:23.736627552'))
 		>>> kx.toq(qtime.py())
-		pykx.TimestampAtom(pykx.q('2001.08.17D03:16:23.736627000'))
+		pykx.TimestampAtom(pykx.q('2024.01.05D03:16:23.736627000'))
 		```

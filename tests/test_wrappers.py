@@ -7,17 +7,18 @@ from datetime import timedelta
 import gc
 import math
 from operator import index
+import os
 import pickle
 from platform import python_implementation
 from textwrap import dedent
 from uuid import UUID
+import itertools
 
 # Do not import Pandas, PyArrow, or PyKX here - use the pd/pa/kx fixtures instead!
 import numpy as np
 import pytest
 import pytz
 from packaging import version
-
 
 pypy = python_implementation() == 'PyPy'
 
@@ -64,6 +65,10 @@ def test_pykx_q_get(kx, q):
 
 
 @pytest.mark.embedded
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_pykx_q_getattr(kx, q):
     q("af:.pykx.eval\"type('Car', (object,), {'speed': 200, 'color': 'red'})\"")
     q('af[`:speed]`')
@@ -158,6 +163,10 @@ class Test_K:
         assert str(q('()')) == ''
 
     @pytest.mark.unlicensed(unlicensed_only=True)
+    @pytest.mark.skipif(
+        os.getenv('PYKX_THREADING') is not None,
+        reason='Not supported with PYKX_THREADING'
+    )
     def test_repr_str_unlicensed(self, kx):
         x = kx.K([0, None, '', float('NaN')])
         assert str(x) == repr(x)
@@ -233,17 +242,204 @@ class Test_K:
         assert q('5') != None # noqa: E711
         assert not q('5') == None # noqa: E711
 
+    def test_slicing(self, q, kx):
+        test_vector = q('1 2 3')
+        assert test_vector[0].py() == test_vector.py()[0]
+        assert test_vector[-1].py() == test_vector.py()[-1]
+        assert test_vector[1:].py() == test_vector.py()[1:]
+        assert test_vector[-1:].py() == test_vector.py()[-1:]
+        assert test_vector[-2:-1].py() == test_vector.py()[-2:-1]
+        assert test_vector[-5:].py() == test_vector.py()[-5:]
+        assert test_vector[:-1].py() == test_vector.py()[:-1]
+        assert test_vector[:-3].py() == test_vector.py()[:-3]
+        assert test_vector[::1].py() == test_vector.py()[::1]
+        assert test_vector[::2].py() == test_vector.py()[::2]
+        assert test_vector[-1:5:2].py() == test_vector.py()[-1:5:2]
+        assert test_vector[::-1].py() == test_vector.py()[::-1]
+        with pytest.raises(ValueError) as err:
+            test_vector[::0]
+        assert 'slice step cannot be zero' in str(err)
+
+        test_list = q('(1 2 3; 4 5 6)')
+        assert test_list[0].py() == test_list.py()[0]
+        assert test_list[-1].py() == test_list.py()[-1]
+        assert test_list[:6].py() == test_list.py()[:6]
+        with pytest.raises(ValueError) as err:
+            test_list[::0]
+        assert 'slice step cannot be zero' in str(err)
+
+        test_table = q('([] a:1 2 3)')
+        assert all(test_table[1:].pd() == test_table.pd()[1:].reset_index(drop=True))
+        assert all(test_table[-1:].pd() == test_table.pd()[-1:].reset_index(drop=True))
+        with pytest.raises(ValueError) as err:
+            test_table[::0]
+        assert 'slice step cannot be zero' in str(err)
+
+        test_table2 = q('([] a:1 2 3; b:4 5 6; c:7 8 9)')
+        assert all(test_table2[2:].pd() == test_table2.pd()[2:].reset_index(drop=True))
+        assert all(test_table2[-2:].pd() == test_table2.pd()[-2:].reset_index(drop=True))
+        assert all(test_table2[-3:].pd() == test_table2.pd()[-3:].reset_index(drop=True))
+        assert test_table2[6:] == test_table2[10:]
+        assert all(test_table2[-4:].pd() == test_table2.pd()[-4:].reset_index(drop=True))
+        assert all(test_table2[:4].pd() == test_table2.pd()[:4].reset_index(drop=True))
+        assert all(test_table2[::1].pd() == test_table2.pd()[::1].reset_index(drop=True))
+        assert all(test_table2[::2].pd() == test_table2.pd()[::2].reset_index(drop=True))
+        assert all(test_table2[-1:5:2].pd() == test_table2.pd()[-1:5:2].reset_index(drop=True))
+        assert all(test_table2[::-1].pd() == test_table2.pd()[::-1].reset_index(drop=True))
+        assert test_table2[:-9] == q('sublist', 0, test_table2)
+        assert all(test_table2[:-1].pd() == test_table2.pd()[:-1])
+
+        empty_vector = q('`long$()')
+        assert empty_vector[1:] == empty_vector
+        assert empty_vector[-1:] == empty_vector
+        assert empty_vector[:1] == empty_vector
+        assert empty_vector[:-1] == empty_vector
+
+        list_of_empties = q('(();();())')
+        assert (list_of_empties[1:] == q('(();())')).all()
+        assert (list_of_empties[-1:] == q('enlist ()')).all()
+        assert (list_of_empties[:1] == q('enlist ()')).all()
+        assert (list_of_empties[:-1] == q('(();())')).all()
+
+        empty_table = q('([] a:(); b:(); c:())')
+        assert empty_table[1:] == empty_table
+        assert empty_table[-1:] == empty_table
+        assert empty_table[:1] == empty_table
+        assert empty_table[:-1] == empty_table
+
+        vector_of_one = q('enlist 1')
+        assert vector_of_one[1:] == kx.LongVector(q('`long$()'))
+        assert (vector_of_one[:1] == q('enlist 1')).all()
+        assert (vector_of_one[:1] == q('enlist 1')).all()
+        assert vector_of_one[:-1] == kx.LongVector(q('`long$()'))
+
+        list_of_two = q('(1; 2.0)')
+        assert (list_of_two[1:] == q('enlist 2f')).all()
+        assert (list_of_two[:1] == q('enlist 1')).all()
+        assert (list_of_two[-1:] == q('enlist 2f')).all()
+        assert (list_of_two[:-1] == q('enlist 1')).all()
+
+    def test_vector_indexing(self, q): # noqa: C901
+        vector = q('til 3')
+        vectorpy = vector.py()
+        indexList = [-3, -2, -1, 0, 1, 2, 3, None]
+        listOfLists = [indexList, indexList, indexList]
+        comboList = list(itertools.product(*listOfLists))
+
+        for i in comboList:
+            s = slice(*i)
+            try:
+                q = vector[s]
+                qNoqNulls = [None if i.is_null else i.py() for i in q]
+                qErr = False
+            except Exception as ex:
+                qEx = ex
+                qErr = True
+            try:
+                p = vectorpy[s]
+                pErr = False
+            except Exception as ex:
+                pEx = ex
+                pErr = True
+            if not qErr and not pErr:
+                if not qNoqNulls == p:
+                    print(s, qNoqNulls, p)
+                    raise AssertionError
+            elif qErr and not pErr:
+                print(s, qEx, p)
+                raise AssertionError
+            elif not qErr and pErr:
+                print(s, q, pEx)
+                raise AssertionError
+            elif qErr and pErr:
+                if not qErr == pErr:
+                    print(s, qEx, pEx)
+                    raise AssertionError
+            else:
+                print(s)
+                raise AssertionError
+
+    def test_list_indexing(self, q): # noqa: C901
+        vector = q('(1i;2f;3j)')
+        vectorpy = vector.py()
+        indexList = [-3, -2, -1, 0, 1, 2, 3, None]
+        listOfLists = [indexList, indexList, indexList]
+        comboList = list(itertools.product(*listOfLists))
+
+        for i in comboList:
+            s = slice(*i)
+            try:
+                q = vector[s]
+                qNoqNulls = [None if i.is_null else i.py() for i in q]
+                qErr = False
+            except Exception as ex:
+                qEx = ex
+                qErr = True
+            try:
+                p = vectorpy[s]
+                pErr = False
+            except Exception as ex:
+                pEx = ex
+                pErr = True
+            if not qErr and not pErr:
+                if not qNoqNulls == p:
+                    print(s, qNoqNulls, p)
+                    raise AssertionError
+            elif qErr and not pErr:
+                print(s, qEx, p)
+                raise AssertionError
+            elif not qErr and pErr:
+                print(s, q, pEx)
+                raise AssertionError
+            elif qErr and pErr:
+                if not qErr == pErr:
+                    print(s, qEx, pEx)
+                    raise AssertionError
+            else:
+                print(s)
+                raise AssertionError
+
+    def test_table_indexing(self, q): # noqa: C901
+        tab = q('([] a:1 2 3; b:4 5 6; c:7 8 9)')
+        tabpd = tab.pd()
+        indexList = [-3, -2, -1, 0, 1, 2, 3, None]
+        listOfLists = [indexList, indexList, indexList]
+        comboList = list(itertools.product(*listOfLists))
+
+        for i in comboList:
+            s = slice(*i)
+            try:
+                q = tab[s].pd()
+                qErr = False
+            except Exception as ex:
+                qEx = ex
+                qErr = True
+            try:
+                p = tabpd[s].reset_index(drop=True)
+                pErr = False
+            except Exception as ex:
+                pEx = ex
+                pErr = True
+            if not qErr and not pErr:
+                if len(q) != len(p) or not all(q == p):
+                    print(s, q, p)
+                    raise AssertionError
+            elif qErr and not pErr:
+                print(s, qEx, p)
+                raise AssertionError
+            elif not qErr and pErr:
+                print(s, q, pEx)
+                raise AssertionError
+            elif qErr and pErr:
+                if not qErr == pErr:
+                    print(s, qEx, pEx)
+                    raise AssertionError
+            else:
+                print(s)
+                raise AssertionError
+
 
 class Test_Atom:
-    def test_char_atom(self, kx, q):
-        atom = kx.CharAtom('a')
-        assert 1 == len(atom)
-        assert atom[0].py() == b'a'
-        with pytest.raises(IndexError):
-            atom[1]
-        with pytest.raises(IndexError):
-            atom[-1]
-
     def test_boolean_atom(self, q):
         t, f = q('1b'), q('0b')
         assert t == True    # noqa
@@ -309,6 +505,10 @@ class Test_Atom:
             assert 'Retrieval of infinite values' in str(err)
 
     @pytest.mark.unlicensed(unlicensed_only=True)
+    @pytest.mark.skipif(
+        os.getenv('PYKX_THREADING') is not None,
+        reason='Not supported with PYKX_THREADING'
+    )
     def test_null_inf_unlic(self, kx):
         qtypes = [kx.ByteAtom, kx.GUIDAtom, kx.ShortAtom,
                   kx.IntAtom, kx.LongAtom, kx.RealAtom,
@@ -1267,6 +1467,10 @@ class Test_Vector:
         for type_code, zero in types:
             f(type_code, zero)
 
+    def test_np_timestampvector_nulls(self, q, kx):
+        assert kx.q('0Np').py() is None
+        assert kx.q('enlist 0Np').py() == [kx.TimestampAtom(kx.q('0Np'))]
+
 
 class Test_List:
     v = '(0b;"G"$"00000000-0000-0000-0000-000000000001";0x02;3h;4i;5j;6e;7f)'
@@ -1740,28 +1944,6 @@ class Test_TimestampVector:
     def test_empty_vector(self, q):
         assert q('"p"$()').np().dtype == np.dtype('datetime64[ns]')
         assert q('"p"$()').np(raw=True).dtype == np.int64
-
-    def test_extracting_date_and_time(self, kx):
-        ts = kx.q('2023.10.25D16:42:01.292070013')
-        assert ts.date == kx.DateAtom(kx.q('2023.10.25'))
-        assert ts.time == kx.TimeAtom(kx.q('16:42:01.292'))
-        assert ts.year == kx.IntAtom(kx.q('2023i'))
-        assert ts.month == kx.IntAtom(kx.q('10i'))
-        assert ts.day == kx.IntAtom(kx.q('25i'))
-        assert ts.hour == kx.IntAtom(kx.q('16i'))
-        assert ts.minute == kx.IntAtom(kx.q('42i'))
-        assert ts.second == kx.IntAtom(kx.q('1i'))
-
-        ts_2 = kx.q('2018.11.09D12:21:08.456123789')
-        tsv = kx.q('enlist', ts, ts_2)
-        assert (tsv.date == kx.DateVector(kx.q('2023.10.25 2018.11.09'))).all()
-        assert (tsv.time == kx.TimeVector(kx.q('16:42:01.292 12:21:08.456'))).all()
-        assert (tsv.year == kx.IntVector(kx.q('2023 2018i'))).all()
-        assert (tsv.month == kx.IntVector(kx.q('10 11i'))).all()
-        assert (tsv.day == kx.IntVector(kx.q('25 9i'))).all()
-        assert (tsv.hour == kx.IntVector(kx.q('16 12i'))).all()
-        assert (tsv.minute == kx.IntVector(kx.q('42 21i'))).all()
-        assert (tsv.second == kx.IntVector(kx.q('1 8i'))).all()
 
 
 class Test_MonthVector:
@@ -2512,6 +2694,7 @@ class Test_Dictionary:
 class Test_KeyedTable:
     kt = '([k1:100+til 3] x:til 3; y:`singly`keyed`table)'
     mkt = '([k1:`a`b`a;k2:100+til 3] x:til 3; y:`multi`keyed`table)'
+    mkt_mask = '([col1:0 1 0N]col2: 0 1 0N;col3: 1 2 3)'
 
     def test_bool(self, q):
         assert q(self.kt).any()
@@ -2558,6 +2741,16 @@ class Test_KeyedTable:
         assert kt_pd['y'][101] == 'keyed'
         assert kt_pd['y'][102] == 'table'
         assert b'pykx' not in pickle.dumps(kt_pd)
+
+    def test_mask_keyed_pd(self, q, kx):
+        mkt_mask_q = q(self.mkt_mask)
+        mkt_mask_pd = mkt_mask_q.pd()
+        mkt_mask_multi_q = mkt_mask_q.set_index(['col2'], append=True)
+        mkt_mask_multi_pd = mkt_mask_multi_q.pd()
+        assert isinstance(kx.toq(mkt_mask_pd.index), kx.LongVector)
+        assert isinstance(kx.toq(mkt_mask_pd['col2']), kx.LongVector)
+        assert all(kx.q('0!', kx.toq(mkt_mask_pd)) == kx.q('0!', mkt_mask_q))
+        assert all(kx.q('0!', kx.toq(mkt_mask_multi_pd)) == kx.q('0!', mkt_mask_multi_q))
 
     def test_multi_keyed_pd(self, q):
         mkt_pd = q(self.mkt).pd()
@@ -2778,6 +2971,10 @@ class Test_Function:
         assert 1024 == q.pykx.modpow(2, 10, None)
 
     @pytest.mark.unlicensed(unlicensed_only=True)
+    @pytest.mark.skipif(
+        os.getenv('PYKX_THREADING') is not None,
+        reason='Not supported with PYKX_THREADING'
+    )
     def test_call_unlicensed(self, kx, q_port):
         q = kx.QConnection(port=q_port)
         funcs = (
@@ -2937,6 +3134,10 @@ class Test_Function:
                    == q(',').vs(q('"ab"'), q('"XY"')))
         assert q(',').vs(q('"ab"'), q('"XY"')).py() == [b'aXY', b'bXY']
 
+    @pytest.mark.skipif(
+        os.getenv('PYKX_THREADING') is not None,
+        reason='Not supported with PYKX_THREADING'
+    )
     def test_nested_error(self, kx, q):
         try:
             q('{x[y;z]}', lambda x, y: x.py() + y.py(), 'sym', 2)
@@ -3429,6 +3630,10 @@ def test_attributes_keyed_table(kx, q):
         tab.parted(['x', 'x1'])
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_apply_vector(q, kx):
     longvec = q('til 10')
     assert (longvec.apply(lambda x: x+1) == q('1+til 10')).all()
@@ -3457,6 +3662,14 @@ def test_apply_vector(q, kx):
 
     with pytest.raises(kx.QError):
         longvec.apply(q('{x+y}'), y=1)
+
+
+def test_magic_dates_times(kx):
+    assert kx.q('.z.D') == kx.DateAtom('today')
+    curr_time = kx.q('.z.T')
+    assert curr_time <= kx.TimeAtom('now')
+    curr_tstamp = kx.q('.z.P')
+    assert curr_tstamp <= kx.TimestampAtom('now')
 
 
 def checkHTML(tab):

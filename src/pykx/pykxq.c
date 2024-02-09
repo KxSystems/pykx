@@ -17,6 +17,7 @@
 
 void* q_lib;
 
+static P sys;
 static P builtins;
 static P toq_module;
 static P toq;
@@ -39,6 +40,7 @@ static P M, errfmt;
 static void** N;
 
 int pykx_flag = -1;
+bool pykx_threading = false;
 
 // Equivalent to starting Python with the `-S` flag. Allows us to edit some global config variables
 // before `site.main()` is called.
@@ -65,10 +67,13 @@ static int check_py_foreign(K x){return x->t==112 && x->n==2 && *kK(x)==(K)py_de
 
 EXPORT K k_check_python(K x){return kb(check_py_foreign(x));}
 
-EXPORT K k_pykx_init(K k_q_lib_path) {
+EXPORT K k_pykx_init(K k_q_lib_pat, K _pykx_threading) {
+    if (_pykx_threading->g)
+        pykx_threading = true;
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
+    sys = PyModule_GetDict(PyImport_ImportModule("sys"));
     builtins = PyModule_GetDict(PyImport_ImportModule("builtins"));
     toq_module = PyModule_GetDict(PyImport_AddModule("pykx.toq"));
     toq = PyDict_GetItemString(toq_module, "toq");
@@ -146,9 +151,15 @@ static K create_foreign(P p) {
     return x;
 }
 
+void flush_stdout() {
+    P out = PyDict_GetItemString(sys, "stdout");
+    if ( PyObject_HasAttrString(out, "flush") ) {
+        PyObject_CallMethod(out, "flush", NULL);
+    }
+}
+
 K k_py_error() {
     if (!PyErr_Occurred()) return (K)0;
-
     P ex_type;
     P ex_value;
     P ex_traceback;
@@ -276,14 +287,17 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
 
     if (!k_ret->g) {
         if ((k = k_py_error())) {
+            flush_stdout();
             Py_XDECREF(py_ret);
             PyGILState_Release(gstate);
             return k;
         } else Py_XDECREF(py_ret);
+        flush_stdout();
         PyGILState_Release(gstate);
         return (K)0;
     }
     if ((k = k_py_error())) {
+        flush_stdout();
         Py_XDECREF(py_ret);
         PyGILState_Release(gstate);
         return k;
@@ -291,6 +305,7 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
 
     if (as_foreign->g) {
         k = (K)create_foreign(py_ret);
+        flush_stdout();
         Py_XDECREF(py_ret);
         PyGILState_Release(gstate);
         return k;
@@ -298,6 +313,7 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
     P py_k_ret = PyObject_CallFunctionObjArgs(toq, py_ret, NULL);
     Py_XDECREF(py_ret);
     if ((k = k_py_error())) {
+        flush_stdout();
         Py_XDECREF(py_k_ret);
         PyGILState_Release(gstate);
         return k;
@@ -306,6 +322,7 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
     Py_XDECREF(py_k_ret);
     k = (K)PyLong_AsLongLong(py_addr);
     Py_XDECREF(py_addr);
+    flush_stdout();
     PyGILState_Release(gstate);
     return k;
 }
@@ -451,15 +468,19 @@ EXPORT K repr(K as_repr, K f) {
     Py_XDECREF(repr);
     if (!as_repr->g) {
         const char *bytes = PyBytes_AS_STRING(str);
-        printf("%s\n", bytes);
+        PySys_WriteStdout("%s\n", bytes);
+        flush_stdout();
+        PyGILState_Release(gstate);
         Py_XDECREF(str);
         return (K)0;
     }
     if ((k = k_py_error())) {
+        flush_stdout();
         PyGILState_Release(gstate);
         Py_XDECREF(str);
         return k;
     }
+    flush_stdout();
     const char *chars = PyBytes_AS_STRING(str);
     PyGILState_Release(gstate);
     return kp(chars);
@@ -644,6 +665,7 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
     if ((k = k_py_error())) {
         if (pyres)
             Py_XDECREF(pyres);
+        flush_stdout();
         PyGILState_Release(gstate);
         return k;
     }
@@ -654,6 +676,7 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
 
     res = create_foreign(pyres);
     Py_XDECREF(pyres);
+    flush_stdout();
     PyGILState_Release(gstate);
     return res;
 }

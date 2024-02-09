@@ -40,27 +40,55 @@ instance.
 
 ```python
 # select from table object
->>> pykx.q.qsql.select(qtab, columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
+>>> kx.q.qsql.select(qtab, columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
 # or by name
->>> pykx.q.qsql.select('qtab', columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
+>>> kx.q.qsql.select('qtab', columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
 ```
 
 Or you can use this to run a functional `qSQL` execute.
 
 ```python
->>> pykx.q.qsql.exec(qtab, columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'})
+>>> kx.q.qsql.exec(qtab, columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'})
 ```
 
 You can also update rows within tables using `qSQL` for example.
 
 ```python
->>> pykx.q.qsql.update(qtab, {'eye': ['blue']}, where='hair=`fair')
+>>> kx.q.qsql.update(qtab, {'eye': ['blue']}, where='hair=`fair')
 ```
 
 You can also delete rows of a table based on vairious conditions using `qSQL`.
 
 ```python
->>> pykx.q.qsql.delete('qtab', where=['hair=`fair', 'age=28'])
+>>> kx.q.qsql.delete('qtab', where=['hair=`fair', 'age=28'])
+```
+
+When operating on in-memory tables, updates can be persisted for `select`, `update` and `delete` calls. For example, using the `inplace` keyword for `select` statements.
+
+```python
+>>> qtab = kx.Table(data = {'a': [1, 2, 3], 'b': ['a', 'b', 'c']})
+>>> qtab
+pykx.Table(pykx.q('
+a b
+---
+1 a
+2 b
+3 c
+'))
+>>> kx.q.qsql.select(qtab, where=['a in 1 2'], inplace=True)
+pykx.Table(pykx.q('
+a b
+---
+1 a
+2 b
+'))
+>>> qtab  # Query has been persisted
+pykx.Table(pykx.q('
+a b
+---
+1 a
+2 b
+'))
 ```
 
 ### ANSI SQL API
@@ -86,9 +114,10 @@ Finally, you can prepare a `SQL` query and then when it is used later the types 
 match in order for the query to run.
 
 ```Python
->>> p = q.sql.prepare('select * from trades where date = $1 and price < $2',
+>>> import pykx as kx
+>>> p = kx.q.sql.prepare('select * from trades where date = $1 and price < $2',
     kx.DateAtom,
     kx.FloatAtom
 )
->>> q.sql.execute(p, date(2022, 1, 2), 500.0)
+>>> kx.q.sql.execute(p, date(2022, 1, 2), 500.0)
 ```

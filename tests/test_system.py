@@ -18,6 +18,10 @@ def test_qargs_s_flag(num_threads):
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_qargs_s_flag_missing():
     os.environ['QARGS'] = '--licensed -s'
     with pytest.raises(Exception, match='ValueError: Missing argument for'):
@@ -26,6 +30,10 @@ def test_qargs_s_flag_missing():
 
 @pytest.mark.isolate
 @pytest.mark.parametrize('num_threads', (1.5, 1.0, 'hmmm'))
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_qargs_s_flag_invalid(num_threads):
     os.environ['QARGS'] = f'--licensed -s {num_threads}'
     with pytest.raises(Exception, match='ValueError: Invalid argument for'):
@@ -107,7 +115,8 @@ def test_system_variables():
     assert all(kx.q.system.variables() == kx.q('enlist `a'))
     print(kx.q.system.variables('.pykx'))
     assert all(kx.q.system.variables('.pykx') == kx.q('`debug`i`pykxDir`pykxExecutable`util'))
-    assert all(kx.q.system.variables('pykx') == kx.q('`debug`i`pykxDir`pykxExecutable`util'))
+    kx.q('pykx.a:til 10;pykx.b:20')
+    assert all(kx.q.system.variables('pykx') == kx.q('`a`b'))
 
 
 @pytest.mark.isolate
@@ -300,8 +309,10 @@ def test_system_variables_ipc(q_port):
         assert all(q.system.variables() == q('enlist `a'))
         q('.pykx.i: 5')
         q('.pykx.pykxDir: til 10')
+        q('pykx.a: til 10')
+        q('pykx.b: til 10')
         assert all(q.system.variables('.pykx') == q('`i`pykxDir'))
-        assert all(q.system.variables('pykx') == q('`i`pykxDir'))
+        assert all(q.system.variables('pykx') == q('`a`b'))
 
 
 @pytest.mark.isolate

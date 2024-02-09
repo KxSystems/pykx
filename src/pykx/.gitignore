@@ -6,5 +6,6 @@
 !pykx.c
 !pykxq.c
 !numpy_conversions.c
+!_tcore.c
 *.html
 _version.py

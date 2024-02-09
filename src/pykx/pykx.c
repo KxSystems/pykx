@@ -26,6 +26,7 @@ static K (*kp_ptr)(char*);
 static K (*k_ptr)(int, char*, ...);
 void* q_lib;
 
+static PyObject* sys;
 static PyObject* builtins;
 static PyObject* toq_module;
 static PyObject* toq;
@@ -48,9 +49,12 @@ static PyObject* error_preamble;
 
 int pykx_flag = -1;
 int init_ptrs = 0;
+bool pykx_threading = false;
 
 
-EXPORT K k_pykx_init(K k_q_lib_path) {
+EXPORT K k_pykx_init(K k_q_lib_path, K _pykx_threading) {
+    if (_pykx_threading->g)
+        pykx_threading = true;
     q_lib = dlopen(k_q_lib_path->s, RTLD_NOW | RTLD_GLOBAL);
     r0_ptr = (void (*)(K))dlsym(q_lib, "r0");
     r1_ptr = (K (*)(K))dlsym(q_lib, "r1");
@@ -67,6 +71,7 @@ EXPORT K k_pykx_init(K k_q_lib_path) {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
+    sys = PyModule_GetDict(PyImport_ImportModule("sys"));
     builtins = PyModule_GetDict(PyImport_ImportModule("builtins"));
     toq_module = PyModule_GetDict(PyImport_AddModule("pykx.toq"));
     toq = PyDict_GetItemString(toq_module, "toq");
@@ -112,6 +117,13 @@ static int check_py_foreign(K x){return x->t==112 && x->n==2 && *kK(x)==(K)py_de
 
 EXPORT K k_check_python(K x){return kb(check_py_foreign(x));}
 
+void flush_stdout() {
+    PyObject* out = PyDict_GetItemString(sys, "stdout");
+    if ( PyObject_HasAttrString(out, "flush") ) {
+        PyObject_CallMethod(out, "flush", NULL);
+    }
+}
+
 K k_py_error() {
     if (!PyErr_Occurred()) return (K)0;
 
@@ -150,6 +162,8 @@ K k_py_error() {
 
 
 static PyObject* k_to_py_cast(K x, K typenum, K israw) {
+    if (pykx_threading)
+        return Py_None;
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     if (x->t == 112) {
@@ -178,6 +192,8 @@ static PyObject* k_to_py_cast(K x, K typenum, K israw) {
 
 
 static PyObject* k_to_py_list(K x) {
+    if (pykx_threading)
+        return Py_None;
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     if (x->t == 112) {
@@ -198,6 +214,8 @@ static PyObject* k_to_py_list(K x) {
 
 EXPORT K k_to_py_foreign(K x, K typenum, K israw) {
     K k;
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     PyObject* p = k_to_py_cast(x, typenum, israw);
@@ -267,6 +285,8 @@ void construct_args_kwargs(PyObject* params, PyObject** args, PyObject** kwargs,
 
 
 EXPORT K k_pyfunc(K k_guid_string, K k_args) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     K k = (K)0; // the K object which will be returned
@@ -353,6 +373,8 @@ EXPORT K k_pyfunc(K k_guid_string, K k_args) {
 // k_eval_or_exec == 0 -> eval the code string
 // k_eval_or_exec == 1 -> exec the code string
 EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     K k;
@@ -381,21 +403,25 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
 
     if (!k_ret->g) {
         if ((k = k_py_error())) {
+            flush_stdout();
             Py_XDECREF(py_ret);
             PyGILState_Release(gstate);
             return k;
         } else Py_XDECREF(py_ret);
+        flush_stdout();
         PyGILState_Release(gstate);
         return (K)0;
     }
 
     if ((k = k_py_error())) {
+        flush_stdout();
         Py_XDECREF(py_ret);
         PyGILState_Release(gstate);
         return k;
     }
     if (as_foreign->g) {
         k = (K)create_foreign(py_ret);
+        flush_stdout();
         Py_XDECREF(py_ret);
         PyGILState_Release(gstate);
         return k;
@@ -403,6 +429,7 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
     PyObject* py_k_ret = PyObject_CallFunctionObjArgs(toq, py_ret, NULL);
     Py_XDECREF(py_ret);
     if ((k = k_py_error())) {
+        flush_stdout();
         Py_XDECREF(py_k_ret);
         PyGILState_Release(gstate);
         return k;
@@ -411,6 +438,7 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
     Py_XDECREF(py_k_ret);
     k = (K)PyLong_AsLongLong(py_addr);
     Py_XDECREF(py_addr);
+    flush_stdout();
     PyGILState_Release(gstate);
     return k;
 }
@@ -489,6 +517,8 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
 
 
 EXPORT K foreign_to_q(K f) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     if (f->t != 112)
         return raise_k_error("Expected foreign object for call to .pykx.toq");
     if (!check_py_foreign(f))
@@ -530,6 +560,8 @@ EXPORT K foreign_to_q(K f) {
 
 
 EXPORT K repr(K as_repr, K f) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     K k;
     if (f->t != 112) {
         if (as_repr->g){
@@ -551,22 +583,28 @@ EXPORT K repr(K as_repr, K f) {
     Py_XDECREF(repr);
     if (!as_repr->g) {
         const char *bytes = PyBytes_AS_STRING(str);
-        printf("%s\n", bytes);
+        PySys_WriteStdout("%s\n", bytes);
+        flush_stdout();
+        PyGILState_Release(gstate);
         Py_XDECREF(str);
         return (K)0;
     }
     if ((k = k_py_error())) {
+        flush_stdout();
         PyGILState_Release(gstate);
         Py_XDECREF(str);
         return k;
     }
     const char *chars = PyBytes_AS_STRING(str);
+    flush_stdout();
     PyGILState_Release(gstate);
     return kp_ptr(chars);
 }
 
 
 EXPORT K get_attr(K f, K attr) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     K k;
     if (f->t != 112) {
         if (f->t == 105) {
@@ -593,6 +631,8 @@ EXPORT K get_attr(K f, K attr) {
 
 
 EXPORT K get_global(K attr) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     K k;
     if (attr->t != -11) {
         return raise_k_error("Expected a SymbolAtom for the attribute to get in .pykx.get");
@@ -617,6 +657,8 @@ EXPORT K get_global(K attr) {
 
 
 EXPORT K set_global(K attr, K val) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     K k;
     int gstate = PyGILState_Ensure();
 
@@ -641,6 +683,8 @@ EXPORT K set_global(K attr, K val) {
 
 
 EXPORT K set_attr(K f, K attr, K val) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     if (f->t != 112) {
         if (f->t == 105) {
             return raise_k_error("Expected foreign object for call to .pykx.setattr, try unwrapping the foreign object with `.");
@@ -669,6 +713,8 @@ EXPORT K set_attr(K f, K attr, K val) {
 }
 
 EXPORT K import(K module) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     K k;
     K res;
     if (module->t != -11)
@@ -688,6 +734,8 @@ EXPORT K import(K module) {
 
 
 EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
+    if (pykx_threading)
+        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     K k;
     PyObject* pyf = NULL;
 
@@ -744,6 +792,7 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
     if ((k = k_py_error())) {
         if (pyres)
             Py_XDECREF(pyres);
+        flush_stdout();
         PyGILState_Release(gstate);
         return k;
     }
@@ -754,6 +803,7 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
 
     res = create_foreign(pyres);
     Py_XDECREF(pyres);
+    flush_stdout();
     PyGILState_Release(gstate);
     return res;
 }

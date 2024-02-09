@@ -1,5 +1,4 @@
 """Functionality for the registration of conversion functions between PyKX and Python"""
-
 from .toq import _converter_from_python_type
 
 

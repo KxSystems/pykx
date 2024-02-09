@@ -54,15 +54,15 @@ class QConsole:
             self._eval_and_print(code)
 
 
-class PyConsole(InteractiveConsole):
+class PyConsole:
     def __init__(self):
-        super().__init__(globals())
-        self.push('import sys')
-        self.push('quit = sys.exit')
-        self.push('exit = sys.exit')
+        self.console = InteractiveConsole(globals())
+        self.console.push('import sys')
+        self.console.push('quit = sys.exit')
+        self.console.push('exit = sys.exit')
 
     def interact(self, banner=None, exitmsg=None):
         try:
-            super().interact(banner=banner, exitmsg=exitmsg)
+            self.console.interact(banner=banner, exitmsg=exitmsg)
         except SystemExit:
             _pykx_helpers.clean_errors()

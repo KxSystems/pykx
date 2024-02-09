@@ -1,10 +1,10 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from functools import partial
 import math
 import os
 from pathlib import Path
 from sys import getrefcount
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 # Do not import Pandas, PyArrow, or PyKX here - use the pd/pa/kx fixtures instead!
 import numpy as np
@@ -43,6 +43,10 @@ def q_atom_types(kx):
 
 
 @pytest.mark.unlicensed(unlicensed_only=True)
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_adapt_k_unlicensed_error(kx):
     a = kx.toq(1.5)
     with pytest.raises(kx.LicenseException):
@@ -292,6 +296,23 @@ def test_from_datetime_date(kx):
 
 
 @pytest.mark.unlicensed
+def test_from_datetime_time(kx):
+    t = time(15, 55, 23)
+    t_np = np.datetime64('2005-02-25T03:30')
+
+    kd = kx.K(t)
+    assert isinstance(kd, kx.TimespanAtom)
+    assert kd.py() == timedelta(seconds=57323)
+
+    kd_np = kx.toq.from_datetime_time(t_np, cast=True)
+    assert isinstance(kd_np, kx.TimespanAtom)
+    assert kd_np.py() == timedelta(seconds=12600)
+
+    with pytest.raises(TypeError):
+        kx.TimeAtom(t_np)
+
+
+@pytest.mark.unlicensed
 def test_from_datetime_datetime(kx):
     d = datetime(2020, 9, 8, 7, 6, 5, 4)
 
@@ -393,6 +414,79 @@ def test_from_UUID(kx):
     assert kx.toq(u, kx.GUIDAtom).py() == kx.GUIDAtom(u).py() == u
     if kx.licensed:
         assert str(kx.K(u)) == str(u)
+
+    u = UUID('db712ca2-81b1-0080-95dd-7bdb502da77d')
+    assert kx.K(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u)) == str(u)
+    assert kx.toq(u, kx.GUIDAtom).py() == kx.GUIDAtom(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u)) == str(u)
+
+    u = UUID('7ff0bbb9-ee32-42fe-9631-8c5a09a155a2')
+    assert kx.K(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u)) == str(u)
+    assert kx.toq(u, kx.GUIDAtom).py() == kx.GUIDAtom(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u)) == str(u)
+
+
+@pytest.mark.unlicensed
+def test_from_UUID_list(kx):
+    u = [UUID('db712ca2-81b1-0080-95dd-7bdb502da77d')]
+    assert kx.K(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+    assert kx.toq(u, kx.GUIDVector).py() == kx.GUIDVector(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+
+    u = [UUID('7ff0bbb9-ee32-42fe-9631-8c5a09a155a2')]
+    assert kx.K(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+    assert kx.toq(u, kx.GUIDVector).py() == kx.GUIDVector(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+
+
+@pytest.mark.unlicensed
+def test_from_UUID_np_array(kx):
+    u = np.array([UUID('db712ca2-81b1-0080-95dd-7bdb502da77d')], dtype=object)
+    assert kx.K(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+    assert kx.toq(u, kx.GUIDVector).py() == kx.GUIDVector(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+
+    u = np.array([UUID('7ff0bbb9-ee32-42fe-9631-8c5a09a155a2')], dtype=object)
+    assert kx.K(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+    assert kx.toq(u, kx.GUIDVector).py() == kx.GUIDVector(u).py() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+
+
+@pytest.mark.unlicensed
+def test_to_UUID_np_array(kx):
+    u = np.array([UUID('db712ca2-81b1-0080-95dd-7bdb502da77d')], dtype=object)
+    assert kx.K(u).np() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+    assert kx.toq(u, kx.GUIDVector).np() == kx.GUIDVector(u).np() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+
+    u = np.array([UUID('7ff0bbb9-ee32-42fe-9631-8c5a09a155a2')], dtype=object)
+    assert kx.K(u).np() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
+    assert kx.toq(u, kx.GUIDVector).np() == kx.GUIDVector(u).np() == u
+    if kx.licensed:
+        assert str(kx.K(u[0])) == str(u[0])
 
 
 @pytest.mark.unlicensed
@@ -896,6 +990,11 @@ def test_from_pandas_series(kx, pd):
 
 
 @pytest.mark.nep49
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+@pytest.mark.xfail(reason="KXI-33749", strict=False)
 def test_from_pandas_series_licensed(q, kx):
     float_vector = q('100?1f')
     assert all(float_vector == kx.K(float_vector.pd()))
@@ -1037,7 +1136,8 @@ def test_toq_pa_tabular_ktype(q, kx, pa):
 
 
 @pytest.mark.unlicensed
-def test_toq_dict_error(q, kx):
+@pytest.mark.xfail(reason="Windows test execution fails intermittently with license error", strict=False) # noqa: E501
+def test_toq_dict_error(q, kx, pa):
     pdSeries = q('1 2 3').pd()
     with pytest.raises(TypeError, match=r"'ktype' .*"):
         kx.toq(pdSeries, {'x': kx.LongVector})

@@ -377,16 +377,15 @@ class SystemCommands:
         kx.q.system.variables()
         ```
 
-        Get the variables defined within the `.foo` namespace, note the leading `.` may be ommited.
+        Get the variables associated with a q namespace/dictionary
 
         ```
+        kx.q.system.variables('.foo')
         kx.q.system.variables('foo')
         ```
         """
         if ns is not None:
             ns = str(ns)
-            if ns[0] != '.':
-                ns = '.' + ns
             return self._q._call(f'\\v {ns}', wait=True)
         return self._q._call('\\v', wait=True)
 

@@ -19,7 +19,7 @@ is also the `pykx.RawQConnection` class that is a superset of the `pykx.AsyncQCo
 has extra functionality around manually polling the send an receive message queues.
 
 For more examples of usage of the IPC interface you can look at the
-[`interface overview`](../getting-started/interface_overview.ipynb#ipc-communication).
+[`interface overview`](../getting-started/PyKX%20Introduction%20Notebook.ipynb#ipc-communication).
 """
 
 from enum import Enum
@@ -338,10 +338,10 @@ class QConnection(Q):
             authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
             information.
 
-        Note: The `timeout` argument may not always be enforced when making succesive querys.
+        Note: The `timeout` argument may not always be enforced when making successive queries.
             When making successive queries if one query times out the next query will wait until a
-            response has been recieved from the previous query before starting the timer for its own
-            timeout. This can be avioded by using a seperate `QConnection` instance for each query.
+            response has been received from the previous query before starting the timer for its own
+            timeout. This can be avoided by using a separate `QConnection` instance for each query.
 
         Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
 
@@ -614,6 +614,14 @@ class QConnection(Q):
         if len(chunks) == 0:
             self.close()
             raise RuntimeError("Attempted to use a closed IPC connection")
+        elif len(chunks) <8:
+            self.close()
+            raise RuntimeError("PyKX attempted to process a message containing less than "
+                               "the expected number of bytes, connection closed."
+                               f"\nReturned bytes: {chunks}.\n"
+                               "If you have a reproducible use-case please raise an "
+                               "issue at https://github.com/kxsystems/pykx/issues with "
+                               "the use-case provided.")
 
         # The last 5 bytes of the header contain the size and the first byte contains information
         # about whether the message is encoded in big-endian or little-endian form
@@ -698,7 +706,7 @@ class QConnection(Q):
         conn.file_execute('file.q')
         ```
 
-        Connect to a q process using an asyncronous QConnection at IP address 127.0.0.1,
+        Connect to a q process using an asynchronous QConnection at IP address 127.0.0.1,
             on port 5000 and execute a file based on absolute path.
 
         ```python
@@ -773,10 +781,10 @@ class SyncQConnection(QConnection):
             authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
             information.
 
-        Note: The `timeout` argument may not always be enforced when making succesive querys.
+        Note: The `timeout` argument may not always be enforced when making successive queries.
             When making successive queries if one query times out the next query will wait until a
-            response has been recieved from the previous query before starting the timer for its own
-            timeout. This can be avioded by using a seperate `SyncQConnection` instance for each
+            response has been received from the previous query before starting the timer for its own
+            timeout. This can be avoided by using a separate `SyncQConnection` instance for each
             query.
 
         Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
@@ -1001,10 +1009,10 @@ class AsyncQConnection(QConnection):
             authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
             information.
 
-        Note: The `timeout` argument may not always be enforced when making succesive querys.
+        Note: The `timeout` argument may not always be enforced when making successive queries.
             When making successive queries if one query times out the next query will wait until a
-            response has been recieved from the previous query before starting the timer for its own
-            timeout. This can be avioded by using a seperate `QConnection` instance for each query.
+            response has been received from the previous query before starting the timer for its own
+            timeout. This can be avoided by using a separate `QConnection` instance for each query.
 
         Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
 
@@ -1425,7 +1433,7 @@ class RawQConnection(QConnection):
 
         Note: The `timeout` argument may not always be enforced when making successive queries.
             When making successive queries if one query times out the next query will wait until a
-            response has been recieved from the previous query before starting the timer for its own
+            response has been received from the previous query before starting the timer for its own
             timeout. This can be avoided by using a separate `QConnection` instance for each query.
 
         Note: The overhead of calling `clean_open_connections` is large.
@@ -1738,6 +1746,14 @@ class RawQConnection(QConnection):
             tot_bytes += 8
             if len(chunks) == 0:
                 return
+            elif len(chunks) <8:
+                self.close()
+                raise RuntimeError("PyKX attempted to process a message containing less than "
+                                   "the expected minimum number of bytes, connection closed."
+                                   f"\nReturned bytes: {chunks}.\n"
+                                   "If you have a reproducible use-case please raise an "
+                                   "issue at https://github.com/kxsystems/pykx/issues with "
+                                   "the use-case provided.")
 
             # The last 5 bytes of the header contain the size and the first byte contains
             # information about whether the message is encoded in big-endian or little-endian form
@@ -1888,7 +1904,7 @@ class RawQConnection(QConnection):
                 over the timeout limit.
 
         Examples:
-2
+
         ```python
         q = await pykx.RawQConnection(host='localhost', port=5002)
         ```
@@ -2043,10 +2059,10 @@ class SecureQConnection(QConnection):
             authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
             information.
 
-        Note: The `timeout` argument may not always be enforced when making succesive querys.
+        Note: The `timeout` argument may not always be enforced when making successive queries.
             When making successive queries if one query times out the next query will wait until a
-            response has been recieved from the previous query before starting the timer for its own
-            timeout. This can be avioded by using a seperate `SecureQConnection` instance for each
+            response has been received from the previous query before starting the timer for its own
+            timeout. This can be avoided by using a separate `SecureQConnection` instance for each
             query.
 
         Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.

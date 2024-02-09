@@ -16,7 +16,7 @@ If you need a feature that's not included in this list please let us know by rai
 
 - Database management functionality allowing for Pythonic persistence and management of on-disk kdb+ Databases (Beta)
 - Improvements to multi-threaded PyKX efficiency, reducing per-call overhead for running PyKX on separate threads
-- Configurable initialisation logic in the absense of a license. Thus allowing users who have their own workflows for license access to modify the instructions for their users.
+- Configurable initialisation logic in the absence of a license. Thus allowing users who have their own workflows for license access to modify the instructions for their users.
 - Addition of `cast` keyword when inserting/upserting data into a table reducing mismatch issues
 
 ## Future
@@ -26,4 +26,4 @@ If you need a feature that's not included in this list please let us know by rai
 - Continued additions of Pandas-like functionality on PyKX Table objects
 - Performance improvements through enhanced usage of Cython
 - Real-time/Streaming functionality utilities
-- Data pre-processing and statitics modules for operation on PyKX tables and vector objects
+- Data pre-processing and statistics modules for operation on PyKX tables and vector objects

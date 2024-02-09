@@ -51,7 +51,7 @@ IndexError: index out of range
 N Dimensional list vectors can also be manipulated using single element indexing as follows
 
 ```python
->>> x = kx.q('4 4#16?1f')
+>>> x = kx.random.random([4, 4], 1.0)
 >>> x
 pykx.List(pykx.q('
 0.5294808 0.6916099 0.2296615 0.6919531 
@@ -76,7 +76,7 @@ pykx.LongVector(pykx.q('5 6 7 8 9'))
 >>> x[:8:2]
 pykx.LongVector(pykx.q('0 2 4 6'))
 
->>> x = kx.q('4 4#16?1f')
+>>> x = kx.random.random([4, 4], 1.0)
 >>> x[:2]
 pykx.List(pykx.q('
 0.1477547 0.274227  0.5635053 0.883823 
@@ -90,6 +90,35 @@ pykx.CharVector(pykx.q('"cd"'))
 pykx.CharVector(pykx.q('"defg"'))
 >>> y[:6:2]
 pykx.CharVector(pykx.q('"ace"'))
+```
+
+Negative slicing works in a similar way and can be used for `list`, `vector` and `table` objects too.
+
+```python
+>>> list = kx.q('("a"; 2; 3.3; `four)')
+>>> list[-3:]
+pykx.List(pykx.q('
+2
+3.3
+`four
+'))
+
+>>> vector = kx.q.til(5)
+>>> vector[:-1]
+pykx.LongVector(pykx.q('0 1 2 3'))
+
+>>> table = kx.Table(data = {
+...     'a': [1, 2, 3],
+...     'b': [4, 5, 6],
+...     'c': [7, 8, 9],
+... })
+>>> table[-2:]
+pykx.Table(pykx.q('
+a b c
+-----
+2 5 8
+3 6 9
+'))
 ```
 
 ## Assigning and Adding Values to Vectors/Lists
@@ -114,7 +143,7 @@ pykx.LongVector(pykx.q('0 0 0 0 0 5 6 7 8 10'))
 ??? Note "N-Dimensional vector element assignment not supported"
 
 	```python
-	>>> x = kx.q('4 4#16?1f')
+	>>> x = kx.random.random([4, 4], 1.0)
 	>>> x
 	pykx.List(pykx.q('
 	0.3927524  0.5170911 0.5159796 0.4066642

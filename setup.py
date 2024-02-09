@@ -80,7 +80,13 @@ class build_ext(default_build_ext):
         self.build_q_c_extensions()
         super().run()
 
-    def build_q_c_extension(self, compiler, lib, lib_ext):
+    def build_q_c_extension(self, compiler, lib, lib_ext, library=None):
+        libs = [
+            'dl',
+            *windows_libraries,
+        ]
+        if library is not None:
+            libs.extend(library)
         return compiler.link_shared_object(
             objects=compiler.compile(
                 sources=[str(src_dir/f'{lib}.c')],
@@ -100,10 +106,7 @@ class build_ext(default_build_ext):
                 ],
             ),
             output_filename=str(Path(self.build_lib)/'pykx'/f'{lib}.{lib_ext}'),
-            libraries=[
-                'dl',
-                *windows_libraries,
-            ],
+            libraries=libs,
             library_dirs=[
                 str(src_dir/'lib'/q_lib_dir_name),
                 *windows_library_dirs,
@@ -123,6 +126,8 @@ class build_ext(default_build_ext):
         lib_ext = 'dll' if system == 'Windows' else 'so'
         self.build_q_c_extension(compiler, 'pykx', lib_ext)
         self.build_q_c_extension(compiler, 'pykxq', lib_ext)
+        if system != 'Windows':
+            self.build_q_c_extension(compiler, '_tcore', lib_ext, library=['pthread'])
 
 
 class clean(default_clean):

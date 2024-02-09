@@ -209,18 +209,24 @@ def _idx_to_k(key, n):
         return key
     if isinstance(key, Integral):
         # replace negative index with equivalent positive index
+        key = _key_preprocess(key, n)
+    elif isinstance(key, slice):
+        key = range(n)[key]
+    return K(key)
+
+
+def _key_preprocess(key, n, slice=False):
+    if key is not None:
         if key < 0:
             key = n + key
-        if key >= n or key < 0:
+        if (key >= n or key < 0) and not slice:
             raise IndexError('index out of range')
-    elif isinstance(key, slice) and key.stop is None:
-        # ensure slices have a stop set
-        # TODO: Ensure this produces index k objects from slices whose behavior matches indexing
-        # Python lists (KXI-9723).
-        key = slice(key.start,
-                    n if (key.step or 1) > 0 else -1,
-                    key.step)
-    return K(key)
+        elif slice:
+            if key < 0:
+                key = 0
+            if key > n:
+                key = n
+    return(key)
 
 
 def _rich_convert(x: 'K', stdlib: bool = True):
@@ -671,6 +677,13 @@ class TimeAtom(TemporalSpanAtom):
     _np_type = 'ms'
     _np_dtype = 'timedelta64[ms]'
 
+    # TODO: `cast` should be set to False at the next major release (KXI-12945)
+    def __new__(cls, x: Any, *, cast: bool = None, **kwargs):
+        if (type(x) == str) and x == 'now': # noqa: E721
+            if licensed:
+                return q('.z.T')
+        return toq(x, ktype=None if cls is K else cls, cast=cast) # TODO: 'strict' and 'cast' flags
+
     def _prototype(self=None):
         return TimeAtom(np.timedelta64(59789214, 'ms'))
 
@@ -821,6 +834,13 @@ class DateAtom(TemporalFixedAtom):
     _epoch_offset = DATE_OFFSET
     _np_dtype = 'datetime64[D]'
 
+    # TODO: `cast` should be set to False at the next major release (KXI-12945)
+    def __new__(cls, x: Any, *, cast: bool = None, **kwargs):
+        if (type(x) == str) and x == 'today': # noqa: E721
+            if licensed:
+                return q('.z.D')
+        return toq(x, ktype=None if cls is K else cls, cast=cast) # TODO: 'strict' and 'cast' flags
+
     def _prototype(self=None):
         return DateAtom(np.datetime64('1972-05-31', 'D'))
 
@@ -878,6 +898,13 @@ class TimestampAtom(TemporalFixedAtom):
     _np_type = 'ns'
     _epoch_offset = TIMESTAMP_OFFSET
     _np_dtype = 'datetime64[ns]'
+
+    # TODO: `cast` should be set to False at the next major release (KXI-12945)
+    def __new__(cls, x: Any, *, cast: bool = None, **kwargs):
+        if (type(x) == str) and x == 'now': # noqa: E721
+            if licensed:
+                return q('.z.P')
+        return toq(x, ktype=None if cls is K else cls, cast=cast) # TODO: 'strict' and 'cast' flags
 
     def _prototype(self=None):
         return TimestampAtom(datetime(2150, 10, 22, 20, 31, 15, 70713))
@@ -2317,7 +2344,6 @@ class TemporalVector(Vector):
             array = array.view(self._np_type)
         else:
             array = array.astype(self._np_type, copy=False)
-
         if raw:
             has_nulls = False
         if has_nulls is None or has_nulls:
@@ -2327,7 +2353,6 @@ class TemporalVector(Vector):
         if has_nulls:
             is_fixed = isinstance(self, TemporalFixedVector)
             array[nulls] = np.datetime64('NaT') if is_fixed else np.timedelta64('NaT')
-
         return array
 
 
@@ -2409,7 +2434,14 @@ class TimestampVector(TemporalFixedVector):
             else:
                 return [x.replace(tzinfo=tzinfo)
                         for x in self.np().astype('datetime64[us]').astype(datetime).tolist()]
-        return self.np().astype('datetime64[us]').astype(datetime).tolist()
+        converted_vector=self.np().astype('datetime64[us]').astype(datetime).tolist()
+        null_pos=[]
+        for x in converted_vector:
+            if x is None:
+                null_pos.append(converted_vector.index(x))
+        for i in null_pos:
+            converted_vector[i]=q('0Np')
+        return converted_vector
 
 
 class MonthVector(TemporalFixedVector):
@@ -2687,6 +2719,9 @@ class Table(PandasAPI, Mapping):
         return q.ungroup(self)
 
     def __getitem__(self, key):
+        n = len(self)
+        if isinstance(key, Integral):
+            key = _key_preprocess(key, n)
         res = self.loc[key]
         if isinstance(res, List) and len(res) == 1:
             res = q('{raze x}', res)
@@ -2741,7 +2776,8 @@ class Table(PandasAPI, Mapping):
         row: Union[list, List],
         match_schema: bool = False,
         test_insert: bool = False,
-        replace_self: bool = True
+        replace_self: bool = True,
+        inplace: bool = True
     ):
         """Helper function around `q`'s `insert` function which inserts a row or multiple rows into
         a q Table object.
@@ -2752,7 +2788,10 @@ class Table(PandasAPI, Mapping):
             test_insert: Causes the function to modify a small local copy of the table and return
                 the modified example, this can only be used with embedded q and will not modify the
                 source tables contents.
-            replace_self: Causes the underlying Table python object to update itself with the
+            replace_self: `Deprecated` please use `inplace` keyword.
+                Causes the underlying Table python object to update itself with the
+                resulting Table after the insert.
+            inplace: Causes the underlying Table python object to update itself with the
                 resulting Table after the insert.
 
         Returns:
@@ -2774,7 +2813,10 @@ class Table(PandasAPI, Mapping):
         q['.pykx.i.itab'] = self
         q.insert('.pykx.i.itab', row, match_schema, test_insert)
         res = q('.pykx.i.itab')
-        if replace_self:
+        if not replace_self:
+            warnings.warn("Keyword 'replace_self' is deprecated please use 'inplace'",
+                          DeprecationWarning)
+        if replace_self and inplace:
             self.__dict__.update(res.__dict__)
         q('delete itab from `.pykx.i')
         return res
@@ -2784,7 +2826,8 @@ class Table(PandasAPI, Mapping):
         row: Union[list, List],
         match_schema: bool = False,
         test_insert: bool = False,
-        replace_self: bool = True
+        replace_self: bool = True,
+        inplace: bool = True
     ):
         """Helper function around `q`'s `upsert` function which inserts a row or multiple rows into
         a q Table object.
@@ -2795,7 +2838,10 @@ class Table(PandasAPI, Mapping):
             test_insert: Causes the function to modify a small local copy of the table and return
                 the modified example, this can only be used with embedded q and will not modify the
                 source tables contents.
-            replace_self: Causes the underlying Table python object to update itself with the
+            replace_self: `Deprecated` please use `inplace` keyword.
+                Causes the underlying Table python object to update itself with the
+                resulting Table after the upsert.
+            inplace: Causes the underlying Table python object to update itself with the
                 resulting Table after the upsert.
 
         Returns:
@@ -2815,7 +2861,10 @@ class Table(PandasAPI, Mapping):
         ```
         """
         res = q.upsert(self, row, match_schema, test_insert)
-        if replace_self:
+        if not replace_self:
+            warnings.warn("Keyword 'replace_self' is deprecated please use 'inplace'",
+                          DeprecationWarning)
+        if replace_self and inplace:
             self.__dict__.update(res.__dict__)
         return res
 
@@ -3326,7 +3375,7 @@ class KeyedTable(Dictionary, PandasAPI):
             df = pd.DataFrame(columns=kk.py() + vk.py())
             df = df.set_index(kk.py())
             return df
-        idx = [np.stack(kvg(i).np(raw=raw, has_nulls=has_nulls)).reshape(-1)
+        idx = [kvg(i).np(raw=raw, has_nulls=has_nulls).reshape(-1)
                for i in range(len(kk))]
         cols = [vvg(i).np(raw=raw, has_nulls=has_nulls)
                 for i in range(len(vk))]
@@ -3366,7 +3415,8 @@ class KeyedTable(Dictionary, PandasAPI):
         row: Union[list, List],
         match_schema: bool = False,
         test_insert: bool = False,
-        replace_self: bool = True
+        replace_self: bool = True,
+        inplace: bool = True
     ):
         """Helper function around `q`'s `insert` function which inserts a row or multiple rows into
         a q Table object.
@@ -3377,7 +3427,10 @@ class KeyedTable(Dictionary, PandasAPI):
             test_insert: Causes the function to modify a small local copy of the table and return
                 the modified example, this can only be used with embedded q and will not modify the
                 source tables contents.
-            replace_self: Causes the underlying Table python object to update itself with the
+            replace_self: `Deprecated` please use `inplace` keyword.
+                Causes the underlying Table python object to update itself with the
+                resulting Table after the insert.
+            inplace: Causes the underlying Table python object to update itself with the
                 resulting Table after the insert.
 
         Returns:
@@ -3399,7 +3452,10 @@ class KeyedTable(Dictionary, PandasAPI):
         q['.pykx.i.itab'] = self
         q.insert('.pykx.i.itab', row, match_schema, test_insert)
         res = q('.pykx.i.itab')
-        if replace_self:
+        if not replace_self:
+            warnings.warn("Keyword 'replace_self' is deprecated please use 'inplace'",
+                          DeprecationWarning)
+        if replace_self and inplace:
             self.__dict__.update(res.__dict__)
         q('delete itab from `.pykx.i')
         return res
@@ -3409,7 +3465,8 @@ class KeyedTable(Dictionary, PandasAPI):
         row: Union[list, List],
         match_schema: bool = False,
         test_insert: bool = False,
-        replace_self: bool = True
+        replace_self: bool = True,
+        inplace: bool = True
     ):
         """Helper function around `q`'s `upsert` function which inserts a row or multiple rows into
         a q Table object.
@@ -3421,8 +3478,11 @@ class KeyedTable(Dictionary, PandasAPI):
             test_insert: Causes the function to modify a small local copy of the table and return
                 the modified example, this can only be used with embedded q and will not modify the
                 source tables contents.
-            replace_self: Causes the underlying Table python object to update itself with the
-                resulting Table after the upsert.
+            replace_self: `Deprecated` please use `inplace` keyword.
+                Causes the underlying Table python object to update itself with the
+                resulting Table after the insert.
+            inplace: Causes the underlying Table python object to update itself with the
+                resulting Table after the insert.
 
         Returns:
             The resulting table after the given row has been upserted.
@@ -3441,7 +3501,10 @@ class KeyedTable(Dictionary, PandasAPI):
         ```
         """
         res = q.upsert(self, row, match_schema, test_insert)
-        if replace_self:
+        if not replace_self:
+            warnings.warn("Keyword 'replace_self' is deprecated please use 'inplace'",
+                          DeprecationWarning)
+        if replace_self and inplace:
             self.__dict__.update(res.__dict__)
         return res
 

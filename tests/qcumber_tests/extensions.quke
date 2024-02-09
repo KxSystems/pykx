@@ -1,0 +1,43 @@
+feature General Extensions
+    should Test loading and listing extensions
+        expect fail to load extension if supplied argument is invalid
+            @[.pykx.loadExtension;`test;like[;"Extension provided must be of type string"]]
+
+        expect fail to load an extension with an appropriate error
+            @[.pykx.loadExtension;"noext";like[;"Extension provided 'noext' not available"]]
+
+        expect listing of extensions to operate appropriately
+            "dashboards" in .pykx.listExtensions[]
+
+feature Dashboards Extension
+    before
+        .pykx.loadExtension["dashboards"];
+
+    should Fail to run dashboards functionality under various conditions
+        expect to fail when running a function using an invalid function definition
+            .[.pykx.dash.runFunction;
+              ("def func";1);
+              like[;"SyntaxError('invalid syntax',*"]]
+
+        expect to fail when loading a Python script with invalid content
+            .[.pykx.dash.runFunction;
+              ("def func(x):\n\treturn x+1\n\n1+'a'";1);
+              like[;"TypeError(\"unsupported operand type(s) for +*"]]
+
+        expect to fail when a function definition can't be found
+            .[.pykx.dash.runFunction;
+              ("1+1";1);
+              like[;"Exception('No function definition found')*"]]
+
+    should Correctly execute Python functions supplied as 
+        expect single argument function to operate as expected
+            res:.pykx.dash.runFunction["def func(x):\n\treturn x+1";1];
+            res~2
+
+        expect multi argument function to operate as expected
+            res:.pykx.dash.runFunction["def func(x, y):\n\treturn x*y";2 10];
+            res~20
+
+        expect function with python dependencies to work appropriately
+            res:.pykx.dash.runFunction["import numpy as np\n\ndef func(x):\n\treturn np.linspace(0, x.py(), 5)";10];
+            res~0 2.5 5 7.5 10

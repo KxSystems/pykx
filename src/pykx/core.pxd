@@ -57,6 +57,7 @@ cdef float* (*kE)(K x)
 cdef double* (*kF)(K x)
 cdef K* (*kK)(K x)
 
+cdef void (*_shutdown_thread)()
 cdef K (*b9)(int mode, K x)
 cdef K (*d9)(K x)
 cdef int (*dj)(int date)

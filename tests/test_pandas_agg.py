@@ -1,10 +1,16 @@
 """Tests for the Pandas API agg functionality"""
 
+import os
+
 import pytest
 
 import statistics
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_single_func(q, kx):
     tab = q('([] til 10; 1)')
     gtab = q('([]sym:`a`a`a`b`b;x:1 2 2 3 3)')
@@ -28,6 +34,10 @@ def test_single_func(q, kx):
     assert q('{x~y}', mode_gtab, mode_gdf)
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_list_funcs(q, kx):
     tab = q('([] til 10; 1)')
     gtab = q('([]sym:`a`a`a`b`b;x:1 2 2 3 3)')
@@ -48,6 +58,10 @@ def test_list_funcs(q, kx):
     assert q('{x~y}', lst_gdf['x']['mode'], lst_gtab['mode'].values()['x'])
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_dict_funcs(q, kx):
     tab = q('([] til 10; 1)')
     dict_str = tab.agg({'x': 'min', 'x1': 'max'})

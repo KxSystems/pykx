@@ -1,0 +1,19 @@
+feature pykx.q
+    should not error
+        expect not error
+            .qu.compare[(::); system"l pykx.q"]
+
+feature .pykx.safeReimport
+    should function safely 
+        expect versions to match
+            .qu.compare[.pykx.version[];.pykx.safeReimport[{[x;y]first system x," -c 'import pykx as kx;print(kx.__version__)'"}[getenv`PYKX_EXECUTABLE]]]
+        expect reset env vars on success
+            PYKX_UNDER_Q:getenv`PYKX_UNDER_Q;
+            .pykx.safeReimport {1+1};
+            .qu.compare[PYKX_UNDER_Q;getenv`PYKX_UNDER_Q];
+        expect signal error and reset env vars on failure
+            PYKX_UNDER_Q:getenv`PYKX_UNDER_Q;
+            err:@[.pykx.safeReimport;{1+`};{x}];
+            .qu.compare["type";err];
+            .qu.compare[PYKX_UNDER_Q;getenv`PYKX_UNDER_Q];
+

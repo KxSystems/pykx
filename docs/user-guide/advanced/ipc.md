@@ -21,7 +21,7 @@ used to replace the functionality of [`qPython`](https://github.com/exxeleron/qP
 ```python
 # Licensed mode
 with pykx.SyncQConnection('localhost', 5001) as q:
-    result = q('til 10')
+    result = q.til(10)
     print(result)
     print(result.py())
 
@@ -32,7 +32,7 @@ with pykx.SyncQConnection('localhost', 5001) as q:
 ```python
 # Unlicensed mode
 with pykx.SyncQConnection('localhost', 5001) as q:
-    result = q('til 10')
+    result = q.til(10)
     print(result)
     print(result.py())
 
@@ -50,7 +50,7 @@ ensure that the connection instance is properly closed automatically when leavin
 Manually creating a `QConnection`
 
 ```python
-q = pykx.SyncQConnection('localhost' 5001) # Directly instantiate a QConnection instance
+q = pykx.SyncQConnection('localhost', 5001) # Directly instantiate a QConnection instance
 q(...) # Make some queries
 q.close() # Must manually ensure it is closed when no longer needed
 ```

@@ -1,6 +1,7 @@
 """Tests for the Pandas API."""
 
 import sys
+import os
 
 import numpy as np
 import pandas as pd
@@ -232,6 +233,16 @@ def test_df_loc_set(kx, q):
         df.loc[df['z'] == 'a', 3] = 99
     with pytest.raises(ValueError):
         df.loc[df['z'] == 'a', 'y', 'z'] = 99
+
+
+def test_df_loc_err(kx, q):
+    df = kx.Table(data={'a': [1, 2, 3]})
+    with pytest.raises(kx.QError) as err:
+        df['b']
+    assert 'inaccessible column: b' in str(err.value)
+    with pytest.raises(kx.QError) as err:
+        df[['a', 'b', 'c']]
+    assert "inaccessible columns: ['b', 'c']" in str(err.value)
 
 
 def test_df_set_cols(kx, q):
@@ -1134,6 +1145,27 @@ def test_df_select_dtypes(kx, q):
                          exclude=[kx.SymbolVector]).py(),
         q('([] c2:1 2 3h; c3:1 2 3j;  c4:1 2 3i)').py()
     )
+    assert check_result_and_type(
+        kx,
+        df.select_dtypes(include=[kx.ShortAtom, kx.LongAtom]).py(),
+        q('([] c2:1 2 3h; c3:1 2 3j)').py()
+    )
+    assert check_result_and_type(
+        kx,
+        df.select_dtypes(exclude='kx.LongAtom').py(),
+        q('([] c1:`a`b`c; c2:1 2 3h; c4:1 2 3i)').py()
+    )
+    df = q('([] c1:"abc";c2:(1 2 3;4 5 6;7 8 9);c3:("abc";"abc";"abc"))')
+    assert check_result_and_type(
+        kx,
+        df.select_dtypes(exclude='kx.List').py(),
+        q('([] c1:"abc")').py()
+    )
+    assert check_result_and_type(
+        kx,
+        df.select_dtypes(include='kx.List').py(),
+        q('([] c2:(1 2 3;4 5 6;7 8 9);c3:("abc";"abc";"abc"))').py()
+    )
 
 
 def test_df_select_dtypes_errors(kx, q):
@@ -1145,6 +1177,16 @@ def test_df_select_dtypes_errors(kx, q):
                        " have overlapping elements"):
         df.select_dtypes(include='kx.LongVector',
                          exclude='kx.LongVector')
+    with pytest.raises(Exception, match=r"'CharVector' not supported."
+                       " Use 'CharAtom' for columns of char atoms."
+                       " 'kx.List' will include any columns containing"
+                       " mixed list data."):
+        df.select_dtypes(include='kx.CharVector')
+    with pytest.raises(Exception, match=r"'CharVector' not supported."
+                       " Use 'CharAtom' for columns of char atoms."
+                       " 'kx.List' will exclude any columns containing"
+                       " mixed list data."):
+        df.select_dtypes(exclude='kx.CharVector')
 
 
 def test_df_drop(kx, q):
@@ -1376,9 +1418,32 @@ def test_df_rename(kx, q):
     assert(all(rez.pd().eq(kt.pd().rename(idx))))
 
     idx = {0: 'foo', 5: 'bar'}
+    rez = kt.rename(idx, axis=0)
+    # assert(q('{x~y}', rez, kt.pd().rename(idx)))  # {x~y}=1b because of some q attribute
+    assert(all(rez.pd().eq(kt.pd().rename(idx))))
+
+    idx = {0: 'foo', 5: 'bar'}
     rez = kt.rename(index=idx)
     # assert(q('{x~y}', rez, kt.pd().rename(index=idx)))  # {x~y}=1b because of some q attribute
     assert(all(rez.pd().eq(kt.pd().rename(index=idx))))
+
+    tab = kx.q('([] Policy: 1 2 3)')
+
+    rez = tab.rename({'Policy': 'PolicyID'}, axis=1)
+    assert all(tab.pd().rename({'Policy': 'PolicyID'}, axis=1).eq(rez.pd()))
+
+    tab = kx.KeyedTable(data=tab)
+
+    idx = {'A': 0, 0: 'a', 'B': 'b'}
+    rez = tab.rename(idx)
+    assert all(tab.pd().rename(idx).eq(rez.pd()))
+
+    rez = tab.rename({2: 'B'})
+    assert all(tab.pd().rename({2: 'B'}).eq(rez.pd()))
+
+    with pytest.raises(ValueError):
+        idx = {'A': 0, 0: 'a', 'B': 'b'}
+        tab.rename(columns=idx)
 
     with pytest.raises(ValueError):
         t.rename()
@@ -1937,6 +2002,10 @@ def test_pandas_groupby_errors(kx, q):
         tab.groupby(level=[0, 4])
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_pandas_groupby(kx, q):
     df = pd.DataFrame(
         {
@@ -2067,15 +2136,15 @@ def test_df_add_prefix(kx, q):
 
     q_add_prefix = t.add_prefix("col_", axis=1)
 
-    assert(q('~', q_add_prefix, t.pd().add_prefix("col_", axis=1)))
+    assert(q('~', q_add_prefix, t.pd().add_prefix("col_")))
 
     kt = kx.q('([idx:til 5] til 5; 5?5; 5?1f; (5;5)#100?" ")')
 
     q_add_prefix = kt.add_prefix("col_", axis=1)
-    assert(q('~', q_add_prefix, kt.pd().add_prefix("col_", axis=1)))
+    assert(q('~', q_add_prefix, kt.pd().add_prefix("col_")))
 
     with pytest.raises(ValueError) as err:
-        t.add_prefix("col_", axis=0)
+        t.set_index('x').add_prefix("col_", axis=0)
         assert 'nyi' in str(err)
 
     with pytest.raises(ValueError) as err:
@@ -2086,17 +2155,17 @@ def test_df_add_prefix(kx, q):
 def test_df_add_suffix(kx, q):
     t = q('([] til 5; 5?5; 5?1f; (5;5)#100?" ")')
 
-    q_add_suffix = t.add_suffix("_col", axis=1)
+    q_add_suffix = t.add_suffix("_col")
 
-    assert(q('~', q_add_suffix, t.pd().add_suffix("_col", axis=1)))
+    assert(q('~', q_add_suffix, t.pd().add_suffix("_col")))
 
     kt = kx.q('([idx:til 5] til 5; 5?5; 5?1f; (5;5)#100?" ")')
 
     q_add_suffix = kt.add_suffix("_col", axis=1)
-    assert(q('~', q_add_suffix, kt.pd().add_suffix("_col", axis=1)))
+    assert(q('~', q_add_suffix, kt.pd().add_suffix("_col")))
 
     with pytest.raises(ValueError) as err:
-        t.add_suffix("_col", axis=0)
+        t.set_index('x').add_suffix("_col", axis=0)
         assert 'nyi' in str(err)
 
     with pytest.raises(ValueError) as err:

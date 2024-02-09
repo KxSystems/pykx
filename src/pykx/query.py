@@ -4,10 +4,12 @@ from abc import ABCMeta
 from random import choices
 from string import ascii_letters
 from typing import Any, Dict, List, Optional, Union
+import warnings
 
 from . import Q
 from . import wrappers as k
-from .exceptions import PyKXException
+from .ipc import QFuture
+from .exceptions import PyKXException, QError
 
 
 __all__ = [
@@ -62,7 +64,8 @@ class QSQL:
                table: Union[k.Table, str],
                columns: Optional[Union[Dict[str, str], k.Dictionary]] = None,
                where: Optional[Union[List[str], str, k.SymbolAtom, k.SymbolVector]] = None,
-               by: Optional[Union[Dict[str, str], k.Dictionary]] = None
+               by: Optional[Union[Dict[str, str], k.Dictionary]] = None,
+               inplace: bool = False,
     ) -> k.K:
         """Apply a q style select statement on tables defined within the process.
 
@@ -78,6 +81,9 @@ class QSQL:
                 appropriate aggregations are to be applied.
             by: A dictionary mapping the names to be assigned to the produced columns and the
                 columns whose results are used to construct the groups of the by clause.
+            inplace: Whether the result of an update is to be persisted. This operates for tables
+                referenced by name in q memory or general table objects
+                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
 
         Examples:
 
@@ -115,7 +121,7 @@ class QSQL:
         pykx.q.qsql.select(qtab, columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'}, where='col3=0b')
         ```
         """ # noqa: E501
-        return self._seud(table, 'select', columns, where, by)
+        return self._seud(table, 'select', columns, where, by, inplace=inplace)
 
     def exec(self,
              table: Union[k.Table, str],
@@ -201,7 +207,8 @@ class QSQL:
                columns: Optional[Union[Dict[str, str], k.Dictionary]] = None,
                where: Optional[Union[List[str], str, k.SymbolAtom, k.SymbolVector]] = None,
                by: Optional[Union[Dict[str, str], k.Dictionary]] = None,
-               modify: bool = False
+               modify: bool = False,
+               inplace: bool = False,
     ) -> k.K:
         """
         Apply a q style update statement on tables defined within the process.
@@ -219,8 +226,12 @@ class QSQL:
                 appropriate aggregations are to be applied.
             by: A dictionary mapping the names to be assigned to the produced columns and the
                 columns whose results are used to construct the groups of the by clause.
-            modify: Whether the result of a delete is to be saved. This holds when `table` is the
-                name of a table in q memory, as outlined at:
+            modify: `Deprecated`, please use `inplace` instead. Whether the result of an update
+                is to be saved. This operates for tables referenced by name in q memory or
+                general table objects
+                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+            inplace: Whether the result of an update is to be persisted. This operates for tables
+                referenced by name in q memory or general table objects
                 https://code.kx.com/q/basics/qsql/#result-and-side-effects.
 
         Examples:
@@ -268,17 +279,18 @@ class QSQL:
         Apply an update grouping based on a by phrase and persist the result using the modify keyword
 
         ```python
-        pykx.q.qsql.update('byqtab', columns={'weight': 'avg weight'}, by={'city': 'city'}, modify=True)
+        pykx.q.qsql.update('byqtab', columns={'weight': 'avg weight'}, by={'city': 'city'}, inplace=True)
         pykx.q['byqtab']
             ```
         """ # noqa: E501
-        return self._seud(table, 'update', columns, where, by, modify)
+        return self._seud(table, 'update', columns, where, by, modify, inplace)
 
     def delete(self,
                table: Union[k.Table, str],
                columns: Optional[Union[List[str], k.SymbolVector]] = None,
                where: Optional[Union[List[str], str, k.SymbolAtom, k.SymbolVector]] = None,
-               modify: bool = False
+               modify: bool = False,
+               inplace: bool = False,
     ) -> k.K:
         """
         Apply a q style delete statement on tables defined within the process.
@@ -292,8 +304,12 @@ class QSQL:
             columns: Denotes the columns to be deleted from a table.
             where: Conditional filtering used to select subsets of the data which are to be
                 deleted from the table.
-            modify: Whether the result of a delete is to be saved. This holds when `table` is the
-                name of a table in q memory, as outlined at:
+            modify: `Deprecated`, please use `inplace` instead. Whether the result of a delete
+                is to be saved. This holds when `table` is the name of a table in q memory,
+                as outlined at:
+                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+            inplace: Whether the result of an update is to be persisted. This operates for tables
+                referenced by name in q memory or general table objects
                 https://code.kx.com/q/basics/qsql/#result-and-side-effects.
 
         Examples:
@@ -337,11 +353,22 @@ class QSQL:
         if columns is not None and where is not None:
             raise TypeError("'where' and 'columns' clauses cannot be used simultaneously in a "
                             "delete statement")
-        return self._seud(table, 'delete', columns, where, None, modify)
+        return self._seud(table, 'delete', columns, where, None, modify, inplace)
 
-    def _seud(self, table, query_type, columns=None, where=None, by=None, modify=False) -> k.K:
+    def _seud(self, table, query_type, columns=None, where=None, by=None, modify=False, inplace=False) -> k.K: # noqa: C901, E501
+        if modify and inplace:
+            raise RuntimeError("Attempting to use both 'modify' and 'inplace' keywords, please use only 'inplace'") # noqa: E501
+
+        if modify:
+            warnings.warn("The 'modify' keyword is now deprecated please use 'inplace'")
+            inplace = modify
+
         if not isinstance(table, str):
             table = k.K(table)
+
+        if isinstance(table, (k.SplayedTable, k.PartitionedTable)) and inplace:
+            raise QError("Application of 'inplace' updates not "
+                         "supported for splayed/partitioned tables")
         select_clause = self._generate_clause(columns, 'columns', query_type)
         by_clause = self._generate_clause(by, 'by', query_type)
         where_clause = self._generate_clause(where, 'where', query_type)
@@ -351,27 +378,38 @@ class QSQL:
                 raise TypeError("'table' object provided was not a K tabular object or an "
                                 "object which could be converted to an appropriate "
                                 "representation")
-            if modify:
-                raise TypeError("'modify' argument can only be used when 'table' is saved as a "
-                                "named object in q memory")
             randstring = ''.join(choices(ascii_letters, k=32))
             self.randstring = randstring
             table_name = f'.pykx.i._{randstring}'
             self._q[table_name] = table
+            original_table = table
             table = table_name
         elif not isinstance(table, str):
             raise TypeError("'table' must be a an object which is convertible to a K object "
                             "or a string denoting an item in q memory")
         query_char = '!' if query_type in ('delete', 'update') else '?'
-        table_code = f'`$"{table}"' if modify else f'get`$"{table}"'
+        if (not inplace and query_type in ('delete', 'update')):
+            table_code = f'get`$"{table}"'
+        else:
+            table_code = f'`$"{table}"'
         try:
-            return self._q(
+            res = self._q(
                 f'{query_char}[{table_code};;;]',
                 where_clause,
                 by_clause,
                 select_clause,
                 wait=True,
             )
+            if inplace and isinstance(original_table, k.K):
+                if query_type in ('delete', 'update'):
+                    res = self._q[table_name]
+                if isinstance(res, QFuture):
+                    raise QError("'inplace' not supported with asyncronous query")
+                if type(original_table) != type(res):
+                    raise QError('Returned data format does not match input type, '
+                                 'cannot perform inplace operation')
+                original_table.__dict__.update(res.__dict__)
+            return res
         finally:
             if isinstance(original_table, k.K):
                 self._q._call(f'![`.pykx.i;();0b;enlist[`$"_{randstring}"]]', wait=True)
@@ -441,7 +479,7 @@ class QSQL:
 
 
 class SQL:
-    """Wrapper around the KX Insights Core ANSI SQL interface.
+    """Wrapper around the [KX Insights Core ANSI SQL](https://code.kx.com/insights/core/sql.html) interface.
 
     Lots of examples within this interface use a table named trades, an example of this table is
 

@@ -76,18 +76,6 @@ cdef inline uint64_t byteswap64(uint64_t x):
     return x
 
 
-cdef object complex_to_UUID(np.complex128_t c):
-    return UUID(int=(int((<uint64_t*>&c.real)[0]) << 64) | (<uint64_t*>&c.imag)[0])
-
-
-cdef complex UUID_to_complex(u: UUID) except *:
-    cdef uint64_t upper_bits = (u.int & (-1 ^ 0xFFFFFFFFFFFFFFFF)) >> 64
-    cdef uint64_t lower_bits = u.int & 0xFFFFFFFFFFFFFFFF
-    upper_bits = byteswap64(upper_bits)
-    lower_bits = byteswap64(lower_bits)
-    return complex((<double*>&upper_bits)[0], (<double*>&lower_bits)[0])
-
-
 # A cdef class is used to store the reference in order to guarantee r0 is called
 cdef class _K:
     cdef core.K k
@@ -195,7 +183,6 @@ cpdef k_unpickle(x):
 
 # We pickle to a Numpy array instead of bytes to benefit from Numpy's highly performant pickling.
 cpdef k_pickle(x):
-    # Call b9 with mode 3: unenumerate & allow serialization of GUIDs, timespan and timestamp
     cdef core.K k_serialized = core.b9(6, <core.K><uintptr_t>x._addr)
     serialized = factory(<uintptr_t>k_serialized, False)
     cdef np.npy_intp n = k_serialized.n
@@ -207,7 +194,6 @@ cpdef k_pickle(x):
 
 
 cpdef k_hash(x):
-    # Call b9 with mode 2: unenumerate & allow serialization of timespan and timestamp
     cdef core.K serialized = core.b9(6, <core.K><uintptr_t>x._addr)
     return hash(PyBytes_FromStringAndSize(<char*>serialized.G0, <Py_ssize_t>serialized.n))
 
@@ -307,8 +293,7 @@ def vector_unlicensed_getitem(self, ssize_t index):
 def guid_atom_py(self, bint raw, bint has_nulls, bint stdlib):
     if raw:
         return np.asarray(<np.complex128_t[:1]><np.complex128_t*>_k(self).G0)[0]
-    return complex_to_UUID(np.asarray(
-        <np.complex128_t[:1]><np.complex128_t*>_k(self).G0).byteswap()[0])
+    return UUID(bytes=(_k(self).G0)[:16])
 
 
 def list_np(self, bint raw, bint has_nulls):
@@ -477,7 +462,8 @@ cdef inline object select_wrapper(core.K k):
         # XXX: it's possible to have a dictionary that is not a keyed table, but still uses tables
         # as its keys
         key_ktype = (<core.K*>k.G0)[0].t
-        wrapper = wrappers.KeyedTable if key_ktype == 98 else wrappers.Dictionary
+        value_ktype = (<core.K*>k.G0)[1].t
+        wrapper = wrappers.KeyedTable if key_ktype == 98 and value_ktype == 98 else wrappers.Dictionary
     return wrapper
 
 
