@@ -2029,3 +2029,34 @@ def test_keyed_loc_fixes(q):
         mkt[['k1', 'y']]
     with pytest.raises(KeyError):
         mkt['k1']
+
+
+def test_isnull(q):
+    tab = q('''([]
+        g:1#0Ng;    h:1#0Nh;    i1:1#0Ni; j:1#0Nj;
+        e:1#0Ne;    f:1#0Nf;    s:1#`  ;  p:1#0Np;
+        m:1#0Nm;    d:1#0Nd;    n:1#0Nn;  u:1#0Nu;
+        v:1#0Nv;    t:1#0Nt;    c:1#" ";
+        g2:1?0Ng;   h2:1?0Wh;   i2:1?10i; j2:1?10j;
+        e2:1?10e;   f2:1?10f;   s2:1#`foo;p2:1?10p;
+        m2:1?"m"$10;d2:1?"d"$10;n2:1?10n; u2:1?10u;
+        v2:1?10v;   t2:1?10t;   c2:1?" ")
+        ''')
+
+    cols = ["g", "h", "i1", "j",
+            "e", "f", "s", "p",
+            "m", "d", "n", "u",
+            "v", "t", "c",
+            "g2", "h2", "i2", "j2",
+            "e2", "f2", "s2", "p2",
+            "m2", "d2", "n2", "u2",
+            "v2", "t2", "c2"]
+
+    expected = pd.DataFrame.from_dict({c: [True] if i < 15 else [False]
+                                       for i, c in enumerate(cols)})
+    expected_inv = ~expected
+
+    pd.testing.assert_frame_equal(tab.isna().pd(), expected)
+    pd.testing.assert_frame_equal(tab.isnull().pd(), expected)
+    pd.testing.assert_frame_equal(tab.notna().pd(), expected_inv)
+    pd.testing.assert_frame_equal(tab.notnull().pd(), expected_inv)
