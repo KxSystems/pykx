@@ -196,6 +196,16 @@ class PandasMeta:
             tab
         )
 
+    @convert_result
+    def skew(self, axis=0, skipna=True, numeric_only=False):
+        res, cols = preparse_computations(self, axis, skipna, numeric_only)
+        return (q(
+            '''{[row]
+                m:{(sum (x - avg x) xexp y) % count x};
+                g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];
+                (g1 each row) * {sqrt[n * n-1] % neg[2] + n:count x} each row
+            }''', res), cols)
+
     @api_return
     def mode(self, axis: int = 0, numeric_only: bool = False, dropna: bool = True):
         tab = self
@@ -267,16 +277,6 @@ class PandasMeta:
             res,
             min_count
         ), cols)
-
-    @convert_result
-    def skew(self, axis=0, skipna=True, numeric_only=False):
-        res, cols = preparse_computations(self, axis, skipna, numeric_only)
-        return (q(
-            '''{[row]
-                m:{(sum (x - avg x) xexp y) % count x};
-                g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];
-                (g1 each row) * {sqrt[n * n-1] % neg[2] + n:count x} each row
-            }''', res), cols)
 
     @convert_result
     def sum(self, axis=0, skipna=True, numeric_only=False, min_count=0):

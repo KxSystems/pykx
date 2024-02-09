@@ -124,6 +124,10 @@ def test_kurl_aws_minio_small(q, q_port):
     assert q('{x like first y`domain}', test_url, e)
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 @kurl_q_server_init
 def test_kurl_aws_minio_large(q, q_port):
     """Test AWS Min.io authentication with large passwords"""

@@ -6,7 +6,171 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 2.3.1
+
+#### Release Date
+
+2024-02-07
+
+### Fixes and Improvements
+
+- `.pykx.eval` is now variadic allowing an optional second parameter to be passed to define return type. Previously would error with `rank`.
+
+	=== "Behavior prior to change"
+
+		```q
+		q).pykx.eval["lambda x: x";<] 7
+		'rank
+		[0]  .pykx.eval["lambda x: x";<] 7
+		```
+
+	=== "Behavior post change"
+
+		```q
+        q).pykx.eval["lambda x: x";<] 7
+		7
+		```
+
+- Wraps which have a return type assigned using `<` or `>` are now considered wraps and can be unwrapped:
+
+	=== "Behavior prior to change"
+
+		```q
+		q).pykx.util.isw .pykx.eval["lambda x: x"][<]
+		0b
+		q).pykx.unwrap  .pykx.eval["lambda x: x"][<]
+		{$[type[x]in 104 105 112h;util.foreignToq unwrap x;x]}.[code[foreign]]`.pykx.util.parseArgsenlist
+		```
+
+	=== "Behavior post change"
+
+		```q
+		q).pykx.util.isw .pykx.eval["lambda x: x"][<]
+		1b
+		q).pykx.unwrap  .pykx.eval["lambda x: x"][<]
+		foreign
+		```
+
+- `.pykx.qcallable` and `.pykx.pycallable` can now convert wraps which already have return types assigned:
+
+	=== "Behavior prior to change"
+
+		```q
+		q).pykx.qcallable[.pykx.eval["lambda x: x"][<]]`
+		'Could not convert provided function to callable with q return
+		q).pykx.print .pykx.pycallable[.pykx.eval["lambda x: x"][>]]
+		'Could not convert provided function to callable with Python return
+		```
+
+	=== "Behavior post change"
+
+		```q
+		q).pykx.qcallable[.pykx.eval["lambda x: x"][<]]`test
+		`test
+		q).pykx.print .pykx.wrap .pykx.pycallable[.pykx.eval["lambda x: x"][>]]`test
+		test
+		```
+
+## PyKX 2.3.0
+
+#### Release Date
+
+2024-01-22
+
+### Fixes and Improvements
+
+- A bug was fixed when using `.pykx.console`, it is now possible to access python variables set using the console with `.pykx.(eval|pyexec|pyeval)` functions.
+
+	=== "Behavior prior to change"
+
+		```q
+        q) .pykx.console[]
+        >>> a = 10
+        >>> quit()
+        q) .pykx.eval["a"]`
+        'NameError("name 'a' is not defined")
+          [1]  /.../q/pykx.q:968: .pykx.eval:{wrap pyeval x}
+		```
+
+	=== "Behavior post change"
+
+		```q
+        q) .pykx.console[]
+        >>> a = 10
+        >>> quit()
+        q) .pykx.eval["a"]`
+        10
+		```
+
+## PyKX 2.2.2
+
+#### Release Date
+
+2023-12-07
+
+### Fixes and Improvements
+
+- When loaded in a q process loading `pykx.q` would not allow `Ctrl+C` (SIGINT) interruption.
+
+## PyKX 2.2.1
+
+#### Release Date
+
+2023-11-30
+
+### Fixes and Improvements
+
+- `.pykx.print` was using `repr` representation for some objects. Now consistently calls `print`.
+- `.pykx.safeReimport` now resets environment variables correctly before throwing any error raised by the function supplied to it.
+- Wrapped Python objects being supplied as arguments to functions were being converted according to `.pykx.util.defaultConv`. Now are left untouched:
+
+	=== "Behavior prior to change"
+
+		```q
+		q)\l pykx.q
+		q)np:.pykx.import `numpy;
+		q)r:np[`:random.rand;1;2];
+		q).pykx.print r
+		array([[0.03720163, 0.72012121]])
+		q).pykx.print .pykx.eval["lambda x: x"] r
+		array([array([0.03720163, 0.72012121])], dtype=object)
+		q).pykx.setdefault"py"
+		q).pykx.print .pykx.eval["lambda x: x"] r
+		[[0.037201634310417564, 0.7201212148535847]]
+		```
+
+	=== "Behavior post change"
+
+		```q
+		q).pykx.print r
+		array([[0.59110368, 0.52612429]])
+		q).pykx.print .pykx.eval["lambda x: x"] r
+		array([[0.59110368, 0.52612429]])
+		q).pykx.setdefault"py"
+		q).pykx.print .pykx.eval["lambda x: x"] r
+		array([[0.59110368, 0.52612429]])
+		```
+- q hsym will convert correctly to `pathlib.PosixPath` rather than `str`:
+
+	=== "Behavior prior to change"
+
+		```q
+		q).pykx.eval["lambda x: print(type(x))"] `:/path/to/somewhere;
+		<class 'str'>
+		```
+
+	=== "Behavior post change"
+
+		```q
+		q).pykx.eval["lambda x: print(type(x))"] `:/path/to/somewhere;
+		<class 'pathlib.PosixPath'>
+		```
+
 ## PyKX 2.2.0
+
+#### Release Date
+
+2023-11-09
 
 ### Additions
 
@@ -62,6 +226,10 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 - `safeReimport` now additionally unsets/resets: `PYKX_DEFAULT_CONVERSION`, `PYKX_SKIP_UNDERQ`, `PYKX_EXECUTABLE`, `PYKX_DIR`
 
 ## PyKX 2.1.0
+
+#### Release Date
+
+2023-10-09
 
 ### Fixes and Improvements
 

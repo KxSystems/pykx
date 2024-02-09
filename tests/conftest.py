@@ -45,6 +45,7 @@ def kx(request):
     os.environ['QARGS'] = f'-S {seed} --testflag {request.param}'
     os.environ['PYKX_RELEASE_GIL'] = '1'
     os.environ['PYKX_Q_LOCK'] = '-1'
+    os.environ['PYKX_BETA_FEATURES'] = 'true'
     if os.getenv('CI') and system() == 'Linux' and randint(0, 1) % 2 == 0:
         os.environ['PYKX_Q_LIB_LOCATION'] = '/specified_q_lib_path'
     import pykx as kx

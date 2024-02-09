@@ -22,7 +22,7 @@ Once you have access to your license you can install the license following the w
 
 ### Initialization failing with a 'embedq' error
 
-Failure to initialize PyKX while raising an error `embedq` indicates that the license you are attempting to use for PyKX in [licensed modality](modes.md) does not have the sufficient feature flags necessary to run PyKX. To access a license which does allow for running PyKX in this modality please following the instructions [here](#accessing-a-license-valid-for-pykx) to get a new license with appropriate feature flags.
+Failure to initialize PyKX while raising an error `embedq` indicates that the license you are attempting to use for PyKX in [licensed modality](user-guide/advanced/modes.md) does not have the sufficient feature flags necessary to run PyKX. To access a license which does allow for running PyKX in this modality please following the instructions [here](#accessing-a-license-valid-for-pykx) to get a new license with appropriate feature flags.
 
 ### Initialization failing with a 'kc.lic' error
 
@@ -156,3 +156,18 @@ The following section outlines how a user can get access to a verbose set of env
 	which q: /usr/local/anaconda3/bin/q
 	q info: 
 	```
+
+## Issues running PyKX in a subprocess?
+
+Internally PyKX makes use of a number of variables/environment variables which are persisted within the Python/q process within imports PyKX. Due to how Python subprocesses work with respect to inheriting environment variables users who attempt to spawn a subprocess dependent on PyKX will run into a Segmentation Fault.
+
+To avoid this subprocesses should be spawned while making use of the `kx.PyKXReimport` functionality as follows:
+
+```python
+import pykx as kx
+import subprocess
+with kx.PyKXReimport():
+    subprocess.Popen(['python', 'file.py']) # Run Python with a file that imports PyKX
+```
+
+For more information on the `PyKXReimport` functionality see its API documentation [here](api/reimporting.md).

@@ -1,5 +1,6 @@
 import pytest
 
+import os
 import sys
 from platform import system
 
@@ -35,6 +36,10 @@ def test_foreign_ref_count():
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_foreign_refcount_under_q():
     if system() != 'Windows':
         import pykx as kx
@@ -129,6 +134,10 @@ def test_foreign_types(kx):
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_foreign_under_q():
     import pykx as kx
     if system() != 'Windows':
@@ -157,6 +166,10 @@ def test_foreign_under_q():
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_foreign_class_under_q():
     if system() != 'Windows':
         import pykx as kx
@@ -196,6 +209,10 @@ def test_foreign_class_under_q():
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_foreign_functions_under_q():
     if system() != 'Windows':
         import pykx as kx
@@ -241,6 +258,10 @@ def test_foreign_functions_under_q():
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_foreign_setattr_under_q(kx, q):
     if system() != 'Windows':
         import pykx as kx
@@ -262,6 +283,10 @@ def test_foreign_setattr_under_q(kx, q):
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_foreign_setattr_arrow_under_q(q, kx, pa):
     if system() != 'Windows':
         import pykx as kx

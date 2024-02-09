@@ -17,6 +17,10 @@ def test_initialization_using_unlicensed_mode(tmp_path, q):
     assert 2 == kx.toq(2).py()
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_fallback_to_unlicensed_mode_error(tmp_path):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     os.environ['QARGS'] = '--licensed'
@@ -25,6 +29,10 @@ def test_fallback_to_unlicensed_mode_error(tmp_path):
         import pykx # noqa: F401
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_unlicensed_signup(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['N'])
@@ -34,6 +42,10 @@ def test_unlicensed_signup(tmp_path, monkeypatch):
     assert not kx.licensed
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_invalid_lic_continue(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['F'])
@@ -44,6 +56,10 @@ def test_invalid_lic_continue(tmp_path, monkeypatch):
         assert str(e) == 'Invalid input provided please try again'
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_licensed_signup_no_file(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['Y', 'n', '1', '/test/test.blah'])
@@ -54,6 +70,10 @@ def test_licensed_signup_no_file(tmp_path, monkeypatch):
         assert str(e) == "Download location provided /test/test.blah does not exist."
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_licensed_signup_invalid_b64(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['Y', 'n', '2', 'data:image/png;test'])
@@ -66,6 +86,10 @@ def test_licensed_signup_invalid_b64(tmp_path, monkeypatch):
         assert str(e) == err_msg
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_licensed_success_file(monkeypatch):
     qhome_path = os.environ['QHOME']
     os.unsetenv('QLIC')
@@ -78,6 +102,10 @@ def test_licensed_success_file(monkeypatch):
     assert [0, 1, 2, 3, 4] == kx.q.til(5).py()
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_licensed_success_b64(monkeypatch):
     qhome_path = os.environ['QHOME']
     os.unsetenv('QLIC')
@@ -86,6 +114,19 @@ def test_licensed_success_b64(monkeypatch):
         license_content = base64.encodebytes(f.read())
     inputs = iter(['Y', 'n', '2', str(license_content)])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+
+    import pykx as kx
+    assert kx.licensed
+    assert [0, 1, 2, 3, 4] == kx.q.til(5).py()
+
+
+def test_envvar_init():
+    qhome_path = os.environ['QHOME']
+    os.unsetenv('QLIC')
+    os.unsetenv('QHOME')
+    with open(qhome_path + '/kc.lic', 'rb') as f:
+        license_content = base64.encodebytes(f.read())
+    os.environ['KDB_LICENSE_B64'] = license_content.decode('utf-8')
 
     import pykx as kx
     assert kx.licensed
@@ -136,10 +177,18 @@ def test_check_license_format(kx):
         assert str(e) == 'Unsupported option provided for format parameter'
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_check_license_success_file(kx):
     assert kx.license.check(os.environ['QHOME'] + '/kc.lic')
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_check_license_success_b64(kx):
     with open(os.environ['QHOME'] + '/kc.lic', 'rb') as f:
         license = base64.encodebytes(f.read())

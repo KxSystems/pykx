@@ -55,6 +55,20 @@ def test_setitem(q, kx):
         q['views'] = 'views' # check element of the .q namespace
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_setitem_func(kx):
+    def func(n=2):
+        return n
+
+    kx.q['func']= func
+    assert 1 == kx.q('func', 1)
+    assert '' == kx.q('func', '')
+    assert '.' == kx.q('func', '.')
+
+
 @pytest.mark.ipc
 def test_delitem(q, kx):
     key = 'test_key'
@@ -125,6 +139,10 @@ def test_get_q_singleton_from_class(kx, q):
 
 
 @pytest.mark.unlicensed(unlicensed_only=True)
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_unlicensed_call(kx):
     with pytest.raises(kx.LicenseException, match=f"(?i)run q code via '{kx.q!r}'"):
         kx.q('{[xn] xn-((xn*xn)-2)%2*xn}\\[1.5]')
@@ -152,6 +170,10 @@ def test_large_vector(q):
     assert q('sum', v).py() == 225179981032980480
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_path_arguments(q):
     # KXI-30172: Projections of PyKX functions don't support Path
     a = q("{[f;x] f x}")(lambda x: x)(Path('test'))

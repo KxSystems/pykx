@@ -57,8 +57,13 @@ k)c:{'[y;x]}/|:
 // @desc Compose using enlist for generation of variadic functions
 k)ce:{'[y;x]}/enlist,|:
 
+// @desc Print a message warning that "UNDER_PYTHON" is deprecated
+if[not ""~getenv`UNDER_PYTHON;
+   -1"WARN: Environment variable 'UNDER_PYTHON' is deprecated, if set locally update to use 'PYKX_UNDER_PYTHON'";
+  ]
+
 // @desc Make use of `pykx.so` logic when running under Python
-if["true"~getenv`UNDER_PYTHON;
+if["true"~getenv`PYKX_UNDER_PYTHON;
   util.load:2:[hsym`$pykxDir,"/pykx";]
   ];
 
@@ -118,19 +123,6 @@ util.CFunctions:flip `qname`cname`args!flip (
 {.Q.dd[`.pykx;x`qname]set util.load x`cname`args}each util.CFunctions;
 
 // @private
-// @desc
-// Set default conversion type for K objects.
-// This is set to numpy by default to facilitate migration from numpy
-util.defaultConv:$[
-  ""~util.conversion:getenv`PYKX_DEFAULT_CONVERSION;
-  "default";
-  $[util.conversion in ("py";"np";"pd";"pa";"k";"raw";"default");
-    util.conversion;
-    '"Unknown default conversion type"
-    ]
-  ]
-
-// @private
 // @desc Convert q/Python objects to Pythonic foreigns
 util.toPython:{wrap util.pyForeign[$[type[x]in 104 105 112h;wrap[unwrap x]`;x];y;z]}
 
@@ -159,7 +151,8 @@ util.isconv:{any(util.ispy;util.isnp;util.ispd;util.ispa;util.isk;util.israw)@\:
 // @private
 // @desc Convert a supplied argument to the specified python object type
 util.convertArg:{
-  $[util.isconv x;
+  $[util.isw x;x;
+    util.isconv x;
     .z.s[(x; 1; 0b)];
     $[not util.isconv x 0;util.toPython . x;
       util.ispy  x 0; [.z.s[(x[0][::][1]; 1; x[2])]];
@@ -176,7 +169,8 @@ util.convertArg:{
 // @private
 // @desc Convert a supplied argument to the default q -> Python type
 util.toDefault:{
-  $[util.isconv x;(::);
+  $[util.isw x;(::);
+    util.isconv x;(::);
     "py"      ~ util.defaultConv;topy;
     "np"      ~ util.defaultConv;tonp;
     "pd"      ~ util.defaultConv;topd;
@@ -235,7 +229,16 @@ util.wf:{[f;x].pykx.util.pykx[f;x]}
 // @desc
 // Functionality used for checking if an supplied
 // argument is a Python foreign or wrapped object 
-util.isw:{$[105=type x;.pykx.util.wf~$[104 105h~t:type each u:get x;:.z.s last u;104h~first t;first value first u;0b];0b]}
+util.isw:{
+  if[not 105h~type x;:0b];
+  $[.pykx.util.wf~$[104 105h~t:type each u:get x;
+      :.z.s last u;
+      104h~first t;
+      first value first u;
+      0b];:1b;
+    101 105h~t;:(::)~first u;
+    100 105h~t;:.pykx.toq~first u;
+    0b]}
 
 // @private
 // @desc Functionality for management of keywords/keyword dictionaries etc.
@@ -281,11 +284,6 @@ util.parseArgs:{
       ];
   (hasargs; arglist; kwargs)
   };
-
-
-// @private
-// @desc Wrap a supplied foreign object function  
-util.wfunc:{[f;x]r:wrap f x 0;$[count x:1_x;.[;x];]r}
 
 // -----------------------
 // User Callable Functions
@@ -348,7 +346,7 @@ util.wfunc:{[f;x]r:wrap f x 0;$[count x:1_x;.[;x];]r}
 //
 // name       | type   | description
 // -----------|--------|------------
-// `argList`  | `list` | List of opsitional arguments
+// `argList`  | `list` | List of optional arguments
 //
 // **Return:**
 //
@@ -642,7 +640,7 @@ toraw: {x y}(`..raw;;)
 // @name .pykx.todefault
 // @category api
 // @overview
-// _Tag a q object to be indicate a raw conversion when called in Python_
+// _Tag a q object to indicate it should use the PyKX default conversion when called in Python_
 //
 // ```q
 // .pykx.todefault[qObject]
@@ -658,26 +656,24 @@ toraw: {x y}(`..raw;;)
 //
 // type         | description
 // -------------|------------
-// `projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a raw object. |
+// `projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a default object. |
 //
 // !!! Note
 //     The `todefault` conversion is used to match embedPy conversion logic, in particular it converts q lists to Python lists when dealing with contiguous datatypes rather than to nested single value array types. Additionally it converts q tables to Pandas DataFrames
 //
 // ```q
-// // Denote that a q object once passed to Python should be managed as a Numpy object
-// q).pykx.toraw til 10
-// enlist[`..raw;;][0 1 2 3 4 5 6 7 8 9]
+// // Denote that a q object once passed to Python should be managed as a default object
+// // in this case a q list is converted to numpy 
+// q).pykx.todefault til 10
+// enlist[`..numpy;;][0 1 2 3 4 5 6 7 8 9]
 //
-// // Pass a q object to Python with default conversions and return type
-// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.tonp (til 10;til 10)
-// <class 'numpy.ndarray'>
-//
-// // Pass a q object to Python treating the Python object as a raw Object
+// // Pass a q list to Python treating the Python object as PyKX default
 // q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault (til 10;til 10)
 // <class 'list'>
 //
-// // Pass a q Table to Python treating the Python table as a Pandas DataFrame
-// q)
+// // Pass a q Table to Python by default treating the Python table as a Pandas DataFrame
+// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault ([]til 10;til 10)
+// <class 'pandas.core.frame.DataFrame'>
 // ```
 todefault:{$[0h=type x;toraw x;$[99h~type x;all 98h=type each(key x;value x);0b]|98h=type x;topd x;tonp x]}
 
@@ -753,7 +749,13 @@ wrap:ce util.wf@
 // q).pykx.unwrap a
 // foreign
 // ```
-unwrap:{$[util.isw x;$[104 105h~type each u:get x;(last u)`.;x`.];x]}
+unwrap:{
+  c:last get last get first get last@;
+  $[util.isw x;t:type each u:get x;:x];
+  if[(101 105h~t) and (::)~first u;:c u]; 
+  if[(100 105h~t) and .pykx.toq~first u;:c u];
+  if[104 105h~t;:(last u)`.];
+  x`.}
 
 
 // @kind function
@@ -794,9 +796,9 @@ unwrap:{$[util.isw x;$[104 105h~type each u:get x;(last u)`.;x`.];x]}
 //
 //
 // ```q
-// // Default value on startup is "np"
+// // Default value on startup is "default"
 // q).pykx.util.defaultConv
-// "np"
+// "default"
 //
 // // Set default value to Pandas
 // q).pykx.setdefault["Pandas"]
@@ -973,7 +975,7 @@ pyexec:util.pyrun[0b; 1b; 0b]
 // q).pykx.eval["lambda x: x + 1"][5]`
 // 6
 // ```
-.pykx.eval:{wrap pyeval x}
+.pykx.eval:ce util.wfunc pyeval
 
 // @kind function
 // @name .pykx.qeval
@@ -1169,11 +1171,10 @@ repr :{$[type[x]in 104 105 112h;util.repr[1b] unwrap x;.Q.s x]}
 // 4  0.711172  False
 // ```
 print:{
-  $[type[x]in 104 105 112h;
-    $[util.isconv x;
-      .pykx.eval["lambda x:print(x)"]x;
-      util.repr[0b] unwrap x
-      ];
+  $[type[x]in 104 105 112h ;
+    $[any(util.isw;util.isconv)@\:x;
+     .pykx.eval["lambda x:print(x)"]x;
+     show x];
     show x
     ];
   }
@@ -1459,7 +1460,7 @@ getattr;      // Note this function is loaded directly from C
 // q).pykx.print setCallable
 // [1 2]
 // ```
-pycallable:{$[util.isw x;x(>);util.isf x;wrap[x](>);'"Could not convert provided function to callable with Python return"]}
+pycallable:{$[util.isw x;wrap[unwrap[x]](>);util.isf x;wrap[x](>);'"Could not convert provided function to callable with Python return"]}
 
 // @kind function
 // @name .pykx.qcallable
@@ -1492,14 +1493,44 @@ pycallable:{$[util.isw x;x(>);util.isf x;wrap[x](>);'"Could not convert provided
 // q).pykx.print setCallable
 // [1 2]
 // ```
-qcallable :{$[util.isw x;x(<);util.isf x;wrap[x](<);'"Could not convert provided function to callable with q return"]}
+qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not convert provided function to callable with q return"]}
 
+// @kind function
+// @name .pykx.safeReimport
+// @category api
+// @overview
+// _Isolated execution of a q function which relies on importing PyKX_
+//
+// ```q
+// .pykx.safeReimport[qFunction]
+// ```
+//
+// **Parameters:**
+//
+// name         | type       | description
+// -------------|------------|-------------
+// `qFunction`  | `function` | A function which is to be run following unsetting of PyKX environment variables and prior to their reset
+//
+// **Returns:**
+//
+// type   | description
+// -------|------------
+// `any`  | On successful execution this function will return the result of the executed function
+//
+// **Example:**
+//
+// ```q
+// q)\l pykx.q
+// q).pykx.safeReimport[{system"python -c 'import pykx as kx'";til 5}]
+// 0 1 2 3 4
+// ```
 safeReimport:{[x]
   pyexec["pykx_internal_reimporter = pykx.PyKXReimport()"];
   envlist:(`PYKX_DEFAULT_CONVERSION;
     `PYKX_UNDER_Q;
     `SKIP_UNDERQ;
     `PYKX_SKIP_UNDERQ;
+    `PYKX_UNDER_PYTHON;
     `UNDER_PYTHON;
     `PYKX_LOADED_UNDER_Q;
     `PYKX_Q_LOADED_MARKER;
@@ -1508,11 +1539,11 @@ safeReimport:{[x]
   envvals:getenv each envlist;
 
   .pykx.eval["pykx_internal_reimporter.reset()"];
-  r: x[];
+  r: @[{(0b;x y)}x;(::);{(1b;x)}];
 
   pyexec["del pykx_internal_reimporter"];
   setenv'[envlist;envvals];
-  r
+  $[r 0;';::] r 1
   }
 
 // @kind function
@@ -1587,8 +1618,15 @@ debugInfo:{
 // --------------------------------------------------
 // 0.439081  49f2404d-5aec-f7c8-abba-e2885a580fb6 mil
 // 0.5759051 656b5e69-d445-417e-bfe7-1994ddb87915 igf
+//
+// // Enter PyKX console setting Python objects using PyKX
+// q).pykx.console[]
+// >>> a = list(range(5))
+// >>> quit()
+// q).pykx.eval["a"]`
+// 0 1 2 3 4
 // ```
-console:{pyexec"pykx.console.PyConsole().interact(banner='', exitmsg='')"};
+console:{pyexec"from code import InteractiveConsole\n__pykx_console__ = InteractiveConsole(globals())\n__pykx_console__.push('import sys')\n__pykx_console__.push('quit = sys.exit')\n__pykx_console__.push('exit = sys.exit')\ntry:\n    line = __pykx_console__.interact(banner='', exitmsg='')\nexcept SystemExit:\n    pykx._pykx_helpers.clean_errors()"}
 
 // @private
 // @desc
@@ -1598,9 +1636,83 @@ console:{pyexec"pykx.console.PyConsole().interact(banner='', exitmsg='')"};
 
 // @private
 // @desc
+// Set default conversion type for K objects.
+setdefault {$[""~c:getenv`PYKX_DEFAULT_CONVERSION;"default";c]}[];
+
+// @private
+// @desc
 // Finalise loading of PyKX functionality setting environment variables
 // needed to ensure loading PyKX multiple times does not result in unexpected errors
 finalise[];
+
+// @private
+// @kind function
+// @name .pykx.listExtensions
+// @category api
+// @overview
+// _List all q scripts in the extensions directory which can be loaded_
+//
+// ```q
+// .pykx.listExtensions[]
+// ```
+//
+// **Returns:**
+//
+// type   | description
+// -------|------------
+// `list` | A list of strings denoting the available extensions in your version of PyKX
+//
+// **Example:**
+//
+// ```q
+// q)\l pykx.q
+// q).pykx.listExtensions[]
+// "dashboards"
+// ```
+listExtensions:{-2 _/:lst where like[;"*.q"]lst:string key hsym`$pykxDir,"/extensions/"}
+
+// @private
+// @kind function
+// @name .pykx.loadExtension
+// @category api
+// @overview
+// _Loading of a PyKX extension_
+//
+// ```q
+// .pykx.loadExtension[ext]
+// ```
+//
+// **Parameters:**
+//
+// name   | type     | description
+// -------|----------|-------------
+// `ext`  | `string` | The name of the extension which is to be loaded
+//
+// **Returns:**
+//
+// type   | description
+// -------|------------
+// `null` | On successful execution this function will load the extension and return null
+//
+// **Example:**
+//
+// ```q
+// q)\l pykx.q
+// q)`dash in key `.pykx
+// 0b
+// q).pykx.listExtensions[]
+// "dashboards"
+// q)`dash in key `.pykx
+// 1b
+// ```
+loadExtension:{[ext]
+  if[not 10h=type ext;'"Extension provided must be of type string"];
+  if[not ext in listExtensions[];'"Extension provided '",ext,"' not available"];
+  @[system"l ",;
+    pykxDir,"/extensions/",ext,".q";
+    {'x," raised when attempting to load extension"}
+    ];
+  }
 
 // @desc Restore context used at initialization of script
 system"d ",string .pykx.util.prevCtx;

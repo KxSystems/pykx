@@ -131,6 +131,13 @@ x         x1                                   x2
 --------------------------------------------------
 0.439081  49f2404d-5aec-f7c8-abba-e2885a580fb6 mil
 0.5759051 656b5e69-d445-417e-bfe7-1994ddb87915 igf
+
+// Enter PyKX console setting Python objects using PyKX
+q).pykx.console[]
+>>> a = list(range(5))
+>>> quit()
+q).pykx.eval["a"]`
+0 1 2 3 4
 ```
 
 ## `.pykx.debugInfo`
@@ -559,6 +566,35 @@ q).pykx.repr til 5
 "0 1 2 3 4"
 ```
 
+## `.pykx.safeReimport`
+
+
+_Isolated execution of a q function which relies on importing PyKX_
+
+```q
+.pykx.safeReimport[qFunction]
+```
+
+**Parameters:**
+
+name         | type       | description
+-------------|------------|-------------
+`qFunction`  | `function` | A function which is to be run following unsetting of PyKX environment variables and prior to their reset
+
+**Returns:**
+
+type   | description
+-------|------------
+`any`  | On successful execution this function will return the result of the executed function
+
+**Example:**
+
+```q
+q)\l pykx.q
+q).pykx.safeReimport[{system"python -c 'import pykx as kx'";til 5}]
+0 1 2 3 4
+```
+
 ## `.pykx.set`
 
 
@@ -713,17 +749,58 @@ type | description |
     [Python](https://docs.python.org/3/library/datatypes.html)     | `"py", "python", "Python"`   |
     [PyArrow](https://arrow.apache.org/docs/python/index.html)     | `"pa", "pyarrow", "PyArrow"` |
     [K](../api/pykx-q-data/type_conversions.md)                    | `"k", "q"`                   |
+    raw                                                            | `"raw"`                      |
+    default                                                        | `"default"`                  |
 
 
 ```q
-// Default value on startup is "np"
+// Default value on startup is "default"
 q).pykx.util.defaultConv
-"np"
+"default"
 
 // Set default value to Pandas
 q).pykx.setdefault["Pandas"]
 q).pykx.util.defaultConv
 "pd"
+```
+
+## `.pykx.todefault`
+
+
+_Tag a q object to indicate it should use the PyKX default conversion when called in Python_
+
+```q
+.pykx.todefault[qObject]
+```
+
+**Parameters:**
+
+name      | type    | description |
+----------|---------|-------------|
+`qObject` | `any`   | A q object which is to be converted to a default form in Python. |
+
+**Return:**
+
+type         | description
+-------------|------------
+`projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a default object. |
+
+!!! Note
+    The `todefault` conversion is used to match embedPy conversion logic, in particular it converts q lists to Python lists when dealing with contiguous datatypes rather than to nested single value array types. Additionally it converts q tables to Pandas DataFrames
+
+```q
+// Denote that a q object once passed to Python should be managed as a default object
+// in this case a q list is converted to numpy 
+q).pykx.todefault til 10
+enlist[`..numpy;;][0 1 2 3 4 5 6 7 8 9]
+
+// Pass a q list to Python treating the Python object as PyKX default
+q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault (til 10;til 10)
+<class 'list'>
+
+// Pass a q Table to Python by default treating the Python table as a Pandas DataFrame
+q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault ([]til 10;til 10)
+<class 'pandas.core.frame.DataFrame'>
 ```
 
 ## `.pykx.tok`

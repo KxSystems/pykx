@@ -153,6 +153,7 @@ typedef struct{
  X(P,PyObject_Call,(P,P,P))\
  X(P,PyObject_CallObject,(P,P))\
  X(int,PyObject_HasAttr,(P,P))\
+ X(int,PyObject_HasAttrString,(P,char*))\
  X(P,PyObject_GetAttr,(P,P))\
  X(int,PyObject_SetAttrString,(P,char*,P))\
  X(char*,PyUnicode_AsUTF8,(P))\
@@ -160,6 +161,7 @@ typedef struct{
  X(P,PyRun_String,(char*,int,P,P))\
  X(P,PyImport_Import,(P))\
  X(int,Py_IsInitialized,())\
+ X(int,PySys_WriteStdout,(char*,...))\
 
 //https://docs.scipy.org/doc/numpy/reference/c-api.html https://github.com/numpy/numpy/blob/master/numpy/core/code_generators/numpy_api.py
 #undef PyCFunction_New

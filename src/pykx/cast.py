@@ -75,6 +75,15 @@ def cast_to_python_date(x):
         raise _cast_TypeError(x, type(x), datetime.date)
 
 
+def cast_to_python_time(x):
+    if type(x) is datetime.datetime:
+        return x.time()
+    if type(x) is np.datetime64:
+        return x.astype(datetime.time).time()
+    else:
+        raise _cast_TypeError(x, type(x), datetime.time)
+
+
 def cast_to_python_datetime(x):
     if type(x) is datetime.date:
         return datetime.datetime.combine(x, datetime.datetime.min.time())
@@ -115,6 +124,7 @@ def cast_to_python_timedelta(x):
 __all__ = [
     'cast_numpy_ndarray_to_dtype',
     'cast_to_python_date',
+    'cast_to_python_time',
     'cast_to_python_datetime',
     'cast_to_python_float',
     'cast_to_python_int',

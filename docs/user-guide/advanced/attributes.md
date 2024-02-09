@@ -31,7 +31,10 @@ pykx.LongVector(pykx.q('`s#0 1 2 3 4 5 6 7 8 9'))
 Applying the unique attribute to the first column of the table.
 
 ```Python
->>> a = kx.q('([] a: til 10; b: `a`b`c`d`e`f`g`h`i`j)')
+>>> a = kx.Table(data = {
+...     'a': kx.q.til(5),
+...     'b': ['a', 'b', 'c', 'd', 'e']
+... })
 >>> kx.q.meta(a)
 pykx.KeyedTable(pykx.q('
 c| t f a
@@ -52,7 +55,10 @@ b| s
 Applying the grouped attribute to a specified column of a table.
 
 ```Python
->>> a = kx.q('([] a: til 10; b: `a`a`b`b`c`c`d`d`e`e)')
+>>> a = kx.Table(data = {
+...     'a': kx.q.til(5),
+...     'b': ['a', 'a', 'b', 'b', 'b']
+... })
 >>> kx.q.meta(a)
 pykx.KeyedTable(pykx.q('
 c| t f a
@@ -73,7 +79,10 @@ b| s   g
 Applying the parted attribute to multiple columns on a table.
 
 ```Python
->>> a = kx.q('([] a: til 10; b: `a`a`b`b`c`c`d`d`e`e)')
+>>> a = kx.Table(data = {
+...     'a': kx.q.til(5),
+...     'b': ['a', 'a', 'b', 'b', 'b']
+... })
 >>> kx.q.meta(a)
 pykx.KeyedTable(pykx.q('
 c| t f a

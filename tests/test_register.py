@@ -6,7 +6,9 @@ import pytest
 def test_register_py_toq(q, kx):
     with pytest.raises(TypeError) as err_info:
         kx.toq(complex(1, 2))
-    assert str(err_info.value) == "Cannot convert <class 'complex'> '(1+2j)' to K object"
+    assert str(err_info.value) == (
+        "Cannot convert <class 'complex'> '(1+2j)' to K object."
+        " See pykx.register to register custom conversions.")
 
     def complex_toq(data):
         return kx.toq([data.real, data.imag])

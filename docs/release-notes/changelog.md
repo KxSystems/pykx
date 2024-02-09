@@ -4,15 +4,426 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+!!! Warning
+
+    Currently PyKX is not compatible with Pandas 2.2.0 or above as it introduced breaking changes which cause data to be cast to the incorrect type.
+
+## PyKX 2.3.1
+
+#### Release Date
+
+2024-02-07
+
+### Fixes and Improvements
+
+- Python functions saved to q would error if passed `''` or `'.'`. These now pass without issue.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> def func(n=2):
+		...     return n
+		...
+		>>> kx.q['func']= func
+		>>> kx.q('func', '')
+		Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "/home/rocuinneagain/.local/lib/python3.10/site-packages/pykx/embedded_q.py", line 227, in __call__
+			return factory(result, False)
+		File "pykx/_wrappers.pyx", line 493, in pykx._wrappers._factory
+		File "pykx/_wrappers.pyx", line 486, in pykx._wrappers.factory
+		pykx.exceptions.QError: Provided foreign object is not a Python object
+		>>> kx.q('func', '.')
+		Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "/home/rocuinneagain/.local/lib/python3.10/site-packages/pykx/embedded_q.py", line 227, in __call__
+			return factory(result, False)
+		File "pykx/_wrappers.pyx", line 493, in pykx._wrappers._factory
+		File "pykx/_wrappers.pyx", line 486, in pykx._wrappers.factory
+		pykx.exceptions.QError: rank
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> def func(n=2):
+		...     return n
+		... 
+		>>> kx.q['func']= func
+		>>> kx.q('func', '')
+		pykx.SymbolAtom(pykx.q('`'))
+		>>> kx.q('func', '.')
+		pykx.SymbolAtom(pykx.q('`.'))
+		```
+
+- Changed `Table.rename()` to ignore any `columns` values that are of the wrong type instead of throwing an unhelpful error.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> key_tab.rename({0:'PolicyID'}, axis = 1)
+		ValueError('nyi')
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> key_tab.rename({0:'PolicyID'}, axis = 1)
+		pykx.KeyedTable(pykx.q('
+		idx| x y
+		---| ---
+		0  | 0 3
+		1  | 1 2
+		2  | 2 1
+		'))
+		```
+
+- Improved upon the quality of `Table.rename()` error messages and documentation on the function.
+- PyKX would error with `_get_config_value() missing 1 required positional argument: 'default'` on import if a license was not found since 2.3.0. Now correctly opens the license walkthrough.
+- Pandas 2.2.0 introduced breaking changes which effect PyKX. PyKX dependencies have been updated to `pandas>=1.2, < 2.2.0` until these are resolved. Data casting behavior leads to an unexpected datatype being returned:
+
+	=== "Behavior with Pandas <2.2.0"
+
+		```python
+		>>> pd.Series([1, pd.NA, 3], dtype=pd.Int64Dtype()).to_numpy()
+		array([1, <NA>, 3], dtype=object)
+
+		>>> kx.K(pd.Series([1, pd.NA, 3], dtype=pd.Int64Dtype()))
+		pykx.LongVector(pykx.q('1 0N 3'))
+		```
+
+	=== "Behavior with Pandas >=2.2.0"
+
+		```python
+		>>> pd.Series([1, pd.NA, 3], dtype=pd.Int64Dtype()).to_numpy()
+		array([ 1., nan,  3.])
+
+		>>> kx.K(pd.Series([1, pd.NA, 3], dtype=pd.Int64Dtype())) 
+		pykx.FloatVector(pykx.q('1 -9.223372e+18 3'))
+		```
+
+- `df.select_dtypes()` updated to now accept `kx.*Atom` values for `include`/`exclude` params.  Use of `kx.CharVector` will return error.
+- To align with other areas of PyKX the `upsert` and `insert` methods for PyKX tables and keyed tables now support the keyword argument `inplace`, this change will deprecate usage of `replace_self` with the next major release of PyKX.
+
+### Beta Features
+
+- Addition of the concept of `Remote Function` execution to PyKX, this allows users, from a Python session to define Python functions which will be executed on a remote q/kdb+ server running PyKX under q. The intention with this feature is to allow onboarding of Python first operations within existing or q/kdb+ first infrastructures
+
+	```python
+	>>> from pykx.remote import function, session
+	>>> remote_session = session()
+	>>> remote_session.create('localhost', 5050)
+	>>> @function(remote_session)
+	... def func(x):
+	...     return x+1
+	>>> func(2)            # Functionality run on q server
+	pykx.LongAtom(pykx.q('3'))
+	>>> remote_session.clear()
+	```
+
+## PyKX 2.3.0
+
+#### Release Date
+
+2024-01-22
+
+### Additions
+
+- PyKX now supports the use of `KDB_LICENSE_B64` or `KDB_K4LICENSE_B64` configuration values/environment variables to define the content of a `kc.lic` or `k4.lic` license respectively if no license is found on initial usage of PyKX.
+- Shortcut provided for access to current date, time and timestamp information using `'today'` and `'now'`.
+
+	```python
+	>>> kx.DateAtom('today')
+	pykx.DateAtom(pykx.q('2024.01.05'))
+	>>> kx.TimeAtom('now')
+	pykx.TimeAtom(pykx.q('16:15:32.724'))
+	>>> kx.TimestampAtom('now')
+	pykx.TimestampAtom(pykx.q('2024.01.05T16:15:42.926631000'))
+	```
+
+- Addition of support for `inplace` updates of PyKX tables modified using qsql select/update/delete operations on in-memory data. Application of `inplace` modifications is not supported for direct application on Partitioned/Splayed tables.
+
+	```python
+	>>> N = 1000
+	>>> qtab = kx.Table(data={'x': kx.random.random(N, 1.0, seed=10)})
+	>>> qtab
+	pykx.Table(pykx.q('
+	x          
+	-----------
+	0.0891041  
+	0.8345194  
+	0.3621949  
+	0.999934   
+	0.3837986  
+	..
+	'))
+	>>> kx.q.qsql.select(qtab, where = ['x>0.5'], inplace=True)
+	pykx.Table(pykx.q('
+	x
+	-----------
+	0.8345194
+	0.999934
+	0.8619188
+	0.7517286
+	0.6348263
+	..
+	'))
+	>>> qtab
+	pykx.Table(pykx.q('
+	x
+	-----------
+	0.8345194
+	0.999934
+	0.8619188
+	0.7517286
+	0.6348263
+	..
+	'))
+	```
+
+- Addition of `reset_index`, `add_suffix`, `add_prefix`, `count`, `skew` and `std` functionality to Pandas Like API
+    - See [here](../user-guide/advanced/Pandas_API.ipynb) for details of supported keyword arguments, limitations and examples.
+- `%%q` Jupyter Notebook magic adds `--debug` option which prints the q backtrace if the cell execution fails.
+- Release 2.3.0 adds to PyKX the concept of Beta features, these features are available to users through setting the configuration/environment variable `PYKX_BETA_FEATURES`. For more information on Beta features see further documentation [here](../beta-features/index.md)
+
+### Fixes and Improvements
+
+- `%%q` Jupyter Notebook magic now returns all outputs up to and including an error when thrown. Previously only the error was returned.
+- `%%q` Jupyter Notebook magic ignores accidental whitespace in execution options. Below example no longer fails with `Received unknown argument` error:
+
+	```python
+	%%q   --port 5000
+	```
+
+- In cases where PyKX IPC sockets read data from unexpected publishers it could raise an `IndexError`. PyKX will now provide a more verbose error indicating that an unexpected message has been received, the bytes processed and requests a reproducible example to be provided if possible.
+- Update to table column retrieval logic to error when a user attempts to access a non-existent column with a queried table.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> tab = kx.Table(data = {'a': [1, 2, 3]})
+		>>> tab['c']
+		pykx.LongVector(pykx.q('`long$()'))
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> tab = kx.Table(data = {'a': [1, 2, 3]})
+		>>> tab['c']
+		..
+		QError: Attempted to retrieve inaccessible column: c
+		```
+
+- Improved error message for conversion failures.
+- Fixes an issue where a user would receive a length error when attempting to apply `min`, `max`, `prod` and `sum` functions on `pykx.KeyedTable` objects.
+
+### Beta Features
+
+- Database Management functionality has been added for the creation, loading and maintenance of PyKX Partitioned Databases. A full worked example of this functionality can be found [here](../examples/db-management.ipynb) along with full API documentation which includes examples of each function [here](../api/db.md). The API includes but is not limited to the following:
+
+	- Database table creation and renaming.
+        - Enumeration of in-memory tables against on-disk sym file.
+	- Column listing, addition, reordering, renaming copying, function application and deletion on-disk.
+	- Attribute setting and removal.
+	- Addition of missing tables from partitions within a database.
+
+- Added `PYKX_THREADING` environment variable that allows [multithreaded programs](../beta-features/threading.md) to modify state when calling into python on secondary threads. Note: This behaviour is only supported on Linux / MacOS.
+
+    !!! Note
+
+        When using `PYKX_THREADING` you must ensure you call `kx.shutdown_thread()` at the end of the script to ensure the background thread is properly closed.
+
+## PyKX 2.2.3
+
+#### Release Date
+
+2024-01-11
+
+### Fixes and Improvements
+
+- PyKX now raises an error appropriately when failing to locate `msvcr100.dll` when loading on Windows.
+- Config values now default to `False` when not set rather than `None`.
+- Resolved issue where both `PYKX_NO_SIGNAL` and `PYKX_NO_SIGINT` needed to be set to take effect. Now correctly accepts either.
+- Reduced signal handling list to only `SIGINT` and `SIGTERM`. The inclusion of `SIGSEGV` since 2.2.1 could cause segfaults with compressed enum files.
+- Updated q libraries to 2024.01.09
+
+!!! Note
+
+	PyKX 2.2.3 is currently not available for Mac x86 for all Python versions, additionally it is unavailable for Mac ARM on Python 3.7. Updated builds will be provided once available.
+
+## PyKX 2.2.2
+
+!!! Warning
+
+	Please skip this release and use 2.2.3 or newer. This is due to potential segfaults when reading compressed files.
+
+#### Release Date
+
+2023-12-12
+
+### Fixes and Improvements
+
+- Conversions between `UUID` and `pykx.GUID` types could produce invalid results under various conditions in both licensed and unlicensed mode.
+- A regression in 2.2.1 resulted in `SIGINT` signals being incorrectly treated as `SIGTERM` style signals, PyKX now resets all signals overwritten by PyKX to their values prior to import.
+- Indexing regression in 2.2.1 causing hangs for certain inputs such as `tbl[::-1]` has been resolved.
+
+## PyKX 2.2.1
+
+!!! Warning
+
+	Please skip this release and use 2.2.3 or newer. This is due to potential segfaults when reading compressed files.
+
+#### Release Date
+
+2023-11-30
+
+### Fixes and Improvements
+
+- Some messages to `stdout` were not being captured when redirecting. Now all are captured.
+- Deprecation of internally used environment variable `UNDER_PYTHON` which has been replaced by `PYKX_UNDER_PYTHON` to align with other internally used environment variables.
+- Fix `Unknown default conversion type` error when `PYKX_DEFAULT_CONVERSION` is set to `k`
+- Numpy dependency for Python 3.11 corrected to `numpy~=1.23.2`
+- `pykx.q.qsql.select` and `pykx.q.qsql.exec` statements no longer use `get` calls for table retrieval unnecessarily when operating locally or via IPC. 
+- Null integral values in table keys will no longer convert the underlying vectors to floats when converting from a `pykx.KeyedTable` to `pandas.DataFrame`
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> kx.q('`col1 xkey ([] col1: (1j; 2j; 0Nj); col2:(1j; 2j; 0Nj); col3:`a`b`c)').pd()
+		       col2 col3
+		col1
+		 1.0      1    a
+		 2.0      2    b
+		 0.0     --    c
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		>>> kx.q('`col1 xkey ([] col1: (1j; 2j; 0Nj); col2:(1j; 2j; 0Nj); col3:`a`b`c)').pd()
+		       col2 col3
+		col1           
+		 1       1    a
+		 2       2    b
+		--      --    c
+		```
+
+	!!! Warning
+
+		For multi-keyed PyKX tables converted to Pandas the appropriate round-trip behaviour is supported however due to limitations in Pandas displaying of these as masked arrays is not supported as below
+
+		```python
+		>>> kx.q('`col1`col2 xkey ([] col1: (1j; 2j; 0Nj); col2:(1j; 2j; 0Nj); col3:`a`b`c)').pd()
+		                                          col3
+		col1                 col2                     
+		 1                    1                      a
+		 2                    2                      b
+		-9223372036854775808 -9223372036854775808    c
+		```
+
+- Fix to issue where providing `SIGTERM` signals to Python processes running PyKX would not result in the Python process being terminated.
+- Addition of deprecation warning for environmental configuration option `PYKX_NO_SIGINT` which is to be replaced by `PYKX_NO_SIGNAL`. This is used when users require no signal handling logic overwrites and now covers `SIGTERM`, `SIGINT`, `SIGABRT` signals amongst others.
+- Use of `pykx.q.system.variables` no longer prepends leading `.` to supplied string allowing users to get the variables associated with dictionary like namespaces.
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> kx.q('.test.a:1;.test.b:2')
+		>>> kx.q('test.c:3;test.d:4')
+		>>> kx.q.system.variables('.test')
+		pykx.SymbolVector(pykx.q('`s#`a`b'))
+		>>> kx.q.system.variables('test')
+		pykx.SymbolVector(pykx.q('`s#`a`b'))
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		>>> kx.q('.test.a:1;.test.b:2')
+		>>> kx.q('test.c:3;test.d:4')
+		>>> kx.q.system.variables('.test')
+		pykx.SymbolVector(pykx.q('`s#`a`b'))
+		>>> kx.q.system.variables('test')
+		pykx.SymbolVector(pykx.q('`s#`c`d'))
+		```
+
+- q dictionaries with tables as keys were being incorrectly wrapped as `pykx.KeyedTable`. Now corrected to `pykx.Dictionary`:
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> type(pykx.q('([] a:1 2 3;b:2 3 4)!enlist each 1 2 3'))
+		<class 'pykx.wrappers.KeyedTable'>
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> type(pykx.q('([] a:1 2 3;b:2 3 4)!enlist each 1 2 3'))
+		<class 'pykx.wrappers.Dictionary'>
+		```
+- Added consistent conversion of `datetime.time` objects
+  
+	=== "Behavior prior to change"
+
+		```q
+		q).pykx.pyexec"from datetime import time"
+		q).pykx.eval["time(11, 34, 56)"]`
+		foreign
+		``` 
+
+		```python
+		>>> kx.toq(time(11, 34, 56))
+		Traceback (most recent call last):
+			File "<stdin>", line 1, in <module>
+			File "pykx/toq.pyx", line 2641, in pykx.toq.ToqModule.__call__
+			File "pykx/toq.pyx", line 270, in pykx.toq._default_converter
+		TypeError: Cannot convert <class 'datetime.time'> 'datetime.time(11, 34, 56)' to K object
+		```
+
+	=== "Behavior post change"
+
+		```q
+		q).pykx.pyexec"from datetime import time"
+		q).pykx.eval["time(11, 34, 56)"]`
+		0D11:34:56.000000000
+		``` 
+
+		```python
+		>>> kx.toq(time(11, 34, 56))
+		pykx.TimespanAtom(pykx.q('0D11:34:56.000000000'))
+		```
+
+- Fixed null value for `TimestampVector` returning `NoneType` instead of `pykx.wrappers.TimestampAtom` for `.py()` method
+  
+	=== "Before Null Change"
+		
+		```python
+		>>> for x in kx.q('0Np,.z.p').py():
+		...     print(type (x))
+		<class 'NoneType'>
+		<class 'datetime.datetime'>
+		``` 
+
+	=== "After Null Change"
+
+		```python
+		>>> for x in kx.q('0Np,.z.p').py():
+		...     print(type (x))
+		<class 'pykx.wrappers.TimestampAtom'>
+		<class 'datetime.datetime'>
+		```
+
+### Upgrade considerations
+
+- If dependent on the environment variable `UNDER_PYTHON` please upgrade your code to use `PYKX_UNDER_PYTHON`
+
 ## PyKX 2.2.0
 
 #### Release Date
 
 2023-11-09
-
-!!! Warning
-
-	PyKX 2.2.0 presently does not include a Python 3.11 release for MacOS x86 and Linux x86 architectures, this will be rectified in an upcoming patch release.
 
 ### Additions
 
@@ -203,6 +614,32 @@
 	```
 
 - Addition of `poll_recv_async` to `RawQConnection` objects to support asynchronous polling.
+
+- Addition of negative slicing to `list` , `vector` and `table` objects
+
+		```python
+		>>> import pykx as kx
+		>>> qlist = kx.q('("a";2;3.3;`four)')
+		>>> qlist[-3:]
+		pykx.List(pykx.q('
+		2
+		3.3
+		`four
+		'))
+
+		>>> vector = kx.q('til 5')
+		>>> vector[:-1]
+		pykx.LongVector(pykx.q('0 1 2 3'))
+
+		>>> table = kx.q('([] a:1 2 3; b:4 5 6; c:7 8 9)')
+  		>>> table[-2:]
+		pykx.Table(pykx.q('
+		a b c
+		-----
+		2 5 8
+		3 6 9
+		'))
+		```
 
 ### Fixes and Improvements
 
@@ -399,7 +836,7 @@ the following reads a CSV file and specifies the types of the three columns name
 	```
 
 - Notebooks will HTML print tables and dictionaries through the addition of `_repr_html_`. Previous `q` style output is still available using `print`.
-- Added [`serialize` and `deserialize`](../api/serialize.html) as base methods to assist with the serialization of `K` objects for manual use over IPC.
+- Added [`serialize` and `deserialize`](../api/serialize.md) as base methods to assist with the serialization of `K` objects for manual use over IPC.
 - Added support for `pandas` version `2.0`.
 
 !!! Warning "Pandas 2.0 has deprecated the `datetime64[D/M]` types."
@@ -674,7 +1111,7 @@ the following reads a CSV file and specifies the types of the three columns name
 ### Additions
 
 - Added `to_local_folder` kwarg to `install_into_QHOME` to enable use of `pykx.q` without write access to `QHOME`.
-- Added [an example](../examples/threaded_execution/README.md) that shows how to use `EmbeddedQ` in a multithreaded context where the threads need to modify global state.
+- Added [an example](../examples/threaded_execution/threading.md) that shows how to use `EmbeddedQ` in a multithreaded context where the threads need to modify global state.
 - Added [PYKX_NO_SIGINT](../user-guide/configuration.md#environment-variables) environment variable.
 
 ### Fixes and Improvements

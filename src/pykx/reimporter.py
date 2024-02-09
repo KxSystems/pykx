@@ -36,6 +36,7 @@ class PyKXReimport:
                         'SKIP_UNDERQ',
                         'PYKX_SKIP_UNDERQ',
                         'UNDER_PYTHON',
+                        'PYKX_UNDER_PYTHON',
                         'PYKX_Q_LOADED_MARKER',
                         'PYKX_LOADED_UNDER_Q',
                         'QHOME',

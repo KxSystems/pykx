@@ -13,6 +13,7 @@ def q(instructions, code): # noqa
     unix = False
     no_ctx = False
     displayRet = False
+    debug = False
     if len(instructions)>0:
 
         instructions = instructions.split(' ')
@@ -64,6 +65,13 @@ def q(instructions, code): # noqa
                 displayRet = True
                 instructions.pop(0)
                 continue
+            elif instructions[0] == '--debug':
+                debug = True
+                instructions.pop(0)
+                continue
+            elif instructions[0] == '':
+                instructions.pop(0)
+                continue
             else:
                 raise kx.QError(
                     f'Received unknown argument "{instructions[0]}" in %%q magic command'
@@ -98,18 +106,35 @@ def q(instructions, code): # noqa
         _q = kx.q
     code = [kx.CharVector(x) for x in code.split('\n')][:-1]
     ret = _q(
-        "{[ld;code;file] {x where not (::)~/:x} value (@';\"q\";enlist[file],/:value(ld;code))}",
+        '''{[ld;code;file]
+             res:1_ {x,enlist `err`res`trc!$[any x`err;
+             (1b;(::);(::));
+             .Q.trp[{(0b;(@) . ("q";x);(::))};y;{(1b;x;.Q.sbt y)}]]} over
+            enlist[enlist `err`res`trc!(0b;(::);(::))],enlist[file],/:value(ld;code);
+            select from res where not (::)~/:res}
+       ''',
         ld,
         code,
         b'jupyter_cell.q'
     )
     if not kx.licensed:
         ret = ret.py()
-        for r in ret:
-            display(r) if displayRet else print(r)
+        for i in range(len(ret['res'])):
+            if ret['err'][i]:
+                if debug:
+                    print(ret['trc'][i].decode())
+                raise kx.QError(ret['res'][i].decode())
+            else:
+                display(ret['res'][i]) if displayRet else print(ret['res'][i])
     else:
         for i in range(len(ret)):
-            display(_q('{x y}', ret, i)) if displayRet else print(_q('{x y}', ret, i))
+            r = _q('@', ret, i)
+            if r['err']:
+                if debug:
+                    print(r['trc'])
+                raise kx.QError(r['res'].py().decode())
+            else:
+                display(r['res']) if displayRet else print(r['res'])
     if issubclass(type(_q), kx.QConnection):
         _q.close()
 

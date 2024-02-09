@@ -77,3 +77,44 @@ feature default conversions
         expect failure if default conversion unsupported
             err:@[.pykx.setdefault;"unsupported";{x}];
             err like "unknown conversion type: unsupported"
+feature time conversions
+    should return as pykx timespan objects
+        expect timespan object returned when time passed
+            .pykx.pyexec"from datetime import time";
+            .qu.compare[.pykx.eval["time(11, 34, 56)"]`;0D11:34:56.000000000];
+        expect timespan object returned when timedelta passed
+            .pykx.pyexec"import numpy as np";
+            .qu.compare[.pykx.eval["np.timedelta64(1, 'D') + np.timedelta64(9, 'h')"]`;1D09:00:00.000000000]
+feature guid conversions
+    should roundtrip guids correctly
+        expect same guid atom returned 
+            .pykx.pyexec"from uuid import UUID";
+            .qu.compare[.pykx.eval["UUID('db712ca2-81b1-0080-95dd-7bdb502da77d')"]`;"G"$"db712ca2-81b1-0080-95dd-7bdb502da77d"];
+        expect same guid list returned 
+            .qu.compare[.pykx.eval["[UUID('db712ca2-81b1-0080-95dd-7bdb502da77d')]"]`;enlist"G"$"db712ca2-81b1-0080-95dd-7bdb502da77d"];
+        expect same guid list returned from numpy
+            .pykx.pyexec"import numpy as np";
+            .qu.compare[.pykx.eval["np.array([UUID('db712ca2-81b1-0080-95dd-7bdb502da77d')], dtype=object)"]`;enlist "G"$"db712ca2-81b1-0080-95dd-7bdb502da77d"]
+        expect same guid atom returned 
+            .qu.compare[.pykx.eval["UUID('7ff0bbb9-ee32-42fe-9631-8c5a09a155a2')"]`;"G"$"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"];
+        expect same guid list returned 
+            .qu.compare[.pykx.eval["[UUID('7ff0bbb9-ee32-42fe-9631-8c5a09a155a2')]"]`;enlist"G"$"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"];
+        expect same guid list returned from numpy
+            .qu.compare[.pykx.eval["np.array([UUID('7ff0bbb9-ee32-42fe-9631-8c5a09a155a2')], dtype=object)"]`;enlist"G"$"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"]
+        expect guid atom to python
+            .qu.compare[.pykx.eval["lambda x: str.encode(str(x))"]["G"$"db712ca2-81b1-0080-95dd-7bdb502da77d"]`;"db712ca2-81b1-0080-95dd-7bdb502da77d"];
+        expect guid list to python
+            .qu.compare[.pykx.eval["lambda x: str.encode(str(x))"][enlist "G"$"db712ca2-81b1-0080-95dd-7bdb502da77d"]`;"[UUID('db712ca2-81b1-0080-95dd-7bdb502da77d')]"];
+        expect guid atom to python
+            .qu.compare[.pykx.eval["lambda x: str.encode(str(x))"]["G"$"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"]`;"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"];
+        expect guid list to python
+            .qu.compare[.pykx.eval["lambda x: str.encode(str(x))"][enlist "G"$"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"]`;"[UUID('7ff0bbb9-ee32-42fe-9631-8c5a09a155a2')]"];            
+        expect guid atom round trip
+            .qu.compare[.pykx.eval["lambda x: x"]["G"$"db712ca2-81b1-0080-95dd-7bdb502da77d"]`;"G"$"db712ca2-81b1-0080-95dd-7bdb502da77d"];
+        expect guid list round trip
+            .qu.compare[.pykx.eval["lambda x: x"][enlist "G"$"db712ca2-81b1-0080-95dd-7bdb502da77d"]`;enlist "G"$"db712ca2-81b1-0080-95dd-7bdb502da77d"];
+        expect guid atom round trip
+            .qu.compare[.pykx.eval["lambda x: x"]["G"$"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"]`;"G"$"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"];
+        expect guid list round trip
+            .qu.compare[.pykx.eval["lambda x: x"][enlist "G"$"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"]`;enlist "G"$"7ff0bbb9-ee32-42fe-9631-8c5a09a155a2"];
+

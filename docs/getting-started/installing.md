@@ -131,11 +131,25 @@ The following steps outline the process by which a user can gain access to and i
 
 ### License installation using environment variables
 
+To provide environment specific flexibility there are two methods by which users can install a license using environment variables. In both cases this method is flexible to the installation of both `kc.lic` and `k4.lic` versions of a license.
+
+#### Using a supplied license file directly
+
 1. Visit https://kx.com/kdb-insights-personal-edition-license-download/ or https://kx.com/kdb-insights-commercial-evaluation-license-download/ and fill in the attached form following the instructions provided.
 2. On receipt of an email from KX providing access to your license download the license file and save to a secure location on your computer.
 3. Set an environment variable on your computer pointing to the folder containing the license file (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
        * Variable Name: `QLIC`
        * Variable Value: `/user/path/to/folder`
+
+#### Using the base64 encoded license content
+
+1. Visit https://kx.com/kdb-insights-personal-edition-license-download/ or https://kx.com/kdb-insights-commercial-evaluation-license-download/ and fill in the attached form following the instructions provided.
+2. On receipt of an email from KX providing access to your license copy the base64 encoded contents of your license provided in plain-text within the email
+3. Set an environment variable `KDB_LICENSE_B64` on your computer pointing with the value copied in step 2 (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
+       * Variable Name: `KDB_LICENSE_B64`
+       * Variable Value: `<copied contents from email>`
+
+If looking to make use of a `k4.lic` you can do so by setting the base64 encoded content of your file as the environment variable `KDB_K4LICENSE_B64`.
 
 ## Supported Environments
 
@@ -149,27 +163,47 @@ KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX 
 
 ### Python Dependencies
 
+#### Required Python dependencies
+
 PyKX depends on the following third-party Python packages:
 
-- `pandas>=1.2`
-- `numpy~=1.22`
+- `numpy~=1.20; python_version=='3.7'`
+- `numpy~=1.22; python_version<'3.11', python_version>'3.7'`
+- `numpy~=1.23.2; python_version>='3.11'`
+- `pandas>=1.2, < 2.2.0`
 - `pytz>=2022.1`
 - `toml~=0.10.2`
 
 They are installed automatically by `pip` when PyKX is installed.
 
-### Optional Python Dependencies
+The following provides a breakdown of how these libraries are used within PyKX
+
+- [Numpy](https://pypi.org/project/numpy) is used by PyKX when converting data from PyKX objects to numpy equivalent array/recarray style objects, additionally low level integration allowing direct calls to numpy functions such as `numpy.max` with PyKX objects relies on the numpy Python API.
+- [Pandas](https://pypi.org/project/pandas) is used by PyKX when converting PyKX data to Pandas Series/DataFrame equivalent objects, additionally when converting data to PyArrow data formats as supported by the optional dependencies below Pandas is used as an intermendiary data format.
+- [pytz](https://pypi.org/project/pytz/) is used by PyKX when converting data with timezone information to PyKX objects in order to ensure that the timezone offsets are accurately applied.
+- [toml](https://pypi.org/project/toml/) is used by PyKX for configuration parsing, in particular when users make use of `.pykx-config` files for configuration management as outlined [here](../user-guide/configuration.md).
+
+
+#### Optional Python Dependencies
 
 - `pyarrow>=3.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`.
-- `find-libpython~=0.2`, which can be included by installing the `debug` extra, e.g. `pip install pykx[debug]`. This dependency can be used to help find `libpython` in the scenario that `pykx.q` fails to find it.
+- `find-libpython~=0.2`, which can be included by installing the `debug` extra, e.g. `pip install pykx[debug]`.
+- `ast2json~=0.3`, which is required for KX Dashboards Direct integration and can be installed with the `dashboards` extra, e.g. `pip install pykx[dashboards]`
+- `dill>=0.2`, which is required for the Beta feature `Remote Functions` can be installed via pip with the `beta` extra, e.g. `pip install pykx[beta]`
 
 !!! Warning
 
     Trying to use the `pa` conversion methods of `pykx.K` objects or the `pykx.toq.from_arrow` method when PyArrow is not installed (or could not be imported without error) will raise a `pykx.PyArrowUnavailable` exception.  `pyarrow` is supported Python 3.8-3.10 but remains in Beta for Python 3.11.
 
+The following provides a breakdown of how these libraries are used within PyKX
+
+- [PyArrow](https://pypi.org/project/pyarrow) is used by PyKX for the conversion of PyKX object to and from their PyArrow equivalent table/array objects. 
+- [find-libpython](https://pypi.org/project/find-libpython) can be used by developers using PyKX to source the `libpython.{so|dll|dylib}` file required by [PyKX under q](../pykx-under-q/intro.md).
+
 ### Optional Non-Python Dependencies
 
 - `libssl` for TLS on [IPC connections](../api/ipc.md).
+- `libpthread` on Linux/MacOS when using the `PYKX_THREADING` environment variable.
 
 ### Windows Dependencies
 

@@ -12,7 +12,7 @@ import webbrowser
 import toml
 import pandas as pd
 
-from .exceptions import PyKXWarning
+from .exceptions import PyKXWarning, QError
 
 
 system = platform.system()
@@ -26,6 +26,7 @@ if 'Darwin' in system and 'arm' in platform.machine():
     q_lib_dir_name = 'm64arm'
 if 'Linux' in system and ('arm' in platform.machine() or 'aarch64' in platform.machine()):
     q_lib_dir_name = 'l64arm'
+tcore_path_location = bytes(Path(__file__).parent.resolve(strict=True) / '_tcore.so')
 
 
 # Profile information for user defined config
@@ -44,7 +45,7 @@ def _get_config_value(param, default):
     return os.getenv(param, default)
 
 
-def _is_enabled(param, cmdflag=None, deprecated=False):
+def _is_enabled(param, cmdflag=False, deprecated=False):
     env_config = _get_config_value(param, '').lower() in ('1', 'true')
     if deprecated and env_config:
         warn('The environment variable ' + param + ' is deprecated.\n'
@@ -115,6 +116,17 @@ if not license_located:
 qargs = tuple(shlex.split(_get_config_value('QARGS', '')))
 
 
+def _license_install_B64(license, license_type):
+    try:
+        lic = base64.b64decode(license)
+    except base64.binascii.Error:
+        raise Exception('Invalid license copy provided, '
+                        'please ensure you have copied the license information correctly')
+
+    with open(qlic/license_type, 'wb') as binary_file:
+        binary_file.write(lic)
+
+
 def _license_install(intro=None, return_value=False): # noqa: 
     modes_url = "https://code.kx.com/pykx/user-guide/advanced/modes.html"
     lic_url = "https://kx.com/kdb-insights-personal-edition-license-download"
@@ -166,22 +178,15 @@ def _license_install(intro=None, return_value=False): # noqa:
                 raise Exception(f'Download location provided {download_location} does not exist.')
 
             shutil.copy(download_location, qlic)
-            print('\nPyKX license successfully installed!\n')
+            print('\nPyKX license successfully installed. Restart Python for this to take effect.\n') # noqa: E501
         elif install_type == '2':
 
             license = input('\nPlease provide your activation key (base64 encoded string) '
                             'provided with your welcome email : ').strip()
 
-            try:
-                lic = base64.b64decode(license)
-            except base64.binascii.Error:
-                raise Exception('Invalid license copy provided, '
-                                'please ensure you have copied the license information correctly')
+            _license_install_B64(license, 'kc.lic')
 
-            with open(qlic/'kc.lic', 'wb') as binary_file:
-                binary_file.write(lic)
-
-            print('PyKX license successfully installed!\n')
+            print('\nPyKX license successfully installed. Restart Python for this to take effect.\n') # noqa: E501
         elif install_type == '3':
             if return_value:
                 return False
@@ -196,13 +201,25 @@ _licenvset = _is_enabled('PYKX_LICENSED', '--licensed') or _is_enabled('PYKX_UNL
 if any(i in qargs for i in _arglist) or _licenvset or not hasattr(sys, 'ps1'): # noqa: C901
     pass
 elif not license_located:
-    _license_install()
+    kc_b64 = _get_config_value('KDB_LICENSE_B64', None)
+    k4_b64 = _get_config_value('KDB_K4LICENSE_B64', None)
+    if kc_b64 is not None:
+        _license_install_B64(kc_b64, 'kc.lic')
+    elif k4_b64 is not None:
+        _license_install_B64(k4_b64, 'k4.lic')
+    else:
+        _license_install()
 
 licensed = False
 
 under_q = _is_enabled('PYKX_UNDER_Q')
 qlib_location = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_dir/'lib'))
-no_sigint = _is_enabled('PYKX_NO_SIGINT')
+pykx_threading = _is_enabled('PYKX_THREADING')
+if platform.system() == 'Windows':
+    pykx_threading = False
+    warn('PYKX_THREADING is only supported on Linux / MacOS, it has been disabled.')
+no_sigint = _is_enabled('PYKX_NO_SIGINT', deprecated=True)
+no_pykx_signal = _is_enabled('PYKX_NO_SIGNAL')
 
 if _is_enabled('PYKX_ENABLE_PANDAS_API', '--pandas-api'):
     warn('Usage of PYKX_ENABLE_PANDAS_API configuration variable was removed in '
@@ -227,6 +244,7 @@ release_gil = _is_enabled('PYKX_RELEASE_GIL', '--release-gil')
 use_q_lock = _get_config_value('PYKX_Q_LOCK', False)
 skip_under_q = _is_enabled('SKIP_UNDERQ', '--skip-under-q') or _is_enabled('PYKX_SKIP_UNDERQ')
 no_qce = _is_enabled('PYKX_NOQCE', '--no-qce')
+beta_features = _is_enabled('PYKX_BETA_FEATURES', '--beta')
 load_pyarrow_unsafe = _is_enabled('PYKX_LOAD_PYARROW_UNSAFE', '--load-pyarrow-unsafe')
 
 pandas_2 = pd.__version__.split('.')[0] == '2'
@@ -252,6 +270,14 @@ def _set_licensed(licensed_):
 def _set_keep_local_times(keep_local_times_):
     global keep_local_times
     keep_local_times = keep_local_times_
+
+
+def _check_beta(feature_name, *, status=beta_features):
+    if status:
+        return None
+    raise QError(f'Attempting to use a beta feature "{feature_name}'
+                 '", please set configuration flag PYKX_BETA_FEATURES=true '
+                 'to run these operations')
 
 
 __all__ = [

@@ -120,7 +120,7 @@ Vectors with the q types `short`, `int`, and `long` can be converted to Python i
 
 Real vectors use the standard `NaN` and `inf` values, and so are handled by q, Python, Numpy, Pandas, and PyArrow in the same way with no special handling.
 
-Temporal vectors use `NaT` to represent null values in Numpy and Pandas, `None` to represent them in pure Python, and PyArrow represents null temporal values like it does for any other data type: by masking it out using the array metadata.
+Temporal vectors use `NaT` to represent null values in Numpy and Pandas, left as `pykx.K` objects in pure Python, and PyArrow represents null temporal values like it does for any other data type: by masking it out using the array metadata.
 
 When converting a table from q to Python with one of the methods above, each column will be transformed as an independent vector as described above.
 
@@ -156,6 +156,131 @@ x x1
 8
 9 35
 '))
+```
+
+An important example which represents some of the limitations of Pandas DataFrames when displaying masked arrays in index columns can be seen as follows.
+
+In the example below we are converting a keyed table containing one key column containing nulls to Pandas, as expected when converted the null mask is applied as appropriate
+
+```python
+>>> keytab = kx.q.xkey('x',
+...     kx.Table(data = {
+...         'x': kx.q('1 2 0N'),
+...         'x1': kx.q('1 0N 2'),
+...         'x3': [1, 2, 3]})
+...     )
+>>> keytab
+pykx.KeyedTable(pykx.q('
+x| x1 x3
+-| -----
+1| 1  1 
+2|    2 
+ | 2  3 
+'))
+>>> keytab.pd()
+    x1  x3
+x         
+ 1   1   1
+ 2  --   2
+--   2   3
+```
+
+However, when displaying with multi-index columns the mask behaviour is not adhered to, this can be seen as follows
+
+```python
+>>> keytab = kx.q.xkey(['x', 'x1'],
+...     kx.Table(data = {
+...         'x': kx.q('1 2 0N'),
+...         'x1': kx.q('1 0N 2'),
+...         'x3': [1, 2, 3]})
+...     )
+>>> keytab
+pykx.KeyedTable(pykx.q('
+x x1| x3
+----| --
+1 1 | 1 
+2   | 2 
+  2 | 3 
+'))
+>>> keytab.pd()
+                                           x3
+x                    x1                      
+ 1                    1                     1
+ 2                   -9223372036854775808   2
+-9223372036854775808  2                     3
+```
+
+To illustrate this as a limitation of Pandas rather than PyKX consider the following
+
+```python
+>>> tab = kx.Table(data = {
+...         'x': kx.q('1 2 0N'),
+...         'x1': kx.q('1 0N 2'),
+...         'x3': [1, 2, 3]})
+>>> tab
+pykx.Table(pykx.q('
+x x1 x3
+-------
+1 1  1 
+2    2 
+  2  3 
+'))
+>>> df = tab.pd()
+>>> df
+   x  x1  x3
+0  1   1   1
+1  2  --   2
+2 --   2   3
+>>> df.set_index(['x'])
+    x1  x3
+x         
+ 1   1   1
+ 2  --   2
+--   2   3
+>>> df.set_index(['x', 'x1'])
+                                           x3
+x                    x1                      
+ 1                    1                     1
+ 2                   -9223372036854775808   2
+-9223372036854775808  2                     3
+```
+
+Additional to the above inconsistency with Pandas you may also run into issues with the visual representations of masked arrays when displayed in Pandas DataFrames containing large numbers of rows, for example consider the following case.
+
+```python
+>>> t = kx.q('([] time:.z.p;a:til 1000;b:9,999#0N)')
+>>> t.pd()
+                                 time    a                    b
+0   2023-06-12 01:25:48.178532806    0                    9
+1   2023-06-12 01:25:48.178532806    1 -9223372036854775808
+2   2023-06-12 01:25:48.178532806    2 -9223372036854775808
+3   2023-06-12 01:25:48.178532806    3 -9223372036854775808
+4   2023-06-12 01:25:48.178532806    4 -9223372036854775808
+..                            ...  ...                  ...
+995 2023-06-12 01:25:48.178532806  995 -9223372036854775808
+996 2023-06-12 01:25:48.178532806  996 -9223372036854775808
+997 2023-06-12 01:25:48.178532806  997 -9223372036854775808
+998 2023-06-12 01:25:48.178532806  998 -9223372036854775808
+999 2023-06-12 01:25:48.178532806  999 -9223372036854775808
+ 
+[1000 rows x 3 columns]    
+```
+
+While `-9223372036854778080` does represent an underlying PyKX Null value for display purposes visually it is distracting. To display the DataFrame with the masked values you must set it's `display.max_rows` to be longer than the length of the specified table, the effect of this can be seen as follows.
+
+```python
+>>> import pandas as pd
+>>> t = kx.q('([] time:.z.p;a:til 1000;b:9,999#0N)')
+>>> pd.set_option('display.max_rows', 1000)
+>>> t.pd
+                          time    a  b
+0   2023-11-26 22:16:05.885992    0  9
+1   2023-11-26 22:16:05.885992    1 --
+2   2023-11-26 22:16:05.885992    2 --
+3   2023-11-26 22:16:05.885992    3 --
+4   2023-11-26 22:16:05.885992    4 --
+5   2023-11-26 22:16:05.885992    5 --
+..
 ```
 
 For more information on masked Numpy arrays and interactions with null representation data in Pandas see the following links
