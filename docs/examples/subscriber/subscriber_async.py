@@ -25,9 +25,9 @@ async def main_loop(q):
 async def main():
     global table
     async with kx.RawQConnection(port=5001, event_loop=asyncio.get_event_loop()) as q:
-        print('===== Initial Table =====')
+        print('===== Initital Table =====')
         print(table)
-        print('===== Initial Table =====')
+        print('===== Initital Table =====')
         # Set the variable py_server on the q process pointing towards this processes IPC connection
         # We use neg to ensure the messages are sent async so no reply is expected from this process
         await q('py_server: neg .z.w')
