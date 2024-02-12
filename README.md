@@ -1,4 +1,4 @@
-# PyKX 
+# PyKX
 
 ## Introduction
 

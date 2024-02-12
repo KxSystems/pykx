@@ -31,7 +31,7 @@ upserted all of the rows they have recieved to the table the final table will be
 
 ```
 $ python asyncio_threading.py
-===== Initial Table =====
+===== Initital Table =====
 a b
 ---
 4 8
@@ -44,7 +44,7 @@ a b
 2 1
 1 8
 8 5
-===== Initial Table =====
+===== Initital Table =====
 a  b
 -----
 4  8

@@ -8,6 +8,16 @@
 
     Currently PyKX is not compatible with Pandas 2.2.0 or above as it introduced breaking changes which cause data to be cast to the incorrect type.
 
+## PyKX 2.3.2
+
+#### Release Date
+
+2024-02-12
+
+### Fixes and Improvements
+
+- Update of PyKX 4.0 linux shared object to version 2024.02.09, this update is to facilitate deployments on more secure linux/linux-arm environments.
+
 ## PyKX 2.3.1
 
 #### Release Date
