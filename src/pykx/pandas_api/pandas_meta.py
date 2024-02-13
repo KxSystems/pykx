@@ -284,6 +284,18 @@ class PandasMeta:
         ), cols)
 
     @convert_result
+    def idxmax(self, axis=0, skipna=True, numeric_only=False):
+        tab = self
+        axis = q('{$[11h~type x; `index`columns?x; x]}', axis)
+        res, cols, ix = preparse_computations(tab, axis, skipna, numeric_only)
+        return (q(
+            '''{[row;tab;axis]
+                row:{$[11h~type x; {[x1; y1] $[x1 > y1; x1; y1]} over x; max x]} each row;
+                m:$[0~axis; (::); flip] value flip tab;
+                $[0~axis; (::); cols tab] m {$[abs type y;x]?y}' row}
+            ''', res, tab[ix], axis), cols)
+
+    @convert_result
     def idxmin(self, axis=0, skipna=True, numeric_only=False):
         tab = self
         axis = q('{$[11h~type x; `index`columns?x; x]}', axis)
