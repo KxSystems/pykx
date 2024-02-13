@@ -32,7 +32,7 @@ feature .pykx.eval
 
         expect an error to be raised if a Path object is supplied as a parameter when not suitable
             system"c 2000 2000";
-            @[.pykx.eval"lambda x:x+1";`:test;{x like "*TypeError('can only*"}]
+            @[.pykx.eval"lambda x:x+1";`:test;{x like "*TypeError(\"unsupported operand type(s) for +: 'PosixPath' and 'int'\")"}]
 
     should error appropriately if supplied an incorrect type
         expect to error if input type is non string
@@ -41,13 +41,52 @@ feature .pykx.eval
 
         expect to evaluate correctly if supplied a char atom
             .qu.compare[-7h; type .pykx.eval["1"]`]
+    should not convert wraps passed to functions
+        expect not convert wraps passed to functions
+            np:.pykx.import `numpy;
+            r:np[`:random.rand;1;2];
+            r~.pykx.eval["lambda x: x"] r;
 feature .pykx.qeval
     should return the correct values and types
         expect to return a 2
             .qu.compare[2; .pykx.qeval["1+1"]]
         expect to return a composition
             .qu.compare[105h; type .pykx.qeval["lambda x, y: x + y"]]
-         expect to return 2
+        expect to return 2
             .qu.compare[2; .pykx.qeval["lambda x, y: x + y"][1;1]]
         expect to return 2
             .qu.compare[2; .pykx.qeval["lambda x, y: x + y"] . (1;1)]
+        expect ` 
+            .qu.compare[`;.pykx.eval["lambda x: x"][<]`]
+        expect `.
+            .qu.compare[`.;.pykx.eval["lambda x: x"][<]`.]
+        expect ` 
+            .qu.compare[`;.pykx.toq .pykx.eval["lambda x: x"][>]`]
+        expect `.
+            .qu.compare[`.;.pykx.toq .pykx.eval["lambda x: x"][>]`.]
+
+feature No segfault on compressed
+    before
+        (`:compressed16383;17;1;0) set til 16383
+    should No segfault
+        expect No segfault
+            .qu.compare[desc til 16383 ;desc get `:compressed16383]
+    after
+        hdel `:compressed16383
+
+feature Typed wraps are wraps and can be unwrapped
+    should be wraps
+        expect 1b
+            .pykx.util.isw  .pykx.eval["lambda x: x"]
+        expect 1b
+            .pykx.util.isw  .pykx.eval["lambda x: x";<]
+        expect 1b
+            .pykx.util.isw  .pykx.eval["lambda x: x";>]
+
+    should be possible to unwrap
+        expect 1b
+            .pykx.util.isf .pykx.unwrap .pykx.eval["lambda x: x"]
+        expect 1b
+            .pykx.util.isf .pykx.unwrap .pykx.eval["lambda x: x";<]
+        expect 1b
+            .pykx.util.isf .pykx.unwrap .pykx.eval["lambda x: x";>]

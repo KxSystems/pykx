@@ -1,5 +1,7 @@
 """Tests for the Pandas API apply functionality"""
 
+import os
+
 import numpy as np
 import pytest
 
@@ -72,6 +74,10 @@ def test_sum_axis_1_col_2(q, kx):
     assert all(sum_data == q('1+til 10'))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_py_add_axis_0_cols_1(q, kx):
     tab = q('([] til 10)')
 
@@ -84,6 +90,10 @@ def test_py_add_axis_0_cols_1(q, kx):
     assert all(add_data == kx.toq(tab.pd().apply(add_1)))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_py_add_axis_0_cols_2(q, kx):
     tab = q('([] til 10; 1)')
 
@@ -96,6 +106,10 @@ def test_py_add_axis_0_cols_2(q, kx):
     assert q('{all raze x}', add_data.values() == q('(1+til 10;10#2)'))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_py_add_axis_1_cols_1(q, kx):
     tab = q('([] til 10)')
 
@@ -107,6 +121,10 @@ def test_py_add_axis_1_cols_1(q, kx):
     assert all(add_data == kx.toq(tab.pd().apply(add_1, axis=1)))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_py_add_axis_1_cols_2(q, kx):
     tab = q('([] til 10; 1)')
 
@@ -119,6 +137,10 @@ def test_py_add_axis_1_cols_2(q, kx):
     assert q('{all raze x}', add_data.values() == q('(1+til 10;10#2)'))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_py_sum_axis_0_cols_1(q, kx):
     tab = q('([] til 10)')
     sum_data = tab.apply(np.sum)
@@ -128,6 +150,10 @@ def test_py_sum_axis_0_cols_1(q, kx):
     assert all(sum_data == kx.toq(tab.pd().apply(np.sum)))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_py_sum_axis_1_cols_1(q, kx):
     tab = q('([] til 10)')
     sum_data = tab.apply(np.sum, axis=1)
@@ -136,6 +162,10 @@ def test_py_sum_axis_1_cols_1(q, kx):
     assert all(sum_data == kx.toq(tab.pd().apply(np.sum, axis=1)))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_py_sum_axis_0_cols_2(q, kx):
     tab = q('([] til 10; 1)')
     sum_data = tab.apply(np.sum)
@@ -145,6 +175,10 @@ def test_py_sum_axis_0_cols_2(q, kx):
     assert all(sum_data == kx.toq(tab.pd().apply(np.sum)))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_py_sum_axis_1_cols_2(q, kx):
     tab = q('([] til 10; 1)')
     sum_data = tab.apply(np.sum, axis=1)
@@ -153,6 +187,10 @@ def test_py_sum_axis_1_cols_2(q, kx):
     assert all(sum_data == kx.toq(tab.pd().apply(np.sum, axis=1)))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_py_args(q, kx):
     tab = q('([] til 10; 1)')
 

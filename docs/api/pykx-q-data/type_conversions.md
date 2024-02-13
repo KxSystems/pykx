@@ -322,7 +322,7 @@ True
 	Calling `.py()` on a `pykx.LongVector` will return a list of python int objects.
 
 	```Python
-	>>>> pykx.LongVector([1, 2.5]).py()
+	>>> pykx.LongVector([1, 2.5]).py()
 	[1, 2]
 	```
 
@@ -342,7 +342,7 @@ True
 	Calling `.py()` on a `pykx.RealAtom` will return a python float object.
 
 	```Python
-	>>>> pykx.RealAtom(2.5).py()
+	>>> pykx.RealAtom(2.5).py()
 	2.5
 	```
 
@@ -383,7 +383,7 @@ True
 	Calling `.py()` on a `pykx.FloatAtom` will return a python float object.
 
 	```Python
-	>>>> pykx.FloatAtom(2.5).py()
+	>>> pykx.FloatAtom(2.5).py()
 	2.5
 	```
 

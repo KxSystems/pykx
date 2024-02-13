@@ -5,6 +5,7 @@ include setup.py
 
 graft src/pykx/include
 graft src/pykx/lib
+graft src/pykx/extensions
 
 recursive-include src/pykx *.py *.pxd *.pyx *.c *.so *.k
 recursive-include tests *.py

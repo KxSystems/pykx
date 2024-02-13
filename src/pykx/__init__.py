@@ -20,6 +20,11 @@ if os.environ.get('PYKX_QINIT_CHECK') is None:
 else: # nocov
     pass
 
+
+# List of beta features available in the current PyKX version
+beta_features = []
+
+
 from . import reimporter
 # Importing core initializes q if in licensed mode, and loads the q C API symbols. This should
 # happen early on so that if the qinit check is currently happening then no time is wasted.
@@ -36,13 +41,24 @@ from typing import Any, List, Optional, Union
 from warnings import warn
 from weakref import proxy
 
-from .config import k_allocator, licensed, no_sigint, pykx_platlib_dir
+from .config import k_allocator, licensed, no_pykx_signal, no_sigint, pykx_platlib_dir, under_q
 from . import util
 
 if platform.system() == 'Windows': # nocov
     os.environ['PATH'] += f';{pykx_platlib_dir}'
     if platform.python_version_tuple()[:2] >= ('3', '8'):
         os.add_dll_directory(pykx_platlib_dir)
+
+# Cache initialised signal values prior to PyKX loading
+_signal_list = [
+    'signal.SIGINT',
+    'signal.SIGTERM',
+]
+
+_signal_dict = {}
+
+for i in _signal_list:
+    _signal_dict[i] = signal.getsignal(eval(i))
 
 
 def _first_resolved_path(possible_paths: List[Union[str, Path]]) -> Path:
@@ -273,6 +289,7 @@ from .exceptions import *
 from ._ipc import _init as _ipc_init
 _ipc_init(q)
 
+from .db import DB
 from .ipc import AsyncQConnection, QConnection, QFuture, RawQConnection, SecureQConnection, SyncQConnection # noqa
 from .config import qargs, qhome, qlic
 from .wrappers import *
@@ -291,6 +308,12 @@ _license_init(q)
 
 from .random import _init as _random_init
 _random_init(q)
+
+from .db import _init as _db_init
+_db_init(q)
+
+from .remote import _init as _remote_init
+_remote_init(q)
 
 if k_allocator:
     from . import _numpy as _pykx_numpy_cext
@@ -402,6 +425,8 @@ except NameError:
     # Not running under IPython/Jupyter...
     pass
 
+shutdown_thread = core.shutdown_thread
+
 if licensed:
     days_to_expiry = q('"D"$', q.z.l[1]) - q.z.D
     if days_to_expiry < 10:
@@ -439,16 +464,18 @@ __all__ = sorted([
     'config',
     'util',
     'q',
+    'shutdown_thread',
     'PyKXReimport',
     *exceptions.__all__,
     *wrappers.__all__,
 ])
 
-if not no_sigint:
-    try:
-        signal.signal(signal.SIGINT, signal.default_int_handler)
-    except Exception:
-        logging.exception('Failed to set SIGINT handler...')
+if (not no_sigint) or (not no_pykx_signal):
+    for k, v in _signal_dict.items():
+        try:
+            signal.signal(eval(k), v)
+        except Exception:
+            pass
 
 
 def __dir__():

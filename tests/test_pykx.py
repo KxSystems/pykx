@@ -67,6 +67,10 @@ def test_qinit_startup():
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_unlicensed_env():
     os.environ['PYKX_UNLICENSED'] = 'true'
     import pykx as kx
@@ -75,16 +79,24 @@ def test_unlicensed_env():
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_qinit_qq_startup():
     # PyKX would not initialise appropriately if q.q exists in QHOME containing a show statement
     shutil.copy('tests/qinit.q', os.environ['QHOME']+'/q.q')
     import pykx as kx
-    os.remove(os.environ['QHOME']+'/q.q')
+    try_clean(os.environ['QHOME']+'/q.q')
     assert kx.q('2 + 2') == 4
 
 
 @disposable_env_only
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_QHOME_symlinks():
     # This logic to get QHOME is copied from `pykx.config`, since we can't use `pykx.qhome` until
     # after PyKX has been imported, but that would ruin the test.
@@ -198,6 +210,10 @@ def test_top_level_attributes(kx):
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_q_lock_error_instant():
     os.environ['PYKX_RELEASE_GIL'] = '1'
     os.environ['PYKX_Q_LOCK'] = '0'
@@ -223,6 +239,40 @@ def test_pykx_safe_reimport():
 
 
 @pytest.mark.isolate
+def test_pykx_sigkill():
+    returncode = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c', 'import pykx as kx; import os; import signal; pid = os.getpid(); os.kill(pid, signal.SIGKILL)'), # noqa: E501
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    ).returncode
+    assert returncode == -9
+
+
+@pytest.mark.isolate
+@pytest.mark.xfail(reason='Local testing shows appropriate behaviour')
+def test_pykx_sigint():
+    output = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c', 'import pykx as kx; import os; import signal; pid = os.getpid(); os.kill(pid, signal.SIGINT)'), # noqa: E501
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    ).stdout.strip()
+    assert output.split('\n')[-1] == 'KeyboardInterrupt'
+
+
+@pytest.mark.isolate
+def test_pykx_sigterm():
+    returncode = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c', 'import pykx as kx; import os; import signal; pid = os.getpid(); os.kill(pid, signal.SIGTERM)'), # noqa: E501
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    ).returncode
+    assert returncode == -15
+
+
+@pytest.mark.isolate
 def test_pykx_star():
     output = subprocess.run(
         (str(Path(sys.executable).as_posix()), '-c', 'from pykx import *; print(q("til 10"))'),
@@ -231,3 +281,62 @@ def test_pykx_star():
         text=True,
     ).stdout.strip()
     assert output.split('\n')[-1] == "0 1 2 3 4 5 6 7 8 9"
+
+
+@pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_pykx_stdout_stderr():
+    output = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c',
+            'import pykx;pykx.q(\'\\l tests/qscripts/test_stdout_stderr.q\')'),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    ).stdout.strip()
+    output = output.split('\n')
+    output = [x for x in output if x[:13] == 'stdouterrtest']
+    assert (lambda x: ([int(i.split(',')[1]) for i in x]))(output) == list(range(1, 23))
+
+
+@pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_pykx_stdout_stderr_under_q():
+    subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c',
+            'import pykx;pykx.install_into_QHOME()'),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    output = subprocess.run(
+        ('q', 'tests/qscripts/test_stdout_stderr.q', '-q'),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    ).stdout.strip()
+    output = output.split('\n')
+    output = [x for x in output if x[:13] == 'stdouterrtest']
+    assert (lambda x: ([int(i.split(',')[1]) for i in x]))(output) == list(range(1, 23))
+
+
+@pytest.mark.isolate
+def test_compressed_enum_segfault(kx):
+    import tempfile
+    temp_dir = tempfile.TemporaryDirectory()
+    kx.q('{`base set hsym x}', temp_dir.name)
+    kx.q('.z.zd:17 1 0')
+    kx.q('n:10000')
+    kx.q('trade:([] sym:`$string til n)')
+    kx.q('.Q.dpft[base;;`sym;`trade] each 2020.01.01 + til 100')
+    kx.q('system"l ",1_ string base')
+    kx.q('select from trade')
+
+
+def test_is_enabled(kx):
+    assert kx.config.ignore_qhome is False

@@ -8,7 +8,7 @@ def _init(_q):
     q = _q
 
 
-def _get(tab, key, default):
+def _get(tab, key, default, cols_check=True):
     idxs = None
     _init_tab = None
     if 'Keyed' in str(type(tab)):
@@ -18,6 +18,10 @@ def _get(tab, key, default):
         if 0 in idxs:
             keys = keys[1:]
         key = keys
+    if cols_check:
+        if q('{not all x in cols y}', key, tab):
+            colstr = str(q('{((),x) except cols y}', key, tab).py())
+            raise QError(f'Attempted to retrieve inaccessible columns: {colstr}')
     if isinstance(key, list) or isinstance(key, SymbolVector):
         if not all([x in tab._keys for x in key]):
             return default
@@ -131,28 +135,12 @@ def _parse_cols(tab, cols):
     return cols
 
 
-def _parse_indexes_slice(tab, loc):
-    step = loc.step if loc.step is not None else 1
-    start = loc.start if loc.start is not None else (0 if step > 0 else len(tab) - 1)
-    stop = loc.stop if loc.stop is not None else (len(tab) if step > 0 else -1)
-    if step > 0 and stop < 0:
-        stop = stop + len(tab)
-    idxs = []
-    idx = start
-    while True:
-        idxs.append(idx)
-        idx += step
-        if (start < stop and idx >= stop) or (start > stop and idx <= stop) or start == stop:
-            break
-    return idxs
-
-
 def _parse_indexes(tab, loc):
     if callable(loc):
         loc = loc(tab)
-    types = [list, ShortVector, IntVector, LongVector]
+    types = [list, ShortVector, IntVector, LongVector, range]
     if isinstance(loc, slice):
-        loc = _parse_indexes_slice(tab, loc)
+        loc = range(len(tab))[loc]
     if ((isinstance(loc, list) and isinstance(loc[0], bool)) or isinstance(loc, BooleanVector))\
             and len(loc) == len(tab):
         idxs = []
@@ -248,6 +236,9 @@ def _loc(tab, loc): # noqa
         if 'Keyed' in str(type(tab)):
             return q('{(count keys x)!((0!x) each where y)}', tab, loc)
         return q('{x where y}', tab, loc)
+    if isinstance(loc, str):
+        if q('{not x in cols y}', loc, tab):
+            raise QError(f'Attempted to retrieve inaccessible column: {loc}')
     return q('{x[enlist each y]}', tab, loc)
 
 
@@ -310,16 +301,25 @@ def _drop_columns(tab, labels, errors=True):
 
 def _rename_index(tab, labels):
     if "Keyed" in str(type(tab)):
+        for x in list(labels.keys()):
+            if type(x) is not int:
+                labels.pop(x)
         return q('''{
                   idx:first flip key x;
                   idx:@[(count idx;1)#idx;idx?raze key y;y];
                   ([] idx)!value x}''',
                  tab, labels)  # noqa
     else:
-        return ValueError('nyi')
+        return ValueError(f"""Only pykx.KeyedTable objects can
+                          have indexes renamed. Received: {type(tab)}""")
 
 
 def _rename_columns(tab, labels):
+    for x in list(labels.keys()):
+        if type(labels[x]) is not str:
+            raise ValueError('pykx.Table column names can only be of type pykx.SymbolAtom')
+        if type(x) is not str:
+            labels.pop(x)
     if "Keyed" in str(type(tab)):
         return q('''{
                   c:cols value x;
@@ -349,7 +349,7 @@ class PandasIndexing:
     @api_return
     def get(self, key, default=None):
         """Get items from table based on key, if key is not found default is returned."""
-        return _get(self, key, default)
+        return _get(self, key, default, cols_check=False)
 
     @property
     def at(self):
@@ -426,10 +426,12 @@ class PandasReindexing:
 
     def rename(self, labels=None, index=None, columns=None, axis=0,
                copy=None, inplace=False, level=None, errors='ignore'):
-
+        if ("Keyed" not in str(type(self)) and columns is None
+                and ((axis == 'index' or axis == 0) or (index is not None))):
+            raise ValueError("Can only rename index of a KeyedTable")
         if labels is None and index is None and columns is None:
             raise ValueError("must pass an index to rename")
-        elif axis != 0 and (index is not None or columns is not None):
+        elif axis !=0 and (index is not None or columns is not None):
             raise ValueError("Cannot specify both 'axis' and any of 'index' or 'columns'")
 
         if (columns is not None or axis==1) and level is not None:
@@ -440,18 +442,53 @@ class PandasReindexing:
 
         t = self
         if labels is not None:
-            if axis == 0:
-                t = _rename_index(t, labels)
-            elif axis == 1:
+            if axis == 1 or axis == 'columns':
                 t = _rename_columns(t, labels)
+            elif axis == 0 or axis == 'index':
+                t = _rename_index(t, labels)
             else:
                 raise ValueError(f'No axis named {axis}')
         else:
+            if (index or columns) is None:
+                raise ValueError("No columns or indices specified or set")
             if index is not None:
                 t = _rename_index(t, index)
             if columns is not None:
                 t = _rename_columns(t, columns)
 
+        return t
+
+    def add_suffix(self, suffix, axis=0):
+        t = self
+        if axis == 1:
+            t = q('''{[s;t]
+                  c:$[99h~type t;cols value@;cols] t;
+                  (c!`$string[c],\\:string s) xcol t
+                  }''', suffix, t)
+        elif axis == 0:
+            if 'Keyed' in str(type(t)):
+                raise ValueError('nyi')
+            else:
+                return q('{[s;t] c:cols t; (c!`$string[c],\\:string s) xcol t}', suffix, t)
+        else:
+            raise ValueError(f'No axis named {axis}')
+        return t
+
+    def add_prefix(self, prefix, axis=0):
+        t = self
+        if axis == 1:
+            t = q('''{[s;t]
+                  c:$[99h~type t;cols value@;cols] t;
+                  (c!`$string[s],/:string[c]) xcol t
+                  }''', prefix, t)
+        elif axis == 0:
+            if 'Keyed' in str(type(t)):
+                raise ValueError('nyi')
+            else:
+                return q('{[s;t] c:cols t; (c!`$string[s],/:string[c]) xcol t}', prefix, t)
+            raise ValueError('nyi')
+        else:
+            raise ValueError(f'No axis named {axis}')
         return t
 
     def sample(self, n=None, frac=None, replace=False, weights=None,

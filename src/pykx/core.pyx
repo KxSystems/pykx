@@ -1,12 +1,15 @@
+from cython import NULL
 import os, platform
 from pathlib import Path
+from platform import system
 from threading import RLock
 from typing import List, Tuple
 import re
 import sys
 
+from . import beta_features
 from .util import num_available_cores
-from .config import _is_enabled, _license_install
+from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _check_beta
 
 
 def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
@@ -58,6 +61,7 @@ cdef int _qinit(int (*qinit)(int, char**, char*, char*, char*), qhome_str: str, 
 
 
 cdef char* _libq_path
+cdef char* _tcore_path
 cdef void* _q_handle
 
 
@@ -165,6 +169,9 @@ cdef inline uintptr_t _keval(const char* code, K k1, K k2, K k3, K k4, K k5, K k
                 # with nogil ensures the gil is dropped during the call into k
                 with nogil:
                     return <uintptr_t>knogil(<void*> k, <char* const>code, k1, k2, k3, k4, k5, k6, k7, k8)
+            if pykx_threading:
+                with nogil:
+                    return <uintptr_t>k(handle, <char* const>code, k1, k2, k3, k4, k5, k6, k7, k8, NULL)
             return <uintptr_t>k(handle, <char* const>code, k1, k2, k3, k4, k5, k6, k7, k8, NULL)
     except BaseException as err:
         raise err
@@ -237,105 +244,135 @@ def _link_qhome():
             pass # Skip subdirectories of $QHOME that don't exist.
     update_marker.touch()
 
+cdef void (*init_syms)(char* x)
 
-if under_q: # nocov
-    if '--unlicensed' in qargs: # nocov
-        warn("The '--unlicensed' flag has no effect when running under a q process", # nocov
-             PyKXWarning) # nocov
-    _q_handle = dlopen(NULL, RTLD_NOW | RTLD_GLOBAL) # nocov
-    licensed = True # nocov
-else:
-    # To make Cython happy, we indirectly assign Python values to `_libq_path`
-    if '--unlicensed' in qargs or _is_enabled('PYKX_UNLICENSED', '--unlicensed'):
-        _libq_path_py = bytes(find_core_lib('e'))
-        _libq_path = _libq_path_py
-        _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
-        licensed = False
+if not pykx_threading:
+    if under_q: # nocov
+        if '--unlicensed' in qargs: # nocov
+            warn("The '--unlicensed' flag has no effect when running under a q process", # nocov
+                 PyKXWarning) # nocov
+        _q_handle = dlopen(NULL, RTLD_NOW | RTLD_GLOBAL) # nocov
+        licensed = True # nocov
     else:
-        if platform.system() == 'Windows': # nocov
-            from ctypes.util import find_library # nocov
-            if find_library("msvcr100.dll") is None: # nocov
-                msvcrMSG = "Needed dependency msvcr100.dll missing. See: https://code.kx.com/pykx/getting-started/installing.html" # nocov
-                if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', --licensed): # nocov
-                    raise PyKXException(msvcrMSG)  # nocov
-                else: # nocov
-                    warn(msvcrMSG, PyKXWarning) # nocov
-        _core_q_lib_path = find_core_lib('q')
-        licensed = True
-        if not _is_enabled('PYKX_UNSAFE_LOAD', '--unsafeload'):
-            _qinit_check_proc = subprocess.run(
-                (str(Path(sys.executable).as_posix()), '-c', 'import pykx'),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                env={
-                    **os.environ,
-                    'PYKX_QINIT_CHECK': ';'.join((
-                        str(_core_q_lib_path),
-                        str(pykx_lib_dir if ignore_qhome is None else qhome),
-                        str(qlic),
-                        # Use the env var directly because `config.qargs` has already split the args.
-                        os.environ.get('QARGS', ''),
-                    )),
-                }
-            )
-            _qinit_output = '    ' + '    '.join(_qinit_check_proc.stdout.strip().splitlines(True))
-            _license_message = False
-            if _qinit_check_proc.returncode: # Fallback to unlicensed mode
-                if _qinit_output != '    ':
-                    _capout_msg = f'Captured output from initialization attempt:\n{_qinit_output}'
-                else:
-                    _capout_msg = '' # nocov - this can only occur under extremely weird circumstances.
-                if hasattr(sys, 'ps1'):
-                    if re.compile('exp').search(_capout_msg):
-                        _exp_license = 'Your PyKX license has now expired.\n\n'\
-                                       f'{_capout_msg}\n\n'\
-                                       'Would you like to renew your license? [Y/n]: '
-                        _license_message = _license_install(_exp_license, True)
-                    elif re.compile('embedq').search(_capout_msg):
-                        _ce_license = 'You appear to be using a non kdb Insights license.\n\n'\
-                                      f'{_capout_msg}\n\n'\
-                                      'Running PyKX in the absence of a kdb Insights license '\
-                                      'has reduced functionality.\nWould you like to install '\
-                                      'a kdb Insights personal license? [Y/n]: '
-                        _license_message = _license_install(_ce_license, True)
-                    elif re.compile('upd').search(_capout_msg):
-                        _upd_license = 'Your installed license is out of date for this version'\
-                                       ' of PyKX and must be updated.\n\n'\
-                                       f'{_capout_msg}\n\n'\
-                                       'Would you like to install an updated kdb '\
-                                       'Insights personal license? [Y/n]: '
-                        _license_message = _license_install(_upd_license, True)
-            if (not _license_message) and _qinit_check_proc.returncode:
-                if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed'):
-                    raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}')
-                else:
-                    warn(f'Failed to initialize PyKX successfully with the following error: {_capout_msg}', PyKXWarning)
-                _libq_path_py = bytes(find_core_lib('e'))
-                _libq_path = _libq_path_py
-                _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
-                licensed = False
-        if licensed: # Start in licensed mode
-            if 'QHOME' in os.environ and not ignore_qhome:
-                # Only link the user's QHOME to PyKX's QHOME if the user actually set $QHOME.
-                # Note that `pykx.qhome` has a default value of `./q`, as that is the behavior
-                # employed by q.
-                try:
-                    _link_qhome()
-                except BaseException:
-                    warn('Failed to link user QHOME directory contents to allow access to PyKX.\n'
-                        'To suppress this warning please set the configuration option "PYKX_IGNORE_QHOME" as outlined at:\n'
-                        'https://code.kx.com/pykx/user-guide/configuration.html')
-            _libq_path_py = bytes(_core_q_lib_path)
+        # To make Cython happy, we indirectly assign Python values to `_libq_path`
+        if '--unlicensed' in qargs or _is_enabled('PYKX_UNLICENSED', '--unlicensed'):
+            _libq_path_py = bytes(find_core_lib('e'))
             _libq_path = _libq_path_py
             _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
-            qinit = <int (*)(int, char**, char*, char*, char*)>dlsym(_q_handle, 'qinit')
-            qinit_return_code = _qinit(qinit, str(qhome if ignore_qhome else pykx_lib_dir), str(qlic), list(qargs))
-            if qinit_return_code:    # nocov
-                dlclose(_q_handle)   # nocov
-                licensed = False     # nocov
-                raise PyKXException( # nocov
-                    f'Non-zero qinit return code {qinit_return_code} despite successful pre-check') # nocov
+            licensed = False
+        else:
+            if platform.system() == 'Windows': # nocov
+                from ctypes.util import find_library # nocov
+                if find_library("msvcr100.dll") is None: # nocov
+                    msvcrMSG = "Needed dependency msvcr100.dll missing. See: https://code.kx.com/pykx/getting-started/installing.html" # nocov
+                    if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed'): # nocov
+                        raise PyKXException(msvcrMSG)  # nocov
+                    else: # nocov
+                        warn(msvcrMSG, PyKXWarning) # nocov
+            _core_q_lib_path = find_core_lib('q')
+            licensed = True
+            if not _is_enabled('PYKX_UNSAFE_LOAD', '--unsafeload'):
+                _qinit_check_proc = subprocess.run(
+                    (str(Path(sys.executable).as_posix()), '-c', 'import pykx'),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    env={
+                        **os.environ,
+                        'PYKX_QINIT_CHECK': ';'.join((
+                            str(_core_q_lib_path),
+                            str(pykx_lib_dir if ignore_qhome is None else qhome),
+                            str(qlic),
+                            # Use the env var directly because `config.qargs` has already split the args.
+                            os.environ.get('QARGS', ''),
+                        )),
+                    }
+                )
+                _qinit_output = '    ' + '    '.join(_qinit_check_proc.stdout.strip().splitlines(True))
+                _license_message = False
+                if _qinit_check_proc.returncode: # Fallback to unlicensed mode
+                    if _qinit_output != '    ':
+                        _capout_msg = f'Captured output from initialization attempt:\n{_qinit_output}'
+                    else:
+                        _capout_msg = '' # nocov - this can only occur under extremely weird circumstances.
+                    if hasattr(sys, 'ps1'):
+                        if re.compile('exp').search(_capout_msg):
+                            _exp_license = 'Your PyKX license has now expired.\n\n'\
+                                           f'{_capout_msg}\n\n'\
+                                           'Would you like to renew your license? [Y/n]: '
+                            _license_message = _license_install(_exp_license, True)
+                        elif re.compile('embedq').search(_capout_msg):
+                            _ce_license = 'You appear to be using a non kdb Insights license.\n\n'\
+                                          f'{_capout_msg}\n\n'\
+                                          'Running PyKX in the absence of a kdb Insights license '\
+                                          'has reduced functionality.\nWould you like to install '\
+                                          'a kdb Insights personal license? [Y/n]: '
+                            _license_message = _license_install(_ce_license, True)
+                        elif re.compile('upd').search(_capout_msg):
+                            _upd_license = 'Your installed license is out of date for this version'\
+                                           ' of PyKX and must be updated.\n\n'\
+                                           f'{_capout_msg}\n\n'\
+                                           'Would you like to install an updated kdb '\
+                                           'Insights personal license? [Y/n]: '
+                            _license_message = _license_install(_upd_license, True)
+                if (not _license_message) and _qinit_check_proc.returncode:
+                    if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed'):
+                        raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}')
+                    else:
+                        warn(f'Failed to initialize PyKX successfully with the following error: {_capout_msg}', PyKXWarning)
+                    _libq_path_py = bytes(find_core_lib('e'))
+                    _libq_path = _libq_path_py
+                    _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
+                    licensed = False
+            if licensed: # Start in licensed mode
+                if 'QHOME' in os.environ and not ignore_qhome:
+                    # Only link the user's QHOME to PyKX's QHOME if the user actually set $QHOME.
+                    # Note that `pykx.qhome` has a default value of `./q`, as that is the behavior
+                    # employed by q.
+                    try:
+                        _link_qhome()
+                    except BaseException:
+                        warn('Failed to link user QHOME directory contents to allow access to PyKX.\n'
+                            'To suppress this warning please set the configuration option "PYKX_IGNORE_QHOME" as outlined at:\n'
+                            'https://code.kx.com/pykx/user-guide/configuration.html')
+                _libq_path_py = bytes(_core_q_lib_path)
+                _libq_path = _libq_path_py
+                _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
+                qinit = <int (*)(int, char**, char*, char*, char*)>dlsym(_q_handle, 'qinit')
+                qinit_return_code = _qinit(qinit, str(qhome if ignore_qhome else pykx_lib_dir), str(qlic), list(qargs))
+                if qinit_return_code:    # nocov
+                    dlclose(_q_handle)   # nocov
+                    licensed = False     # nocov
+                    raise PyKXException( # nocov
+                        f'Non-zero qinit return code {qinit_return_code} despite successful pre-check') # nocov
+else:
+    _check_beta('PYKX Threading')
+    beta_features.append('PyKX Threading')
+    _libq_path_py = bytes(str(find_core_lib('q')), 'utf-8')
+    _tcore_path = tcore_path_location
+    _libq_path = _libq_path_py
+    _q_handle = dlopen(_tcore_path, RTLD_NOW | RTLD_GLOBAL)
+
+    init_syms = <void (*)(char* x)>dlsym(_q_handle, 'sym_init')
+    init_syms(_libq_path)
+    qinit = <int (*)(int, char**, char*, char*, char*)>dlsym(_q_handle, 'q_init')
+
+    qinit_return_code = _qinit(qinit, str(qhome if ignore_qhome else pykx_lib_dir), str(qlic), list(qargs))
+    if qinit_return_code:    # nocov
+        dlclose(_q_handle)   # nocov
+        licensed = False     # nocov
+        if qinit_return_code == 1: # nocov
+            raise PyKXException( # nocov
+                f'qinit failed because of an invalid license file, please ensure you have a valid'
+                'q license installed before using PYKX_THREADING.'
+            ) # nocov
+        else: # nocov
+            raise PyKXException( # nocov
+                f'Non-zero qinit return code {qinit_return_code}, failed to initialize '
+                'PYKX_THREADING.'
+            ) # nocov
+    os.environ['QHOME'] = str(qhome if ignore_qhome else pykx_lib_dir)
+    licensed = True
 _set_licensed(licensed)
 
 
@@ -343,74 +380,83 @@ if k_gc and not licensed:
     raise PyKXException('Early garbage collection requires a valid q license.')
 
 
+sym_name = lambda x: bytes('_' + x, 'utf-8') if pykx_threading else bytes(x, 'utf-8')
 
-kG = <unsigned char* (*)(K x)>dlsym(_q_handle, 'kG')
-kC = <unsigned char* (*)(K x)>dlsym(_q_handle, 'kC')
-kU = <U* (*)(K x)>dlsym(_q_handle, 'kU')
-kS = <char** (*)(K x)>dlsym(_q_handle, 'kS')
-kH = <short* (*)(K x)>dlsym(_q_handle, 'kH')
-kI = <int* (*)(K x)>dlsym(_q_handle, 'kI')
-kJ = <long long* (*)(K x)>dlsym(_q_handle, 'kJ')
-kE = <float* (*)(K x)>dlsym(_q_handle, 'kE')
-kF = <double* (*)(K x)>dlsym(_q_handle, 'kF')
-kK = <K* (*)(K x)>dlsym(_q_handle, 'kK')
+if not pykx_threading:
+    kG = <unsigned char* (*)(K x)>dlsym(_q_handle, 'kG')
+    kC = <unsigned char* (*)(K x)>dlsym(_q_handle, 'kC')
+    kU = <U* (*)(K x)>dlsym(_q_handle, 'kU')
+    kS = <char** (*)(K x)>dlsym(_q_handle, 'kS')
+    kH = <short* (*)(K x)>dlsym(_q_handle, 'kH')
+    kI = <int* (*)(K x)>dlsym(_q_handle, 'kI')
+    kJ = <long long* (*)(K x)>dlsym(_q_handle, 'kJ')
+    kE = <float* (*)(K x)>dlsym(_q_handle, 'kE')
+    kF = <double* (*)(K x)>dlsym(_q_handle, 'kF')
+    kK = <K* (*)(K x)>dlsym(_q_handle, 'kK')
 
-b9 = <K (*)(int mode, K x)>dlsym(_q_handle, 'b9')
-d9 = <K (*)(K x)>dlsym(_q_handle, 'd9')
-dj = <int (*)(int date)>dlsym(_q_handle, 'dj')
-dl = <K (*)(void* f, long long n)>dlsym(_q_handle, 'dl')
-dot = <K (*)(K x, K y) nogil>dlsym(_q_handle, 'dot')
-ee = <K (*)(K x)>dlsym(_q_handle, 'ee')
-ja = <K (*)(K* x, void*)>dlsym(_q_handle, 'ja')
-jk = <K (*)(K* x, K y)>dlsym(_q_handle, 'jk')
-js = <K (*)(K* x, char* s)>dlsym(_q_handle, 'js')
-jv = <K (*)(K* x, K y)>dlsym(_q_handle, 'jv')
-k = <K (*)(int handle, const char* s, ...) nogil>dlsym(_q_handle, 'k')
+_shutdown_thread = <void (*)()>dlsym(_q_handle, 'shutdown_thread')
+
+cpdef shutdown_thread():
+    if pykx_threading:
+        _shutdown_thread()
+
+
+b9 = <K (*)(int mode, K x)>dlsym(_q_handle, sym_name('b9'))
+d9 = <K (*)(K x)>dlsym(_q_handle, sym_name('d9'))
+dj = <int (*)(int date)>dlsym(_q_handle, sym_name('dj'))
+dl = <K (*)(void* f, long long n)>dlsym(_q_handle, sym_name('dl'))
+dot = <K (*)(K x, K y) nogil>dlsym(_q_handle, sym_name('dot'))
+ee = <K (*)(K x)>dlsym(_q_handle, sym_name('ee'))
+ja = <K (*)(K* x, void*)>dlsym(_q_handle, sym_name('ja'))
+jk = <K (*)(K* x, K y)>dlsym(_q_handle, sym_name('jk'))
+js = <K (*)(K* x, char* s)>dlsym(_q_handle, sym_name('js'))
+jv = <K (*)(K* x, K y)>dlsym(_q_handle, sym_name('jv'))
+k = <K (*)(int handle, const char* s, ...) nogil>dlsym(_q_handle, sym_name('k'))
 cdef extern from 'include/foreign.h':
     K k_wrapper(void* x, char* code, void* a1, void* a2, void* a3, void* a4, void* a5, void* a6, void* a7, void* a8) nogil
 knogil = k_wrapper
-ka = <K (*)(int t)>dlsym(_q_handle, 'ka')
-kb = <K (*)(int x)>dlsym(_q_handle, 'kb')
-kc = <K (*)(int x)>dlsym(_q_handle, 'kc')
-kclose = <void (*)(int x)>dlsym(_q_handle, 'kclose')
-kd = <K (*)(int x)>dlsym(_q_handle, 'kd')
-ke = <K (*)(double x)>dlsym(_q_handle, 'ke')
-kf = <K (*)(double x)>dlsym(_q_handle, 'kf')
-kg = <K (*)(int x)>dlsym(_q_handle, 'kg')
-kh = <K (*)(int x)>dlsym(_q_handle, 'kh')
-khpunc = <int (*)(char* v, int w, char* x, int y, int z)>dlsym(_q_handle, 'khpunc')
-ki = <K (*)(int x)>dlsym(_q_handle, 'ki')
-kj = <K (*)(long long x)>dlsym(_q_handle, 'kj')
-knk = <K (*)(int n, ...)>dlsym(_q_handle, 'knk')
-knt = <K (*)(long long n, K x)>dlsym(_q_handle, 'knt')
-kp = <K (*)(char* x)>dlsym(_q_handle, 'kp')
-kpn = <K (*)(char* x, long long n)>dlsym(_q_handle, 'kpn')
-krr = <K (*)(const char* s)>dlsym(_q_handle, 'krr')
-ks = <K (*)(char* x)>dlsym(_q_handle, 'ks')
-kt = <K (*)(int x)>dlsym(_q_handle, 'kt')
-ktd = <K (*)(K x)>dlsym(_q_handle, 'ktd')
-ktj = <K (*)(short _type, long long x)>dlsym(_q_handle, 'ktj')
-ktn = <K (*)(int _type, long long length)>dlsym(_q_handle, 'ktn')
-ku = <K (*)(U x)>dlsym(_q_handle, 'ku')
-kz = <K (*)(double x)>dlsym(_q_handle, 'kz')
-m9 = <void (*)()>dlsym(_q_handle, 'm9')
-okx = <int (*)(K x)>dlsym(_q_handle, 'okx')
-orr = <K (*)(const char*)>dlsym(_q_handle, 'orr')
-r0 = <void (*)(K k)>dlsym(_q_handle, 'r0')
-r1 = <K (*)(K k)>dlsym(_q_handle, 'r1')
-sd0 = <void (*)(int d)>dlsym(_q_handle, 'sd0')
-sd0x = <void (*)(int d, int f)>dlsym(_q_handle, 'sd0x')
-sd1 = <K (*)(int d, f)>dlsym(_q_handle, 'sd1')
-sd1 = <K (*)(int d, f)>dlsym(_q_handle, 'sd1')
-sn = <char* (*)(char* s, long long n)>dlsym(_q_handle, 'sn')
-ss = <char* (*)(char* s)>dlsym(_q_handle, 'ss')
-sslInfo = <K (*)(K x)>dlsym(_q_handle, 'sslInfo')
-vak = <K (*)(int x, const char* s, va_list l)>dlsym(_q_handle, 'vak')
-vaknk = <K (*)(int, va_list l)>dlsym(_q_handle, 'vaknk')
-ver = <int (*)()>dlsym(_q_handle, 'ver')
-xD = <K (*)(K x, K y)>dlsym(_q_handle, 'xD')
-xT = <K (*)(K x)>dlsym(_q_handle, 'xT')
-ymd = <int (*)(int year, int month, int day)>dlsym(_q_handle, 'ymd')
+ka = <K (*)(int t)>dlsym(_q_handle, sym_name('ka'))
+kb = <K (*)(int x)>dlsym(_q_handle, sym_name('kb'))
+kc = <K (*)(int x)>dlsym(_q_handle, sym_name('kc'))
+kclose = <void (*)(int x)>dlsym(_q_handle, sym_name('kclose'))
+kd = <K (*)(int x)>dlsym(_q_handle, sym_name('kd'))
+ke = <K (*)(double x)>dlsym(_q_handle, sym_name('ke'))
+kf = <K (*)(double x)>dlsym(_q_handle, sym_name('kf'))
+kg = <K (*)(int x)>dlsym(_q_handle, sym_name('kg'))
+kh = <K (*)(int x)>dlsym(_q_handle, sym_name('kh'))
+khpunc = <int (*)(char* v, int w, char* x, int y, int z)>dlsym(_q_handle, sym_name('khpunc'))
+ki = <K (*)(int x)>dlsym(_q_handle, sym_name('ki'))
+kj = <K (*)(long long x)>dlsym(_q_handle, sym_name('kj'))
+knk = <K (*)(int n, ...)>dlsym(_q_handle, sym_name('knk'))
+knt = <K (*)(long long n, K x)>dlsym(_q_handle, sym_name('knt'))
+kp = <K (*)(char* x)>dlsym(_q_handle, sym_name('kp'))
+kpn = <K (*)(char* x, long long n)>dlsym(_q_handle, sym_name('kpn'))
+krr = <K (*)(const char* s)>dlsym(_q_handle, sym_name('krr'))
+ks = <K (*)(char* x)>dlsym(_q_handle, sym_name('ks'))
+kt = <K (*)(int x)>dlsym(_q_handle, sym_name('kt'))
+ktd = <K (*)(K x)>dlsym(_q_handle, sym_name('ktd'))
+ktj = <K (*)(short _type, long long x)>dlsym(_q_handle, sym_name('ktj'))
+ktn = <K (*)(int _type, long long length)>dlsym(_q_handle, sym_name('ktn'))
+ku = <K (*)(U x)>dlsym(_q_handle, sym_name('ku'))
+kz = <K (*)(double x)>dlsym(_q_handle, sym_name('kz'))
+m9 = <void (*)()>dlsym(_q_handle, sym_name('m9'))
+okx = <int (*)(K x)>dlsym(_q_handle, sym_name('okx'))
+orr = <K (*)(const char*)>dlsym(_q_handle, sym_name('orr'))
+r0 = <void (*)(K k)>dlsym(_q_handle, sym_name('r0'))
+r1 = <K (*)(K k)>dlsym(_q_handle, sym_name('r1'))
+sd0 = <void (*)(int d)>dlsym(_q_handle, sym_name('sd0'))
+sd0x = <void (*)(int d, int f)>dlsym(_q_handle, sym_name('sd0x'))
+sd1 = <K (*)(int d, f)>dlsym(_q_handle, sym_name('sd1'))
+sd1 = <K (*)(int d, f)>dlsym(_q_handle, sym_name('sd1'))
+sn = <char* (*)(char* s, long long n)>dlsym(_q_handle, sym_name('sn'))
+ss = <char* (*)(char* s)>dlsym(_q_handle, sym_name('ss'))
+sslInfo = <K (*)(K x)>dlsym(_q_handle, sym_name('sslInfo'))
+vak = <K (*)(int x, const char* s, va_list l)>dlsym(_q_handle, sym_name('vak'))
+vaknk = <K (*)(int, va_list l)>dlsym(_q_handle, sym_name('vaknk'))
+ver = <int (*)()>dlsym(_q_handle, sym_name('ver'))
+xD = <K (*)(K x, K y)>dlsym(_q_handle, sym_name('xD'))
+xT = <K (*)(K x)>dlsym(_q_handle, sym_name('xT'))
+ymd = <int (*)(int year, int month, int day)>dlsym(_q_handle, sym_name('ymd'))
 
 _r0_ptr = int(<size_t><uintptr_t>r0)
 _k_ptr = int(<size_t><uintptr_t>k)

@@ -50,9 +50,9 @@ def _get_bool_only_subtable(tab):
 
 
 def preparse_computations(tab, axis=0, skipna=True, numeric_only=False, bool_only=False):
-    cols = q('cols', tab)
     if 'Keyed' in str(type(tab)):
-        tab = q('{(keys x) _ 0!x}', tab)
+        tab = tab.values()
+    cols = tab.columns
     if numeric_only:
         (tab, cols) = _get_numeric_only_subtable_with_bools(tab)
     if bool_only:
@@ -180,6 +180,29 @@ class PandasMeta:
             ''', tab, axis, axis_keys
         )
 
+    def std(self, axis: int = 0, ddof: int = 1, numeric_only: bool = False):
+
+        tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q.value(tab)
+        if numeric_only:
+            tab = _get_numeric_only_subtable(tab)
+
+        axis_keys = q('{[axis;tab] $[0~axis;cols;`$string til count @] tab}', axis, tab)
+
+        if ddof == len(tab):
+            return q('{x!count[x]#0n}', axis_keys)
+
+        return q(
+            '''{[tab;axis;ddof;axis_keys]
+                tab:$[0~axis;(::);flip] value flip tab;
+                d:$[0~ddof;dev;
+                    1~ddof;sdev;
+                    {[ddof;x] avg sqrt (sum xexp[x-avg x;2]) % count[x]-ddof}ddof];
+                axis_keys!d each tab
+            }''', tab, axis, ddof, axis_keys
+        )
+
     @api_return
     def median(self, axis: int = 0, numeric_only: bool = False):
         tab = self
@@ -198,6 +221,16 @@ class PandasMeta:
             f'(,/) {{(enlist x 0)!(enlist x 1)}} each r{where_str}}}',
             tab
         )
+
+    @convert_result
+    def skew(self, axis=0, skipna=True, numeric_only=False):
+        res, cols, _ = preparse_computations(self, axis, skipna, numeric_only)
+        return (q(
+            '''{[row]
+                m:{(sum (x - avg x) xexp y) % count x};
+                g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];
+                (g1 each row) * {sqrt[n * n-1] % neg[2] + n:count x} each row
+            }''', res), cols)
 
     @api_return
     def mode(self, axis: int = 0, numeric_only: bool = False, dropna: bool = True):
@@ -382,6 +415,11 @@ class PandasMeta:
             return data
         else:
             return (q('{(flip enlist[`function]!enlist x)!y}', keyname, data))
+
+    @convert_result
+    def count(self, axis=0, numeric_only=False):
+        res, cols, _ = preparse_computations(self, axis, True, numeric_only)
+        return (q('count each', res), cols)
 
     @api_return
     def isna(self):

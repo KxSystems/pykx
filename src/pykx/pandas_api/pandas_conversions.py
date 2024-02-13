@@ -301,7 +301,11 @@ class PandasConversions:
             include_type_nums = [kx_type_to_type_number[x] for x
                                  in [x for x in kx_type_to_type_number.keys() for y
                                  in include if x in str(y)]]
-
+            if 10 in include_type_nums:
+                raise Exception("'CharVector' not supported."
+                                " Use 'CharAtom' for columns of char atoms."
+                                " 'kx.List' will include any columns containing"
+                                " mixed list data.")
         # Run for exclude
         if exclude is not None:
             if not isinstance(exclude, list):
@@ -311,7 +315,11 @@ class PandasConversions:
             exclude_type_nums = [kx_type_to_type_number[x] for x
                                  in [x for x in kx_type_to_type_number.keys() for y
                                  in exclude if x in str(y)]]
-
+            if 10 in exclude_type_nums:
+                raise Exception("'CharVector' not supported."
+                                " Use 'CharAtom' for columns of char atoms."
+                                " 'kx.List' will exclude any columns containing"
+                                " mixed list data.")
         # Check no overlapping values
         if include is not None and exclude is not None:
             if any([x in exclude for x in include]):
@@ -320,14 +328,14 @@ class PandasConversions:
         # Run if include is not None
         if include is not None:
             table_out = q('''{[qtab;inc] tCols:cols qtab;
-                            inc:5h$inc;
+                            inc:abs 5h$inc;
                             bList:value (type each flip 0#qtab) in inc;
                             colList:tCols where bList;
                             ?[qtab; (); 0b; colList!colList]}''',
                         self, include_type_nums)  # noqa
         else:
             table_out = q('''{[qtab;exc] tCols:cols qtab;
-                            exc:5h$exc;
+                            exc:abs 5h$exc;
                             bList:value (type each flip 0#qtab) in exc;
                             colList:tCols where not bList;
                             ?[qtab; (); 0b; colList!colList] }''',

@@ -12,5 +12,4 @@ cdef extern from 'numpy/arrayobject.h':
 cpdef deserialize(x)
 
 
-cdef complex UUID_to_complex(u: UUID) except *
 cdef factory(uintptr_t addr, bint incref, bint err_preamble=*)

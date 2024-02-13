@@ -11,7 +11,7 @@ from . import Q
 from . import toq
 from . import wrappers
 from . import schema
-from .config import find_core_lib, licensed, no_qce, pykx_dir, qargs, skip_under_q
+from .config import find_core_lib, licensed, no_qce, pykx_dir, pykx_threading, qargs, skip_under_q
 from .core import keval as _keval
 from .exceptions import FutureCancelled, LicenseException, NoResults, PyKXException, PyKXWarning, QError # noqa
 from ._wrappers import _factory as factory
@@ -124,13 +124,16 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             if not no_qce:
                 code += f'if[not `comkxic in key `;system"l {kxic_path}"];'
             if os.getenv('PYKX_UNDER_Q') is None:
-                code += 'setenv[`UNDER_PYTHON;"true"];'
-                code += f'2:[`$"{pykx_qlib_path}";(`k_pykx_init; 1)][`$"{find_core_lib("q").as_posix()}"];'  # noqa: E501
+                os.environ['PYKX_UNDER_PYTHON'] = 'true'
+                code += 'setenv[`PYKX_UNDER_PYTHON;"true"];'
+                code += f'2:[`$"{pykx_qlib_path}";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
                 code += f'`.pykx.i.pyfunc set (`$"{pykx_qlib_path}") 2: (`k_pyfunc; 2);'
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
             else:
-                code += f'2:[`$"{pykx_qlib_path}q";(`k_pykx_init; 1)][`$"{find_core_lib("q").as_posix()}"];'  # noqa: E501
+                code += f'2:[`$"{pykx_qlib_path}q";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
+            if pykx_threading:
+                warn('pykx.q is not supported when using PYKX_THREADING.')
             code += '@[get;`.pykx.i.kxic.loadfailed;{()!()}]'
             kxic_loadfailed = self._call(code, debug=False).py()
             if (not no_qce) and ('--no-sql' not in qargs):

@@ -323,14 +323,15 @@ def env_information():
             'PYKX_DEFAULT_CONVERSION', 'PYKX_SKIP_UNDERQ', 'PYKX_UNSET_GLOBALS',
             'PYKX_DEBUG_INSIGHTS_LIBRARIES', 'PYKX_EXECUTABLE', 'PYKX_PYTHON_LIB_PATH',
             'PYKX_PYTHON_BASE_PATH', 'PYKX_PYTHON_HOME_PATH', 'PYKX_DIR',
-            'PYKX_UNLICENSED', 'PYKX_LICENSED'
+            'PYKX_UNLICENSED', 'PYKX_LICENSED', 'PYKX_BETA_FEATURES', 'PYKX_NO_SIGNAL'
             ]
 
     for x in envs:
         env_info += f"{x}: {os.getenv(x, '')}\n"
 
     env_info += '\n**** PyKX Deprecated Environment Variables ****\n'
-    deps = ['SKIP_UNDERQ', 'UNSET_PYKX_GLOBALS', 'KEEP_LOCAL_TIMES', 'IGNORE_QHOME']
+    deps = ['SKIP_UNDERQ', 'UNSET_PYKX_GLOBALS', 'KEEP_LOCAL_TIMES', 'IGNORE_QHOME',
+            'UNDER_PYTHON', 'PYKX_NO_SIGINT']
 
     for x in deps:
         env_info += f"{x}: {os.getenv(x, '')}\n"

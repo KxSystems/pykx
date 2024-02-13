@@ -165,13 +165,13 @@ Foreign objects can be stored in variables just like any other q datatype, or as
 
 Foreign objects cannot be directly operated on in q. Instead, Python objects are typically represented as PyKX objects, which wrap the underlying foreign objects. This provides the ability to get and set attributes, index, call or convert the underlying foreign object to a q object.
 
-Use `.pykx.wrap` to create an PyKX object from a foreign object.
+Use `.pykx.wrap` to create a PyKX object from a foreign object.
 
 ```q
 q)x
 foreign
 q)p:.pykx.wrap x
-q)p           /how an PyKX object looks
+q)p           /how a PyKX object looks
 {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 ```
 
@@ -187,7 +187,7 @@ function       | argument                                         | example
 
 ### Converting data
 
-Given `obj`, an PyKX object representing Python data, we can get the underlying data (as foreign or q) using
+Given `obj`, a PyKX object representing Python data, we can get the underlying data (as foreign or q) using
 
 ```q
 obj`. / get data as foreign
@@ -214,7 +214,7 @@ There is one important exception to this. When calling Python functions, methods
 
 ### Getting attributes and properties
 
-Given `obj`, an PyKX object representing a Python object, we can get an attribute or property directly using
+Given `obj`, a PyKX object representing a Python object, we can get an attribute or property directly using
 
 ```q
 obj`:attr         / equivalent to obj.attr in Python
@@ -248,7 +248,7 @@ q)obj[`:y]`
 
 ### Setting attributes and properties
 
-Given `obj`, an PyKX object representing a Python object, we can set an attribute or property directly using
+Given `obj`, a PyKX object representing a Python object, we can set an attribute or property directly using
 
 ```q
 obj[:;`:attr;val]  / equivalent to obj.attr=val in Python
@@ -271,7 +271,7 @@ q)obj[`:y]`
 
 ### Indexing
 
-Given `lst`, an PyKX object representing an indexable container object in Python, we can access the element at index `i` using
+Given `lst`, a PyKX object representing an indexable container object in Python, we can access the element at index `i` using
 
 ```q
 lst[@;i]    / equivalent to lst[i] in Python
@@ -307,7 +307,7 @@ q)lst`
 
 ### Getting methods
 
-Given `obj`, an PyKX object representing a Python object, we can access a method directly using
+Given `obj`, a PyKX object representing a Python object, we can access a method directly using
 
 ```q
 obj`:method  / equivalent to obj.method in Python
@@ -334,7 +334,7 @@ Using the function API, PyKX objects can be called directly (returning PyKX obje
 
 Users explicitly specify the return type as q or foreign, the default is as a PyKX object.
 
-Given `func`, an `PyKX` object representing a callable Python function or method, we can carry out the following operations:
+Given `func`, a `PyKX` object representing a callable Python function or method, we can carry out the following operations:
 
 ```q
 func                   / func is callable by default (returning PyKX)
@@ -432,7 +432,7 @@ q)oarg:.pykx.eval"10"
 q)oarg`
 10
 q)ofunc:.pykx.eval["lambda x:2+x";<]
-q)ofunc[1]`
+q)ofunc[1]
 3
 q)ofunc oarg
 12
@@ -691,7 +691,7 @@ func(None)   #call with argument None
 
 !!! warning "PyKX function called with `::` calls Python with no arguments"
 
-    Although `::` in q corresponds to `None` in Python, if an PyKX function is called with `::` as its only argument, the corresponding Python function will be called with _no_ arguments.
+    Although `::` in q corresponds to `None` in Python, if a PyKX function is called with `::` as its only argument, the corresponding Python function will be called with _no_ arguments.
 
 To call a Python function with `None` as its sole argument, retrieve `None` as a foreign object in q and pass that as the argument.
 

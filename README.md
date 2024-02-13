@@ -92,18 +92,26 @@ KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX 
 
 PyKX depends on the following third-party Python packages:
 
-- `pandas~=1.2`
-- `numpy~=1.22`
+- `pandas>=1.2, < 2.2.0`
+- `numpy~=1.22; python_version<'3.11'`
+- `numpy~=1.23.2; python_version=='3.11'`
+- `pytz>=2022.1`
+- `toml~=0.10.2`
 
 They are installed automatically by `pip` when PyKX is installed.
 
 PyKX also has an optional Python dependency of `pyarrow>=3.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`
+
+When using PyKX with KX Dashboards users will be required to install `ast2json~=0.3` this can be installed using the `dashboards` extra, e.g. `pip install pykx[dashboards]`
+
+When using PyKX Beta features users will be required to install `dill>=0.2.0` this can be installed using the `beta` extra, e.g. `pip install pykx[beta]`
 
 **Warning:** Trying to use the `pa` conversion methods of `pykx.K` objects or the `pykx.toq.from_arrow` method when PyArrow is not installed (or could not be imported without error) will raise a `pykx.PyArrowUnavailable` exception. `pyarrow` is supported Python 3.8-3.10 but remains in Beta for Python 3.11.
 
 #### Optional Non-Python Dependencies
 
 - `libssl` for TLS on [IPC connections](docs/api/ipc.md).
+- `libpthread` on Linux/MacOS when using the `PYKX_THREADING` environment variable.
 
 #### Windows Dependencies
 

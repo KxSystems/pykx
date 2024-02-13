@@ -81,7 +81,7 @@ from cpython.ref cimport Py_INCREF
 cimport numpy as cnp
 
 from pykx cimport core
-from pykx._wrappers cimport factory, UUID_to_complex
+from pykx._wrappers cimport factory
 
 import datetime
 from ctypes import CDLL
@@ -115,6 +115,7 @@ __all__ = [
     'from_bytes',
     'from_callable',
     'from_datetime_date',
+    'from_datetime_time',
     'from_datetime_datetime',
     'from_datetime_timedelta',
     'from_dict',
@@ -239,8 +240,7 @@ def _conversion_TypeError(x, input_type, output_type):
     if output_type is None:
         output_type = 'K object'
     x_repr = repr(x) if isinstance(x, str) else f"'{x!r}'"
-    return TypeError(f"Cannot convert {input_type} {x_repr} to {output_type}")
-
+    return TypeError(f"Cannot convert {input_type} {x_repr} to {output_type}. See pykx.register to register custom conversions.")
 
 KType = Union[k.K, int]
 
@@ -773,18 +773,10 @@ def from_uuid_UUID(x: UUID,
     if ktype is not None and not ktype is k.GUIDAtom:
         raise _conversion_TypeError(x, repr('uuid.UUID'), ktype)
 
-    u = x.int
-    u = (u & 0x0000000000000000FFFFFFFFFFFFFFFF) << 64 | (u & 0xFFFFFFFFFFFFFFFF0000000000000000) >> 64 # noqa
-    u = (u & 0x00000000FFFFFFFF00000000FFFFFFFF) << 32 | (u & 0xFFFFFFFF00000000FFFFFFFF00000000) >> 32 # noqa
-    u = (u & 0x0000FFFF0000FFFF0000FFFF0000FFFF) << 16 | (u & 0xFFFF0000FFFF0000FFFF0000FFFF0000) >> 16 # noqa
-    u = (u & 0x00FF00FF00FF00FF00FF00FF00FF00FF) << 8  | (u & 0xFF00FF00FF00FF00FF00FF00FF00FF00) >> 8   # noqa
-    cdef uint64_t upper_bits = (u & (-1 ^ 0xFFFFFFFFFFFFFFFF)) >> 64
-    cdef uint64_t lower_bits = u & 0xFFFFFFFFFFFFFFFF
-    cdef uint64_t data[2]
-    data[0] = lower_bits
-    data[1] = upper_bits
+    u = x.bytes
     cdef core.U guid
-    guid.g = <char*>data
+    for i in range(len(u)):
+        guid.g[i] = u[i]
     return factory(<uintptr_t>core.ku(guid), False)
 
 
@@ -1275,6 +1267,7 @@ def from_numpy_ndarray(x: np.ndarray,
 
     cdef long long n = x.size
     cdef core.K kx = NULL
+    cdef core.U guid
     cdef bytes as_bytes
     cdef uintptr_t data
     cdef long int i
@@ -1282,7 +1275,10 @@ def from_numpy_ndarray(x: np.ndarray,
     if ktype is k.GUIDVector and x.dtype == object:
         kx = core.ktn(ktype.t, n)
         for i in range(n):
-            (<cnp.complex128_t*>kx.G0)[i] = UUID_to_complex(x[i])
+            guid_bytes = x[i].bytes
+            for j in range(len(guid_bytes)):
+                guid.g[j] = guid_bytes[j]
+            (<core.U*>kx.G0)[i] = guid
         return factory(<uintptr_t>kx, False)
 
     elif ktype is k.SymbolVector:
@@ -1829,6 +1825,18 @@ def from_datetime_date(x: Any,
                                   ktype=k.DateAtom if ktype is None else ktype,
                                   cast=cast,
                                   handle_nulls=handle_nulls)
+
+
+def from_datetime_time(x: Any,
+                           ktype: Optional[KType] = None,
+                           *,
+                           cast: bool = False,
+                           handle_nulls: bool = False,
+) -> k.TemporalFixedAtom:
+    if (cast is None or cast) and type(x) is not datetime.time:
+        x = cast_to_python_time(x)
+
+    return k.toq(datetime.datetime.combine(datetime.date.min, x) - datetime.datetime.min)
 
 
 def from_datetime_datetime(x: Any,
@@ -2394,7 +2402,7 @@ def from_callable(x: Callable,
     params = list(signature(x).parameters.values())
     if len(params) > 8:
         raise ValueError('Too many parameters - q functions cannot have more than 8 parameters')
-    return q('{@[;`] .pykx.wrap[x]::}', k.Foreign(x))
+    return q('{.pykx.wrap[x][<]}', k.Foreign(x))
 
 
 cdef extern from 'include/foreign.h':
@@ -2474,6 +2482,7 @@ _converter_from_ktype = {
     k.TimestampAtom: from_datetime_datetime,
     k.MonthAtom: from_datetime_datetime,
     k.DateAtom: from_datetime_date,
+
     k.DatetimeAtom: from_datetime_datetime,
     k.TimespanAtom: from_datetime_timedelta,
     k.MinuteAtom: from_datetime_timedelta,
@@ -2545,6 +2554,7 @@ _converter_from_python_type = {
     UUID: from_uuid_UUID,
 
     datetime.date: from_datetime_date,
+    datetime.time: from_datetime_time,
     datetime.datetime: from_datetime_datetime,
     datetime.timedelta: from_datetime_timedelta,
     np.datetime64: from_numpy_datetime64,

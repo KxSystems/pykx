@@ -50,26 +50,6 @@ x         x1
 '))
 ```
 
-### Creation of PyKX objects using q
-
-Generation of PyKX objects using q can be completed through calling `kx.q`
-
-```python
->>> kx.q('10 20 30')
-pykx.LongVector(pykx.q('10 20 30'))
-
->>> kx.q('([]5?1f;5?`4;5?0Ng)')
-pykx.Table(pykx.q('
-x         x1   x2                                  
----------------------------------------------------
-0.439081  ncej 8c6b8b64-6815-6084-0a3e-178401251b68
-0.5759051 jogn 5ae7962d-49f2-404d-5aec-f7c8abbae288
-0.5919004 ciha 5a580fb6-656b-5e69-d445-417ebfe71994
-0.8481567 hkpb ddb87915-b672-2c32-a6cf-296061671e9d
-0.389056  aeaj 580d8c87-e557-0db1-3a19-cb3a44d623b1
-'))
-```
-
 ### Creation of PyKX objects from Python data types
 
 Generation of PyKX objects from Python, Numpy, Pandas and PyArrow objects can be completed as follows using the `kx.toq` method.
@@ -113,6 +93,26 @@ col1 col2
 '))
 ```
 
+### Creation of PyKX objects using q
+
+Generation of PyKX objects using q can be completed through calling `kx.q`
+
+```python
+>>> kx.q('10 20 30')
+pykx.LongVector(pykx.q('10 20 30'))
+
+>>> kx.q('([]5?1f;5?`4;5?0Ng)')
+pykx.Table(pykx.q('
+x         x1   x2
+---------------------------------------------------
+0.439081  ncej 8c6b8b64-6815-6084-0a3e-178401251b68
+0.5759051 jogn 5ae7962d-49f2-404d-5aec-f7c8abbae288
+0.5919004 ciha 5a580fb6-656b-5e69-d445-417ebfe71994
+0.8481567 hkpb ddb87915-b672-2c32-a6cf-296061671e9d
+0.389056  aeaj 580d8c87-e557-0db1-3a19-cb3a44d623b1
+'))
+```
+
 ## Interacting with PyKX Objects
 
 PyKX objects can be interacted with in a variety of ways, through indexing using Pythonic syntax, passing PyKX objects to q/numpy functions, querying via SQL/qSQL syntax or through the use of q functionality via the context interface. Each of these is described in more depth throughout this documentation but examples of each are provided here
@@ -121,7 +121,7 @@ PyKX objects can be interacted with in a variety of ways, through indexing using
 * Create a PyKX list and interact with the list using indexing and slices.
 
     ```python
-    >>> qarray = kx.toq([random() for _ in range(10)], kx.FloatVector)
+    >>> qarray = kx.random.random(10, 1.0)
     >>> qarray
     pykx.FloatVector(pykx.q('0.391543 0.08123546 0.9367503 0.2782122 0.2392341 0.1508133 0.1567317 0.9785 ..'))
     >>> qarray[1]
@@ -143,11 +143,12 @@ PyKX objects can be interacted with in a variety of ways, through indexing using
 * Create a PyKX table and manipulate using Pythonic syntax
 
     ```python
+    >>> N = 100
     >>> qtable = kx.Table(
         data={
-            'x': [random() for _ in range(100)], 
-            'x1': [random() * 5 for _ in range(100)],
-            'x2': [['a', 'b', 'c'][randint(0, 2)] for _ in range(100)]
+            'x': kx.random.random(N, 1.0),
+            'x1': 5 * kx.random.random(N, 1.0),
+            'x2': kx.random.random(N, ['a', 'b', 'c'])
         }
     )
     >>> qtable
@@ -216,16 +217,16 @@ PyKX objects can be interacted with in a variety of ways, through indexing using
 * Pass a PyKX array objects to a Numpy functions
 
     ```python
-    >>> qarray1 = kx.toq([random() for _ in range(10)], kx.FloatVector)
+    >>> qarray1 = kx.random.random(10, 1.0)
     >>> qarray1
     pykx.FloatVector(pykx.q('0.7880561 0.9677446 0.9325539 0.6501981 0.4837422 0.5338642 0.5156039 0.31358..'))
-    >>> qarray2 = kx.toq([random() for _ in range(10)], kx.FloatVector)
+    >>> qarray2 = kx.random.random(10, 1.0)
     >>> qarray2
     pykx.FloatVector(pykx.q('0.04164985 0.6417901 0.1608836 0.691249 0.4832847 0.6339534 0.4614883 0.06373..'))
 
     >>> np.max(qarray1)
     0.9677445779088885
-    >>> np.sum(kx.toq([randint(0, 10) for _ in range(10)]))
+    >>> np.sum(kx.random.random(10, 10))
     43
     >>> np.add(qarray1, qarray2)
     pykx.FloatVector(pykx.q('0.8297059 1.609535 1.093438 1.341447 0.9670269 1.167818 0.9770923 0.3773123 1..'))
@@ -234,11 +235,12 @@ PyKX objects can be interacted with in a variety of ways, through indexing using
 * Query using SQL/qSQL
 
     ```python
+    >>> N = 100
     >>> qtable = kx.Table(
         data={
-            'x': [['a', 'b', 'c'][randint(0, 2)] for _ in range(100)]
-            'x1': [random() for _ in range(100)], 
-            'x2': [random() * 5 for _ in range(100)],
+            'x': kx.random.random(N, ['a', 'b', 'c'],
+            'x1': kx.random.random(N, 1.0),
+            'x2': 5 * kx.random.random(N, 1.0),
         }
     )
     >>> qtable[0:5]
@@ -310,6 +312,9 @@ Objects generated via the PyKX library can be converted where reasonable to `Pyt
 * Convert PyKX objects to Numpy
 
     ```python
+    >>> import numpy as np
+    >>> random = np.random.random
+    >>> randint = np.random.randint
     >>> qvec = kx.q('10?5')
     >>> qvec.np()
     array([0, 2, 4, 1, 2, 1, 0, 1, 0, 1])
@@ -360,7 +365,7 @@ Objects generated via the PyKX library can be converted where reasonable to `Pyt
 * Convert PyKX objects to PyArrow
 
     ```python
-    >>> qvec = kx.q('10?5')
+    >>> qvec = kx.random.random(10, 5)
     >>> qvec.pa()
     <pyarrow.lib.Int64Array object at 0x7ffa678f4e80>
     [
@@ -388,5 +393,5 @@ Objects generated via the PyKX library can be converted where reasonable to `Pyt
 
 ## Next steps
 
-- [Interface Overview Notebook](interface_overview.ipynb)
+- [Interface Overview Notebook](PyKX%20Introduction%20Notebook.ipynb#ipc-communication)
 - [PyKX User Guide](../user-guide/index.md)
