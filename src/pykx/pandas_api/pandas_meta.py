@@ -155,6 +155,32 @@ class PandasMeta:
         )
 
     @api_return
+    def kurt(self, axis: int = 0, numeric_only: bool = False):
+        tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q.value(tab)
+        if numeric_only:
+            tab = _get_numeric_only_subtable(tab)
+
+        axis_keys = q('{[axis;tab] $[0~axis;cols;`$string til count @] tab}', axis, tab)
+
+        return q(
+            '''{[tab;axis;axis_keys]
+                tab:$[0~axis;(::);flip] value flip tab;
+                kurt:{[x]
+                      res: x - avg x;
+                      n: count x;
+                      m2: sum rsq: res xexp 2;
+                      m4: sum rsq xexp 2;
+                      adj: 3 * xexp[n - 1;2] % (n - 2) * (n - 3);
+                      num: n * (n + 1) * (n - 1) * m4;
+                      den: (n - 2) * (n - 3) * m2 xexp 2;
+                      (num % den) - adj};
+                axis_keys!kurt each tab}
+            ''', tab, axis, axis_keys
+        )
+
+    @api_return
     def median(self, axis: int = 0, numeric_only: bool = False):
         tab = self
         if 'Keyed' in str(type(tab)):
@@ -201,6 +227,27 @@ class PandasMeta:
             f'm: {m_str} each r;'
             f'cs !/: {flip_m}m}}',
             tab
+        )
+
+    @api_return
+    def sem(self, axis: int = 0, ddof: int = 1, numeric_only: bool = False):
+        tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q.value(tab)
+        if numeric_only:
+            tab = _get_numeric_only_subtable(tab)
+
+        axis_keys = q('{[axis;tab] $[0~axis;cols;`$string til count @] tab}', axis, tab)
+
+        if ddof == len(tab):
+            return q('{x!count[x]#0n}', axis_keys)
+
+        return q(
+            '''{[tab;axis;ddof;axis_keys]
+                tab:$[0~axis;(::);flip] value flip tab;
+                d:{dev[x] % sqrt count[x] - y}[;ddof];
+                axis_keys!d each tab}
+            ''', tab, axis, ddof, axis_keys
         )
 
     @api_return
