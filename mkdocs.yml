@@ -225,7 +225,7 @@ nav:
     - Beta Features:
       - Introduction: beta-features/index.md
       - Database Management: beta-features/db-management.md
-      - Remote Function Execution: beta-features/remote.md
+      - Remote Function Execution: beta-features/remote-functions.md
       - Multithreading: beta-features/threading.md
     - Python interfacing within q:
       - Overview: pykx-under-q/intro.md
