@@ -33,9 +33,9 @@ async def main():
     calls = 1000
     conns = [await kx.RawQConnection(port=5001, event_loop=asyncio.get_event_loop()) for _ in range(N)] # noqa
     main_q_con = kx.SyncQConnection(port=5001)
-    print('===== Initital Table =====')
+    print('===== Initial Table =====')
     print(kx.q('table'))
-    print('===== Initital Table =====')
+    print('===== Initial Table =====')
     # Set the variable py_server on the q process pointing towards this processes IPC connection
     # We use neg to ensure the messages are sent async so no reply is expected from this process
     [await conns[i](f'py_server{i}: neg .z.w') for i in range(N)]

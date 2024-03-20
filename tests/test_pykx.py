@@ -340,3 +340,20 @@ def test_compressed_enum_segfault(kx):
 
 def test_is_enabled(kx):
     assert kx.config.ignore_qhome is False
+
+
+@pytest.mark.isolate
+def test_PYKX_Q_LIB_LOCATION():
+    import tempfile
+    import importlib
+    import shutil
+    temp_dir = tempfile.TemporaryDirectory().name
+    pykx_loc = os.path.dirname(importlib.util.find_spec("pykx").origin)
+    shutil.copytree(os.path.join(pykx_loc, "lib"), temp_dir)
+    os.environ['PYKX_Q_LIB_LOCATION'] = temp_dir
+    file = os.path.join(temp_dir, "PYKX_Q_LIB_LOCATION.q")
+    with open(file, 'w') as f:
+        f.write('.pytest.a:42')
+    import pykx as kx
+    kx.q('\\l PYKX_Q_LIB_LOCATION.q')
+    assert 42 == kx.q('.pytest.a').py()

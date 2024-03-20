@@ -12,7 +12,7 @@ Installation of PyKX is available in using three methods
 
 !!! Note Python Support
 
-	PyKX is only officially supported on Python versions 3.8-3.11, Python 3.7 has reached end of life and is no longer actively supported, please consider upgrading
+	PyKX is only officially supported on Python versions 3.8-3.12, Python 3.7 has reached end of life and is no longer actively supported, please consider upgrading
 
 === "Installing PyKX from PyPI"
 	Ensure you have a recent version of `pip`:
@@ -135,7 +135,7 @@ To provide environment specific flexibility there are two methods by which users
 
 #### Using a supplied license file directly
 
-1. Visit https://kx.com/kdb-insights-personal-edition-license-download/ or https://kx.com/kdb-insights-commercial-evaluation-license-download/ and fill in the attached form following the instructions provided.
+1. Visit [here](https://kx.com/kdb-insights-personal-edition-license-download/) for a personal edition or [here](https://kx.com/kdb-insights-commercial-evaluation-license-download/) for a commercial evaluation license and fill in the attached form following the instructions provided.
 2. On receipt of an email from KX providing access to your license download the license file and save to a secure location on your computer.
 3. Set an environment variable on your computer pointing to the folder containing the license file (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
        * Variable Name: `QLIC`
@@ -143,7 +143,7 @@ To provide environment specific flexibility there are two methods by which users
 
 #### Using the base64 encoded license content
 
-1. Visit https://kx.com/kdb-insights-personal-edition-license-download/ or https://kx.com/kdb-insights-commercial-evaluation-license-download/ and fill in the attached form following the instructions provided.
+1. Visit [here](https://kx.com/kdb-insights-personal-edition-license-download/) for a personal edition or [here](https://kx.com/kdb-insights-commercial-evaluation-license-download/) for a commercial evaluation license and fill in the attached form following the instructions provided.
 2. On receipt of an email from KX providing access to your license copy the base64 encoded contents of your license provided in plain-text within the email
 3. Set an environment variable `KDB_LICENSE_B64` on your computer pointing with the value copied in step 2 (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
        * Variable Name: `KDB_LICENSE_B64`
@@ -155,9 +155,9 @@ If looking to make use of a `k4.lic` you can do so by setting the base64 encoded
 
 KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX installed from wheel files. Support for user-built installations of PyKX (e.g. built from the source distribution) is only provided on a best-effort basis. Currently, PyKX provides wheels for the following environments:
 
-- Linux (`manylinux_2_17_x86_64`, `linux-arm64`) with CPython 3.8-3.11
-- macOS (`macosx_10_10_x86_64`, `macosx_10_10_arm`) with CPython 3.8-3.11
-- Windows (`win_amd64`) with CPython 3.8-3.11
+- Linux (`manylinux_2_17_x86_64`, `linux-arm64`) with CPython 3.8-3.12
+- macOS (`macosx_10_10_x86_64`, `macosx_10_10_arm`) with CPython 3.8-3.12
+- Windows (`win_amd64`) with CPython 3.8-3.12
 
 ## Dependencies
 
@@ -167,9 +167,10 @@ KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX 
 
 PyKX depends on the following third-party Python packages:
 
-- `numpy~=1.20; python_version=='3.7'`
-- `numpy~=1.22; python_version<'3.11', python_version>'3.7'`
-- `numpy~=1.23.2; python_version>='3.11'`
+- `numpy~=1.20, <2.0; python_version=='3.7'`
+- `numpy~=1.22, <2.0; python_version<'3.11', python_version>'3.7'`
+- `numpy~=1.23, <2.0; python_version=='3.11'`
+- `numpy~=1.26, <2.0; python_version=='3.12'`
 - `pandas>=1.2, < 2.2.0`
 - `pytz>=2022.1`
 - `toml~=0.10.2`
@@ -193,7 +194,7 @@ The following provides a breakdown of how these libraries are used within PyKX
 
 !!! Warning
 
-    Trying to use the `pa` conversion methods of `pykx.K` objects or the `pykx.toq.from_arrow` method when PyArrow is not installed (or could not be imported without error) will raise a `pykx.PyArrowUnavailable` exception.  `pyarrow` is supported Python 3.8-3.10 but remains in Beta for Python 3.11.
+    Trying to use the `pa` conversion methods of `pykx.K` objects or the `pykx.toq.from_arrow` method when PyArrow is not installed (or could not be imported without error) will raise a `pykx.PyArrowUnavailable` exception.  `pyarrow` is supported Python 3.8-3.10 but remains in Beta for Python 3.11-3.12.
 
 The following provides a breakdown of how these libraries are used within PyKX
 
@@ -208,6 +209,14 @@ The following provides a breakdown of how these libraries are used within PyKX
 ### Windows Dependencies
 
 To run q or PyKX on Windows, `msvcr100.dll` must be installed. It is included in the [Microsoft Visual C++ 2010 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=26999).
+
+Alternatively installation of all required Windows dependencies can be completed through execution of the `w64_install.ps1` supplied at the root of the PyKX github [here](https://github.com/KxSystems/pykx) as follows using PowerShell:
+
+```PowerShell
+git clone https://github.com/kxsystems/pykx
+cd pykx
+.\w64_install.ps1
+```
 
 ## Next steps
 

@@ -1,3 +1,0 @@
-# Console
-
-::: pykx.console

@@ -8,14 +8,14 @@ def test_simple_schema(q, kx):
         'col1': kx.GUIDAtom,
         'col2': kx.TimeAtom,
         'col3': kx.BooleanAtom,
-        'col4': kx.FloatAtom})
+        'col4': kx.FloatVector})
     assert isinstance(qtab, kx.Table)
     assert kx.q.cols(qtab).py() == ['col1', 'col2', 'col3', 'col4']
     assert kx.q('{exec t from 0!meta x}', qtab).py() == b'gtbf'
 
 
 def test_single_key_schema(q, kx):
-    qtab = kx.schema.builder({'col1': kx.TimestampAtom,
+    qtab = kx.schema.builder({'col1': kx.TimestampVector,
                               'col2': kx.FloatAtom,
                               'col3': kx.IntAtom},
                              key='col1')
@@ -27,7 +27,7 @@ def test_single_key_schema(q, kx):
 
 def test_multi_key_schema(q, kx):
     qtab = kx.schema.builder({'col1': kx.TimestampAtom,
-                              'col2': kx.SymbolAtom,
+                              'col2': kx.SymbolVector,
                               'col3': kx.IntAtom,
                               'col4': kx.List},
                              key=['col1', 'col2'])
@@ -53,3 +53,7 @@ def test_builder_error(q, kx):
     with pytest.raises(Exception) as err_info:
         kx.schema.builder({'a': 1, 'b': kx.IntAtom})
     assert str(err_info.value) == "Error: <class 'KeyError'> raised for column a"
+
+    with pytest.raises(Exception) as err_info:
+        kx.schema.builder({'a': kx.CharVector, 'b': kx.IntAtom})
+    assert "Error: setting column to 'CharVector' is ambiguous" in str(err_info.value)

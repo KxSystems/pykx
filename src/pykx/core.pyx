@@ -9,7 +9,7 @@ import sys
 
 from . import beta_features
 from .util import num_available_cores
-from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _check_beta
+from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _check_beta, _get_config_value, pykx_lib_dir, ignore_qhome
 
 
 def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
@@ -47,13 +47,13 @@ def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
     )
 
 
-cdef int _qinit(int (*qinit)(int, char**, char*, char*, char*), qhome_str: str, qlic_str: str, args: List[str]) except *:
+cdef int _qinit(int (*qinit)(int, char**, char*, char*, char*), qhome_str: str, qlic_str: str, ignore_qhome: bool, args: List[str]) except *:
     normalized_args = _normalize_qargs(args)
     cdef int argc = len(normalized_args)
     cdef char** argv = <char**>PyMem_Malloc(sizeof(char*) * argc)
     for i, arg in enumerate(normalized_args):
         argv[i] = strncpy(<char*>PyMem_Malloc(len(arg) + 1), arg + b'\0', len(arg) + 1)
-    qhome_bytes = bytes(Path(__file__).parent.absolute()/'lib')
+    qhome_bytes = bytes(pykx_lib_dir) if ignore_qhome else qhome_str.encode()
     qlic_bytes = qlic_str.encode()
     init_code = qinit(argc, argv, qhome_bytes, qlic_bytes, NULL)
     os.environ['QHOME'] = qhome_str
@@ -81,7 +81,7 @@ if qinit_check_data is not None:                                                
     _libq_path = _libq_path_py                                                     # nocov
     _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)                         # nocov
     qinit = <int (*)(int, char**, char*, char*, char*)>dlsym(_q_handle, 'qinit')                   # nocov
-    os._exit(_qinit(qinit, _qhome_str, _qlic_str, _qargs))                         # nocov
+    os._exit(_qinit(qinit, _qhome_str, _qlic_str, ignore_qhome, _qargs))                         # nocov
 
 
 from libc.string cimport strncpy
@@ -92,10 +92,11 @@ from warnings import warn
 import subprocess
 import sys
 
-from .config import find_core_lib, ignore_qhome, k_gc, qargs, qhome, qlic, pykx_lib_dir, \
+from .config import find_core_lib, k_gc, qargs, qhome, qlic, pykx_lib_dir, \
     release_gil, _set_licensed, under_q, use_q_lock
 from .exceptions import PyKXException, PyKXWarning
 
+final_qhome = str(qhome if ignore_qhome else pykx_lib_dir)
 
 if '--licensed' in qargs and '--unlicensed' in qargs:
     raise PyKXException("$QARGS includes mutually exclusive flags '--licensed' and '--unlicensed'")
@@ -281,7 +282,7 @@ if not pykx_threading:
                         **os.environ,
                         'PYKX_QINIT_CHECK': ';'.join((
                             str(_core_q_lib_path),
-                            str(pykx_lib_dir if ignore_qhome is None else qhome),
+                            final_qhome,
                             str(qlic),
                             # Use the env var directly because `config.qargs` has already split the args.
                             os.environ.get('QARGS', ''),
@@ -331,7 +332,7 @@ if not pykx_threading:
                     # employed by q.
                     try:
                         _link_qhome()
-                    except BaseException:
+                    except BaseException as e:
                         warn('Failed to link user QHOME directory contents to allow access to PyKX.\n'
                             'To suppress this warning please set the configuration option "PYKX_IGNORE_QHOME" as outlined at:\n'
                             'https://code.kx.com/pykx/user-guide/configuration.html')
@@ -339,7 +340,7 @@ if not pykx_threading:
                 _libq_path = _libq_path_py
                 _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
                 qinit = <int (*)(int, char**, char*, char*, char*)>dlsym(_q_handle, 'qinit')
-                qinit_return_code = _qinit(qinit, str(qhome if ignore_qhome else pykx_lib_dir), str(qlic), list(qargs))
+                qinit_return_code = _qinit(qinit, final_qhome, str(qlic), ignore_qhome, list(qargs))
                 if qinit_return_code:    # nocov
                     dlclose(_q_handle)   # nocov
                     licensed = False     # nocov
@@ -357,7 +358,7 @@ else:
     init_syms(_libq_path)
     qinit = <int (*)(int, char**, char*, char*, char*)>dlsym(_q_handle, 'q_init')
 
-    qinit_return_code = _qinit(qinit, str(qhome if ignore_qhome else pykx_lib_dir), str(qlic), list(qargs))
+    qinit_return_code = _qinit(qinit, final_qhome, str(qlic), ignore_qhome, list(qargs))
     if qinit_return_code:    # nocov
         dlclose(_q_handle)   # nocov
         licensed = False     # nocov
@@ -371,7 +372,7 @@ else:
                 f'Non-zero qinit return code {qinit_return_code}, failed to initialize '
                 'PYKX_THREADING.'
             ) # nocov
-    os.environ['QHOME'] = str(qhome if ignore_qhome else pykx_lib_dir)
+    os.environ['QHOME'] = final_qhome
     licensed = True
 _set_licensed(licensed)
 

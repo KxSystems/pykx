@@ -30,14 +30,14 @@ from multiprocessing import Lock as multiprocessing_lock, RawValue
 import selectors
 import socket
 from threading import Lock as threading_lock
-from time import monotonic_ns
+from time import monotonic_ns, sleep
 from typing import Any, Callable, Optional, Union
 from warnings import warn
 from weakref import finalize, WeakMethod
 import sys
 
 from . import deserialize, serialize, Q
-from .config import max_error_length, pykx_lib_dir, system
+from .config import max_error_length, pykx_lib_dir, pykx_qdebug, system
 from .core import licensed
 from .exceptions import FutureCancelled, NoResults, PyKXException, QError, UninitializedConnection
 from .util import get_default_args, normalize_to_bytes, normalize_to_str
@@ -123,7 +123,42 @@ class QFuture(asyncio.Future):
                 except BaseException as e:
                     self.set_exception(QError(str(e)))
             else:
-                self.q_connection._recv(acceptAsync=True)
+                try:
+                    self.q_connection._recv(acceptAsync=True)
+                except BaseException as e:
+                    if isinstance(e, QError):
+                        raise e
+                    if self.q_connection._connection_info['reconnection_attempts'] != -1:
+                        self.q_connection._cancel_all_futures()
+                        print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                        loops = self.q_connection._connection_info['reconnection_attempts']
+                        reconnection_delay = 0.5
+                        while True:
+                            try:
+                                self.q_connection._create_connection_to_server()
+                            except BaseException as err:
+                                # attempts = 0 is infinite attempts as it will go to -1
+                                # before the check to break
+                                loops -= 1
+                                if loops == 0:
+                                    print(
+                                        'WARNING: Could not reconnect to server within '
+                                        f'{self.q_connection._connection_info["reconnection_attempts"]} attempts.',
+                                        file=sys.stderr
+                                    ) # noqa
+                                    raise err
+                                print(
+                                    f'Failed to reconnect, trying again in {reconnection_delay} '
+                                    'seconds.',
+                                    file=sys.stderr
+                                )
+                                sleep(reconnection_delay)
+                                reconnection_delay *= 2
+                                continue
+                            print('Connection successfully reestablished.', file=sys.stderr)
+                            break
+                    else:
+                        raise e
         yield from self
         super().__await__()
         return self.result()
@@ -133,6 +168,8 @@ class QFuture(asyncio.Future):
             return self.result()
         while not self.done():
             await asyncio.sleep(0)
+            if self.done():
+                return self.result()
             if self.poll_recv is not None:
                 try:
                     res = self.q_connection.poll_recv()
@@ -141,14 +178,85 @@ class QFuture(asyncio.Future):
                 except BaseException as e:
                     self.set_exception(QError(str(e)))
             else:
-                self.q_connection._recv(acceptAsync=True)
+                try:
+                    self.q_connection._recv(acceptAsync=True)
+                except BaseException as e:
+                    if isinstance(e, QError):
+                        raise e
+                    if self.q_connection._connection_info['reconnection_attempts'] != -1:
+                        self.q_connection._cancel_all_futures()
+                        print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                        loops = self.q_connection._connection_info['reconnection_attempts']
+                        reconnection_delay = 0.5
+                        while True:
+                            try:
+                                self.q_connection._create_connection_to_server()
+                            except BaseException as err:
+                                # attempts = 0 is infinite attempts as it will go to -1 before the
+                                # check to break
+                                loops -= 1
+                                if loops == 0:
+                                    print(
+                                        'WARNING: Could not reconnect to server within '
+                                        f'{self.q_connection._connection_info["reconnection_attempts"]} attempts.',
+                                        file=sys.stderr
+                                    ) # noqa
+                                    raise err
+                                print(
+                                    f'Failed to reconnect, trying again in {reconnection_delay} '
+                                    'seconds.',
+                                    file=sys.stderr
+                                )
+                                sleep(reconnection_delay)
+                                reconnection_delay *= 2
+                                continue
+                            print('Connection successfully reestablished.', file=sys.stderr)
+                            break
+                    else:
+                        raise e
+        if self.done():
+            return self.result()
         return await self
 
     def _await(self) -> Any:
         if self.done():
             return self.result()
-        while not self.done():
-            self.q_connection._recv(locked=True, acceptAsync=True)
+        try:
+            while not self.done():
+                self.q_connection._recv(locked=True, acceptAsync=True)
+        except BaseException as e:
+            if isinstance(e, QError):
+                raise e
+            if self._connection_info['reconnection_attempts'] != -1:
+                # TODO: Clear call stack futures
+                print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                loops = self._connection_info['reconnection_attempts']
+                reconnection_delay = 0.5
+                while True:
+                    try:
+                        self._create_connection_to_server()
+                    except BaseException as err:
+                        # attempts = 0 is infinite attempts as it will go to -1 before the check
+                        # to break
+                        loops -= 1
+                        if loops == 0:
+                            print(
+                                'WARNING: Could not reconnect to server within '
+                                f'{self._connection_info["reconnection_attempts"]} attempts.',
+                                file=sys.stderr
+                            )
+                            raise err
+                        print(
+                            f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
+                            file=sys.stderr
+                        )
+                        sleep(reconnection_delay)
+                        reconnection_delay *= 2
+                        continue
+                    print('Connection successfully reestablished.', file=sys.stderr)
+                    break
+            else:
+                raise e
         return self.result()
 
     def set_result(self, val: Any) -> None:
@@ -190,7 +298,10 @@ class QFuture(asyncio.Future):
         if self._cancelled:
             raise FutureCancelled(self._cancelled_message)
         if self._result is not None:
-            if self._debug:
+            if self._cancelled_message != '':
+                print(f'Connection was lost no result', file=sys.stderr)
+                return None
+            if self._debug or pykx_qdebug:
                 if self._result._unlicensed_getitem(0).py() == True:
                     print((self._result._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
                     raise QError(self._result._unlicensed_getitem(2).py().decode())
@@ -198,6 +309,15 @@ class QFuture(asyncio.Future):
                     return self._result._unlicensed_getitem(1)
             return self._result
         raise NoResults()
+    
+    def _disconnected(self):
+        if object.__getattribute__(self.q_connection, '_loop') is not None:
+            self.add_done_callback(
+                lambda x: print(f'Connection was lost no result', file=sys.stderr)
+            )
+        self._result = 0
+        self._cancelled_message = ' '
+        self._done = True
 
     def done(self) -> bool:
         """
@@ -305,7 +425,8 @@ class QConnection(Q):
                  unix: bool = False,
                  wait: bool = True,
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
-                 no_ctx: bool = False
+                 no_ctx: bool = False,
+                 reconnection_attempts: int = -1
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -332,6 +453,13 @@ class QConnection(Q):
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
+            reconnection_attempts: This parameter specifies how many attempts will be made to
+                reconnect to the server if the connection is lost. The query will be resent if the
+                reconnection is successful. The default is -1 which will not attempt to reconnect, 0
+                will continuosly attempt to reconnect to the server with no stop and an exponential
+                backoff between successive attempts. Any positive integer will specify the maximum
+                number of tries to reconnect before throwing an error if a connection can not be
+                made.
 
         Note: The `username` and `password` parameters are not required.
             The `username` and `password` parameters are only required if the q server requires
@@ -350,6 +478,36 @@ class QConnection(Q):
         """
         super().__init__()
 
+    def _create_connection_to_server(self):
+        object.__setattr__(
+            self,
+            '_handle',
+            _ipc.init_handle(
+                self._connection_info['host'],
+                self._connection_info['port'],
+                self._connection_info['credentials'],
+                self._connection_info['unix'],
+                self._connection_info['tls'],
+                self._connection_info['timeout'],
+                self._connection_info['large_messages']
+            )
+        )
+        if not isinstance(self, SecureQConnection):
+            object.__setattr__(
+                self,
+                '_sock',
+                socket.fromfd(
+                    self._handle,
+                    socket.AF_INET,
+                    socket.SOCK_STREAM
+                )
+            )
+            self._sock.setblocking(0)
+            object.__setattr__(self, '_reader', selectors.DefaultSelector())
+            self._reader.register(self._sock, selectors.EVENT_READ, WeakMethod(self._recv_socket))
+            object.__setattr__(self, '_writer', selectors.DefaultSelector())
+            self._writer.register(self._sock, selectors.EVENT_WRITE, WeakMethod(self._send_sock))
+
     def _init(self,
               host: Union[str, bytes] = 'localhost',
               port: int = None,
@@ -365,7 +523,10 @@ class QConnection(Q):
               no_ctx: bool = False,
               as_server: bool = False,
               conn_gc_time: float = 0.0,
+              reconnection_attempts: int = -1
     ):
+        credentials = f'{normalize_to_str(username, "Username")}:' \
+                      f'{normalize_to_str(password, "Password")}'
         object.__setattr__(self, '_connection_info', {
             'host': host,
             'port': port,
@@ -373,6 +534,7 @@ class QConnection(Q):
             'password': password,
             'timeout': timeout,
             'large_messages': large_messages,
+            'credentials': credentials,
             'tls': tls,
             'unix': unix,
             'wait': wait,
@@ -380,13 +542,12 @@ class QConnection(Q):
             'no_ctx': no_ctx,
             'as_server': as_server,
             'conn_gc_time': conn_gc_time,
+            'reconnection_attempts': reconnection_attempts,
         })
         if system == 'Windows' and unix: # nocov
             raise TypeError('Unix domain sockets cannot be used on Windows')
         if port is None or not isinstance(port, int):
             raise TypeError('IPC port must be provided')
-        credentials = f'{normalize_to_str(username, "Username")}:' \
-                      f'{normalize_to_str(password, "Password")}'
         object.__setattr__(self, '_lock', lock)
         object.__setattr__(self, 'closed', False)
         if isinstance(self, RawQConnection) and as_server:
@@ -472,7 +633,8 @@ class QConnection(Q):
               *params,
               wait: Optional[bool] = None,
               error=False,
-              debug=False
+              debug=False,
+              skip_debug=False
     ):
         if self.closed:
             raise RuntimeError("Attempted to use a closed IPC connection")
@@ -484,7 +646,7 @@ class QConnection(Q):
             events = self._writer.select(timeout)
             for key, _mask in events:
                 callback = key.data
-                if debug:
+                if (not skip_debug) and (debug or pykx_qdebug):
                     return callback()(
                         key.fileobj,
                         bytes(CharVector(
@@ -612,10 +774,18 @@ class QConnection(Q):
         chunks = list(a)
         tot_bytes += 8
         if len(chunks) == 0:
-            self.close()
+            try:
+                if self._connection_info['reconnection_attempts'] == -1:
+                    self.close()
+            except BaseException:
+                self.close()
             raise RuntimeError("Attempted to use a closed IPC connection")
         elif len(chunks) <8:
-            self.close()
+            try:
+                if self._connection_info['reconnection_attempts'] == -1:
+                    self.close()
+            except BaseException:
+                self.close()
             raise RuntimeError("PyKX attempted to process a message containing less than "
                                "the expected number of bytes, connection closed."
                                f"\nReturned bytes: {chunks}.\n"
@@ -749,7 +919,8 @@ class SyncQConnection(QConnection):
                  unix: bool = False,
                  wait: bool = True,
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
-                 no_ctx: bool = False
+                 no_ctx: bool = False,
+                 reconnection_attempts: int = -1,
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -775,6 +946,13 @@ class SyncQConnection(QConnection):
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
+            reconnection_attempts: This parameter specifies how many attempts will be made to
+                reconnect to the server if the connection is lost. The query will be resent if the
+                reconnection is successful. The default is -1 which will not attempt to reconnect, 0
+                will continuosly attempt to reconnect to the server with no stop and an exponential
+                backoff between successive attempts. Any positive integer will specify the maximum
+                number of tries to reconnect before throwing an error if a connection can not be
+                made.
 
         Note: The `username` and `password` parameters are not required.
             The `username` and `password` parameters are only required if the q server requires
@@ -812,6 +990,20 @@ class SyncQConnection(QConnection):
         ```python
         pykx.SyncQConnection(port=5001, unix=True)
         ```
+
+        Automatically reconnect to a q server after a disconnect.
+
+        ```python
+        >>> conn = kx.SyncQConnection(port=5001, reconnection_attempts=0)
+        >>> conn('til 10')
+        pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+        # server connection is lost here
+        >>> conn('til 10')
+        WARNING: Connection lost attempting to reconnect.
+        Failed to reconnect, trying again in 0.5 seconds.
+        Connection successfully reestablished.
+        pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+        ```
         """
         self._init(host,
                    port,
@@ -825,6 +1017,7 @@ class SyncQConnection(QConnection):
                    wait=wait,
                    lock=lock,
                    no_ctx=no_ctx,
+                   reconnection_attempts=reconnection_attempts,
         )
         super().__init__()
 
@@ -833,6 +1026,7 @@ class SyncQConnection(QConnection):
                  *args: Any,
                  wait: Optional[bool] = None,
                  debug: bool = False,
+                 skip_debug: bool = False,
     ) -> K:
         """Evaluate a query on the connected q process over IPC.
 
@@ -894,25 +1088,59 @@ class SyncQConnection(QConnection):
         if wait is None:
             wait = self._connection_info['wait']
         with self._lock if self._lock is not None else nullcontext():
-            return self._call(query, *args, wait=wait, debug=debug)
+            return self._call(query, *args, wait=wait, debug=debug, skip_debug=skip_debug)
 
     def _call(self,
               query: Union[str, bytes],
               *args: Any,
               wait: Optional[bool] = None,
               debug: bool = False,
+              skip_debug: bool = False,
     ) -> K:
-        self._send(query, *args, wait=wait, debug=debug)
-        if not wait:
-            return K(None)
-        res = self._recv(locked=True)
-        if not debug:
-            return res
-        if res._unlicensed_getitem(0).py() == True:
-            print((res._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
-            raise QError(res._unlicensed_getitem(2).py().decode())
-        else:
-            return res._unlicensed_getitem(1)
+        try:
+            self._send(query, *args, wait=wait, debug=debug, skip_debug=skip_debug)
+            if not wait:
+                return K(None)
+            res = self._recv(locked=True)
+            if skip_debug or not (debug or pykx_qdebug):
+                return res
+            if res._unlicensed_getitem(0).py() == True:
+                print((res._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
+                raise QError(res._unlicensed_getitem(2).py().decode())
+            else:
+                return res._unlicensed_getitem(1)
+        except BaseException as e:
+            if isinstance(e, QError):
+                raise e
+            if self._connection_info['reconnection_attempts'] != -1:
+                print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                loops = self._connection_info['reconnection_attempts']
+                reconnection_delay = 0.5
+                while True:
+                    try:
+                        self._create_connection_to_server()
+                    except BaseException as err:
+                        # attempts = 0 is infinite attempts as it will go to -1 before the check
+                        # to break
+                        loops -= 1
+                        if loops == 0:
+                            print(
+                                'WARNING: Could not reconnect to server within '
+                                f'{self._connection_info["reconnection_attempts"]} attempts.',
+                                file=sys.stderr
+                            )
+                            raise err
+                        print(
+                            f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
+                            file=sys.stderr
+                        )
+                        sleep(reconnection_delay)
+                        reconnection_delay *= 2
+                        continue
+                    print('Connection successfully reestablished.', file=sys.stderr)
+                    return self._call(query, *args, wait=wait, debug=debug)
+            else:
+                raise e
 
     def __enter__(self):
         return self
@@ -973,7 +1201,8 @@ class AsyncQConnection(QConnection):
                  wait: bool = True,
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
                  event_loop: Optional[asyncio.AbstractEventLoop] = None,
-                 no_ctx: bool = False
+                 no_ctx: bool = False,
+                 reconnection_attempts: int = -1,
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -1003,6 +1232,13 @@ class AsyncQConnection(QConnection):
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
+            reconnection_attempts: This parameter specifies how many attempts will be made to
+                reconnect to the server if the connection is lost. The query will not be resent if
+                the reconnection is successful. The default is -1 which will not attempt to
+                reconnect, 0 will continuosly attempt to reconnect to the server with no stop and an
+                exponential backoff between successive attempts. Any positive integer will specify
+                the maximum number of tries to reconnect before throwing an error if a connection
+                can not be made.
 
         Note: The `username` and `password` parameters are not required.
             The `username` and `password` parameters are only required if the q server requires
@@ -1015,6 +1251,11 @@ class AsyncQConnection(QConnection):
             timeout. This can be avoided by using a separate `QConnection` instance for each query.
 
         Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
+
+        Warning: AsyncQConnections will not resend queries that have not completed on reconnection.
+            When using the `reconnection_attempts` key word argument any queries that were not
+            complete before the connection was lost will have to be manually sent again after the
+            automatic reconnection.
 
         Raises:
             PyKXException: Using both tls and unix is not possible with a QConnection.
@@ -1039,6 +1280,33 @@ class AsyncQConnection(QConnection):
         ```python
         await pykx.AsyncQConnection(port=5001, unix=True)
         ```
+
+        Automatically reconnect to a q server after a disconnect.
+
+        ```python
+        async def main():
+            conn = await kx.AsyncQConnection(
+                port=5001,
+                event_loop=asyncio.get_event_loop(),
+                reconnection_attempts=0
+            )
+            print(await conn('til 10'))
+            # Connection lost here
+            # All unfinished futures are cancelled on connection loss
+            print(await conn('til 10')) # First call only causes a reconnection but wont send the query and returns none
+            print(await conn('til 10')) # Second one completes
+
+            print(await conn('til 10'))
+        asyncio.run(main())
+
+        # Outputs
+        0 1 2 3 4 5 6 7 8 9
+        WARNING: Connection lost attempting to reconnect.
+        Connection successfully reestablished.
+        Connection was lost no result
+        None
+        0 1 2 3 4 5 6 7 8 9
+        ```
         """
         # TODO: Remove this once TLS support is fixed
         if tls:
@@ -1057,6 +1325,7 @@ class AsyncQConnection(QConnection):
             'lock': lock,
             'loop': event_loop,
             'no_ctx': no_ctx,
+            'reconnection_attempts':reconnection_attempts,
         })
         object.__setattr__(self, '_initialized', False)
 
@@ -1073,7 +1342,8 @@ class AsyncQConnection(QConnection):
                           wait: bool = True,
                           lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
                           event_loop: Optional[asyncio.AbstractEventLoop] = None,
-                          no_ctx: bool = False
+                          no_ctx: bool = False,
+                          reconnection_attempts: int = -1,
     ):
         object.__setattr__(self, '_call_stack', [])
         self._init(host,
@@ -1087,7 +1357,8 @@ class AsyncQConnection(QConnection):
                    unix=unix,
                    wait=wait,
                    lock=lock,
-                   no_ctx=no_ctx
+                   no_ctx=no_ctx,
+                   reconnection_attempts=reconnection_attempts,
         )
         object.__setattr__(self, '_loop', event_loop)
         con_info = object.__getattribute__(self, '_connection_info')
@@ -1098,20 +1369,27 @@ class AsyncQConnection(QConnection):
     async def _initobj(self): # nocov
         """Crutch used for `__await__` after spawning."""
         if not self._initialized:
-            await self._async_init(self._stored_args['host'],
-                                   self._stored_args['port'],
-                                   *self._stored_args['args'],
-                                   username=self._stored_args['username'],
-                                   password=self._stored_args['password'],
-                                   timeout=self._stored_args['timeout'],
-                                   large_messages=self._stored_args['large_messages'],
-                                   tls=self._stored_args['tls'],
-                                   unix=self._stored_args['unix'],
-                                   wait=self._stored_args['wait'],
-                                   lock=self._stored_args['lock'],
-                                   event_loop=self._stored_args['loop'],
-                                   no_ctx=self._stored_args['no_ctx'])
+            await self._async_init(
+                self._stored_args['host'],
+                self._stored_args['port'],
+                *self._stored_args['args'],
+                username=self._stored_args['username'],
+                password=self._stored_args['password'],
+                timeout=self._stored_args['timeout'],
+                large_messages=self._stored_args['large_messages'],
+                tls=self._stored_args['tls'],
+                unix=self._stored_args['unix'],
+                wait=self._stored_args['wait'],
+                lock=self._stored_args['lock'],
+                event_loop=self._stored_args['loop'],
+                no_ctx=self._stored_args['no_ctx'],
+                reconnection_attempts=self._stored_args['reconnection_attempts'],
+            )
         return self
+
+    def _cancel_all_futures(self):
+        [x._disconnected() for x in self._call_stack]
+        self._call_stack = []
 
     def __await__(self):
         return self._initobj().__await__()
@@ -1205,11 +1483,49 @@ class AsyncQConnection(QConnection):
         else:
             if not self._initialized:
                 raise UninitializedConnection()
-            with self._lock if self._lock is not None else nullcontext():
-                q_future = self._send(query, *args, wait=wait, debug=debug)
-                if self._loop is None:
+            try:
+                with self._lock if self._lock is not None else nullcontext():
+                    q_future = self._send(query, *args, wait=wait, debug=debug)
+                    if self._loop is None:
+                        return q_future
+                    return self._loop.create_task(q_future.__async_await__())
+            except BaseException as e:
+                if isinstance(e, QError):
+                    raise e
+                if self._connection_info['reconnection_attempts'] != -1:
+                    self._cancel_all_futures()
+                    print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                    loops = self._connection_info['reconnection_attempts']
+                    reconnection_delay = 0.5
+                    while True:
+                        try:
+                            self._create_connection_to_server()
+                        except BaseException as err:
+                            # attempts = 0 is infinite attempts as it will go to -1 before the check
+                            # to break
+                            loops -= 1
+                            if loops == 0:
+                                print(
+                                    'WARNING: Could not reconnect to server within '
+                                    f'{self._connection_info["reconnection_attempts"]} attempts.',
+                                    file=sys.stderr
+                                )
+                                raise err
+                            print(
+                                f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
+                                file=sys.stderr
+                            )
+                            sleep(reconnection_delay)
+                            reconnection_delay *= 2
+                            continue
+                        print('Connection successfully reestablished.', file=sys.stderr)
+                        break
+
+                    q_future = QFuture(self, self._connection_info['timeout'], debug)
+                    q_future.set_result(K(None))
                     return q_future
-                return self._loop.create_task(q_future.__async_await__())
+                else:
+                    raise e
 
     def _call(self,
               query: Union[str, bytes],
@@ -1217,8 +1533,42 @@ class AsyncQConnection(QConnection):
               wait: Optional[bool] = None,
               debug: bool = False,
     ):
-        with self._lock if self._lock is not None else nullcontext():
-            return self._send(query, *args, wait=wait, debug=debug)._await()
+        try:
+            with self._lock if self._lock is not None else nullcontext():
+                return self._send(query, *args, wait=wait, debug=debug)._await()
+        except BaseException as e:
+            if isinstance(e, QError):
+                raise e
+            if self._connection_info['reconnection_attempts'] != -1:
+                self._cancel_all_futures()
+                print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                loops = self._connection_info['reconnection_attempts']
+                reconnection_delay = 0.5
+                while True:
+                    try:
+                        self._create_connection_to_server()
+                    except BaseException as err:
+                        # attempts = 0 is infinite attempts as it will go to -1 before the check
+                        # to break
+                        loops -= 1
+                        if loops == 0:
+                            print(
+                                'WARNING: Could not reconnect to server within '
+                                f'{self._connection_info["reconnection_attempts"]} attempts.',
+                                file=sys.stderr
+                            )
+                            raise err
+                        print(
+                            f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
+                            file=sys.stderr
+                        )
+                        sleep(reconnection_delay)
+                        reconnection_delay *= 2
+                        continue
+                    print('Connection successfully reestablished.', file=sys.stderr)
+                    break
+            else:
+                raise e
 
     async def __aenter__(self):
         return await self
@@ -1870,7 +2220,7 @@ class RawQConnection(QConnection):
                 self.open_cons.pop(i)
 
     def poll_recv_async(self):
-        """Asynchronously recieve a query from the process connected to over IPC.
+        """Asynchronously receive a query from the process connected to over IPC.
 
         Raises:
             QError: Query timed out, may be raised if the time taken to make or receive a query goes
@@ -2026,7 +2376,8 @@ class SecureQConnection(QConnection):
                  unix: bool = False,
                  wait: bool = True,
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
-                 no_ctx: bool = False
+                 no_ctx: bool = False,
+                 reconnection_attempts: int = -1,
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -2053,6 +2404,13 @@ class SecureQConnection(QConnection):
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
+            reconnection_attempts: This parameter specifies how many attempts will be made to
+                reconnect to the server if the connection is lost. The query will be resent if the
+                reconnection is successful. The default is -1 which will not attempt to reconnect, 0
+                will continuosly attempt to reconnect to the server with no stop and an exponential
+                backoff between successive attempts. Any positive integer will specify the maximum
+                number of tries to reconnect before throwing an error if a connection can not be
+                made.
 
         Note: The `username` and `password` parameters are not required.
             The `username` and `password` parameters are only required if the q server requires
@@ -2091,6 +2449,7 @@ class SecureQConnection(QConnection):
                    wait=wait,
                    lock=lock,
                    no_ctx=no_ctx,
+                   reconnection_attempts=reconnection_attempts,
         )
         super().__init__()
 
@@ -2169,6 +2528,19 @@ class SecureQConnection(QConnection):
         # basis:
         q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
+
+        Automatically reconnect to a q server after a disconnect.
+
+        ```python
+        >>> conn = kx.SecureQConnection(port=5001, reconnection_attempts=0)
+        >>> conn('til 10')
+        pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+        >>> conn('til 10')
+        WARNING: Connection lost attempting to reconnect.
+        Failed to reconnect, trying again in 0.5 seconds.
+        Connection successfully reestablished.
+        pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+        ```
         """
         return self._call(query, *args, wait=wait, debug=debug)
 
@@ -2192,24 +2564,59 @@ class SecureQConnection(QConnection):
                 raise ValueError('Cannot send Python function over IPC')
         handler = self._licensed_call if licensed else self._unlicensed_call
 
-        with self._lock if self._lock is not None else nullcontext():
-            if debug:
-                res = handler(
-                    handle, 
-                    normalize_to_bytes(
-                        '{[pykxquery] .Q.trp[{[x] (0b; value x)}; pykxquery;'
-                        '{(1b; "backtrace:\n",.Q.sbt y; x)}]}',
-                        'Query'
-                    ),
-                    [K(normalize_to_bytes(query, 'Query'))] if len(args) == 0 else [List([K(normalize_to_bytes(query, 'Query')), *args])],
-                    wait,
-                )
-                if res._unlicensed_getitem(0).py() == True:
-                    print((res._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
-                    raise QError(res._unlicensed_getitem(2).py().decode())
-                else:
-                    return res._unlicensed_getitem(1)
-            return handler(handle, normalize_to_bytes(query, 'Query'), args, wait)
+        try:
+            with self._lock if self._lock is not None else nullcontext():
+                if debug or pykx_qdebug:
+                    res = handler(
+                        handle, 
+                        normalize_to_bytes(
+                            '{[pykxquery] .Q.trp[{[x] (0b; value x)}; pykxquery;'
+                            '{(1b; "backtrace:\n",.Q.sbt y; x)}]}',
+                            'Query'
+                        ),
+                        [K(normalize_to_bytes(query, 'Query'))] if len(args) == 0 else [List([K(normalize_to_bytes(query, 'Query')), *args])],
+                        wait,
+                    )
+                    if res._unlicensed_getitem(0).py() == True:
+                        print((res._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
+                        raise QError(res._unlicensed_getitem(2).py().decode())
+                    else:
+                        return res._unlicensed_getitem(1)
+                return handler(handle, normalize_to_bytes(query, 'Query'), args, wait)
+        except BaseException as e:
+            if isinstance(e, QError) and 'snd handle' not in str(e) and 'write to handle' not in str(e) and 'close handle' not in str(e):
+                raise e
+            if self._connection_info['reconnection_attempts'] != -1:
+                print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                loops = self._connection_info['reconnection_attempts']
+                reconnection_delay = 0.5
+                while True:
+                    try:
+                        self._create_connection_to_server()
+                        if not licensed and self._handle == -1:
+                            raise ConnectionError('Could not connect to q server')
+                    except BaseException as err:
+                        # attempts = 0 is infinite attempts as it will go to -1 before the check
+                        # to break
+                        loops -= 1
+                        if loops == 0:
+                            print(
+                                'WARNING: Could not reconnect to server within '
+                                f'{self.q_connection._connection_info["reconnection_attempts"]} attempts.',
+                                file=sys.stderr
+                            )
+                            raise err
+                        print(
+                            f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
+                            file=sys.stderr
+                        )
+                        sleep(reconnection_delay)
+                        reconnection_delay *= 2
+                        continue
+                    print('Connection successfully reestablished.', file=sys.stderr)
+                    return self._call(query, *args, wait=wait, debug=debug)
+            else:
+                raise e
 
     def __enter__(self):
         return self

@@ -161,3 +161,13 @@ def test_sql_get_input_values(q, kx):
 
         assert q.sql.get_input_types(p1) == ['FloatAtom/FloatVector', 'LongAtom/LongVector']
         assert q.sql.get_input_types(p2) == ['SymbolAtom/SymbolVector', 'FloatAtom/FloatVector']
+
+
+@pytest.mark.embedded
+def test_sql_string_col(q):
+    q('t:([] optid:1 2 3;Market:`a`b`CBOE;date:3#2023.11.14;Symbol:("a";"b";"odMP=20"))')
+    qres = q('''select optid,Market,Symbol from t
+              where date = 2023.11.14,Market=`CBOE,Symbol like "odMP=20"''')
+    sqlres = q("""s)select optid,Market,Symbol from t
+                where date = 2023.11.14 and Market IN ('CBOE') and Symbol LIKE ('odMP=20');""")
+    assert q('~', qres, sqlres)

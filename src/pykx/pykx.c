@@ -285,6 +285,7 @@ void construct_args_kwargs(PyObject* params, PyObject** args, PyObject** kwargs,
 
 
 EXPORT K k_pyfunc(K k_guid_string, K k_args) {
+
     if (pykx_threading)
         return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     PyGILState_STATE gstate;
@@ -373,6 +374,7 @@ EXPORT K k_pyfunc(K k_guid_string, K k_args) {
 // k_eval_or_exec == 0 -> eval the code string
 // k_eval_or_exec == 1 -> exec the code string
 EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
+
     if (pykx_threading)
         return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     PyGILState_STATE gstate;
@@ -547,7 +549,7 @@ EXPORT K foreign_to_q(K f) {
         PyGILState_Release(gstate);
         return k;
     }
-    long _addr = PyLong_AsLongLong(k_addr);
+    long long _addr = PyLong_AsLongLong(k_addr);
     K res = (K)(uintptr_t)_addr;
     r1_ptr(res);
     Py_XDECREF(toq_args);
@@ -734,6 +736,7 @@ EXPORT K import(K module) {
 
 
 EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
+
     if (pykx_threading)
         return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     K k;
@@ -749,7 +752,6 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
     if (!PyCallable_Check(pyf)) {
         return raise_k_error("Attempted to call non callable python foreign object");
     }
-
     int len = (has_no_args->j==0)?0:(int)args->n;
     PyObject* py_params = NULL;
     PyObject* py_kwargs = NULL;
@@ -760,8 +762,10 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
             PyGILState_Release(gstate);
             return k;
         }
-    } else
-      py_params = PyTuple_New(0);
+    } else{
+        py_params = PyTuple_New(0);
+    }
+      
 
     if ((kK(kwargs)[0])->n != 0) {
         PyObject* factory_args = PyTuple_New(1);
@@ -796,6 +800,7 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
         PyGILState_Release(gstate);
         return k;
     }
+
     K res;
     if (pyres == NULL) {
         pyres = Py_BuildValue("");
@@ -805,6 +810,7 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
     Py_XDECREF(pyres);
     flush_stdout();
     PyGILState_Release(gstate);
+
     return res;
 }
 

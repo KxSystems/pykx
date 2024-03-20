@@ -384,6 +384,28 @@ def test_from_datetime64(kx):
 
 @pytest.mark.unlicensed
 @pytest.mark.nep49
+def test_from_datetime64_smsus(kx):
+    d = np.array(['2020-09-08T07:06:05.000004'], dtype='datetime64[us]')
+
+    kd = kx.K(d)
+    assert isinstance(kd, kx.TimestampVector)
+    assert (kd.np() == d.astype(np.dtype('datetime64[ns]'))).all()
+
+    d = np.array(['2020-09-08T07:06:05.004'], dtype='datetime64[ms]')
+
+    kd = kx.K(d)
+    assert isinstance(kd, kx.TimestampVector)
+    assert (kd.np() == d.astype(np.dtype('datetime64[ns]'))).all()
+
+    d = np.array(['2020-09-08T07:06:05'], dtype='datetime64[s]')
+
+    kd = kx.K(d)
+    assert isinstance(kd, kx.TimestampVector)
+    assert (kd.np() == d.astype(np.dtype('datetime64[ns]'))).all()
+
+
+@pytest.mark.unlicensed
+@pytest.mark.nep49
 def test_from_timedelta64(kx):
     d = np.timedelta64(60312222971312, 'ns')
 
@@ -1109,11 +1131,11 @@ def test_from_pandas_categorical(q, kx, pd):
 @pytest.mark.nep49
 def test_toq_pd_tabular_ktype(q, kx):
     df = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
-    assert kx.toq(df).dtypes['type'].py() == [b'kx.LongAtom', b'kx.SymbolAtom']
+    assert kx.toq(df).dtypes['datatypes'].py() == [b'kx.LongAtom', b'kx.SymbolAtom']
     kval = {'x': kx.FloatVector}
-    assert kx.toq(df, ktype=kval).dtypes['type'].py() == [b'kx.FloatAtom', b'kx.SymbolAtom']
+    assert kx.toq(df, ktype=kval).dtypes['datatypes'].py() == [b'kx.FloatAtom', b'kx.SymbolAtom']
     kval = {'x': kx.FloatVector, 'y': kx.CharVector}
-    assert kx.toq(df, ktype=kval).dtypes['type'].py() == [b'kx.FloatAtom', b'kx.CharVector']
+    assert kx.toq(df, ktype=kval).dtypes['datatypes'].py() == [b'kx.FloatAtom', b'kx.CharVector']
     with pytest.raises(ValueError, match="Column name passed in dictionary not present in df table"): # noqa: E501
         kx.toq(df, ktype={'x1': kx.FloatVector})
     with pytest.raises(kx.QError, match="Not supported:.*"):
@@ -1124,11 +1146,11 @@ def test_toq_pd_tabular_ktype(q, kx):
 def test_toq_pa_tabular_ktype(q, kx, pa):
     pdtab = pd.DataFrame.from_dict({'x': [1, 2], 'y': ['a', 'b']})
     df = pa.Table.from_pandas(pdtab)
-    assert kx.toq(df).dtypes['type'].py() == [b'kx.LongAtom', b'kx.SymbolAtom']
+    assert kx.toq(df).dtypes['datatypes'].py() == [b'kx.LongAtom', b'kx.SymbolAtom']
     kval = {'x': kx.FloatVector}
-    assert kx.toq(df, ktype=kval).dtypes['type'].py() == [b'kx.FloatAtom', b'kx.SymbolAtom']
+    assert kx.toq(df, ktype=kval).dtypes['datatypes'].py() == [b'kx.FloatAtom', b'kx.SymbolAtom']
     kval = {'x': kx.FloatVector, 'y': kx.CharVector}
-    assert kx.toq(df, ktype=kval).dtypes['type'].py() == [b'kx.FloatAtom', b'kx.CharVector']
+    assert kx.toq(df, ktype=kval).dtypes['datatypes'].py() == [b'kx.FloatAtom', b'kx.CharVector']
     with pytest.raises(ValueError, match="Column name passed in dictionary not present in df table"): # noqa: E501
         kx.toq(df, ktype={'x1': kx.FloatVector})
     with pytest.raises(kx.QError, match="Not supported:.*"):

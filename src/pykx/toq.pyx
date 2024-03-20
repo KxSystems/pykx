@@ -859,7 +859,7 @@ def from_list(x: list,
         except NameError:
             pass #Once on import q does not exist
         else:
-            res = q('{value $[9h~type first x;count[x]#0x0;x]!x}',res)
+            res = q('{value $[9h~type first x;count[x]#0x0;x]!x}',res, skip_debug=True)
     return res
 
 
@@ -1016,6 +1016,9 @@ _dtype_to_ktype = {
     np.dtype('int64'): k.LongVector,
     np.dtype('float32'): k.RealVector,
     np.dtype('float64'): k.FloatVector,
+    np.dtype('datetime64[s]'): k.TimestampVector,
+    np.dtype('datetime64[ms]'): k.TimestampVector,
+    np.dtype('datetime64[us]'): k.TimestampVector,
     np.dtype('datetime64[ns]'): k.TimestampVector,
     np.dtype('datetime64[M]'): k.MonthVector,
     np.dtype('datetime64[D]'): k.DateVector,
@@ -1143,6 +1146,12 @@ def from_numpy_ndarray(x: np.ndarray,
             |                        | | `'timedelta64[ns]'`  | `pykx.TimespanVector`  |          |
             |                        | +----------------------+------------------------+          |
             |                        | | `'datetime64[ns]'`   | `pykx.TimestampVector` |          |
+            |                        | +----------------------+------------------------+          |
+            |                        | | `'datetime64[us]'`   | `pykx.TimestampVector` |          |
+            |                        | +----------------------+------------------------+          |
+            |                        | | `'datetime64[ms]'`   | `pykx.TimestampVector` |          |
+            |                        | +----------------------+------------------------+          |
+            |                        | | `'datetime64[s]'`    | `pykx.TimestampVector` |          |
             |                        | +----------------------+------------------------+          |
             |                        | | `'timedelta64[s]'`   | `pykx.SecondVector`    |          |
             |                        | +----------------------+------------------------+          |
@@ -1294,13 +1303,20 @@ def from_numpy_ndarray(x: np.ndarray,
     elif ktype in supported_np_temporal_types:
         if ktype is k.TimestampVector or ktype is k.TimespanVector:
             offset = TIMESTAMP_OFFSET if ktype is k.TimestampVector else 0
-            x = x.view(np.int64)
+            if x.dtype == np.dtype('<M8[us]'):
+                x = x.view(np.int64) * 1000
+            elif x.dtype == np.dtype('<M8[ms]'):
+                x = x.view(np.int64) * 1000000
+            elif x.dtype == np.dtype('<M8[s]'):
+                x = x.view(np.int64) * 1000000000
+            else:
+                x = x.view(np.int64)
             if ktype is k.TimestampVector:
                 if handle_nulls:
                     mask = (x != NULL_INT64)
-                    x[mask] = x[mask] - TIMESTAMP_OFFSET
+                    x[mask] = x[mask] - offset
                 else:
-                    x = x - TIMESTAMP_OFFSET
+                    x = x - offset
             itemsize = supported_ndarray_k_types[k.LongVector]
             if itemsize != x.itemsize:
                 core.r0(kx)
@@ -2585,7 +2601,6 @@ _converter_from_python_type = {
 if not pandas_2:
     _converter_from_python_type[pd.core.indexes.numeric.Int64Index] = from_pandas_index
     _converter_from_python_type[pd.core.indexes.numeric.Float64Index] = from_pandas_index
-
 
 
 class ToqModule(ModuleType):

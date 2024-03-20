@@ -361,7 +361,7 @@ Objects generated via the PyKX library can be converted where reasonable to `Pyt
     3  0.452041   4
     4  0.019615   0
     ```
-
+    
 * Convert PyKX objects to PyArrow
 
     ```python

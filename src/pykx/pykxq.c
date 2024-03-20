@@ -429,7 +429,7 @@ EXPORT K foreign_to_q(K f) {
         PyGILState_Release(gstate);
         return k;
     }
-    long _addr = PyLong_AsLongLong(k_addr);
+    long long _addr = PyLong_AsLongLong(k_addr);
     K res = (K)(uintptr_t)_addr;
     r1(res);
     Py_XDECREF(toq_args);
@@ -609,6 +609,7 @@ EXPORT K import(K module) {
 
 
 EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
+
     K k;
     P pyf = NULL;
 

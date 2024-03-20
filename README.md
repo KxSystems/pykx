@@ -93,8 +93,9 @@ KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX 
 PyKX depends on the following third-party Python packages:
 
 - `pandas>=1.2, < 2.2.0`
-- `numpy~=1.22; python_version<'3.11'`
-- `numpy~=1.23.2; python_version=='3.11'`
+- `numpy~=1.22, <2.0; python_version<'3.11'`
+- `numpy~=1.23, <2.0; python_version=='3.11'`
+- `numpy~=1.26, <2.0; python_version=='3.12'`
 - `pytz>=2022.1`
 - `toml~=0.10.2`
 
@@ -141,6 +142,13 @@ Windows:
 * [Build Tools for Visual Studio](https://visualstudio.microsoft.com/downloads/?q=build+tools).
 * [dlfcn-win32](https://github.com/dlfcn-win32/dlfcn-win32). Can be installed using [Vcpkg](https://github.com/microsoft/vcpkg).
 * `msvcr100.dll`. Available in [Microsoft Visual C++ 2010 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=26999).
+
+To install the above dependencies, you can run the `w64_install.ps1` script as an administrator:
+
+```PowerShell
+cd pykx
+.\w64_install.ps1
+```
 
 ### Building
 

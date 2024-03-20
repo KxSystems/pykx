@@ -108,7 +108,7 @@ s2:{$[99h=t:@x;((|/#:'x)$x:t0[#d;x]),'"| ",/:t0[#x:s2@!x]d:s2@. x;98h=t;(1#x),(,
 S:{x[1]{$[x<#y;((x-2)#y),"..";y]}'$[t&77h>t:@z;,s1 z;99h<t;"\n"\:$z;$[s;,[;,".."];::]s2 .q.sublist[(y;n-s:(y+n:x[0]-2*.Q.qt z)<#z)]z]}
 s:{$[(::)~x;"";`/:$[10h=@r:@[S[(."\\c")-2 1;0];x;::];,-3!x;r]]}
 hap:{@[(0;h;(h:1+i 1)^(1+*&"@"=x)&e;e:(#x)^e)_x,(^e:(i:&"/"=x:(":"=*x)_x)2)#"/";1;-1_]}
-hmb:{x:$[10=@x;x;1_$x];p:{$[#y;y;x]}/'getenv@+`$_:\("HTTP";"NO"),\:"_PROXY";u:hap@x;t:~(~#*p)||/(*":"\:u 2)like/:{(("."=*x)#"*"),x}'","\:p 1;a:$[t;p:hap@*p;u]1;r:(`$":",,/($[t;p;u]0 2))($y)," ",$[t;x;u 3]," HTTP/1.1",s,(s/:(~![-35;::])_("Accept-Encoding: gzip";"Connection: close";"Host: ",u 2),((0<#a)#,$[t;"Proxy-";""],"Authorization: Basic ",btoa a),$[#z;("Content-type: ",z 0;"Content-length: ",$#z 1);()]),(d:s,s:"\r\n"),$[#z;z 1;""];(0;n)_$[#ss[(n:4+*r ss d)#r;"content-encoding: gzip\r\n"];-35!r;r]}
+hmb:{if[-11=@x;x:1_$x];if[0>@y;y:,y];p:{$[#y;y;x]}/'getenv@+`$_:\("HTTP";"NO"),\:"_PROXY";u:hap@x;t:~(~#*p)||/(*":"\:u 2)like/:{(("."=*x)#"*"),x}'","\:p 1;a:$[t;p:hap@*p;u]1;r:(`$":",,/($[t;p;u]0 2))($*y)," ",$[t;x;u 3]," HTTP/1.1",s,(s/:(~![-35;::])_("Accept-Encoding: gzip";"Connection: close";"Host: ",u 2),((0<#a)#,$[t;"Proxy-";""],"Authorization: Basic ",btoa a),$[#z;("Content-type: ",z 0;"Content-length: ",$#z 1);()],1_y),(d:s,s:"\r\n"),$[#z;z 1;""];(0;n)_$[#ss[(n:4+*r ss d)#r;"content-encoding: gzip\r\n"];-35!r;r]}
 hg:{hmb[x;`GET;()]1};hp:{hmb[x;`POST;(y;z)]1}
 
 a0:(#:;*:;last;sum;prd;min;max;.q.all;.q.any;?:),a1:(avg;wsum;wavg;var;dev;cov;cor),`.q `svar`sdev`scov`med
@@ -144,7 +144,7 @@ a2:({(%;(sum;("f"$;x));(sum;(~^:;x)))};{(sum;(*;("f"$;x);y))};{(%;(wsum;x;y);(su
 
 / x0 translate;x1 aggrs;x2 translate  ?terminal (subselect/exec within partition)  unknown assumed uniform?
 qd:{$[(#:)~*x;(?:)~*x 1;0]};xy:{`$$*&x~/:y};         x1:{$[qb x;();IN[*x;a0];$[qd x;1_x;,x];,/x1'1_x]}
-x0:{$[qb x;x;IN[*x;a1];x0 a2[a1?*x]. 1_x;x0'x]};x2:{$[qb x; x;IN[*x;a0];$[qd x;(#:;(?:;(,/;xy[x 1]y)));[y:xy[x]y;$[(?:)~*x;(?:;(,/;y));(#:)~*x;(sum;y);(*x;y)]]];x2[;y]'x]}
+x0:{$[qb x;x;IN[*x;a1];x0 a2[a1?*x]. 1_x;x0'x]};x2:{$[qb x; x;IN[*x;a0];$[qd x;(#:;(?:;(,/;xy[x 1]y)));[y:xy[x]y;$[(?:)~*x;(?:;(,/;y));(#:)~*x;(sum;y);(*x;y)]]];@[x;&~(::)~/:x;x2[;y]]]}
 ua:{((`$$!#u)!u;x2[;u:?,/x1'x]'x:x0'x)};q0:{$[~qb x;,/q0'x;-11h=@x;*`\:x;()]};qe:{$[#x;99h=@x;1]}
 ps:{[t;c;b;a]if[-11h=@t;t:. t];if[~qe[a]&qe[b]|-1h=@b;'`nyi];d:pv;v:$[q:0>@b;0;~#b;0;-11h=@v:*. b;pf~*`\:v;0]
  if[$[~#c;0;@*c;0;-11h=@x:c[0]1;pf~*`\:x;0];d@:&-6!*c;c:1_c]

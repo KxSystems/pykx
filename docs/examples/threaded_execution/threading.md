@@ -10,7 +10,7 @@ writeup.
 ## Quickstart
 
 This example creates a python process that creates multiple tasks/threads that subscribe to a `q`
-process over IPC and upon recieving a new row upsert it to a local table. There are 2 scripts
+process over IPC and upon receiving a new row upsert it to a local table. There are 2 scripts
 included: `asyncio_threading.py` and `threads.py`, the first uses asyncio tasks running on
 seperate threads and the second example uses the python `threading` library directly to spawn
 threads.
@@ -27,11 +27,11 @@ $ python threads.py
 ### Outcome
 
 The inital table will be printed upon starting the program, once all the threads/tasks have
-upserted all of the rows they have recieved to the table the final table will be printed.
+upserted all of the rows they have received to the table the final table will be printed.
 
 ```
 $ python asyncio_threading.py
-===== Initital Table =====
+===== Initial Table =====
 a b
 ---
 4 8
@@ -44,7 +44,7 @@ a b
 2 1
 1 8
 8 5
-===== Initital Table =====
+===== Initial Table =====
 a  b
 -----
 4  8

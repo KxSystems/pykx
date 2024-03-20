@@ -163,7 +163,7 @@ def test_check_license_invalid_file(kx):
 
 
 def test_check_license_no_qlic(kx):
-    err_msg = f'Unable to find an installed license: k4.lic at location: {str(kx.qhome)}.\n'\
+    err_msg = f'Unable to find an installed license: k4.lic at location: {str(kx.qlic)}.\n'\
               'Please consider installing your license again using pykx.util.install_license\n'
     with patch('sys.stdout', new=StringIO()) as test_out:
         kx.license.check('/test/test.blah', license_type='k4.lic')
@@ -182,7 +182,7 @@ def test_check_license_format(kx):
     reason='Not supported with PYKX_THREADING'
 )
 def test_check_license_success_file(kx):
-    assert kx.license.check(os.environ['QHOME'] + '/kc.lic')
+    assert kx.license.check(os.environ['QLIC'] + '/kc.lic')
 
 
 @pytest.mark.skipif(
@@ -190,7 +190,7 @@ def test_check_license_success_file(kx):
     reason='Not supported with PYKX_THREADING'
 )
 def test_check_license_success_b64(kx):
-    with open(os.environ['QHOME'] + '/kc.lic', 'rb') as f:
+    with open(os.environ['QLIC'] + '/kc.lic', 'rb') as f:
         license = base64.encodebytes(f.read())
     assert kx.license.check(license, format='STRING')
 

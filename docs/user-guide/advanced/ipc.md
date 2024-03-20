@@ -20,7 +20,7 @@ used to replace the functionality of [`qPython`](https://github.com/exxeleron/qP
 
 ```python
 # Licensed mode
-with pykx.SyncQConnection('localhost', 5001) as q:
+with kx.SyncQConnection('localhost', 5001) as q:
     result = q.til(10)
     print(result)
     print(result.py())
@@ -31,12 +31,12 @@ with pykx.SyncQConnection('localhost', 5001) as q:
 
 ```python
 # Unlicensed mode
-with pykx.SyncQConnection('localhost', 5001) as q:
+with kx.SyncQConnection('localhost', 5001) as q:
     result = q.til(10)
     print(result)
     print(result.py())
 
-pykx.LongVector._from_addr(0x7fcab6800b80)
+kx.LongVector._from_addr(0x7fcab6800b80)
 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 ```
 
@@ -50,7 +50,7 @@ ensure that the connection instance is properly closed automatically when leavin
 Manually creating a `QConnection`
 
 ```python
-q = pykx.SyncQConnection('localhost', 5001) # Directly instantiate a QConnection instance
+q = kx.SyncQConnection('localhost', 5001) # Directly instantiate a QConnection instance
 q(...) # Make some queries
 q.close() # Must manually ensure it is closed when no longer needed
 ```
@@ -58,7 +58,7 @@ q.close() # Must manually ensure it is closed when no longer needed
 Using a context interface to create and manage the `QConnection`
 
 ```python
-with pykx.SyncQConnection('localhost', 5001) as q:
+with kx.SyncQConnection('localhost', 5001) as q:
     q(...) # Make some queries
 # QConnection is automatically closed here
 ```
@@ -84,7 +84,7 @@ The following call to the q function [`save`](../../api/pykx-execution/q.md#save
 because `q('save')` returns a regular [`pykx.Function`][] object.
 
 ```python
-with pykx.SyncQConnection('localhost', 5001) as q:
+with kx.SyncQConnection('localhost', 5001) as q:
     q('save')('t') # Executes locally within Embedded q
 ```
 
@@ -95,7 +95,7 @@ its execution context using its symbol value, and so it is executed in the q ser
 [`save`](../../api/pykx-execution/q.md#save) is defined.
 
 ```python
-with pykx.SyncQConnection('localhost', 5001) as q:
+with kx.SyncQConnection('localhost', 5001) as q:
     q.save('t') # Executes in the q server over IPC
 ```
 
@@ -105,7 +105,7 @@ and so what is returned is the result of calling [`save`](../../api/pykx-executi
 rather than the [`save`](../../api/pykx-execution/q.md#save) function itself.
 
 ```python
-with pykx.SyncQConnection('localhost', 5001) as q:
+with kx.SyncQConnection('localhost', 5001) as q:
     q('save', 't') # Executes in the q server over IPC
 ```
 
@@ -121,7 +121,7 @@ you use the `event_loop` keyword argument to pass the event loop into the [`pykx
 This will allow the eventloop to properly manage the returned [`pykx.QFuture`][] objects.
 
 ```python
-async with pykx.AsyncQConnection('localhost', 5001, event_loop=asyncio.get_event_loop()) as q:
+async with kx.AsyncQConnection('localhost', 5001, event_loop=asyncio.get_event_loop()) as q:
     fut = q('til 10') # returns a QFuture that can later be awaited on, this future is attached to the event loop
     await fut # await the future object to get the result
 ```
@@ -131,7 +131,7 @@ If you are using an [`pykx.AsyncQConnection`][] to make q queries that respond i
 a dedicated [`pykx.AsyncQConnection`][] instance that is closed upon the result being received.
 
 ```python
-async with pykx.AsyncQConnection('localhost', 5001, event_loop=asyncio.get_event_loop()) as q:
+async with kx.AsyncQConnection('localhost', 5001, event_loop=asyncio.get_event_loop()) as q:
     fut = q('query', wait=False, reuse=False) # query a q process that is going to return a deferred result
     await fut # await the future object to get the result
 ```
@@ -143,13 +143,29 @@ In addition to the ability to execute code remotely using explicit calls to the 
 The following provide and example of the usage of this functionality on both a syncronous and asyncronous use-case.
 
 ```python
-with pykx.SyncQConnection(port = 5000) as q:
+with kx.SyncQConnection(port = 5000) as q:
     q.file_execute('/absolute/path/to/file.q')
     ret = q('.test.variable.set.in.file.q', return_all=True)
 ```
 
 ```python
-async with pykx.AsyncQConnection('localhost', 5001) as q:
+async with kx.AsyncQConnection('localhost', 5001) as q:
     q.file_execute('../relative/path/to/file.q')
     ret = await q('.test.variable.set.in.file.q')
+```
+
+## Reconnecting to a kdb+ server
+
+When generating a client-server architecture it is often the case that for short periods of time your server may be inaccessible due to network issues or planned outages. At such times clients connected to these servers will need to reconnect, this may require them to manually 'close' their existing stale connection and reconnect using the same credentials to the now restarted server. From PyKX 2.4+ the ability to manually configure reconnection attempts for clients connecting to servers has been added via the addition of the `reconnection_attempts` keyword argument. The following example shows the output of when attempting to make use of a connection which has been cancelled and is subsequently re-established:
+
+```python
+>>> conn = kx.SyncQconnection(port=5050, reconnection_attempts=5)
+>>> conn('1+1')  # after this call the server on port 5050 is shutdown for 2 seconds
+pykx.LongAtom(pykx.q('2')
+>>> conn('1+2')
+WARNING: Connection lost attempting to reconnect.
+Failed to reconnect, trying again in 0.5 seconds.
+Failed to reconnect, trying again in 1.0 seconds.
+Connection successfully reestablished.
+pykx.LongAtom(pykx.q('3'))
 ```

@@ -1,3 +1,5 @@
+import warnings
+
 from . import api_return
 from ..exceptions import QError
 
@@ -112,11 +114,15 @@ class PandasMeta:
 
     @property
     def dtypes(self):
+        warnings.warn("dtypes column 'type' is deprecated, please use 'datatypes'",
+                      DeprecationWarning)
         return q('''
                  {a:0!x;
-                  flip `columns`type!(
+                  d:flip `columns`datatypes!(
                     a[`c];
-                    {$[x~"kx.List";x;x,$[y in .Q.a;"Atom";"Vector"]]}'[y `$/:lower a`t;a`t])}
+                    {$[x~"kx.List";x;x,$[y in .Q.a;"Atom";"Vector"]]}'[y `$/:lower a`t;a`t]);
+                  d[`type]:d[`datatypes];d
+                 }
                  ''', q.meta(self), _type_mapping)
 
     @property

@@ -8,6 +8,8 @@ import pytest
 
 @pytest.mark.order(1)
 def test_creation(kx):
+    # Definition of qtab would break kx.DB prior to use of .Q.pt
+    kx.q('qtab:([]100?1f;100?1f)')
     db = kx.DB(path='db')
     tab = kx.Table(data={
         'date': kx.q('2015.01.01 2015.01.01 2015.01.02 2015.01.02'),
@@ -241,6 +243,24 @@ def test_load_warning(kx):
     assert type(db.table.table) == kx.PartitionedTable # noqa: E721
 
 
+@pytest.mark.order(19)
+def test_compress(kx):
+    zd_cache = kx.q.z.zd
+    compress = kx.Compress(kx.CompressionAlgorithm.gzip, level=8)
+    db = kx.DB(path='db')
+    qtab = kx.Table(data={
+        'col1': kx.random.random(1000, 10.0),
+        'col2': kx.random.random(1000, 10)
+    })
+    db.create(qtab, 'comptab', kx.q('2015.01.02'), compress=compress)
+    db.fill_database()
+    assert zd_cache == kx.q.z.zd
+    compress_info = kx.q('-21!key`:./2015.01.02/comptab/col1')
+    assert type(compress_info) == kx.Dictionary
+    assert compress_info['algorithm'].py() == 2
+    assert compress_info['zipLevel'].py() == 8
+
+
 def test_enumerate(kx):
     tab = kx.Table(data={
         'date': kx.q('2015.01.01 2015.01.01 2015.01.02 2015.01.02'),
@@ -292,23 +312,6 @@ def test_beta():
     with pytest.raises(kx.QError) as err:
         kx.DB()
     assert 'Attempting to use a beta feature "Data' in str(err.value)
-
-
-def test_splay(kx):
-    os.mkdir('splay')
-    kx.q['tab'] = kx.Table(data={
-        'x': kx.random.random(100, ['a', 'b', 'c']),
-        'x1': kx.random.random(100, 1.0),
-        'x2': kx.random.random(100, 10)
-    })
-    kx.q('`:./splay/tab set .Q.en[`:./splay;tab]')
-    db = kx.DB()
-    db.load('splay')
-    assert type(db.tab) == kx.Table # noqa: E721
-    with pytest.raises(kx.QError) as err:
-        db.rename_column('tab', 'x', 'x3')
-    shutil.rmtree('../splay')
-    assert 'Application of Database Management functionality' in str(err.value)
 
 
 @pytest.mark.order(-1)

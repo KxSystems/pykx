@@ -74,7 +74,8 @@ for path in pykx_config_locs:
 pykx_dir = Path(__file__).parent.resolve(strict=True)
 os.environ['PYKX_DIR'] = str(pykx_dir)
 os.environ['PYKX_EXECUTABLE'] = sys.executable
-pykx_lib_dir = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_dir/'lib'))
+pykx_libs_dir = Path(pykx_dir/'lib') if _get_config_value('PYKX_4_1_ENABLED', None) is None else Path(pykx_dir/'lib'/'4-1-libs') # noqa
+pykx_lib_dir = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_libs_dir))
 pykx_platlib_dir = pykx_lib_dir/q_lib_dir_name
 lib_prefix = '' if system == 'Windows' else 'lib'
 lib_ext = {
@@ -213,9 +214,9 @@ elif not license_located:
 licensed = False
 
 under_q = _is_enabled('PYKX_UNDER_Q')
-qlib_location = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_dir/'lib'))
+qlib_location = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_libs_dir))
 pykx_threading = _is_enabled('PYKX_THREADING')
-if platform.system() == 'Windows':
+if platform.system() == 'Windows' and pykx_threading:
     pykx_threading = False
     warn('PYKX_THREADING is only supported on Linux / MacOS, it has been disabled.')
 no_sigint = _is_enabled('PYKX_NO_SIGINT', deprecated=True)
@@ -246,6 +247,7 @@ skip_under_q = _is_enabled('SKIP_UNDERQ', '--skip-under-q') or _is_enabled('PYKX
 no_qce = _is_enabled('PYKX_NOQCE', '--no-qce')
 beta_features = _is_enabled('PYKX_BETA_FEATURES', '--beta')
 load_pyarrow_unsafe = _is_enabled('PYKX_LOAD_PYARROW_UNSAFE', '--load-pyarrow-unsafe')
+pykx_qdebug = _is_enabled('PYKX_QDEBUG', '--q-debug')
 
 pandas_2 = pd.__version__.split('.')[0] == '2'
 disable_pandas_warning = _is_enabled('PYKX_DISABLE_PANDAS_WARNING')
@@ -294,7 +296,6 @@ __all__ = [
     'qargs',
     'licensed',
     'under_q',
-    'qlib_location',
 
     'ignore_qhome',
     'keep_local_times',

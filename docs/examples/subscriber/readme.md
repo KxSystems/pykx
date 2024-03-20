@@ -32,7 +32,7 @@ $ python subscriber_async.py
 
 ### Outcome
 
-What should be observed on invocation of the above is that the q process should have the variable `py_server` set to the handle of the python process once the python process connects. Once this variable is set you can send rows of the table to the python process and they will be appended as they are recieved.
+What should be observed on invocation of the above is that the q process should have the variable `py_server` set to the handle of the python process once the python process connects. Once this variable is set you can send rows of the table to the python process and they will be appended as they are received.
 
 ```q
 // run q
@@ -45,7 +45,7 @@ q process is started.
 ```bash
 // run the subscriber which will automatically connect
 $ python subscriber.py
-===== Initital Table =====
+===== Initial Table =====
 a b
 ---
 4 8
@@ -58,7 +58,7 @@ a b
 2 1
 1 8
 8 5
-===== Initital Table =====
+===== Initial Table =====
 
 ```
 
