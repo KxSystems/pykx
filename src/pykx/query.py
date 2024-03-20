@@ -1,10 +1,9 @@
 """Query interfaces for PyKX."""
 
 from abc import ABCMeta
-from random import choices
-from string import ascii_letters
 from typing import Any, Dict, List, Optional, Union
 import warnings
+from uuid import uuid4
 
 from . import Q
 from . import wrappers as k
@@ -378,33 +377,38 @@ class QSQL:
                 raise TypeError("'table' object provided was not a K tabular object or an "
                                 "object which could be converted to an appropriate "
                                 "representation")
-            randstring = ''.join(choices(ascii_letters, k=32))
-            self.randstring = randstring
-            table_name = f'.pykx.i._{randstring}'
-            self._q[table_name] = table
+            randguid = str(uuid4())
+            self._q(f'''
+                    {{@[{{get x}};`.pykx.i.updateCache;{{.pykx.i.updateCache:(`guid$())!()}}];
+                    .pykx.i.updateCache["G"$"{randguid}"]:x}}
+                    ''', table)
             original_table = table
-            table = table_name
+            table_code = f'.pykx.i.updateCache["G"$"{randguid}"]'
+            if not inplace:
+                query_char = '!' if query_type in ('delete', 'update') else '?'
+            else:
+                query_char = table_code + (':!' if query_type in ('delete', 'update') else ':?')
         elif not isinstance(table, str):
             raise TypeError("'table' must be a an object which is convertible to a K object "
                             "or a string denoting an item in q memory")
-        query_char = '!' if query_type in ('delete', 'update') else '?'
-        if (not inplace and query_type in ('delete', 'update')):
-            table_code = f'get`$"{table}"'
         else:
-            table_code = f'`$"{table}"'
+            if (not inplace and query_type in ('delete', 'update')):
+                table_code = f'get`$"{table}"'
+            else:
+                table_code = f'`$"{table}"'
+            query_char = '!' if query_type in ('delete', 'update') else '?'
         try:
             res = self._q(
-                f'{query_char}[{table_code};;;]',
+                f'{{{query_char}[{table_code};x;y;z]}}',
                 where_clause,
                 by_clause,
                 select_clause,
                 wait=True,
             )
             if inplace and isinstance(original_table, k.K):
-                if query_type in ('delete', 'update'):
-                    res = self._q[table_name]
+                res = self._q(table_code)
                 if isinstance(res, QFuture):
-                    raise QError("'inplace' not supported with asyncronous query")
+                    raise QError("'inplace' not supported with asynchronous query")
                 if type(original_table) != type(res):
                     raise QError('Returned data format does not match input type, '
                                  'cannot perform inplace operation')
@@ -412,7 +416,7 @@ class QSQL:
             return res
         finally:
             if isinstance(original_table, k.K):
-                self._q._call(f'![`.pykx.i;();0b;enlist[`$"_{randstring}"]]', wait=True)
+                self._q._call(f'.pykx.i.updateCache _:"G"$"{randguid}"', wait=True)
 
     def _generate_clause(self, clause_value, clause_name, query_type):
         if clause_value is None:
@@ -581,7 +585,7 @@ class SQL:
 
         Examples:
 
-        Note: When preparing a query with K types you don't have to fully constuct one.
+        Note: When preparing a query with K types you don't have to fully construct one.
             For example you can pass `kx.LongAtom(1)` as a value to the prepare function as well as
             just [`pykx.LongAtom`][]. This only works for Atom and Vector types. There is also a
             helper function for tables that you can use called `pykx.Table.prototype`.

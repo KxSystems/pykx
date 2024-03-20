@@ -16,17 +16,20 @@ requirements:
   build:
     - git
     - python
-    - setuptools==60.9.3
-    - setuptools_scm[toml]>=6.0.1
+    - setuptools>=68.0
+    - setuptools_scm[toml]>=7.1.0  # [py==37]
+    - setuptools_scm[toml]>=8.0.0  # [py!=37]
     - cython==3.0.0
-    - numpy==1.22.*
+    - numpy==1.26  # [py==312]
+    - numpy==1.22.*  # [py!=37 and py<312]
+    - numpy==1.20  # [py==37]
     - tomli>=2.0.1
-    - wheel>=0.36.2
+    - wheel>=0.36
     - sysroot_linux-64 # [linux64]
 
   run:
     - python
-    - numpy>=1.22
+    - numpy>=1.22,<2.0
     - pandas>=1.2, <2.2.0
     - pytz>=2022.1
     - toml>=0.10.2

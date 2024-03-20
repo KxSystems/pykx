@@ -222,6 +222,16 @@ def test_update(q):
     with pytest.raises(RuntimeError) as err:
         q.qsql.update(qtab, columns={'newcol': 'weight'}, modify=True, inplace=True)
     assert 'Attempting to use both' in str(err)
+    assert 0 == q('count .pykx.i.updateCache').py()
+
+
+def test_update_sym_leak(q):
+    qtab = q('([]name:`tom`dick`harry;age:28 29 35;hair:`fair`dark`fair;eye:`green`brown`gray)')
+    q.qsql.update(qtab, {'eye': '`blue`brown`green'})
+    syms = q.Q.w()['syms']
+    q.qsql.update(qtab, {'eye': '`blue`brown`green'})
+    q.qsql.update(qtab, {'eye': '`blue`brown`green'})
+    assert syms == q.Q.w()['syms']
 
 
 @pytest.mark.asyncio
@@ -251,7 +261,7 @@ async def test_update_async(kx, q_port):
                             columns={'weight': 'max weight'},
                             by={'city': 'city'},
                             inplace=True)
-        with pytest.raises(TypeError):
+        with pytest.raises(kx.QError):
             await q.qsql.update(byqtab,
                                 columns={'weight': 'max weight'},
                                 by={'city': 'city'},
@@ -302,7 +312,7 @@ async def test_delete_async(kx, q_port):
                (await q.qsql.delete(qtab, where='hair=`fair')).py()
         assert (await q('delete from qtab where qbool')).py()
         await q.qsql.delete('q-tab', where='hair=`fair', inplace=True)
-        with pytest.raises(TypeError):
+        with pytest.raises(kx.QError):
             await q.qsql.delete(qtab, where='hair=`fair', inplace=True)
         with pytest.raises(TypeError):
             await q.qsql.delete('q-tab', where='hair=`fair', columns=['age'])

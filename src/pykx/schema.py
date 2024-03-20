@@ -1,4 +1,11 @@
-"""Functionality for the manipulation and creation of schemas"""
+"""
+Functionality to support the creation and manipulation of schemas.
+
+Generated schemas can be used in combination with both
+ [`insert`](https://code.kx.com/pykx/api/pykx-q-data/wrappers.html#pykx.wrappers.Table.insert) and
+ [`upsert`](https://code.kx.com/pykx/api/pykx-q-data/wrappers.html#pykx.wrappers.Table.upsert)
+ functionality to create populated table and keyed table objects.
+"""
 
 from typing import Dict, List, Optional, Union
 
@@ -21,25 +28,24 @@ def __dir__():
 
 _ktype_to_conversion = {
     k.List: "",
-
-    k.GUIDAtom: "guid",
-    k.BooleanAtom: "boolean",
-    k.ByteAtom: "byte",
-    k.ShortAtom: "short",
-    k.IntAtom: "int",
-    k.LongAtom: "long",
-    k.RealAtom: "real",
-    k.FloatAtom: "float",
+    k.GUIDAtom: "guid", k.GUIDVector: "guid",
+    k.BooleanAtom: "boolean", k.BooleanVector: "boolean",
+    k.ByteAtom: "byte", k.ByteVector: "byte",
+    k.ShortAtom: "short", k.ShortVector: "short",
+    k.IntAtom: "int", k.IntVector: "int",
+    k.LongAtom: "long", k.LongVector: "long",
+    k.RealAtom: "real", k.RealVector: "real",
+    k.FloatAtom: "float", k.FloatVector: "float",
     k.CharAtom: "char",
-    k.SymbolAtom: "symbol",
-    k.TimestampAtom: "timestamp",
-    k.MonthAtom: "month",
-    k.DateAtom: "date",
-    k.DatetimeAtom: "datetime",
-    k.TimespanAtom: "timespan",
-    k.MinuteAtom: "minute",
-    k.SecondAtom: "second",
-    k.TimeAtom: "time",
+    k.SymbolAtom: "symbol", k.SymbolVector: "symbol",
+    k.TimestampAtom: "timestamp", k.TimestampVector: "timestamp",
+    k.MonthAtom: "month", k.MonthVector: "month",
+    k.DateAtom: "date", k.DateVector: "date",
+    k.DatetimeAtom: "datetime", k.DatetimeVector: "datetime",
+    k.TimespanAtom: "timespan", k.TimespanVector: "timespan",
+    k.MinuteAtom: "minute", k.MinuteVector: "minute",
+    k.SecondAtom: "second", k.SecondVector: "sector",
+    k.TimeAtom: "time", k.TimeVector: "time",
 }
 
 
@@ -52,7 +58,7 @@ def builder(schema: Dict,
     Parameters:
         schema: The definition of the schema to be created mapping a 'str'
             to a `pykx.*` type object which is one of the types defined in
-            `pykx._kytpe_to_conversion`.
+            `pykx.schema._ktype_to_conversion`.
         key: A `str`-like object or list of `str` objects denoting the columns
             within the table defined by `schema` to be treated as primary keys,
             see [here](https://code.kx.com/q4m3/8_Tables/#841-keyed-table) for
@@ -154,6 +160,10 @@ def builder(schema: Dict,
     mapping = []
     idx=0
     for i in ktypes:
+        if i == k.CharVector:
+            raise Exception("Error: setting column to 'CharVector' is ambiguous, please use 'List' "
+                            "for columns with rows containing multiple characters or 'CharAtom' if "
+                            "your rows contain a single character")
         try:
             qconversion = _ktype_to_conversion[i]
         except KeyError as e:

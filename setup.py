@@ -9,11 +9,10 @@ executing this file directly.
 import setuptools # noqa: I100, F401
 
 from contextlib import contextmanager # noqa: I100
-from contextlib import redirect_stderr
-from distutils.command.clean import clean as default_clean
-from distutils.ccompiler import new_compiler
-from distutils.sysconfig import customize_compiler, get_python_inc
-from glob import iglob
+
+from setuptools._distutils.ccompiler import new_compiler
+from setuptools._distutils.sysconfig import customize_compiler, get_python_inc
+
 import os
 from pathlib import Path
 import platform
@@ -130,37 +129,8 @@ class build_ext(default_build_ext):
             self.build_q_c_extension(compiler, '_tcore', lib_ext, library=['pthread'])
 
 
-class clean(default_clean):
-    """clean command that cleans some extra files and directories."""
-    targets = (iglob(x) for x in (
-        'build',
-        'dist',
-        '.eggs',
-        'pykx.egg-info',
-        str(src_dir/'*.so*'),
-        str(src_dir/'build'),
-    ))
-
-    def run(self):
-        with cd(script_dir):
-            for z in (x for y in self.targets for x in y):
-                rmrf(str(z))
-        for f in src_dir.iterdir():
-            if f.suffix == '.pyx':
-                rmrf(str(f.parent/(f.stem + '.c')))
-                rmrf(str(f.parent/(f.stem + '.html')))
-        with open(os.devnull, 'w') as devnull:
-            with redirect_stderr(devnull):
-                # This command has some useless/annoying output that can make it appear like
-                # there's an issue when there isn't, so we silence it.
-                super().run()
-                # If there's a real problem the error will propagate out, so we'll still see it
-
-
 def cythonize_extensions(extensions: List[Extension]) -> List[Extension]:
     """Convert .pyx/.pxd Extensions into regular .c/.cpp Extensions"""
-    if 'clean' in sys.argv:
-        return []
     with cd(script_dir/'src'):
         cythonized = cythonize(
             extensions,
@@ -243,6 +213,7 @@ def ext(name: str,
         define_macros=[
             # Prevents the use of deprecated Numpy C APIs
             ('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION'),
+            ('NPY_TARGET_VERSION', 'NPY_1_22_API_VERSION'),
             *((('CYTHON_TRACE', '1'), ('CYTHON_TRACE_NOGIL', '1')) if debug else ())
         ],
     )
@@ -267,6 +238,7 @@ if __name__ == '__main__':
             ] if system != 'Windows' else []),
         ]),
     ]
+
     if py_minor_version >= 8: # python 3.8 or higher is required for NEP-49
         exts.append(ext('_numpy', numpy=True, cython=False, libraries=['dl', *windows_libraries]))
     exts.append(ext('numpy_conversions',
@@ -277,6 +249,12 @@ if __name__ == '__main__':
                     numpy=False,
                     cython=False,
                     libraries=['dl', *windows_libraries]))
+    with cd(src_dir/'lib'):
+        [
+            shutil.copy(f, f'4-1-libs/{f}')
+            for f in
+            [str(f) for f in os.listdir() if os.path.isfile(f) and str(f) != 'q.k']
+        ]
     setup(
         name=pyproject['name'],
         description=pyproject['description'],
@@ -293,7 +271,6 @@ if __name__ == '__main__':
         package_dir={'pykx': str(Path('src/pykx'))},
         cmdclass={
             'build_ext': build_ext,
-            'clean': clean,
         },
         include_package_data=True, # makes setuptools use MANIFEST.in
         zip_safe=False, # required by Cython

@@ -180,6 +180,14 @@ def test_path_arguments(q):
     assert q('`:test') == a
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_pyfunc_underq(kx):
+    assert 4 == kx.q('{[f;x] f  x}', len, [0, 1, 2, 3])
+
+
 @pytest.mark.ipc
 def test_dir(kx, q):
     assert set() == ({
@@ -200,3 +208,71 @@ def test_dir(kx, q):
     } - set(dir(q)))
     assert isinstance(dir(kx.embedded_q), list)
     assert sorted(dir(kx.embedded_q)) == dir(kx.embedded_q)
+
+
+@pytest.mark.embedded
+def test_debug(kx, q):
+    cache_sbt = kx.q('.Q.sbt')
+    kx.q('.Q.sbt:{.pykx_test.cache:x}')
+
+    assert q('til 10', debug=True).py() == list(range(10))
+    with pytest.raises(kx.QError) as e:
+        q('til "asd"', debug=True)
+    assert 'type' in str(e)
+
+    assert q('{[x] til x}', 10, debug=True).py() == list(range(10))
+    with pytest.raises(kx.QError) as e:
+        q('{til x}', b'asd', debug=True)
+    assert 'type' in str(e)
+    assert b'{til x}' == kx.q('.pykx_test.cache')[1][1][-1].py()
+
+    assert q('{[x; y] .[mavg; (x; til y)]}', 3, 10, debug=True).py() ==\
+        [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+    with pytest.raises(kx.QError) as e:
+        q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd', debug=True)
+    assert 'type' in str(e)
+    assert b'{[x; y] .[mavg; (x; til y)]}' == kx.q('.pykx_test.cache')[1][1][-1].py()
+
+    kx.q('{.Q.sbt:x}', cache_sbt)
+
+
+@pytest.mark.isolate
+def test_debug_global():
+    os.environ['PYKX_QDEBUG'] = 'True'
+    import pykx as kx
+    assert kx.config.pykx_qdebug
+    assert kx.q('til 10').py() == list(range(10))
+    cache_sbt = kx.q('.Q.sbt')
+    kx.q('.Q.sbt:{.pykx_test.cache:x}')
+    try:
+        kx.q('til "asd"')
+    except Exception as e:
+        assert "type" in str(e)
+
+    assert kx.q('{til x}', 10).py() == list(range(10))
+    try:
+        kx.q('{til x}', b'asd')
+    except Exception as e:
+        assert "type" in str(e)
+    assert b'{til x}' == kx.q('.pykx_test.cache')[1][1][-1].py()
+
+    assert kx.q('{[x; y] .[mavg; (x; til y)]}', 3, 10).py() ==\
+        [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+    try:
+        kx.q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
+    except Exception as e:
+        assert "type" in str(e)
+    assert b'{[x; y] .[mavg; (x; til y)]}' == kx.q('.pykx_test.cache')[1][1][-1].py()
+
+    kx.q('{.Q.sbt:x}', cache_sbt)
+
+
+@pytest.mark.isolate
+def test_41():
+    os.environ['PYKX_4_1_ENABLED'] = 'True'
+    import pykx as kx
+    assert kx.q('~', kx.q.z.K, 4.1).py()
+    with pytest.raises(kx.QError) as err:
+        kx.q('(`a;):(`b;1.2)')
+    assert 'match' in str(err)
+    os.unsetenv('PYKX_4_1_ENABLED')

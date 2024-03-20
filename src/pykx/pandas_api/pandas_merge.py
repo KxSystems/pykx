@@ -207,14 +207,25 @@ def _merge_tables(left, right, on, how, added_idx, left_index, right_index, dist
 
 def _q_merge_tables(left, right, how, added_idx):
     res = left
-    left = q('0!', left)
-    right = q('1!', right)
     if how == 'inner':
-        res = q.ij(left, right)
+        if 'KeyedTable' not in str(type(right)):
+            raise ValueError("Inner Join requires a keyed table"
+                             " for the right dataset.")
+        else:
+            res = q.ij(left, right)
     elif how == 'left':
-        res = q.lj(left, right)
+        if 'KeyedTable' not in str(type(right)):
+            raise ValueError("Left Join requires a keyed table"
+                             " for the right dataset.")
+        else:
+            res = q.ij(left, right)
     elif how == 'right':
-        res = _q_merge_tables(right, left, 'left', added_idx)
+
+        if 'KeyedTable' not in str(type(left)):
+            raise ValueError("Right Join requires a keyed table"
+                             " for the left dataset.")
+        else:
+            res = _q_merge_tables(right, left, 'left', added_idx)
     if added_idx:
         res.pop(added_idx)
     return res

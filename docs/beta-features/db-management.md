@@ -23,7 +23,7 @@ This walkthrough will demonstrate the following steps:
 	1. Creating a copy of a column to the database
 	1. Applying a Python function to a column of the database
 	1. Updating the data type of a column
-1. Adding a new table to the most recent partition of the database.
+1. Adding a new table to the most recent partition of the database, setting compression for the partition.
 
 All integrations with the `Database Management` functionality are facilitated through use of the `pykx.DB` class. To follow along with the example outlined below you can use the [companion notebook](../examples/db-management.ipynb). This uses a more complex table but runs the same commands. For full information on the functions available you can reference the [API section](../api/db.md).
 
@@ -195,7 +195,7 @@ To convert the data type of a column, you can use the `set_column_type` method. 
 
 ### Adding a new table to the database
 
-Now that you have successfully set up one table, you may want to add a second table named `quotes`. In this example, the `quotes` table only contains data for `2020.01.03`. We follow the same method as before and create the `quotes` table using the `create` method
+Now that you have successfully set up one table, you may want to add a second table named `quotes`, additionally setting the persisted data to. In this example, the `quotes` table only contains data for `2020.01.03`. We follow the same method as before and create the `quotes` table using the `create` method.
 
 ```python
 >>> quotes = kx.Table(data={
@@ -205,7 +205,8 @@ Now that you have successfully set up one table, you may want to add a second ta
 ...     'low': kx.random.random(N, 10.0),
 ...     'close': kx.random.random(N, 10.0)
 ... })
->>> db.create(quotes, 'quotes', date(2020, 1, 3), by_field = 'sym', sym_enum = 'symcol')
+>>> compress = kx.Compress(algo=kx.CompressionAlgorithm.gzip, level=5)
+>>> db.create(quotes, 'quotes', date(2020, 1, 3), by_field = 'sym', sym_enum = 'symcol', compress=compress)
 Writing Database Partition 2020-01-03 to table quotes
 ```
 

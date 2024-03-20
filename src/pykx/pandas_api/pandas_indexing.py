@@ -2,6 +2,8 @@ from ..wrappers import BooleanVector, IntVector, K, List, LongVector, ShortVecto
 from ..exceptions import QError
 from . import api_return, MetaAtomic
 
+import warnings
+
 
 def _init(_q):
     global q
@@ -301,13 +303,17 @@ def _drop_columns(tab, labels, errors=True):
 
 def _rename_index(tab, labels):
     if "Keyed" in str(type(tab)):
-        for x in list(labels.keys()):
-            if type(x) is not int:
-                labels.pop(x)
         return q('''{
-                  idx:first flip key x;
-                  idx:@[(count idx;1)#idx;idx?raze key y;y];
-                  ([] idx)!value x}''',
+                    kc:first cols x;
+                    idx:key[x]kc;
+                    newinds:([] ky:key y;vl:value y);
+                    newinds:update ind:{.[?;(x;y);count x]}[idx] each ky from newinds;
+                    newinds:select from newinds where not ind=count idx;
+                    if[0~count newinds;:x];
+                    idx:$[(0h~type idx) or (type[idx]~type[newinds`vl]);
+                        @[idx;newinds`ind;:;newinds`vl];
+                        1_ @[(::),idx;1+newinds`ind;:;newinds`vl]];
+                    (@[key x;kc;:;idx])!value x}''',
                  tab, labels)  # noqa
     else:
         return ValueError(f"""Only pykx.KeyedTable objects can
@@ -319,6 +325,8 @@ def _rename_columns(tab, labels):
         if type(labels[x]) is not str:
             raise ValueError('pykx.Table column names can only be of type pykx.SymbolAtom')
         if type(x) is not str:
+            labels.pop(x)
+        if x not in tab.columns:
             labels.pop(x)
     if "Keyed" in str(type(tab)):
         return q('''{
@@ -425,27 +433,38 @@ class PandasReindexing:
         return t
 
     def rename(self, labels=None, index=None, columns=None, axis=0,
-               copy=None, inplace=False, level=None, errors='ignore'):
+               copy=None, inplace=False, level=None, errors='ignore', mapper=None):
+        if labels is not None:
+            warnings.warn("Keyword 'labels' is deprecated please use 'mapper'",
+                          DeprecationWarning)
+            if mapper is None:
+                mapper = labels
         if ("Keyed" not in str(type(self)) and columns is None
                 and ((axis == 'index' or axis == 0) or (index is not None))):
             raise ValueError("Can only rename index of a KeyedTable")
-        if labels is None and index is None and columns is None:
+        if (not isinstance(mapper, dict) and mapper is not None):
+            raise NotImplementedError("Passing of non dictionary mapper items not yet implemented")
+        if (columns is None and ((axis == 'index' or axis == 0) or (index is not None))):
+            if len(self.index.columns)!=1:
+                raise NotImplementedError(
+                    "Index renaming only supported for single key column KeyedTables")
+        if mapper is None and index is None and columns is None:
             raise ValueError("must pass an index to rename")
         elif axis !=0 and (index is not None or columns is not None):
             raise ValueError("Cannot specify both 'axis' and any of 'index' or 'columns'")
 
         if (columns is not None or axis==1) and level is not None:
-            raise ValueError('q/kdb+ tables only support symbols as column labels (no multi index on the column axis).')  # noqa
+            raise ValueError('q/kdb+ tables only support symbols as column mapper (no multi index on the column axis).')  # noqa
 
         if copy is not None or inplace or level is not None or errors != 'ignore':
             raise ValueError('nyi')
 
         t = self
-        if labels is not None:
+        if mapper is not None:
             if axis == 1 or axis == 'columns':
-                t = _rename_columns(t, labels)
+                t = _rename_columns(t, mapper)
             elif axis == 0 or axis == 'index':
-                t = _rename_index(t, labels)
+                t = _rename_index(t, mapper)
             else:
                 raise ValueError(f'No axis named {axis}')
         else:

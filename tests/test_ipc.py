@@ -660,52 +660,154 @@ def test_large_IPC(kx, q_port):
 @pytest.mark.unlicensed
 def test_debug_kwarg(kx, q_port):
     with kx.SyncQConnection(port=q_port) as q:
+        q('.pykx_test.cache_sbt:.Q.sbt')
+        q('.Q.sbt:{.pykx_test.cache:y;x y}[.Q.sbt]')
         assert q('til 10', debug=True).py() == list(range(10))
         with pytest.raises(kx.QError) as e:
-            q('til "asd"')
-            assert '[1]' in str(e)
+            q('til "asd"', debug=True)
+        assert 'type' in str(e)
+
         assert q('{[x] til x}', 10, debug=True).py() == list(range(10))
         with pytest.raises(kx.QError) as e:
-            q('{[x] til x}', b'asd')
-            assert '[1]' in str(e)
+            q('{til x}', b'asd', debug=True)
+        assert 'type' in str(e)
+        assert b'{til x}' == q('.pykx_test.cache').py()[1][1][-1]
+
         assert q('{[x; y] .[mavg; (x; til y)]}', 3, 10, debug=True).py() ==\
             [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
         with pytest.raises(kx.QError) as e:
-            q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
-            assert '[1]' in str(e)
+            q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd', debug=True)
+        assert 'type' in str(e)
+        assert b'{[x; y] .[mavg; (x; til y)]}' == q('.pykx_test.cache').py()[1][1][-1]
+        q('.Q.sbt:.pykx_test.cache_sbt')
+
     with kx.SecureQConnection(port=q_port) as q:
+        q('.pykx_test.cache_sbt:.Q.sbt')
+        q('.Q.sbt:{.pykx_test.cache:y;x y}[.Q.sbt]')
         assert q('til 10', debug=True).py() == list(range(10))
         with pytest.raises(kx.QError) as e:
             q('til "asd"')
-            assert '[1]' in str(e)
+        assert 'type' in str(e)
+
         assert q('{[x] til x}', 10, debug=True).py() == list(range(10))
         with pytest.raises(kx.QError) as e:
-            q('{[x] til x}', b'asd')
-            assert '[1]' in str(e)
+            q('{til x}', b'asd', debug=True)
+        assert 'type' in str(e)
+        assert b'{til x}' == q('.pykx_test.cache').py()[1][1][-1]
+
         assert q('{[x; y] .[mavg; (x; til y)]}', 3, 10, debug=True).py() ==\
             [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
         with pytest.raises(kx.QError) as e:
+            q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd', debug=True)
+        assert 'type' in str(e)
+        assert b'{[x; y] .[mavg; (x; til y)]}' == q('.pykx_test.cache').py()[1][1][-1]
+
+        q('.Q.sbt:.pykx_test.cache_sbt')
+
+
+@pytest.mark.isolate
+def test_debug_kwarg_global(q_port):
+    os.environ['PYKX_QDEBUG'] = 'True'
+    import pykx as kx
+    with kx.SyncQConnection(port=q_port) as q:
+        q('.pykx_test.cache_sbt:.Q.sbt')
+        q('.Q.sbt:{.pykx_test.cache:y;x y}[.Q.sbt]')
+        assert q('til 10').py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            q('til "asd"')
+        assert 'type' in str(e)
+
+        assert q('{[x] til x}', 10).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            q('{til x}', b'asd')
+        assert 'type' in str(e)
+        assert b'{til x}' == q('.pykx_test.cache')[1][1][-1].py()
+
+        assert q('{[x; y] .[mavg; (x; til y)]}', 3, 10).py() ==\
+            [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+        with pytest.raises(kx.QError) as e:
             q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
-            assert '[1]' in str(e)
+        assert 'type' in str(e)
+        assert b'{[x; y] .[mavg; (x; til y)]}' == q('.pykx_test.cache')[1][1][-1].py()
+        q('.Q.sbt:.pykx_test.cache_sbt')
+
+    with kx.SecureQConnection(port=q_port) as q:
+        q('.pykx_test.cache_sbt:.Q.sbt')
+        q('.Q.sbt:{.pykx_test.cache:y;x y}[.Q.sbt]')
+        assert q('til 10').py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            q('til "asd"')
+        assert 'type' in str(e)
+
+        assert q('{[x] til x}', 10, debug=True).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            q('{til x}', b'asd')
+        assert 'type' in str(e)
+        assert b'{til x}' == q('.pykx_test.cache')[1][1][-1].py()
+
+        assert q('{[x; y] .[mavg; (x; til y)]}', 3, 10).py() ==\
+            [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+        with pytest.raises(kx.QError) as e:
+            q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
+        assert 'type' in str(e)
+        assert b'{[x; y] .[mavg; (x; til y)]}' == q('.pykx_test.cache')[1][1][-1].py()
+        q('.Q.sbt:.pykx_test.cache_sbt')
 
 
 @pytest.mark.asyncio
 @pytest.mark.unlicensed
 async def test_debug_kwarg_async(kx, q_port):
     async with kx.AsyncQConnection(port=q_port) as q:
+        q('.pykx_test.cache_sbt:.Q.sbt')
+        q('.Q.sbt:{.pykx_test.cache:y;x y}[.Q.sbt]')
         assert (await q('til 10', debug=True)).py() == list(range(10))
         with pytest.raises(kx.QError) as e:
             await q('til "asd"')
-            assert '[1]' in str(e)
+        assert 'type' in str(e)
+
         assert (await q('{[x] til x}', 10, debug=True)).py() == list(range(10))
         with pytest.raises(kx.QError) as e:
-            await q('{[x] til x}', b'asd')
-            assert '[1]' in str(e)
+            await q('{til x}', b'asd', debug=True)
+        assert 'type' in str(e)
+        assert b'{til x}' == (await q('.pykx_test.cache')).py()[1][1][-1]
+
+        assert (await q('{[x; y] .[mavg; (x; til y)]}', 3, 10, debug=True)).py()\
+            == [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+        with pytest.raises(kx.QError) as e:
+            await q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd', debug=True)
+        assert 'type' in str(e)
+        assert b'{[x; y] .[mavg; (x; til y)]}' == (await q('.pykx_test.cache')).py()[1][1][-1]
+
+        q('.Q.sbt:.pykx_test.cache_sbt')
+
+
+@pytest.mark.isolate
+@pytest.mark.asyncio
+async def test_debug_kwarg_async_global(q_port):
+    import os
+    os.environ['PYKX_QDEBUG'] = 'True'
+    import pykx as kx
+    async with kx.AsyncQConnection(port=q_port) as q:
+        q('.pykx_test.cache_sbt:.Q.sbt')
+        q('.Q.sbt:{.pykx_test.cache:y;x y}[.Q.sbt]')
+        assert (await q('til 10')).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            await q('til "asd"')
+        assert 'type' in str(e)
+
+        assert (await q('{[x] til x}', 10)).py() == list(range(10))
+        with pytest.raises(kx.QError) as e:
+            await q('{til x}', b'asd')
+        assert 'type' in str(e)
+        assert b'{til x}' == (await q('.pykx_test.cache'))[1][1][-1].py()
+
         assert (await q('{[x; y] .[mavg; (x; til y)]}', 3, 10, debug=True)).py()\
             == [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
         with pytest.raises(kx.QError) as e:
             await q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
-            assert '[1]' in str(e)
+        assert 'type' in str(e)
+        assert b'{[x; y] .[mavg; (x; til y)]}' == (await q('.pykx_test.cache'))[1][1][-1].py()
+        q('.Q.sbt:.pykx_test.cache_sbt')
 
 
 @pytest.mark.embedded
@@ -723,3 +825,161 @@ async def test_debug_kwarg_embedded(kx, q):
     with pytest.raises(kx.QError) as e:
         q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
         assert '[1]' in str(e)
+
+
+@pytest.mark.unlicensed
+def test_SyncQConnection_reconnect(kx):
+    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15001'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+
+    conn = kx.QConnection(port=15001, reconnection_attempts=1)
+
+    assert conn('til 20').py() == list(range(20))
+    proc.kill()
+    time.sleep(2)
+    with pytest.raises(BaseException):
+        conn('til 5')
+
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15001'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+    assert conn('til 10').py() == list(range(10))
+    proc.kill()
+    time.sleep(2)
+
+
+@pytest.mark.unlicensed
+def test_SecureQConnection_reconnect(kx):
+    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15002'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+
+    conn = kx.SecureQConnection(port=15002, reconnection_attempts=1)
+
+    assert conn('til 20').py() == list(range(20))
+    proc.kill()
+    time.sleep(2)
+    with pytest.raises(BaseException):
+        conn('til 5')
+
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15002'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+    assert conn('til 10').py() == list(range(10))
+    proc.kill()
+    time.sleep(2)
+
+
+@pytest.mark.asyncio
+@pytest.mark.unlicensed
+async def test_AsyncQConnection_reconnect(kx):
+    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15003'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+
+    conn = await kx.AsyncQConnection(
+        port=15003,
+        reconnection_attempts=1,
+        event_loop=asyncio.get_event_loop()
+    )
+
+    assert (await conn('til 20')).py() == list(range(20))
+    proc.kill()
+    time.sleep(2)
+    with pytest.raises(BaseException):
+        await conn('til 5')
+
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15003'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+    assert (await conn('10?`a`b`c`d')).py() is None
+    assert (await conn('til 10')).py() == list(range(10))
+    fut = conn('{t:.z.p;while[.z.p<t+x]; 10?`a`b`c`d} 00:00:05')
+    fut2 = conn('{t:.z.p;while[.z.p<t+x]; 10?`a`b`c`d} 00:00:05')
+    proc.kill()
+    time.sleep(2)
+    with pytest.raises(BaseException):
+        await fut
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15003'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+    assert (await fut2) is None
+    assert (await conn('10?`a`b`c`d')).py() is None
+    assert (await conn('til 10')).py() == list(range(10))
+    proc.kill()
+    time.sleep(2)
+
+
+@pytest.mark.asyncio
+@pytest.mark.unlicensed
+async def test_AsyncQConnection_reconnect_with_event_loop(kx, event_loop):
+    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15004'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+
+    conn = await kx.AsyncQConnection(
+        port=15004,
+        reconnection_attempts=1,
+        event_loop=event_loop
+    )
+
+    assert (await conn('til 20')).py() == list(range(20))
+    proc.kill()
+    time.sleep(2)
+    with pytest.raises(BaseException):
+        await conn('til 5')
+
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15004'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+    assert (await conn('10?`a`b`c`d')).py() is None
+    assert (await conn('til 10')).py() == list(range(10))
+    fut = conn('{t:.z.p;while[.z.p<t+x]; 10?`a`b`c`d} 00:00:05')
+    fut2 = conn('{t:.z.p;while[.z.p<t+x]; 10?`a`b`c`d} 00:00:05')
+    proc.kill()
+    time.sleep(2)
+    with pytest.raises(BaseException):
+        await fut
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15004'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+    assert (await fut2) is None
+    assert (await conn('10?`a`b`c`d')).py() is None
+    assert (await conn('til 10')).py() == list(range(10))
+    proc.kill()
+    time.sleep(2)

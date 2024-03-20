@@ -12,6 +12,7 @@ from .exceptions import QError
 from . import wrappers as k
 from . import beta_features
 from .config import _check_beta
+from .compress_encrypt import Compress, Encrypt
 
 import os
 from pathlib import Path
@@ -46,12 +47,6 @@ def _check_column(cls, table, column):
     table_cols = cls.list_columns(table)
     if column not in table_cols:
         raise QError("Specified column '" + column + "' not present in table '" + table + "'")
-
-
-def _check_table(cls, table):
-    if not k.PartitionedTable == type(getattr(cls.table, table)): # noqa: E721
-        raise QError("Application of Database Management functionality only "
-                     "supported for Partitioned Databases")
 
 
 _ktype_to_conversion = {
@@ -90,6 +85,7 @@ class _TABLES:
 class DB(_TABLES):
     """Singleton class used for the management of kdb+ Databases"""
     _instance = None
+    _init_tabs = None
     path = None
     tables = None
     table = _TABLES
@@ -110,7 +106,8 @@ class DB(_TABLES):
         pass
 
     def create(self, table, table_name, partition, *, # noqa: C901
-               by_field=None, sym_enum=None, log=True):
+               by_field=None, sym_enum=None, log=True,
+               compress=None, encrypt=None):
         """
         Create an on-disk partitioned table within a kdb+ database from a supplied
             `pykx.Table` object. Once generated this table will be accessible
@@ -128,6 +125,11 @@ class DB(_TABLES):
                 by the partitioning column)
             sym_enum: The name of the symbol enumeration table to be associated with the table
             log: Print information about status of partitioned datab
+            compress: `pykx.Compress` initialized class denoting the
+                compression settings to be used when persisting a partition/partitions
+            encrypt: `pykx.Encrypt` initialized class denoting the encryption setting to be used
+                when persisting a partition/partitions
+
 
         Returns:
             A `None` object on successful invocation, the database class will be
@@ -139,7 +141,7 @@ class DB(_TABLES):
 
         ```python
         >>> import pykx as kx
-        >>> db = kx.DB(path = 'newDB')
+        >>> db = kx.DB(path = '/tmp/newDB')
         >>> N = 1000
         >>> qtab = kx.Table(data = {
         ...     'date': kx.q.asc(kx.random.random(N, kx.q('2020.01 2020.02 2020.03m'))),
@@ -168,14 +170,14 @@ class DB(_TABLES):
 
         ```python
         >>> import pykx as kx
-        >>> db = kx.DB(path = 'newDB')
+        >>> db = kx.DB(path = '/tmp/newDB')
         >>> N = 333
         >>> qtab = kx.Table(data = {
         ...     'sym': kx.random.random(N, ['AAPL', 'GOOG', 'MSFT']),
         ...     'price': kx.random.random(N, 10.0),
         ...     'size': kx.random.random(N, 100)
         ... })
-        >>> db.create(qtab, 'stocks', kx.q('2020.04'), by_field = 'sym', sym_enum = 'symbols')
+        >>> db.create(qtab, 'stocks', kx.q('2020.04m'), by_field = 'sym', sym_enum = 'symbols')
         >>> db.tables
         ['stocks']
         >>> db.stocks
@@ -190,6 +192,30 @@ class DB(_TABLES):
         ..
         '))
         ```
+
+        Add a table as a partition to an on-disk database, in the example below we are
+            additionally applying gzip compression to the persisted table
+
+        ```python
+        >>> import pykx as kx
+        >>> db = kx.DB(path = '/tmp/newDB')
+        >>> N = 333
+        >>> qtab = kx.Table(data = {
+        ...     'sym': kx.random.random(N, ['AAPL', 'GOOG', 'MSFT']),
+        ...     'price': kx.random.random(N, 10.0),
+        ...     'size': kx.random.random(N, 100)
+        ... })
+        >>> compress = kx.Compress(kx.CompressionAlgorithm.gzip, level=2)
+        >>> db.create(qtab, 'stocks', kx.q('2020.04m'), compress=compress)
+        >>> kx.q('{-21!hsym x}', '/tmp/newDB/2020.04/stocks/price')
+        pykx.Dictionary(pykx.q('
+        compressedLength  | 2064
+        uncompressedLength| 2680
+        algorithm         | 2i
+        logicalBlockSize  | 17i
+        zipLevel          | 2i
+        '))
+        ```
         """
         save_dir = self.path
         func_name = 'dpfts'
@@ -199,6 +225,18 @@ class DB(_TABLES):
             func_name = func_name.replace('f', '')
         if sym_enum is None:
             func_name = func_name.replace('s', '')
+        compression_cache = q.z.zd
+        if encrypt is not None:
+            if not isinstance(encrypt, Encrypt):
+                raise ValueError('Supplied encrypt object not an instance of pykx.Encrypt')
+            if not encrypt.loaded:
+                encrypt.load_key()
+            if compress is None:
+                compress = Compress()
+        if compress is not None:
+            if not isinstance(compress, Compress):
+                raise ValueError('Supplied compress parameter is not a pykx.Compress object')
+            compress.global_init(encrypt=encrypt)
         qfunc = q(_func_mapping[func_name])
         try:
             if type(partition) == str:
@@ -221,12 +259,14 @@ class DB(_TABLES):
                 qfunc(save_dir, partition, by_field, table_name, sym_enum)
         except QError as err:
             q('{![`.;();0b;enlist x]}', table_name)
+            q.z.zd = compression_cache
             raise QError(err)
         q('{![`.;();0b;enlist x]}', table_name)
+        q.z.zd = compression_cache
         self.load(self.path, overwrite=True)
         return None
 
-    def load(self, path: Union[Path, str], *, overwrite=False):
+    def load(self, path: Union[Path, str], *, overwrite=False, encrypt=None):
         """
         Load the tables associated with a kdb+ Database, once loaded a table
             is accessible as an attribute of the `DB` class or a sub attribute
@@ -320,7 +360,11 @@ class DB(_TABLES):
             else:
                 err_info = 'Unable to find object at specified path'
             raise QError('Loading of kdb+ databases can only be completed on folders: ' + err_info)
-        preloaded = self.tables
+        if encrypt is not None:
+            if not isinstance(encrypt, Encrypt):
+                raise ValueError('Supplied encrypt object not an instance of pykx.Encrypt')
+            if not encrypt.loaded:
+                encrypt.load_key()
         q('''
           {[dbpath]
             @[system"l ",;
@@ -331,9 +375,8 @@ class DB(_TABLES):
           ''', load_path)
         self.path = load_path
         self.loaded = True
-        tables = q.tables()
-        self.tables = tables.py()
-        for i in q('except', self.tables, preloaded).py():
+        self.tables = q.Q.pt.py()
+        for i in self.tables:
             if hasattr(self, i):
                 warn(f'A database table "{i}" would overwrite one of the pykx.DB() methods, please access your table via the table attribute') # noqa: E501
             else:
@@ -385,7 +428,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column rename')
-        _check_table(self, table)
         _check_column(self, table, original_name)
         q.dbmaint.renamecol(self.path, table, original_name, new_name)
         self._reload()
@@ -430,7 +472,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column deletion')
-        _check_table(self, table)
         _check_column(self, table, column)
         q.dbmaint.deletecol(self.path, table, column)
         self._reload()
@@ -465,7 +506,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, original_name, 'Table rename')
-        _check_table(self, original_name)
         q.dbmaint.rentable(self.path, original_name, new_name)
         # Remove the original table, without this it persists as an accessible table
         q('{![`.;();0b;enlist x]`}', original_name)
@@ -497,7 +537,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column listing')
-        _check_table(self, table)
         return q.dbmaint.listcols(self.path, table).py()
 
     def add_column(self, table, column_name, default_value):
@@ -531,7 +570,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column addition')
-        _check_table(self, table)
         q.dbmaint.addcol(self.path, table, column_name, default_value)
         self._reload()
         return(None)
@@ -585,7 +623,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Finding columns')
-        _check_table(self, table)
         return q.dbmaint.findcol(self.path, table, column_name).py()
 
     def reorder_columns(self, table, new_order):
@@ -622,7 +659,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column reordering')
-        _check_table(self, table)
         q.dbmaint.reordercols(self.path, table, new_order)
         return None
 
@@ -671,7 +707,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Attribute setting')
-        _check_table(self, table)
         _check_column(self, table, column_name)
         if new_attribute not in ['s', 'g', 'p', 'u', 'sorted',
                                  'grouped', 'partitioned', 'unique']:
@@ -729,7 +764,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column casting')
-        _check_table(self, table)
         _check_column(self, table, column_name)
         if new_type not in _ktype_to_conversion:
             raise QError("Unable to find user specified conversion type: " + str(new_type))
@@ -786,7 +820,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Attribute clearing')
-        _check_table(self, table)
         _check_column(self, table, column_name)
         q.dbmaint.clearattrcol(self.path, table, column_name)
         return None
@@ -819,7 +852,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column copying')
-        _check_table(self, table)
         _check_column(self, table, original_column)
         q.dbmaint.copycol(self.path, table, original_column, new_column)
         self._reload()
@@ -903,7 +935,6 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Function application')
-        _check_table(self, table)
         _check_column(self, table, column_name)
         if not callable(function):
             raise RuntimeError("Provided 'function' is not callable")

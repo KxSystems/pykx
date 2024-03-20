@@ -1,3 +1,0 @@
-# Write
-
-::: pykx.write

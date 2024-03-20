@@ -218,7 +218,7 @@ class Q(metaclass=ABCMeta):
         else:
             path = _first_resolved_path([''.join(x) for x in it.product(
                 # `str(Path/@)[:-1]` gets the path with a trailing path separator
-                (str(x/'@')[:-1] for x in self.paths),
+                (str(x/Path('@'))[:-1] for x in self.paths),
                 ('.', ''),
                 (name,),
                 ('.q', '.k'),
@@ -289,6 +289,7 @@ from .exceptions import *
 from ._ipc import _init as _ipc_init
 _ipc_init(q)
 
+from .compress_encrypt import Compress, CompressionAlgorithm, Encrypt
 from .db import DB
 from .ipc import AsyncQConnection, QConnection, QFuture, RawQConnection, SecureQConnection, SyncQConnection # noqa
 from .config import qargs, qhome, qlic
@@ -314,6 +315,9 @@ _db_init(q)
 
 from .remote import _init as _remote_init
 _remote_init(q)
+
+from .compress_encrypt import _init as _compress_init
+_compress_init(q)
 
 if k_allocator:
     from . import _numpy as _pykx_numpy_cext

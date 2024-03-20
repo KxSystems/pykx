@@ -168,8 +168,9 @@ pykx.List(q('
 Write global tables to disk as splayed, enumerated, indexed q tables.
 
 ```python
->>> pykx.q('t: ([] x: 1 2 3; y: 10 20 30)')
->>> pykx.q.dsave(':v', 't')
+>>> from pathlib import Path
+>>> pykx.q['t'] = kx.Table(data={'x': [1, 2, 3], 'y': [10, 20, 30]})
+>>> pykx.q.dsave(Path('v'), 't')
 pykx.SymbolAtom(q('`t'))
 ```
 
@@ -178,7 +179,7 @@ pykx.SymbolAtom(q('`t'))
 Read or memory-map a variable or q data file.
 
 ```python
->>> pykx.q('a: 10')
+>>> pykx.q['a'] = 10
 >>> pykx.q.get('a')
 pykx.LongAtom(q('10'))
 ```

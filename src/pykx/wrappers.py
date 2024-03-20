@@ -498,7 +498,12 @@ class K:
     def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         return self.py(raw=raw)
 
-    def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+    def pd(
+        self,
+        *,
+        raw: bool = False,
+        has_nulls: Optional[bool] = None
+    ):
         return self.np(raw=raw)
 
     def pa(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
@@ -663,7 +668,12 @@ class TemporalFixedAtom(TemporalAtom):
             return np.datetime64(_wrappers.k_j(self) + epoch_offset, self._np_type)
         return np.datetime64(_wrappers.k_i(self) + self._epoch_offset, self._np_type)
 
-    def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+    def pd(
+        self,
+        *,
+        raw: bool = False,
+        has_nulls: Optional[bool] = None,
+    ):
         if raw:
             return self.np(raw=True)
         return pd.Timestamp(self.np())
@@ -792,7 +802,7 @@ class DatetimeAtom(TemporalFixedAtom):
     """Wrapper for q datetime atoms.
 
     Warning: The q datetime type is deprecated.
-        PyKX does not provide a rich interface for the q datetime type, as it is depreceated. Avoid
+        PyKX does not provide a rich interface for the q datetime type, as it is deprecated. Avoid
         using it whenever possible.
     """
     t = -15
@@ -1520,8 +1530,14 @@ class Vector(Collection, abc.Sequence):
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         return self.np(raw=raw, has_nulls=has_nulls).tolist()
 
-    def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
-        return pd.Series(self.np(raw=raw, has_nulls=has_nulls), copy=False)
+    def pd(
+        self,
+        *,
+        raw: bool = False,
+        has_nulls: Optional[bool] = None,
+    ):
+        res = pd.Series(self.np(raw=raw, has_nulls=has_nulls), copy=False)
+        return res
 
     def pa(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         if pa is None:
@@ -1985,11 +2001,17 @@ class IntegralNumericVector(NumericVector):
             )
         return arr
 
-    def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+    def pd(
+        self,
+        *,
+        raw: bool = False,
+        has_nulls: Optional[bool] = None,
+    ):
         arr = self.np(raw=raw, has_nulls=has_nulls)
         if isinstance(arr, np.ma.MaskedArray):
             arr = pd.arrays.IntegerArray(arr, mask=arr.mask, copy=False)
-        return pd.Series(arr, copy=False)
+        res = pd.Series(arr, copy=False)
+        return res
 
 
 class BooleanVector(IntegralNumericVector):
@@ -2145,11 +2167,17 @@ class GUIDVector(Vector):
             raise PyArrowUnavailable # nocov
         return _raw_guids_to_arrow(self.np(raw=True))
 
-    def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+    def pd(
+        self,
+        *,
+        raw: bool = False,
+        has_nulls: Optional[bool] = None,
+    ):
         if raw:
             return PandasUUIDArray(self.np(raw=raw))
         else:
-            return super().pd()
+            res = super().pd()
+            return res
 
 
 class ByteVector(IntegralNumericVector):
@@ -2440,7 +2468,7 @@ class TimestampVector(TemporalFixedVector):
             if x is None:
                 null_pos.append(converted_vector.index(x))
         for i in null_pos:
-            converted_vector[i]=q('0Np')
+            converted_vector[i]=TimestampAtom(None)
         return converted_vector
 
 
@@ -2563,10 +2591,16 @@ class EnumVector(Vector):
             return _wrappers.k_vec_to_array(self, _wrappers.NPY_INT64)
         return q('value', self).np()
 
-    def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+    def pd(
+        self,
+        *,
+        raw: bool = False,
+        has_nulls: Optional[bool] = None,
+    ):
         if raw:
             return super(self).pd(raw=raw, has_nulls=has_nulls)
-        return pd.Series(self.np(raw=raw, has_nulls=has_nulls), dtype='category')
+        res = pd.Series(self.np(raw=raw, has_nulls=has_nulls), dtype='category')
+        return res
 
 
 class Anymap(List):
@@ -2582,8 +2616,14 @@ class Anymap(List):
     def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         return self._as_list().np(raw=raw, has_nulls=has_nulls)
 
-    def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
-        return self._as_list().pd(raw=raw, has_nulls=has_nulls)
+    def pd(
+        self,
+        *,
+        raw: bool = False,
+        has_nulls: Optional[bool] = None,
+    ):
+        res = self._as_list().pd(raw=raw, has_nulls=has_nulls)
+        return res
 
     def pa(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         return self._as_list().pa(raw=raw, has_nulls=has_nulls)
@@ -2740,7 +2780,13 @@ class Table(PandasAPI, Mapping):
             self._values.py(raw=raw, has_nulls=has_nulls, stdlib=stdlib),
         ))
 
-    def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None, raw_guids=False):
+    def pd(
+        self,
+        *,
+        raw: bool = False,
+        has_nulls: Optional[bool] = None,
+        raw_guids=False,
+    ):
         if raw_guids and not raw:
             v = [x.np(raw=isinstance(x, GUIDVector), has_nulls=has_nulls) for x in self._values]
             v = [PandasUUIDArray(x) if x.dtype == complex else x for x in v]
@@ -3366,7 +3412,12 @@ class KeyedTable(Dictionary, PandasAPI):
             return q('0!', self).np(raw=raw, has_nulls=has_nulls)
         raise LicenseException('convert a keyed table to a Numpy representation')
 
-    def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+    def pd(
+        self,
+        *,
+        raw: bool = False,
+        has_nulls: Optional[bool] = None,
+    ):
         kk = self._keys._keys
         vk = self._values._keys
         kvg = self._keys._values._unlicensed_getitem
@@ -4135,13 +4186,12 @@ class Foreign(Atom):
     def __call__(self, *args, **kwargs):
         if not licensed:
             raise LicenseException('call a q function in a Python process')
-        return q(
-            '{x`}',
-            q('{.pykx.wrap[x]}', self)(
+        if q('.pykx.util.isf', self).py():
+            return q('{.pykx.wrap[x][<]}', self)(
                 *[K(x) for x in args],
                 **{k: K(v) for k, v in kwargs.items()}
             )
-        )
+        return q('{x . y}', self, [*[K(x) for x in args]])
 
     @property
     def params(self):

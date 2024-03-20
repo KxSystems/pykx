@@ -16,6 +16,7 @@ import itertools
 
 # Do not import Pandas, PyArrow, or PyKX here - use the pd/pa/kx fixtures instead!
 import numpy as np
+import pandas as pd
 import pytest
 import pytz
 from packaging import version
@@ -1453,7 +1454,7 @@ class Test_Vector:
         assert not q('0xdeadbeef').has_infs
 
         def f(type_code, zero):
-            v = q(f'v:v where (not &[;]. v=/:(neg z;z:0W{type_code})) & not null v:100?{zero};v')
+            v = q(f'v:v where (not any v=/:(neg z;z:0W{type_code})) & not null v:100?{zero};v')
             assert not v.has_nulls
             assert not v.has_infs
             assert q(f'@[v;-3?50;:;0N{type_code}]').has_nulls
@@ -1467,9 +1468,15 @@ class Test_Vector:
         for type_code, zero in types:
             f(type_code, zero)
 
-    def test_np_timestampvector_nulls(self, q, kx):
+    def test_np_timestampvector_nulls(self, kx):
         assert kx.q('0Np').py() is None
         assert kx.q('enlist 0Np').py() == [kx.TimestampAtom(kx.q('0Np'))]
+
+    @pytest.mark.unlicensed
+    def test_np_timestampvector_nulls_IPC(self, kx, q_port):
+        with kx.QConnection(port=q_port) as conn:
+            r = conn('([] t:2#0Np)').py()
+            assert r['t'][0].py() is None
 
 
 class Test_List:
@@ -3560,6 +3567,31 @@ def test_attributes_table(kx, q):
         tab.parted(['x', 'x1'])
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+@pytest.mark.licensed
+def test_foreign_call(kx, q):
+    isf = q('.pykx.util.isf')
+    assert not q('.pykx.util.isf[1b]').py()
+    assert not q('.pykx.util.isf', True).py()
+    assert not isf(True).py()
+
+    repr = kx.q('.pykx.util.repr')
+    with pytest.raises(kx.QError) as err:
+        q('.pykx.util.repr[1b;1b]')
+    assert 'Expected a foreign' in str(err.value)
+
+    with pytest.raises(kx.QError) as err:
+        q('.pykx.util.repr', True, True)
+    assert 'Expected a foreign' in str(err.value)
+
+    with pytest.raises(kx.QError) as err:
+        repr(True, True)
+    assert 'Expected a foreign' in str(err.value)
+
+
 @pytest.mark.licensed
 def test_attributes_keyed_table(kx, q):
     tab = q('([til 10] x1: 10 + til 10)')
@@ -4066,3 +4098,119 @@ def test_repr_html(kx, q):
     q('system"l ."')
     tab = q('partitionedTab')
     assert (6, 49, 105) == checkHTML(tab)
+
+
+@pytest.mark.unlicensed
+@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
+def test_pyarrow_pandas_ci_only(q):
+    if os.getenv('CI'):
+        with pytest.raises(NotImplementedError):
+            q('get`:a set ('
+              '(1 2;3 4);'
+              '`time`price`vol!(2022.03.29D16:45:14.880819;1.;100i);'
+              '([]a:1 2;b:("ab";"cd")))'
+            ).pd(as_arrow=True)
+
+
+@pytest.mark.unlicensed
+@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
+@pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
+def test_pyarrow_pandas_all_ipc(kx, q_port):
+    with kx.QConnection(port=q_port) as q:
+        def gen_q_datatypes_table(q, table_name: str, num_rows: int = 100) -> str:
+            query = '{@[;0;string]x#/:prd[x]?/:("pdmnuvtbhijef"$\\:0)}'
+            t = q(query, q('enlist', num_rows))
+            if q('{any(raze null x),raze(v,neg v:0W 2147483647 32767)=\\:raze"j"$x:5_x}', t):
+                t = q(query, q('enlist', num_rows))
+            t = q(f'enlist[({num_rows}?.Q.a)],', t)
+            q[table_name] = t
+            q(f'{table_name}[1]: prd[enlist[{num_rows}]]?/:("p"$\\:0)')
+            return table_name
+
+        gen_q_datatypes_table(q, 'tab', 100)
+        for vec in q('tab'):
+            assert 'pyarrow' in str(vec.pd(as_arrow=True))
+        q('tab: flip (`a`b`c`d`e`f`g`h`i`j`k`l`m`n)!(tab)')
+
+        cols = q('cols tab').py()
+        dfa = q('tab').pd(as_arrow=True)
+        for c in cols:
+            assert 'pyarrow' in str(dfa[c].dtype)
+        q('tab: (til 100)!(tab)')
+
+        with pytest.raises(NotImplementedError):
+            q('10?0Ng').pd(as_arrow=True)
+
+        with pytest.raises(NotImplementedError):
+            q('0Nm').pd(as_arrow=True)
+
+        with pytest.raises(NotImplementedError):
+            q('0Nu').pd(as_arrow=True)
+
+
+@pytest.mark.unlicensed
+@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
+@pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
+def test_pyarrow_pandas_all(q):
+    def gen_q_datatypes_table(q, table_name: str, num_rows: int = 100) -> str:
+        query = '{@[;0;string]x#/:prd[x]?/:("pdmnuvtbhijef"$\\:0)}'
+        t = q(query, q('enlist', num_rows))
+        if q('{any(raze null x),raze(v,neg v:0W 2147483647 32767)=\\:raze"j"$x:5_x}', t):
+            t = q(query, q('enlist', num_rows))
+        t = q(f'enlist[({num_rows}?.Q.a)],', t)
+        q[table_name] = t
+        q(f'{table_name}[1]: prd[enlist[{num_rows}]]?/:("p"$\\:0)')
+        return table_name
+
+    gen_q_datatypes_table(q, 'tab', 100)
+    for vec in q('tab'):
+        assert 'pyarrow' in str(vec.pd(as_arrow=True))
+    q('tab: flip (`a`b`c`d`e`f`g`h`i`j`k`l`m`n)!(tab)')
+
+    cols = q('cols tab').py()
+    dfa = q('tab').pd(as_arrow=True)
+    for c in cols:
+        assert 'pyarrow' in str(dfa[c].dtype)
+    q('tab: (til 100)!(tab)')
+
+    with pytest.raises(NotImplementedError):
+        q('10?0Ng').pd(as_arrow=True)
+
+    with pytest.raises(NotImplementedError):
+        q('`u$v:6#u:`abc`xyz`hmm').pd(as_arrow=True)
+
+    with pytest.raises(NotImplementedError):
+        q('0Nm').pd(as_arrow=True)
+
+    with pytest.raises(NotImplementedError):
+        q('0Nu').pd(as_arrow=True)
+
+
+@pytest.mark.embedded
+@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
+@pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
+def test_pyarrow_pandas_table_roundtrip(kx):
+    kx.q('gen_data:{@[;0;string]x#/:prd[x]?/:(`6;`6;0Ng),("bxhijefpdnuvt"$\\:0)}')
+    kx.q('gen_names:{"dset_",/:x,/:string til count y}')
+    kx.q('dset_1D:gen_data[enlist 50]')
+    kx.q('one_tab: flip(`$gen_names["1_tab";dset_1D])!dset_1D')
+
+    tab = kx.q['one_tab']
+    tab2 = kx.toq(tab.pd(as_arrow=True))
+
+    for x in tab.keys():
+        assert isinstance(tab2[x], type(tab[x]))
+        if x == 'dset_1_tab12':
+            assert all([x < 1000 for x in (tab[x]._values - tab2[x]._values).np()[0].astype(int)]) # noqa
+        else:
+            assert (tab[x]._values == tab2[x]._values).all()
+
+
+@pytest.mark.embedded
+@pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
+@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
+def test_pyarrow_pandas_timedeltas(kx):
+    tds = kx.toq(kx.q('''
+            ([] a:1D 1D01 1D01:02 1D01:01:01 1D01:01:01.001 1D01:01:01.001001 1D01:01:01.001001001)
+            ''').pd(as_arrow=True)['a'])
+    assert ([-17, -17, -17, -18, -19, -16, -16] == kx.q('{type each x}', tds)).all()

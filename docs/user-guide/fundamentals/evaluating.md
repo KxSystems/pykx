@@ -70,6 +70,54 @@ x          x1
 
 	The application of arguments to functions within PyKX is limited to a maximum of 8 arguments. This limitation is imposed by the evaluation of q code.
 
+Users wishing to debug failed evaluation of q code can do so either through usage of a `debug` keyword or by globally setting the environment variable `PYKX_QDEBUG`.
+
+=== "Global Setting"
+
+	```python
+	>>> import os
+	>>> os.environ['PYKX_QDEBUG'] = 'True'
+	>>> import pykx as kx
+	>>> kx.q('{x+1}', 'a')
+	backtrace:
+	  [2]  {x+1}
+        	 ^
+	  [1]  (.Q.trp)
+
+	  [0]  {[pykxquery] .Q.trp[value; pykxquery; {if[y~();:(::)];2@"backtrace:
+        	            ^
+	",.Q.sbt y;'x}]}
+	Traceback (most recent call last):
+	  File "<stdin>", line 1, in <module>
+	  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/embedded_q.py", line 230, in __call__
+	    return factory(result, False)
+	  File "pykx/_wrappers.pyx", line 493, in pykx._wrappers._factory
+	  File "pykx/_wrappers.pyx", line 486, in pykx._wrappers.factory
+	pykx.exceptions.QError: type
+	```
+
+=== "Per call debugging"
+
+	```python
+	>>> import pykx as kx
+	>>> kx.q('{x+1}', 'a', debug=True)
+	backtrace:
+	  [2]  {x+1}
+	         ^
+	  [1]  (.Q.trp)
+
+	  [0]  {[pykxquery] .Q.trp[value; pykxquery; {if[y~();:(::)];2@"backtrace:
+	                    ^
+	",.Q.sbt y;'x}]}
+	Traceback (most recent call last):
+	  File "<stdin>", line 1, in <module>
+	  File "/usr/local/anaconda3/lib/python3.8/site-packages/pykx/embedded_q.py", line 230, in __call__
+	    return factory(result, False)
+	  File "pykx/_wrappers.pyx", line 493, in pykx._wrappers._factory
+	  File "pykx/_wrappers.pyx", line 486, in pykx._wrappers.factory
+	pykx.exceptions.QError: type
+	```
+
 ## Using the q console within PyKX
 
 For users more comfortable prototyping q code within a q terminal it is possible within a Python terminal to run an emulation of a q session directly in Python through use of the `kx.q.console` method.

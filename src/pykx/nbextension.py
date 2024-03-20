@@ -14,6 +14,7 @@ def q(instructions, code): # noqa
     no_ctx = False
     displayRet = False
     debug = False
+    reconnection_attempts = -1
     if len(instructions)>0:
 
         instructions = instructions.split(' ')
@@ -69,6 +70,11 @@ def q(instructions, code): # noqa
                 debug = True
                 instructions.pop(0)
                 continue
+            elif instructions[0] == '--reconnection_attempts':
+                reconnection_attempts = float(instructions[1])
+                instructions.pop(0)
+                instructions.pop(0)
+                continue
             elif instructions[0] == '':
                 instructions.pop(0)
                 continue
@@ -87,10 +93,11 @@ def q(instructions, code): # noqa
             large_messages=large_messages,
             tls=tls,
             unix=unix,
-            no_ctx=no_ctx
+            no_ctx=no_ctx,
+            reconnection_attempts=reconnection_attempts
         )
         try:
-            _q(ld)
+            _q(ld, skip_debug=True)
         except kx.QError as err:
             if '.Q.pykxld' in str(err):
                 # .Q.pykxld is not defined on the server so we pass it as inline code
@@ -98,7 +105,7 @@ def q(instructions, code): # noqa
                     lines = f.readlines()
                     for line in lines:
                         if 'pykxld:' in line:
-                            ld = _q("k)"+line[7:-1])
+                            ld = _q("k)"+line[7:-1], skip_debug=True)
                             break
             else:
                 raise err
@@ -115,13 +122,13 @@ def q(instructions, code): # noqa
        ''',
         ld,
         code,
-        b'jupyter_cell.q'
+        b'jupyter_cell.q', skip_debug=True
     )
     if not kx.licensed:
         ret = ret.py()
         for i in range(len(ret['res'])):
             if ret['err'][i]:
-                if debug:
+                if debug or kx.config.pykx_qdebug:
                     print(ret['trc'][i].decode())
                 raise kx.QError(ret['res'][i].decode())
             else:
@@ -130,7 +137,7 @@ def q(instructions, code): # noqa
         for i in range(len(ret)):
             r = _q('@', ret, i)
             if r['err']:
-                if debug:
+                if debug or kx.config.pykx_qdebug:
                     print(r['trc'])
                 raise kx.QError(r['res'].py().decode())
             else:

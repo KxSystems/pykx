@@ -1,3 +1,0 @@
-# Read
-
-::: pykx.read

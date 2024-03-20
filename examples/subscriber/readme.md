@@ -40,7 +40,7 @@ q process is started.
 ```bash
 // run the subscriber which will automatically connect
 $ python subscriber.py
-===== Initital Table =====
+===== Initial Table =====
 a b
 ---
 4 8
@@ -53,7 +53,7 @@ a b
 2 1
 1 8
 8 5
-===== Initital Table =====
+===== Initial Table =====
 
 ```
 

@@ -3,7 +3,7 @@ site_name: 'PyKX'
 site_author: 'KX'
 site_description: 'PyKX Documentation'
 site_url: 'https://code.kx.com/pykx'
-copyright: 'Ⓒ KX 2022'
+copyright: '© 2024 Kx Systems, Inc. KX and kdb+ are registered trademarks of Kx Systems, Inc., a subsidiary of FD Technologies plc.'
 site_dir: 'public'
 dev_addr: 'localhost:8080'
 
@@ -211,6 +211,7 @@ nav:
       - License management: api/license.md
       - Random data generation: api/random.md
       - Querying: api/query.md
+      - Compression and Encryption APIs: api/compress.md
       - Database Interactions: api/db.md
       - Remote Python Execution: api/remote.md
       - IPC: api/ipc.md
@@ -225,6 +226,7 @@ nav:
     - Beta Features:
       - Introduction: beta-features/index.md
       - Database Management: beta-features/db-management.md
+      - Compression and Encryption: beta-features/compress-encypt.md
       - Remote Function Execution: beta-features/remote-functions.md
       - Multithreading: beta-features/threading.md
     - Python interfacing within q:
@@ -245,6 +247,7 @@ nav:
       - PyKX: release-notes/changelog.md
       - PyKX under q: release-notes/underq-changelog.md
     - Roadmap: roadmap.md
+    - Blogs, Articles and Videos: blogs.md
     - Troubleshooting: troubleshooting.md
     - Frequently Asked Questions (FAQ): faq.md
     - Support: support.md

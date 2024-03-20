@@ -47,7 +47,7 @@ def test_read_csv(kx, q, tmp_csv_path_1, tmp_csv_path_2):
         ctx = nullcontext()
     with ctx:
         assert isinstance(
-            q.read.csv(tmp_csv_path_1, {'a': kx.LongAtom, 'b': kx.LongAtom, 'c': kx.LongAtom}),
+            q.read.csv(tmp_csv_path_1, {'col': kx.SymbolAtom, 'a': kx.LongAtom, 'b': kx.LongAtom, 'c': kx.LongAtom}), # noqa: E501
             kx.Table
         )
         tab = q.read.csv(tmp_csv_path_1, [kx.LongAtom, ' ', kx.LongAtom])

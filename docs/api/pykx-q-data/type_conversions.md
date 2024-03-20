@@ -771,11 +771,11 @@ True
 	Converting these types to python will return a float object or a `float64` object in numpy's case.
 
 	```Python
-	>>> kx.q('0001.02.03T04:05:06.007, 0001.02.03T04:05:06.007').py(raw=True)
+	>>> kx.q('0001.02.03T04:05:06.007 0001.02.03T04:05:06.007').py(raw=True)
 	[-730085.8297915857, -730085.8297915857]
-	>>> kx.q('0001.02.03T04:05:06.007, 0001.02.03T04:05:06.007').np(raw=True)
+	>>> kx.q('0001.02.03T04:05:06.007 0001.02.03T04:05:06.007').np(raw=True)
 	array([-730085.82979159, -730085.82979159])
-	>>> kx.q('0001.02.03T04:05:06.007, 0001.02.03T04:05:06.007').np(raw=True).dtype
+	>>> kx.q('0001.02.03T04:05:06.007 0001.02.03T04:05:06.007').np(raw=True).dtype
 	dtype('float64')
 	```
 
@@ -1081,7 +1081,9 @@ True
 	Calling `.py()` on a `pykx.Table` will return a python `dict` object.
 
 	```Python
-	>>> kx.q('([] a: 10?10; b: 10?10)').py()
+	>>> kx.Table(data={
+	...     'a': kx.random.random(10, 10),
+	...     'b': kx.random.random(10, 10)}).py()
 	{'a': [5, 6, 4, 1, 3, 3, 7, 8, 2, 1], 'b': [8, 1, 7, 2, 4, 5, 4, 2, 7, 8]}
 	```
 
@@ -1089,7 +1091,9 @@ True
 	Calling `.np()` on a `pykx.Table` will return a numpy `record` array of the rows of the table with each type converted to it closest analogous numpy type.
 
 	```Python
-	>>> kx.q('([] a: 10?10; b: 10?10)').np()
+	>>> kx.Table(data={
+	...     'a': kx.random.random(10, 10),
+	...     'b': kx.random.random(10, 10)}).np()
 	rec.array([(9, 9), (9, 7), (2, 6), (5, 6), (4, 4), (2, 7), (5, 8), (8, 4),
         	   (7, 4), (9, 6)],
 	           dtype=[('a', '<i8'), ('b', '<i8')])
@@ -1099,7 +1103,9 @@ True
 	Calling `.pd()` on a `pykx.Table` will return a pandas `DataFrame` with each column being converted to its closest pandas `dtype`.
 
 	```Python
-	>>> kx.q('([] a: 10?10; b: 10?10)').pd()
+	>>> kx.Table(data={
+	...     'a': kx.random.random(10, 10),
+	...     'b': kx.random.random(10, 10)}).pd()
 	   a  b
 	0  1  9
 	1  0  7
@@ -1137,7 +1143,9 @@ True
 	Calling `.pa()` on a `pykx.Table` will return a pyarrow `Table`.
 
 	```Python
-	>>> kx.q('([] a: 10?10; b: 10?10)').pa()
+	>>> kx.Table(data={
+	...     'a': kx.random.random(10, 10),
+	...     'b': kx.random.random(10, 10)}).pa()
 	pyarrow.Table
 	a: int64
 	b: int64

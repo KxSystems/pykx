@@ -83,9 +83,16 @@ class PandasConversions:
 
                 try:
                     dict_grab = {}
-                    for k, v in dtype.items():
+                    for k, v in dtype.copy().items():
                         dict_grab[k] = abs(kx_type_to_type_number[[x for x in
                                            kx_type_to_type_number.keys() if x in str(v)][0]])
+                        strval = q('{3_first x}',
+                                   q.qsql.exec(self.dtypes, 'datatypes', f'columns=`{k}'))
+                        qtype = kx_type_to_type_number[strval.py().decode('utf-8')]
+                        if abs(qtype) == dict_grab[k]:
+                            dict_grab.pop(k)
+                    if dict_grab == {}:
+                        return self
                 except IndexError:
                     raise QError('Value passed does not match PyKX wrapper type')
 
@@ -136,21 +143,21 @@ class PandasConversions:
                                     b1:(tabColTypes=10h) & dictColTypes=11h;
                                     c1:()!();
                                     if[any b1;
-                                    dCols1:dictCols where b1;
-                                    f1:{(`$';x)}; c1:dCols1!(f1 each dCols1)];
+                                      dCols1:dictCols where b1;
+                                      f1:{(`$';x)}; c1:dCols1!(f1 each dCols1)];
                                     // Check casting to symbol, run `$string col
                                     // (also covers any symbol -> symbol cases)
                                     b2:(dictColTypes=11h) & not (b1 or tabColTypes=0h);
                                     c2:()!();
                                     if[any b2;
-                                    dCols2:dictCols where b2;
-                                    f2:{(`$string; x)}; c2:dCols2!(f2 each dCols2)];
+                                      dCols2:dictCols where b2;
+                                      f2:{(`$string; x)}; c2:dCols2!(f2 each dCols2)];
                                     // Casting to string covering all cases except mixed lists
                                     b3: (dictColTypes=10h) & not tabColTypes=0h;
                                     c3:()!();
                                     if[any b3;
-                                    dCols3:dictCols where b3;
-                                    f3:{(string; x)}; c3:dCols3!(f3 each dCols3)];
+                                      dCols3:dictCols where b3;
+                                      f3:{(string; x)}; c3:dCols3!(f3 each dCols3)];
                                     // Check mixed lists
                                     // if string column then allow cast to symbol
                                     // Check at beginning of method
@@ -159,8 +166,8 @@ class PandasConversions:
                                        (tabColTypes=0h) & tabColNestedTypes=10h;
                                     c4:()!();
                                     if[any b4;
-                                    dCols4:dictCols where b4;
-                                    f4:{(`$; x)}; c4:dCols4!(f4 each dCols4)];
+                                      dCols4:dictCols where b4;
+                                      f4:{(`$; x)}; c4:dCols4!(f4 each dCols4)];
                                     // Any matches that meet the vanilla case
                                     // and don't have additonal needs --> not any (bools)
                                     b5:not any (b1;b2;b3;b4);

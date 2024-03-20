@@ -14,8 +14,8 @@ def __dir__():
 class SystemCommands:
     """Wrappers for `q` system commands.
 
-    More documentation on all the system commands available to `q` can being
-    (found here)[https://code.kx.com/q/basics/syscmds/].
+    More documentation on all the system commands available to `q` can be
+    [found here](https://code.kx.com/q/basics/syscmds/).
     """
 
     def __init__(self, q: Q):
@@ -137,6 +137,12 @@ class SystemCommands:
 
         ```
         kx.q.system.namespace('foo')
+        ```
+
+        Return to the default namespace.
+
+        ```
+        kx.q.system.namespace('')
         ```
         """
         if 'QConnection' in str(self._q):

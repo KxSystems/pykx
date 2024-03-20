@@ -27,10 +27,12 @@ def test_df_columns(q):
 
 def test_df_dtypes(q):
     df = q('([] til 10; 10?0Ng; 10?1f;0f,til 9;10?("abc";"def");10?1e)')
-    assert all(df.dtypes.columns == ['columns', 'type'])
+    with pytest.warns(DeprecationWarning,
+                      match=r"dtypes column 'type' is deprecated, please use 'datatypes'"):
+        assert all(df.dtypes.columns == ['columns', 'datatypes', 'type'])
     assert q('{x~y}',
              q('("kx.LongAtom";"kx.GUIDAtom";"kx.FloatAtom";"kx.List";"kx.CharVector";"kx.RealAtom")'), # noqa: E501
-             df.dtypes['type'])
+             df.dtypes['datatypes'])
 
 
 def test_df_empty(q):
@@ -523,20 +525,9 @@ def test_table_inner_merge(kx, q):
     )
     tab1 = q('{`idx xcols update idx: reverse 1 + til count x from x}', tab1)
     tab1 = q('{1!x}', tab1)
-    tab2 = q('{`idx xcols update idx: til count x from x}', tab2)
-    tab2 = q('{1!x}', tab2)
+    tab2 = kx.q.qsql.update(tab2, {'idx': 'til count i'}, inplace=True)
+    tab2 = tab2.set_index('idx')
     res = tab1.merge(tab2, left_index=True, right_index=True)
-    assert q(
-        '{x~y}',
-        tab1.merge(tab2, left_index=True, right_index=True, q_join=True),
-        q(
-            '{1!x}',
-            q.ij(
-                q('{0!x}', q.xcol(kx.SymbolVector(['idx', 'lkey', 'value_x']), tab1)),
-                q.xcol(kx.SymbolVector(['idx', 'rkey', 'value_y']), tab2)
-            )
-        )
-    )
     assert isinstance(res, kx.KeyedTable)
     df_res = df1.merge(df2, left_index=True, right_index=True)
     # assert our index does match properly before removing it
@@ -635,20 +626,9 @@ def test_table_left_merge(kx, q):
         )
         tab1 = q('{`idx xcols update idx: reverse 1 + til count x from x}', tab1)
         tab1 = q('{1!x}', tab1)
-        tab2 = q('{`idx xcols update idx: til count x from x}', tab2)
-        tab2 = q('{1!x}', tab2)
+        tab2 = kx.q.qsql.update(tab2, {'idx': 'til count i'}, inplace=True)
+        tab2 = tab2.set_index('idx')
         res = tab1.merge(tab2, left_index=True, right_index=True, how='left')
-        assert q(
-            '{x~y}',
-            tab1.merge(tab2, left_index=True, right_index=True, how='left', q_join=True),
-            q(
-                '{1!x}',
-                q.lj(
-                    q('{0!x}', q.xcol(kx.SymbolVector(['idx', 'lkey', 'value_x']), tab1)),
-                    q.xcol(kx.SymbolVector(['idx', 'rkey', 'value_y']), tab2)
-                )
-            )
-        )
         assert isinstance(res, kx.KeyedTable)
         df_res = df1.merge(df2, left_index=True, right_index=True, how='left')
         # assert our index does match properly before removing it
@@ -762,20 +742,9 @@ def test_table_right_merge(kx, q):
         )
         tab1 = q('{`idx xcols update idx: reverse 1 + til count x from x}', tab1)
         tab1 = q('{1!x}', tab1)
-        tab2 = q('{`idx xcols update idx: til count x from x}', tab2)
-        tab2 = q('{1!x}', tab2)
+        tab2 = kx.q.qsql.update(tab2, {'idx': 'til count i'}, inplace=True)
+        tab2 = tab2.set_index('idx')
         res = tab1.merge(tab2, left_index=True, right_index=True, how='right')
-        assert q(
-            '{x~y}',
-            tab1.merge(tab2, left_index=True, right_index=True, how='right', q_join=True),
-            q(
-                '{1!x}',
-                q.lj(
-                    q('{0!x}', q.xcol(kx.SymbolVector(['idx', 'rkey', 'value_y']), tab2)),
-                    q.xcol(kx.SymbolVector(['idx', 'lkey', 'value_x']), tab1)
-                )
-            )
-        )
         assert isinstance(res, kx.KeyedTable)
         df_res = df1.merge(df2, left_index=True, right_index=True, how='right')
         # assert our index does match properly before removing it
@@ -1061,6 +1030,18 @@ def test_df_astype_vanilla_checks(kx, q):
 def test_df_astype_string_to_sym(kx, q):
     df = q('''([] c1:3#.z.p; c2:`abc`def`ghi; c3:1 2 3j;
             c4:("abc";"def";"ghi");c5:"abc";c6:(1 2 3;4 5 6;7 8 9))''')
+    assert check_result_and_type(
+        kx,
+        df.astype({'c2': kx.SymbolVector}),
+        df)
+    assert check_result_and_type(
+        kx,
+        df.astype({'c2': 'kx.SymbolVector'}),
+        df)
+    assert check_result_and_type(
+        kx,
+        df.astype({'c2': kx.SymbolAtom}),
+        df)
     assert check_result_and_type(
         kx,
         df.astype({'c4': kx.SymbolVector, 'c5': kx.SymbolVector}).py(),
@@ -1438,8 +1419,42 @@ def test_df_rename(kx, q):
     rez = tab.rename(idx)
     assert all(tab.pd().rename(idx).eq(rez.pd()))
 
+    for x in range(len(rez.index)):
+        assert('Atom' in str(rez.index[x].dtypes))
+
     rez = tab.rename({2: 'B'})
     assert all(tab.pd().rename({2: 'B'}).eq(rez.pd()))
+
+    for x in range(len(rez.index)):
+        assert('Atom' in str(rez.index[x].dtypes))
+
+    t = kx.q('([] Policy: 1 2 3)')
+    rez = t.rename({'Poliddcy': 'PolicyID', 'Policy': 'p_id'}, axis=1)
+    assert all(t.pd().rename({'Poliddcy': 'PolicyID', 'Policy': 'p_id'}, axis=1).eq(rez.pd()))
+
+    mixed_index_table = kx.q('([] id:(`a;2;1); Policy: 3 4 5; name:`a`b`c)').pd()
+    df=kx.toq(mixed_index_table.set_index(['id']))
+    rez = df.rename({1: 'x', 2: 'j'})
+    assert all(df.pd().rename({1: 'x', 2: 'j'}).eq(rez.pd()))
+
+    df = kx.q('([] id: 0 1 2; Policy: 3 4 5; name:`a`b`c)').pd()
+    df = df.set_index(['name'])
+    rez = df.rename({'a': 2, 'c': 'p'})
+    assert all(rez.eq(kx.toq(df).rename({'a': 2, 'c': 'p'}).pd()))
+
+    rez = tab.rename({})
+    assert all(tab.pd().rename({}).eq(rez.pd()))
+
+    k_empty = kx.q('([idx:()] x:(); y:())')
+    rez = k_empty.rename({'a': 'b'})
+    assert all(k_empty.pd().rename({'a': 'b'}).eq(rez.pd()))
+
+    df = kx.q('([] id: 0 1 2; Policy: 3 4 5; name:`a`b`c)').pd()
+    df = df.set_index(['id', 'Policy'])
+    kdf = kx.toq(df)
+    with pytest.raises(NotImplementedError) as e:
+        kdf.rename({4: 'a', 1: 'x'})
+        assert str(e) == "Index renaming only supported for single keyed tables"
 
     with pytest.raises(ValueError):
         idx = {'A': 0, 0: 'a', 'B': 'b'}
@@ -1465,6 +1480,10 @@ def test_df_rename(kx, q):
 
     with pytest.raises(ValueError):
         t.rename(columns={'x': 'xXx'}, errors='raise')
+
+    with pytest.raises(NotImplementedError) as e:
+        t.rename(kx.q.lower, axis=1)
+        assert str(e) == "Passing of non dictionary mapper items not yet implemented"
 
 
 @pytest.mark.pandas_api
@@ -2264,3 +2283,43 @@ def test_std(kx, q):
         q_m = tab.std()
     with pytest.raises(kx.QError):
         q_m = tab.std(axis=1)
+
+
+def test_merge_qjoin(kx):
+    tab1 = kx.Table(data={'k': ['foo', 'bar', 'baz'], 'v': [1, 2, 3]})
+    tab2 = kx.Table(data={'k': ['foo', 'bar', 'baz'], 'v': [4, 5, 6]})
+    tab3 = kx.Table(data={'k': ['foo', 'bar'], 'v': [7, 8]})
+    tab1_keyed = tab1.set_index('k')
+    tab2_keyed = tab2.set_index('k')
+    tab3_keyed = tab3.set_index('k')
+    assert check_result_and_type(
+        kx,
+        tab1.merge(tab2_keyed, how='left', q_join=True),
+        kx.q.lj(tab1, tab2_keyed))
+    assert check_result_and_type(
+        kx,
+        tab1.merge(tab3_keyed, how='inner', q_join=True),
+        kx.q.ij(tab1, tab3_keyed))
+    assert check_result_and_type(
+        kx,
+        tab1_keyed.merge(tab2, how='right', q_join=True),
+        kx.q.lj(tab2, tab1_keyed).set_index('k'))
+
+
+def test_merge_qjoin_errors(kx):
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    with pytest.raises(ValueError,
+                       match=r"Inner Join requires a keyed table"
+                       " for the right dataset."):
+        assert tab1.merge(tab2, q_join=True)
+    with pytest.raises(ValueError,
+                       match=r"Left Join requires a keyed table"
+                       " for the right dataset."):
+        assert tab1.merge(tab2, how='left', q_join=True)
+    with pytest.raises(ValueError,
+                       match=r"Right Join requires a keyed table"
+                       " for the left dataset."):
+        assert tab1.merge(tab2, how='right', q_join=True)
