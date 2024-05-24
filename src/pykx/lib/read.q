@@ -1,4 +1,4 @@
-system"l ", {x sv (-1 _ x vs y),enlist "csvutil.q"}[$[.z.o~`w64;"\\";"/"]; (value{})6];
+.pykx.util.loadfile[;"csvutil.q"]{x sv (-1 _ x vs y)}[$[.z.o~`w64;"\\";"/"]; (value{})6];
 
 system"d .read";
 

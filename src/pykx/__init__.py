@@ -231,7 +231,7 @@ class Q(metaclass=ABCMeta):
             self._call(
                 f'{"" if name[0] == "." else "."}{name}:(enlist`)!enlist(::);'
                 f'system "d {"" if name[0] == "." else "."}{name}";'
-                f'system "l {path.as_posix()}"',
+                f'.pykx.util.loadfile["{path.parent}";"{path.name}"];',
                 wait=True,
             )
             return name[1:] if name[0] == '.' else name
@@ -277,6 +277,7 @@ from . import console
 from . import exceptions
 from . import wrappers
 from . import schema
+from . import streamlit
 from . import random
 
 from ._wrappers import _init as _wrappers_init
@@ -360,7 +361,7 @@ def install_into_QHOME(overwrite_embedpy=False, to_local_folder=False) -> None:
 
 
 def activate_numpy_allocator() -> None:
-    """Sets the allocator used for Numpy array data to one optimzied for use with PyKX.
+    """Sets the allocator used for Numpy array data to one optimized for use with PyKX.
 
     This will only change the default allocator if the environment variable `PYKX_ALLOCATOR` is set
     to 1 or if the flag `--pykxalloc` is present in the QARGS environment variable.
@@ -376,7 +377,7 @@ def activate_numpy_allocator() -> None:
     Numpy arrays created with this allocator can be converted into a q vector without copying the
     data.
 
-    Because q objects must have their metadata immediately preceeding the data, only a single
+    Because q objects must have their metadata immediately preceding the data, only a single
     q vector can be created using this approach. Repeated conversions of the Numpy array into a q
     vector will yield the same q vector with its reference count incremented by 1 each time.
 

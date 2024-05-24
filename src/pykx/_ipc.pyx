@@ -74,6 +74,28 @@ def _unlicensed_call(handle: int, query: bytes, parameters: List[K], wait: bool)
     
 
 cpdef ssl_info():
+    """View information relating to the TLS settings used by PyKX from your process
+
+    Returns:
+        A dictionary outlining the TLS settings used by PyKX
+
+    Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> kx.ssl_info()
+        pykx.Dictionary(pykx.q('
+        SSLEAY_VERSION   | OpenSSL 1.1.1q  5 Jul 2022
+        SSL_CERT_FILE    | /usr/local/anaconda3/ssl/server-crt.pem
+        SSL_CA_CERT_FILE | /usr/local/anaconda3/ssl/cacert.pem
+        SSL_CA_CERT_PATH | /usr/local/anaconda3/ssl
+        SSL_KEY_FILE     | /usr/local/anaconda3/ssl/server-key.pem
+        SSL_CIPHER_LIST  | ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:..
+        SSL_VERIFY_CLIENT| NO
+        SSL_VERIFY_SERVER| YES
+        '))
+        ``` 
+    """
     if licensed:
         return q('-26!0')
     cdef uintptr_t info = <uintptr_t>core.sslInfo(<core.K><uintptr_t>0)

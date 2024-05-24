@@ -104,7 +104,7 @@ from . import wrappers as k
 from ._pyarrow import pyarrow as pa
 from .cast import *
 from . import config
-from .config import disable_pandas_warning, find_core_lib, k_allocator, licensed, pandas_2, system
+from .config import find_core_lib, k_allocator, licensed, pandas_2, system
 from .constants import INF_INT16, INF_INT32, INF_INT64, NULL_INT16, NULL_INT32, NULL_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
 from .util import df_from_arrays, slice_to_range
@@ -1303,20 +1303,28 @@ def from_numpy_ndarray(x: np.ndarray,
     elif ktype in supported_np_temporal_types:
         if ktype is k.TimestampVector or ktype is k.TimespanVector:
             offset = TIMESTAMP_OFFSET if ktype is k.TimestampVector else 0
-            if x.dtype == np.dtype('<M8[us]'):
-                x = x.view(np.int64) * 1000
-            elif x.dtype == np.dtype('<M8[ms]'):
-                x = x.view(np.int64) * 1000000
-            elif x.dtype == np.dtype('<M8[s]'):
-                x = x.view(np.int64) * 1000000000
-            else:
-                x = x.view(np.int64)
+            dtype = x.dtype
+            x = x.view(np.int64)
+            mul = None
+            if dtype == np.dtype('<M8[us]'):
+                mul = 1000
+            elif dtype == np.dtype('<M8[ms]'):
+                mul = 1000000
+            elif dtype == np.dtype('<M8[s]'):
+                mul = 1000000000
+            if mul is not None or handle_nulls:
+                x = x.copy()
             if ktype is k.TimestampVector:
                 if handle_nulls:
                     mask = (x != NULL_INT64)
-                    x[mask] = x[mask] - offset
+                    if mask.all():
+                        x = (x if mul is None else (x*mul)) - offset
+                    else:
+                        x[mask] = (x[mask] if mul is None else (x[mask]*mul)) - offset
                 else:
-                    x = x - offset
+                    x = (x if mul is None else (x*mul)) - offset
+            else:
+                x = x if mul is None else x*mul
             itemsize = supported_ndarray_k_types[k.LongVector]
             if itemsize != x.itemsize:
                 core.r0(kx)
@@ -1394,6 +1402,17 @@ _size_to_nan = {
     8: NULL_INT64,
 }
 
+_float_size_to_class = {
+    4: np.float32,
+    8: np.float64  
+}
+
+_int_size_to_class = {
+    2: np.int16,
+    4: np.int32 ,
+    8: np.int64
+}
+
 
 def _to_numpy_or_categorical(x, col_name=None, df=None):
     # Arrays taken from Pandas can come in many forms. If they come from Pandas series, arrays, or
@@ -1406,32 +1425,26 @@ def _to_numpy_or_categorical(x, col_name=None, df=None):
                 x.values,
                 name=col_name if pandas_2 and col_name is not None else x.name
             )
-        elif pandas_2 and x.dtype == np.dtype('datetime64[s]'):
-            if df is not None and col_name is not None:
-                if (
-                    '_PyKX_base_types' in df.attrs.keys()
-                    and col_name in df.attrs['_PyKX_base_types'].keys()
-                ):
-                    if df.attrs['_PyKX_base_types'][col_name] == 'MonthVector':
-                        return _to_numpy_or_categorical(x.values.astype(np.dtype('<M8[M]')))
-                    elif df.attrs['_PyKX_base_types'][col_name] == 'DateVector':
-                        return _to_numpy_or_categorical(x.values.astype(np.dtype('<M8[D]')))
-            if not disable_pandas_warning:
-                warn(
-                    f'WARN: Type information of column: {col_name} is not known falling back to '
-                    'DayVector type',
-                    RuntimeWarning
-                )
-            return _to_numpy_or_categorical(x.values.astype(np.dtype('<M8[D]')))
         elif isinstance(x.values, pd.core.arrays.ExtensionArray):
             if x.dtype.kind != 'f' and hasattr(x, 'isnull') and x.isnull().values.any():
-                if x.dtype.kind != 'i':
+                if not x.dtype.kind in ['i', 'M', 'm']:
                     raise TypeError(
                         'Non-integral masked array conversions to q are not yet implemented'
                     )
+                if x.dtype.kind == 'i':
+                    dtype = _int_size_to_class[x.dtype.itemsize]
+                elif x.dtype.kind == 'm':
+                    dtype = np.timedelta64()
+                elif x.dtype.kind == 'M':
+                    dtype =  np.datetime64()               
                 if k_allocator:
-                    return np.array(x.to_numpy(copy=False, na_value=_size_to_nan[x.dtype.itemsize]))
-                return x.to_numpy(copy=False, na_value=_size_to_nan[x.dtype.itemsize])
+                    return np.array(x.to_numpy(copy=False, na_value=_size_to_nan[x.dtype.itemsize], dtype=dtype))
+                return x.to_numpy(copy=False, na_value=_size_to_nan[x.dtype.itemsize], dtype=dtype)
+            elif x.dtype.kind == 'f' and hasattr(x, 'isnull') and x.isnull().values.any():
+                float_class = _float_size_to_class[x.dtype.itemsize]
+                if k_allocator:
+                    return np.array(x.to_numpy(copy=False, dtype=float_class))
+                return x.to_numpy(copy=False, dtype=float_class)
             else:
                 return np.array(x) if k_allocator else x.to_numpy(copy=False)
         else:
@@ -1483,12 +1496,6 @@ def from_pandas_dataframe(x: pd.DataFrame,
 
     Raises:
         TypeError: Unsupported `ktype` for `pandas.DataFrame`.
-
-    Warning: Pandas 2.0 has deprecated the `datetime64[D/M]` types.
-        Due to this change it is not always possible to determine if the resulting q Table should
-        use a `MonthVector` or a `DayVector`. In the scenario that it is not possible to determine
-        the expected type a warning will be raised and the `DayVector` type will be used as a
-        default.
 
     Returns:
         An instance of `pykx.Table` or `pykx.KeyedTable`.
@@ -1743,6 +1750,24 @@ def from_pandas_nat(x: type(pd.NaT),
     else:
         raise _conversion_TypeError(x, repr('pandas.NaT'), ktype)
     return factory(<uintptr_t>kx, False)
+
+_timedelta_resolution_str_map = {
+    'timedelta64[ns]': k.TimespanAtom,
+    'timedelta64[ms]': k.TimeAtom,
+    'timedelta64[s]': k.SecondAtom,
+}
+
+def from_pandas_timedelta(
+    x: Any,
+    ktype: Optional[KType] = None,
+    *,
+    cast: bool = False,
+    handle_nulls: bool = False,
+) -> k.K:
+    x = x.to_numpy()
+    if ktype is None:
+        ktype = _timedelta_resolution_str_map[str(x.dtype)]
+    return from_numpy_timedelta64(x, ktype=ktype, cast=cast, handle_nulls=handle_nulls)
 
 
 def from_arrow(x: Union['pa.Array', 'pa.Table'],
@@ -2601,7 +2626,8 @@ _converter_from_python_type = {
 if not pandas_2:
     _converter_from_python_type[pd.core.indexes.numeric.Int64Index] = from_pandas_index
     _converter_from_python_type[pd.core.indexes.numeric.Float64Index] = from_pandas_index
-
+else:
+    _converter_from_python_type[pd._libs.tslibs.timedeltas.Timedelta] = from_pandas_timedelta
 
 class ToqModule(ModuleType):
     # TODO: `cast` should be set to False at the next major release (KXI-12945)

@@ -361,7 +361,39 @@ Objects generated via the PyKX library can be converted where reasonable to `Pyt
     3  0.452041   4
     4  0.019615   0
     ```
-    
+
+    If using `pandas>=2.0` it is possible to also use the `as_arrow` keyword argument to convert to
+    pandas types using pyarrow as the backend instead of the default numpy backed pandas objects.
+
+    ```python
+    >>> qvec = kx.toq(np.random.randint(5, size=10))
+    >>> qvec.pd(as_arrow=True)
+    0    1
+    1    2
+    2    3
+    3    4
+    4    2
+    5    3
+    6    0
+    7    0
+    8    2
+    9    0
+    dtype: int64[pyarrow]
+    >>> df = pd.DataFrame(data={'x': [random() for _ in range(5)], 'x1': [randint(0, 4) for _ in range(5)]})
+    >>> qtab = kx.toq(df)
+    >>> qtab.pd(as_arrow=True)
+              x  x1
+    0  0.541059   3
+    1  0.886690   1
+    2  0.674300   4
+    3  0.532791   3
+    4  0.523147   4
+    >>> qtab.pd(as_arrow=True).dtypes
+    x     double[pyarrow]
+    x1     int64[pyarrow]
+    dtype: object
+    ```
+
 * Convert PyKX objects to PyArrow
 
     ```python

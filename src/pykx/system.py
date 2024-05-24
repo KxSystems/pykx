@@ -1,7 +1,10 @@
 """System command wrappers for PyKX."""
+import os
+from pathlib import Path
+from warnings import warn
 
 from . import Q, wrappers as k
-from .exceptions import QError
+from .exceptions import PyKXWarning, QError
 
 
 __all__ = ['SystemCommands']
@@ -25,11 +28,24 @@ class SystemCommands:
         return self._q('{system x}', k.CharVector(x))
 
     def tables(self, namespace=None):
-        """Lists the tables in the current namespace or in the provided namespace."""
+        """Lists the tables associated with a namespace/dictionary
+
+        Examples:
+
+        Retrieve the tables within a provided namespace:
+
+        ```python
+        kx.system.tables('.foo')
+        ```
+
+        Retrieve the tables within a provided dictionary:
+
+        ```python
+        kx.system.tables('foo')
+        ```
+        """
         if namespace is not None:
             namespace = str(namespace)
-            if namespace[0] != '.':
-                namespace = '.' + namespace
             return self._q._call(f'\\a {namespace}', wait=True)
         return self._q._call('\\a', wait=True)
 
@@ -47,13 +63,13 @@ class SystemCommands:
 
         Get the maximum console_size size of output for EmbeddedQ to 10 columns and 10 rows.
 
-        ```
+        ```python
         kx.q.system.console_size
         ```
 
         Set the maximum console size of output for EmbeddedQ to 10 columns and 10 rows.
 
-        ```
+        ```python
         kx.q.system.console_size = [10, 10]
         ```
         """
@@ -81,13 +97,13 @@ class SystemCommands:
 
         Get the maximum display size of output for EmbeddedQ to 10 columns and 10 rows.
 
-        ```
+        ```python
         kx.q.system.display_size
         ```
 
         Set the maximum display size of output for EmbeddedQ to 10 columns and 10 rows.
 
-        ```
+        ```python
         kx.q.system.display_size = [10, 10]
         ```
         """
@@ -108,13 +124,13 @@ class SystemCommands:
 
         Get the current working directory.
 
-        ```
+        ```python
         kx.q.system.cd()
         ```
 
         Change the current working directory to the root directory on a `UNIX` like machine.
 
-        ```
+        ```python
         kx.q.system.cd('/')
         ```
         """
@@ -129,19 +145,19 @@ class SystemCommands:
 
         Get the current namespace.
 
-        ```
+        ```python
         kx.q.system.namespace()
         ```
 
         Change the current namespace to `.foo`, note the leading `.` may be ommited.
 
-        ```
+        ```python
         kx.q.system.namespace('foo')
         ```
 
         Return to the default namespace.
 
-        ```
+        ```python
         kx.q.system.namespace('')
         ```
         """
@@ -159,26 +175,30 @@ class SystemCommands:
 
     def functions(self, ns=None):
         """Get the functions available in the current namespace or functions in a
-        provided namespace.
+        provided namespace or dictionary.
 
         Examples:
 
         Get the functions within the current namespace.
 
-        ```
+        ```python
         kx.q.system.functions()
         ```
 
-        Get the functions within the `.foo` namespace, note the leading `.` may be ommited.
+        Get the functions within the `.foo` namespace.
 
+        ```python
+        kx.q.system.functions('.foo')
         ```
-        kx.q.system.functions('foo')
+
+        Get the functions within a dictionary.
+
+        ```python
+        kx.q.system.function('foo')
         ```
         """
         if ns is not None:
             ns = str(ns)
-            if ns[0] != '.':
-                ns = '.' + ns
             return self._q._call(f'\\f {ns}', wait=True)
         return self._q._call('\\f', wait=True)
 
@@ -193,13 +213,13 @@ class SystemCommands:
 
         Get the current garbage collection mode.
 
-        ```
+        ```python
         kx.q.system.garbage_collection
         ```
 
         Set the current garbage collection mode to immediate collection.
 
-        ```
+        ```python
         kx.q.system.garbage_collection = 1
         ```
         """
@@ -212,18 +232,43 @@ class SystemCommands:
             return self._q._call(f'\\g {value}', wait=True)
         raise ValueError('Garbage collection mode can only be set to either 0 or 1.')
 
-    def load(self, fd):
+    def load(self, path):
         """Loads a q script or a directory of a splayed table.
 
         Examples:
 
         Load a q script named `foo.q`.
 
-        ```
+        ```python
         kx.q.system.load('foo.q')
         ```
         """
-        return self._q._call(f'\\l {fd}', wait=True)
+        if isinstance(path, k.CharAtom) or isinstance(path, k.CharVector):
+            path = path.py().decode()
+        elif isinstance(path, k.SymbolAtom):
+            path = path.py()
+            if path[0] == ':':
+                path = path[1:]
+        elif isinstance(path, Path):
+            path = str(path)
+        if ' ' not in path:
+            if path[-1] == '/':
+                path = path[:-1]
+            print(path)
+            return self._q._call(f'\\l {path}', wait=True)
+        warn('Detected a space in supplied path\n'
+             f'  Path: \'{path}\'\n'
+             'q system loading does not support spaces, attempting load '
+             'using alternative load operation', PyKXWarning)
+        full_path = os.path.abspath(path)
+        load_path = Path(full_path)
+        folder = load_path.parent.as_posix()
+        file = load_path.name
+
+        if not (load_path.is_dir() or load_path.is_file()):
+            raise ValueError(f'Provided user path \'{str(load_path)} \'is not a file/directory')
+        return self._q._call('.pykx.util.loadfile', k.CharVector(folder),
+                             k.CharVector(file), wait=True)
 
     @property
     def utc_offset(self):
@@ -235,13 +280,13 @@ class SystemCommands:
 
         Get the current local time offset.
 
-        ```
+        ```python
         kx.q.system.utc_offset
         ```
 
         Set the current local time offset to be -4:00 from UTC.
 
-        ```
+        ```python
         kx.q.system.utc_offset = -4
         ```
         """
@@ -262,13 +307,13 @@ class SystemCommands:
 
         Get the current level of float precision.
 
-        ```
+        ```python
         kx.q.system.precision
         ```
 
         Set the Level of float precision to 2.
 
-        ```
+        ```python
         kx.q.system.precision = 2
         ```
         """
@@ -292,7 +337,7 @@ class SystemCommands:
 
         Rename a file `foo.q` to `bar.q`.
 
-        ```
+        ```python
         kx.q.system.rename('foo.q', 'bar.q')
         ```
         """
@@ -326,13 +371,13 @@ class SystemCommands:
 
         Set the number of threads for embedded q to use to 8.
 
-        ```
+        ```python
         kx.q.num_threads = 8
         ```
 
         Set the number of threads for a q process being connected to over IPC to 8.
 
-        ```
+        ```python
         q = kx.SyncQConnection('localhost', 5001)
         q.num_threads = 8
         ```
@@ -356,13 +401,13 @@ class SystemCommands:
 
         Get the current seed value.
 
-        ```
+        ```python
         kx.q.system.random_seed
         ```
 
         Set the random seed value to 23.
 
-        ```
+        ```python
         kx.q.system.random_seed = 23
         ```
         """
@@ -379,13 +424,13 @@ class SystemCommands:
 
         Get the variables defined in the current namespace.
 
-        ```
+        ```python
         kx.q.system.variables()
         ```
 
         Get the variables associated with a q namespace/dictionary
 
-        ```
+        ```python
         kx.q.system.variables('.foo')
         kx.q.system.variables('foo')
         ```
@@ -403,7 +448,7 @@ class SystemCommands:
 
         Get the memory usage of `EmbeddedQ`.
 
-        ```
+        ```python
         kx.q.system.workspace
         ```
         """
@@ -417,14 +462,15 @@ class SystemCommands:
 
         Get the current week offset.
 
-        ```
+        ```python
         kx.q.system.week_offset
         ```
 
         Set the current week offset so Monday is the first day of the week.
 
-        ```
+        ```python
         kx.q.system.week_offset = 2
+        ```
         """
         return self._q._call('\\W', wait=True)
 
@@ -443,13 +489,13 @@ class SystemCommands:
 
         Get the current value for date parsing.
 
-        ```
+        ```python
         kx.q.system.date_parsing
         ```
 
         Get the current value for date parsing so the format is `dd/mm/yyyy`.
 
-        ```
+        ```python
         kx.q.system.date_parsing = 1
         ```
         """

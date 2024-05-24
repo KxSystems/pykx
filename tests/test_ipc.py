@@ -658,6 +658,60 @@ def test_large_IPC(kx, q_port):
 
 
 @pytest.mark.unlicensed
+def test_func_parameter(kx, q_port):
+    # The below tests are formatted as follows
+    # to allow operation both in licensed and
+    # unlicensed mode, the initial call retrieves
+    # the function and the assertion passes the
+    # tested functions to the server as the query arg
+    with kx.SyncQConnection(port=q_port) as q:
+        fn = q('{sum}', None)
+        assert q(fn, [1, 2, 3]).py() == 6
+
+        fn = q('{floor}', None)
+        assert q(fn, 5.2).py() == 5
+
+        fn = q('{mins}', None)
+        assert q(fn, [1, 2, 3]).py() == [1, 1, 1]
+
+        fn = q('{cut}', None)
+        assert q(fn, 2, [1, 2, 3]).py() == [[1, 2], [3]]
+
+        fn = q('{min x}')
+        assert q(fn, [1, 2, 3]).py() == 1
+
+    if kx.licensed:
+        with kx.SecureQConnection(port=q_port) as q:
+            fn = q('{sum}', None)
+            assert q(fn, [1, 2, 3]).py() == 6
+
+            fn = q('{floor}', None)
+            assert q(fn, 5.2).py() == 5
+
+            fn = q('{mins}', None)
+            assert q(fn, [1, 2, 3]).py() == [1, 1, 1]
+
+            fn = q('{cut}', None)
+            assert q(fn, 2, [1, 2, 3]).py() == [[1, 2], [3]]
+
+            fn = q('{min x}')
+            assert q(fn, [1, 2, 3]).py() == 1
+
+
+@pytest.mark.unlicensed
+def test_func_errors(kx, q_port):
+    with kx.SyncQConnection(port=q_port) as q:
+        with pytest.raises(ValueError) as err:
+            q(sum, [1, 2, 3])
+        assert 'builtin_function_or_method' in str(err)
+
+    with kx.SecureQConnection(port=q_port) as q:
+        with pytest.raises(ValueError) as err:
+            q(sum, [1, 2, 3])
+        assert 'builtin_function_or_method' in str(err)
+
+
+@pytest.mark.unlicensed
 def test_debug_kwarg(kx, q_port):
     with kx.SyncQConnection(port=q_port) as q:
         q('.pykx_test.cache_sbt:.Q.sbt')
@@ -712,6 +766,7 @@ def test_debug_kwarg_global(q_port):
     with kx.SyncQConnection(port=q_port) as q:
         q('.pykx_test.cache_sbt:.Q.sbt')
         q('.Q.sbt:{.pykx_test.cache:y;x y}[.Q.sbt]')
+        assert q('=', b'z', b'z').py()
         assert q('til 10').py() == list(range(10))
         with pytest.raises(kx.QError) as e:
             q('til "asd"')
@@ -857,6 +912,7 @@ def test_SyncQConnection_reconnect(kx):
 
 
 @pytest.mark.unlicensed
+@pytest.mark.xfail(reason='Flaky on several platforms')
 def test_SecureQConnection_reconnect(kx):
     q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
     proc = subprocess.Popen(

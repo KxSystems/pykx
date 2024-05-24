@@ -52,6 +52,7 @@ markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
   - pymdownx.caret
+  - pymdownx.inlinehilite
   - pymdownx.details
   - pymdownx.emoji:
       emoji_index: !!python/name:materialx.emoji.twemoji
@@ -115,6 +116,12 @@ plugins:
             - https://pandas.pydata.org/docs/objects.inv
   - render_swagger
   - search
+  - exclude-search:
+      exclude:
+        - getting-started/q_magic_command.ipynb
+        - user-guide/advanced/Pandas_API.ipynb
+        - getting-started/PyKX Introduction Notebook.ipynb
+        - examples/db-management.ipynb
   - spellcheck:
       known_words: spelling.txt
       ignore_code: true    # Ignore words in <code> tags
@@ -129,6 +136,7 @@ plugins:
         - user-guide/advanced/Pandas_API.ipynb
         - getting-started/PyKX Introduction Notebook.ipynb
         - examples/db-management.ipynb
+        - examples/charting.ipynb
 
 
 theme:
@@ -144,8 +152,10 @@ theme:
     - content.tabs.link # Insiders
     - header.autohide
     - navigation.tabs
+    - navigation.footer
     - content.code.annotate
     - content.action.edit
+    - content.code.copy
   palette:
   - media: "(prefers-color-scheme: light)"
     scheme: kx-light
@@ -183,6 +193,7 @@ nav:
         - Interacting with PyKX objects: user-guide/fundamentals/evaluating.md
         - Querying data: user-guide/fundamentals/querying.md
         - Indexing PyKX objects: user-guide/fundamentals/indexing.md
+        - Conversion considerations: user-guide/fundamentals/conversion_considerations.md
         - Text Representation in PyKX: user-guide/fundamentals/text.md
         - Handling nulls and infinities: user-guide/fundamentals/nulls_and_infinities.md
       - Advanced usage and performance considerations:
@@ -190,7 +201,7 @@ nav:
         - Database interactions: user-guide/advanced/database.md
         - Using q functions in a Pythonic way: user-guide/advanced/context_interface.md
         - Modes of operation: user-guide/advanced/modes.md
-        - Numpy integration: user-guide/advanced/numpy.md
+        - NumPy integration: user-guide/advanced/numpy.md
         - Serialization and de-serialization: user-guide/advanced/serialization.md
         - Performance considerations: user-guide/advanced/performance.md
         - Interface limitations: user-guide/advanced/limitations.md
@@ -217,10 +228,12 @@ nav:
       - IPC: api/ipc.md
       - PyKX Exceptions: api/exceptions.md
       - Schema generation: api/schema.md
+      - Streamlit Integration: api/streamlit.md
       - System Command Wrappers: api/system.md
+      - Utilities: api/util.md
       - File loading and saving:
-        - Writing PyKX data to disk: api/pykx-save-load/write.md
-        - Reading PyKX data from disk: api/pykx-save-load/read.md 
+        - Writing data to disk: api/pykx-save-load/write.md
+        - Reading data from disk: api/pykx-save-load/read.md 
       - Reimporter module: api/reimporting.md
       - Serialization: api/serialize.md
     - Beta Features:
@@ -229,6 +242,7 @@ nav:
       - Compression and Encryption: beta-features/compress-encypt.md
       - Remote Function Execution: beta-features/remote-functions.md
       - Multithreading: beta-features/threading.md
+      - Streamlit: beta-features/streamlit.md
     - Python interfacing within q:
       - Overview: pykx-under-q/intro.md
       - API: pykx-under-q/api.md
@@ -237,7 +251,9 @@ nav:
     - Examples:
       - Subscriber: examples/subscriber/readme.md
       - Compression and Encryption: examples/compress_and_encrypt/readme.md
+      - Database Creation and Management: examples/db-management.ipynb
       - IPC: examples/ipc/README.md
+      - Charting Data with PyKX: examples/charting.ipynb
       - PyKX as a Server: examples/server/server.md
       - Multithreaded Execution: examples/threaded_execution/threading.md
     - Extras:

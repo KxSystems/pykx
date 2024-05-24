@@ -8,6 +8,17 @@
 // @desc Process context prior to PyKX initialization
 .pykx.util.prevCtx:system"d";
 
+@[
+  {if[not"{.pykx.pyexec x}"~string get x;
+     -1"Warning: Detected invalid '.p.e' function definition expected for PyKX.\n",
+     "Have you loaded another Python integration first?\n\n",
+     "Please consider full installation of PyKX under q following instructions at:\n",
+     "https://code.kx.com/pykx/pykx-under-q/intro.html#installation.\n"
+     ]
+    };
+  `.p.e;
+  {::}]
+
 \d .pykx
 
 // @private
@@ -28,6 +39,18 @@ util.os:first string .z.o;
 //
 // @type {dict}
 util.startup:.Q.opt .z.x
+
+
+// @private
+// @overview
+// @desc Load a file at an associated folder location, this is used
+//     to allow loading of files at folder locations containing spaces
+util.loadfile:{[folder;file]
+  cache:system"cd";
+  res:.[{system"cd ",x;res:system"l ",y;(0b;res)};(folder;file);{(1b;x)}];
+  if[folder~system"cd";system"cd ",cache];
+  $[res[0];'res[1];res[1]]
+  }
 
 // @private
 // @desc Retrieval of PyKX initialization directory on first initialization
@@ -72,7 +95,10 @@ if["true"~getenv`PYKX_UNDER_PYTHON;
 if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
   util.pyEnvInfo:("None"; "None"; "");
   if[0=count getenv`PYKX_Q_LOADED_MARKER;
-    @[system"l ",;"pykx_init.q_";{system"l ",pykxDir,"/pykx_init.q_"}];
+    @[system"l ",;
+      "pykx_init.q_";
+      {[x;y] util.loadfile[x;"pykx_init.q_"]}[pykxDir]
+      ]
     ];
   ];
 
@@ -1632,7 +1658,7 @@ console:{pyexec"from code import InteractiveConsole\n__pykx_console__ = Interact
 // @desc
 // Set the execution function used when loading files with the extension `*.p`
 // or when using the following syntax `p)<python code>` within a q session
-.p.e:{.pykx.pyexec x}
+.p.e:{.pykx.pyexec x}     // If changing this line please ensure you have updated the check used at the beginning of this file to warn users about PyKX being loaded with other Python libraries
 
 // @private
 // @desc
@@ -1708,8 +1734,8 @@ listExtensions:{-2 _/:lst where like[;"*.q"]lst:string key hsym`$pykxDir,"/exten
 loadExtension:{[ext]
   if[not 10h=type ext;'"Extension provided must be of type string"];
   if[not ext in listExtensions[];'"Extension provided '",ext,"' not available"];
-  @[system"l ",;
-    pykxDir,"/extensions/",ext,".q";
+  .[util.loadfile;
+    (pykxDir,"/extensions/";ext,".q");
     {'x," raised when attempting to load extension"}
     ];
   }

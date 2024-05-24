@@ -638,6 +638,13 @@ class QConnection(Q):
     ):
         if self.closed:
             raise RuntimeError("Attempted to use a closed IPC connection")
+        tquery = type(query)
+        debugging = (not skip_debug) and (debug or pykx_qdebug)
+        if not (issubclass(tquery, K) or isinstance(query, (str, bytes))):
+            raise ValueError('Cannot send object of passed type over IPC: ' + str(tquery))
+        if debugging:
+            if not issubclass(tquery, Function):
+                query = CharVector(query)
         start_time = monotonic_ns()
         timeout = self._connection_info['timeout']
         while True:
@@ -646,14 +653,14 @@ class QConnection(Q):
             events = self._writer.select(timeout)
             for key, _mask in events:
                 callback = key.data
-                if (not skip_debug) and (debug or pykx_qdebug):
+                if debugging:
                     return callback()(
                         key.fileobj,
                         bytes(CharVector(
                             '{[pykxquery] .Q.trp[{[x] (0b; value x)}; pykxquery;'
                             '{(1b;"backtrace:\n",.Q.sbt y;x)}]}'
                         )),
-                        CharVector(query) if len(params) == 0 else List((CharVector(query), *params)),
+                        query if len(params) == 0 else List((query, *params)),
                         wait=wait,
                         error=error,
                         debug=debug
@@ -672,13 +679,13 @@ class QConnection(Q):
             for a, b in zip(prev_types, data):
 
                 if not issubclass(a, type(None))\
-                   and (issubclass(type(b), Function) or isinstance(b, Foreign)
+                   and (isinstance(b, Foreign)
                         or (isinstance(b, Composition) and q('{.pykx.util.isw x}', b))
                    )\
                    and not issubclass(a, Function)\
                    or issubclass(type(b), Function) and\
                         isinstance(b, Composition) and q('{.pykx.util.isw x}', b):
-                    raise ValueError('Cannot send Python function over IPC')
+                    raise ValueError('Cannot send object of passed type over IPC: '  + str(type(b)))
         return data
 
     def _send_sock(self,
@@ -1084,6 +1091,18 @@ class SyncQConnection(QConnection):
         # basis:
         q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
+
+        Call a PyKX Operator function with supplied parameters
+
+        ```python
+        q(kx.q.sum, [1, 2, 3])
+        ```
+
+        Call a PyKX Keyword function with supplied paramters
+
+        ```python
+        q(kx.q.floor, [5.2, 10.4])
+        ```
         """
         if wait is None:
             wait = self._connection_info['wait']
@@ -1462,6 +1481,18 @@ class AsyncQConnection(QConnection):
         # basis:
         await q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
+
+        Call a PyKX Operator function with supplied parameters
+      
+        ```python
+        await q(kx.q.sum, [1, 2, 3])
+        ```
+
+        Call a PyKX Keyword function with supplied paramters
+        
+        ```python
+        await q(kx.q.floor, [5.2, 10.4])
+        ```
         """
         if not reuse:
             conn = _DeferredQConnection(self._stored_args['host'],
@@ -1532,6 +1563,7 @@ class AsyncQConnection(QConnection):
               *args: Any,
               wait: Optional[bool] = None,
               debug: bool = False,
+              skip_debug: bool = False
     ):
         try:
             with self._lock if self._lock is not None else nullcontext():
@@ -1666,6 +1698,7 @@ class _DeferredQConnection(QConnection):
               *args: Any,
               wait: Optional[bool] = None,
               debug: bool = False,
+              skip_debug: bool = False
     ):
         return self._send(query, *args, wait=wait, debug=debug)._await()
 
@@ -1984,6 +2017,7 @@ class RawQConnection(QConnection):
               *args: Any,
               wait: Optional[bool] = None,
               debug: bool = False,
+              skip_debug: bool = False,
     ):
         conn = _DeferredQConnection(self._stored_args['host'],
                                     self._stored_args['port'],
@@ -2463,11 +2497,11 @@ class SecureQConnection(QConnection):
     # TODO: can we switch over to exclusively using this approach instead of `_licensed_call`?
     # It would involve making `cls._lib` be either libq or libe depending on if we're licensed.
     @classmethod
-    def _unlicensed_call(cls, handle: int, query: bytes, parameters: List, wait: bool) -> K:
+    def _unlicensed_call(cls, handle: int, query, parameters: List, wait: bool) -> K:
         return _ipc._unlicensed_call(handle, query, parameters, wait)
 
     def __call__(self,
-                 query: Union[str, bytes, CharVector],
+                 query: Union[str, bytes, CharVector, K],
                  *args: Any,
                  wait: Optional[bool] = None,
                  debug: bool = False,
@@ -2529,6 +2563,18 @@ class SecureQConnection(QConnection):
         q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
 
+        Call a PyKX Operator function with supplied parameters
+      
+        ```python
+        q(kx.q.sum, [1, 2, 3])
+        ```
+
+        Call a PyKX Keyword function with supplied paramters
+        
+        ```python
+        q(kx.q.floor, [5.2, 10.4])
+        ```
+
         Automatically reconnect to a q server after a disconnect.
 
         ```python
@@ -2545,23 +2591,29 @@ class SecureQConnection(QConnection):
         return self._call(query, *args, wait=wait, debug=debug)
 
     def _call(self,
-              query: Union[str, bytes],
+              query: Union[K, str, bytes],
               *args: Any,
               wait: Optional[bool] = None,
               debug: bool = False,
+              skip_debug: bool = False
     ) -> K:
         if wait is None:
             wait = self._connection_info['wait']
         if self.closed:
             raise RuntimeError('Attempted to use a closed IPC connection')
+        tquery = type(query)
+        if not (issubclass(tquery, K) or isinstance(query, (str, bytes))):
+            raise ValueError('Cannot send object of passed type over IPC: '  + str(tquery))
+        if not issubclass(tquery, Function):
+            if isinstance(query, CharVector):
+                query = bytes(query)
+            else:
+                query = normalize_to_bytes(query, 'Query')
         if len(args) > 8:
             raise TypeError('Too many parameters - q queries cannot have more than 8 parameters')
         prev_types = [type(x) for x in args]
         handle = self._handle if wait else -self._handle
         args = [K(x) for x in args]
-        for a, b in zip(prev_types, (type(x) for x in args)):
-            if issubclass(b, Function) and not issubclass(a, Function):
-                raise ValueError('Cannot send Python function over IPC')
         handler = self._licensed_call if licensed else self._unlicensed_call
 
         try:
@@ -2574,7 +2626,7 @@ class SecureQConnection(QConnection):
                             '{(1b; "backtrace:\n",.Q.sbt y; x)}]}',
                             'Query'
                         ),
-                        [K(normalize_to_bytes(query, 'Query'))] if len(args) == 0 else [List([K(normalize_to_bytes(query, 'Query')), *args])],
+                        [K(query)] if len(args) == 0 else [List((K(query), *args))],
                         wait,
                     )
                     if res._unlicensed_getitem(0).py() == True:
@@ -2582,7 +2634,7 @@ class SecureQConnection(QConnection):
                         raise QError(res._unlicensed_getitem(2).py().decode())
                     else:
                         return res._unlicensed_getitem(1)
-                return handler(handle, normalize_to_bytes(query, 'Query'), args, wait)
+                return handler(handle, query, args, wait)
         except BaseException as e:
             if isinstance(e, QError) and 'snd handle' not in str(e) and 'write to handle' not in str(e) and 'close handle' not in str(e):
                 raise e

@@ -9,7 +9,7 @@ The following section outlines practical information useful when dealing with ge
 A number of trial and enterprise type licenses exist for q/kdb+. Not all licenses for q/kdb+ however are valid for PyKX. In particular users require access to a license which contains the feature flags `pykx` and `embedq` which provide access to the PyKX functionality. The following locations can be used for the retrieval of evaluation/personal licenses
 
 - For non-commercial personal users you can access a 12 month kdb+ license with PyKX enabled [here](https://kx.com/kdb-insights-personal-edition-license-download).
-- For commercial evaluation you can download a 30 day PyKX license [here](https://kx.com/kdb-insights-commercial-evaluation-license-download/).
+- For commercial evaluation, contact your KX sales representative or sales@kx.com requesting a PyKX trial license. Alternately apply through https://kx.com/book-demo.
 
 For non-personal or non-commercial usage please contact sales@kx.com.
 
@@ -20,7 +20,7 @@ Once you have access to your license you can install the license following the w
 >>> kx.license.install('/path/to/downloaded/kc.lic')
 ```
 
-### Initialization failing with a 'embedq' error
+### Initialization failing with a 'embedq' error
 
 Failure to initialize PyKX while raising an error `embedq` indicates that the license you are attempting to use for PyKX in [licensed modality](user-guide/advanced/modes.md) does not have the sufficient feature flags necessary to run PyKX. To access a license which does allow for running PyKX in this modality please following the instructions [here](#accessing-a-license-valid-for-pykx) to get a new license with appropriate feature flags.
 
@@ -92,7 +92,6 @@ It usually indicates that your license was not correctly written to disk or a li
 ## Environment issues
 
 The following section outlines how a user can get access to a verbose set of environment configuration associated with PyKX. This information is helpful when debugging your environment and should be provided if possible with support requests.
-
 
 ```python
 >>> import pykx as kx

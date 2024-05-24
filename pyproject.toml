@@ -71,6 +71,7 @@ doc = [
     "mkdocs-autorefs==0.4.1",
     "mkdocs-click==0.5.0",
     "mkdocs-exclude==1.0.2",
+    "mkdocs-exclude-search==0.6.6",
     "mkdocs-jupyter~=0.24",
     "mkdocs-material~=9.4.5",
     "mkdocs-render-swagger-plugin==0.0.3",
@@ -99,6 +100,9 @@ dashboards = [
 ]
 beta = [
     "dill>=0.2.0",
+]
+streamlit = [
+    "streamlit~=1.28; python_version>'3.7'"
 ]
 test = [
     "coverage[toml]==6.3.2",
@@ -213,6 +217,7 @@ ignore = [
     "I100", # import statements are in the wrong order
     "I202", # additional newline in a group of imports (We use three 3: built-in, third-party, local)
     "W503", # depracated warning - goes against PEP8
+    "W605", # Invalid escape character in comments causing issue with q examples
 ]
 
 

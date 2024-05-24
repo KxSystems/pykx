@@ -76,6 +76,10 @@ def test_system_tables():
     kx.q('qtab: ([] til 10; 2 + til 10)')
     kx.q('r: ([] til 10; 2 + til 10)')
     assert kx.q.system.tables().py() == ['qtab', 'r']
+    kx.q('.foo.tab:([]10?1f;10?1f)')
+    kx.q('foo.bar:([]10?1f)')
+    assert kx.q.system.tables('.foo').py() == ['tab']
+    assert kx.q.system.tables('foo').py() == ['bar']
 
 
 @pytest.mark.isolate
@@ -95,7 +99,8 @@ def test_system_functions():
     kx.q('\\d .foo')
     kx.q('func: {x + 3}')
     kx.q('\\d .')
-    assert all(kx.q.system.functions('foo') == kx.q('enlist `func'))
+    kx.q('foo.bar: {x+1}')
+    assert all(kx.q.system.functions('foo') == kx.q('enlist `bar'))
     assert all(kx.q.system.functions('.foo') == kx.q('enlist `func'))
 
 
@@ -202,6 +207,51 @@ def test_system_load():
 
 
 @pytest.mark.isolate
+def test_system_space_load(tmp_path):
+    test_location = tmp_path/'test directory'
+    os.makedirs(test_location, exist_ok=True)
+    cache_dir = os.getcwd()
+    file_location = test_location/'load_file.q'
+    with open(file_location, 'w') as f:
+        f.write('.pykx_test.system.variable:1b')
+    import pykx as kx
+    kx.q.system.load(file_location)
+    assert kx.q('.pykx_test.system.variable')
+    assert cache_dir == os.getcwd()
+
+    test_splay = test_location/'splay/'
+    kx.q('{x set ([]10?1f;10?1f)}', test_splay)
+
+    def test_load_splay(test_splay):
+        loaded = kx.q.system.load(test_splay)
+        assert loaded.py() == 'splay'
+        assert isinstance(kx.q['splay'], kx.Table)
+        kx.q('delete splay from `.')
+        assert cache_dir == os.getcwd()
+
+    test_load_splay(test_splay) # Path
+    test_load_splay(str(test_splay)) # String
+    test_load_splay(kx.toq(test_splay)) # Symbol with leading :
+    test_load_splay(kx.toq(str(test_splay))) # Symbol without leading :
+    test_load_splay(kx.CharVector(str(test_splay))) # CharVector
+    test_load_splay(str(test_splay) + '/') # String with trailing /
+    # Symbol with leading :  with trailing /
+    test_load_splay(kx.q('{`$string[x],"/"}', kx.toq(test_splay)))
+    # Symbol without leading : with trailing /
+    test_load_splay(kx.q('{`$string[x],"/"}', kx.toq(str(test_splay))))
+    # CharVector with trailing /
+    test_load_splay(kx.q('{x,"/"}', kx.CharVector(str(test_splay))))
+
+    file_move_location = test_location/'move_file.q'
+    with open(file_move_location, 'w') as f:
+        f.write('.pykx_test.move.variable:1b;system"cd .."')
+    kx.q.system.load(file_move_location)
+    assert kx.q('.pykx_test.move.variable')
+    assert cache_dir != os.getcwd()
+    os.chdir(cache_dir)
+
+
+@pytest.mark.isolate
 def test_system_namespace():
     import pykx as kx
     assert kx.q.system.namespace() == kx.q('`.')
@@ -287,7 +337,8 @@ def test_system_functions_ipc(q_port):
         q('print: {til x}')
         assert all(q.system.functions() == q('enlist `print'))
         q('.foo.func: {x + 3}')
-        assert all(q.system.functions('foo') == q('enlist `func'))
+        q('foo.bar:{x+2}')
+        assert all(q.system.functions('foo') == q('enlist `bar'))
         assert all(q.system.functions('.foo') == q('enlist `func'))
 
 

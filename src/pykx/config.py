@@ -96,6 +96,7 @@ except FileNotFoundError: # nocov
 _qlic = os.getenv('QLIC', '')
 _pwd = os.getcwd()
 license_located = False
+lic_path = ''
 for loc in (_pwd, _qlic, qhome):
     if loc=='':
         pass
@@ -126,15 +127,63 @@ def _license_install_B64(license, license_type):
 
     with open(qlic/license_type, 'wb') as binary_file:
         binary_file.write(lic)
+    return True
 
 
-def _license_install(intro=None, return_value=False): # noqa: 
+def _license_check(lic_type, lic_encoding, lic_variable):
+    license_content = None
+    lic_name = lic_type + '.lic'
+    lic_file = qlic / lic_name
+    if os.path.exists(lic_file):
+        with open(lic_file, 'rb') as f:
+            license_content = base64.encodebytes(f.read()).decode('utf-8')
+            license_content = license_content.replace('\n', '')
+    if lic_encoding == license_content:
+        conflict_message = 'We have been unable to update your license for PyKX using '\
+                           'the following information:\n'\
+                           f"  Environment variable: {lic_variable} \n"\
+                           f'  License location: {qlic}/{lic_type}.lic\n'\
+                           'Reason: License content matches supplied Environment variable'
+        print(conflict_message)
+        return False
+    else:
+        return _license_install_B64(lic_encoding, lic_name)
+
+def _license_install(intro=None, return_value=False, license_check=False, license_error=None): # noqa: 
+
+    if license_check:
+        install_success = False
+        kc_b64 = _get_config_value('KDB_LICENSE_B64', None)
+        k4_b64 = _get_config_value('KDB_K4LICENSE_B64', None)
+
+        if kc_b64 is not None:
+            kx_license_env = 'KDB_LICENSE_B64'
+            kx_license_file = 'kc'
+            install_success = _license_check(kx_license_file, kc_b64, kx_license_env)
+        elif k4_b64 is not None:
+            kx_license_env = 'KDB_K4LICENSE_B64'
+            kx_license_file = 'k4'
+            install_success = _license_check(kx_license_file, k4_b64, kx_license_env)
+        if install_success:
+            if license_error is not None:
+                install_message = f'Initialisation failed with error: {license_error}\n'\
+                                  'Your license has been updated using the following '\
+                                  'information:\n'\
+                                  f'  Environment variable: {kx_license_env}\n'\
+                                  f'  License write location: {qlic}/{kx_license_file}.lic'
+                print(install_message)
+            return True
+
     modes_url = "https://code.kx.com/pykx/user-guide/advanced/modes.html"
-    lic_url = "https://kx.com/kdb-insights-personal-edition-license-download"
+    personal_url = "https://kx.com/kdb-insights-personal-edition-license-download"
+    commercial_url = "https://kx.com/book-demo"
     unlicensed_message = '\nPyKX unlicensed mode enabled. To set this as your default behavior '\
-                         "please set the following environment variable 'PYKX_UNLICENSED='true'"\
-                         '\n\nFor more information on PyKX modes of operation, please visit '\
-                         f'{modes_url}.\nTo apply for a PyKX license please visit {lic_url}'
+                         "set the following environment variable PYKX_UNLICENSED='true'"\
+                         '\n\nFor more information on PyKX modes of operation, visit '\
+                         f'{modes_url}.\nTo apply for a PyKX license visit '\
+                         f'\n\n   Personal License:   {personal_url}'\
+                         '\n   Commercial License: Contact your KX sales representative '\
+                         f'or sales@kx.com or apply on {commercial_url}'
     first_user = '\nThank you for installing PyKX!\n\n'\
                  'We have been unable to locate your license for PyKX. '\
                  'Running PyKX in unlicensed mode has reduced functionality.\n'\
@@ -147,10 +196,28 @@ def _license_install(intro=None, return_value=False): # noqa:
             return False
 
     elif continue_license in ('y', 'Y', ''):
-        redirect = input(f'\nTo apply for a PyKX license, please visit {lic_url}.\n'
-                         'Once the license application has completed, you will receive a '
-                         'welcome email containing your license information.\n'
-                         'Would you like to open this page? [Y/n]: ')
+        commercial = input('\nIs the intended use of this software for:'
+                           '\n    [1] Personal use (Default)'
+                           '\n    [2] Commercial use'
+                           '\nEnter your choice here [1/2]: ').strip().lower()
+        if commercial not in ('1', '2', ''):
+            raise Exception('User provided option was not one of [1/2]')
+
+        personal = commercial in ('1', '')
+
+        lic_url = personal_url if personal else commercial_url
+        lic_type = 'kc.lic' if personal else 'k4.lic'
+
+        if personal:
+            redirect = input(f'\nTo apply for your PyKX license, navigate to {lic_url}.\n'
+                             'Shortly after you submit your application, you will receive a '
+                             'welcome email containing your license information.\n'
+                             'Would you like to open this page? [Y/n]: ')
+        else:
+            redirect = input('\nTo apply for your PyKX license, contact your '
+                             'KX sales representative or sales@kx.com.\n'
+                             f'Alternately apply through {lic_url}.\n'
+                             'Would you like to open this page? [Y/n]: ')
 
         if redirect.lower() in ('y', ''):
             try:
@@ -164,15 +231,15 @@ def _license_install(intro=None, return_value=False): # noqa:
                              'input the file path (Default)'
                              '\n  [2] Input the activation key (base64 encoded string) provided in '
                              'your welcome email'
-                             '\n  [3] Proceed with unlicensed mode:'
+                             '\n  [3] Proceed with unlicensed mode'
                              '\nEnter your choice here [1/2/3]: ').strip().lower()
 
         if install_type not in ('1', '2', '3', ''):
             raise Exception('User provided option was not one of [1/2/3]')
 
         if install_type in ('1', ''):
-            license = input('\nPlease provide the download location of your license '
-                            '(E.g., ~/path/to/kc.lic) : ').strip()
+            license = input('\nProvide the download location of your license '
+                            f'(for example, ~/path/to/{lic_type}) : ').strip()
             download_location = os.path.expanduser(Path(license))
 
             if not os.path.exists(download_location):
@@ -182,10 +249,10 @@ def _license_install(intro=None, return_value=False): # noqa:
             print('\nPyKX license successfully installed. Restart Python for this to take effect.\n') # noqa: E501
         elif install_type == '2':
 
-            license = input('\nPlease provide your activation key (base64 encoded string) '
+            license = input('\nProvide your activation key (base64 encoded string) '
                             'provided with your welcome email : ').strip()
 
-            _license_install_B64(license, 'kc.lic')
+            _license_install_B64(license, lic_type)
 
             print('\nPyKX license successfully installed. Restart Python for this to take effect.\n') # noqa: E501
         elif install_type == '3':
@@ -202,14 +269,7 @@ _licenvset = _is_enabled('PYKX_LICENSED', '--licensed') or _is_enabled('PYKX_UNL
 if any(i in qargs for i in _arglist) or _licenvset or not hasattr(sys, 'ps1'): # noqa: C901
     pass
 elif not license_located:
-    kc_b64 = _get_config_value('KDB_LICENSE_B64', None)
-    k4_b64 = _get_config_value('KDB_K4LICENSE_B64', None)
-    if kc_b64 is not None:
-        _license_install_B64(kc_b64, 'kc.lic')
-    elif k4_b64 is not None:
-        _license_install_B64(k4_b64, 'k4.lic')
-    else:
-        _license_install()
+    _license_install()
 
 licensed = False
 
@@ -250,7 +310,6 @@ load_pyarrow_unsafe = _is_enabled('PYKX_LOAD_PYARROW_UNSAFE', '--load-pyarrow-un
 pykx_qdebug = _is_enabled('PYKX_QDEBUG', '--q-debug')
 
 pandas_2 = pd.__version__.split('.')[0] == '2'
-disable_pandas_warning = _is_enabled('PYKX_DISABLE_PANDAS_WARNING')
 
 
 def find_core_lib(name: str) -> Path:
