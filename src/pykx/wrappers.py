@@ -502,7 +502,8 @@ class K:
         self,
         *,
         raw: bool = False,
-        has_nulls: Optional[bool] = None
+        has_nulls: Optional[bool] = None,
+        as_arrow: Optional[bool] = False,
     ):
         return self.np(raw=raw)
 
@@ -639,6 +640,7 @@ class TemporalSpanAtom(TemporalAtom):
            *,
            raw: bool = False,
            has_nulls: Optional[bool] = None,
+           as_arrow: Optional[bool] = False,
     ) -> Union[pd.Timedelta, int]:
         if raw:
             return self.np(raw=True)
@@ -673,6 +675,7 @@ class TemporalFixedAtom(TemporalAtom):
         *,
         raw: bool = False,
         has_nulls: Optional[bool] = None,
+        as_arrow: Optional[bool] = False,
     ):
         if raw:
             return self.np(raw=True)
@@ -1476,6 +1479,51 @@ class Collection(K):
         return q('@', self, _idx_to_k(key, _wrappers.k_n(self)))
 
 
+if pandas_2 and pa is not None:
+    _as_arrow_map = {
+        'List': 'object',
+        'BooleanVector': 'bool[pyarrow]',
+        'GUIDVector': 'object',
+        'ByteVector': 'uint8[pyarrow]',
+        'ShortVector': 'int16[pyarrow]',
+        'IntVector': 'int32[pyarrow]',
+        'LongVector': 'int64[pyarrow]',
+        'RealVector': 'float[pyarrow]',
+        'FloatVector': 'double[pyarrow]',
+        'CharVector': pd.ArrowDtype(pa.binary(1)),
+        'SymbolVector': 'string[pyarrow]',
+        'TimestampVector': 'timestamp[ns][pyarrow]',
+        'MonthVector': 'timestamp[s][pyarrow]',
+        'DateVector': 'timestamp[s][pyarrow]',
+        'TimespanVector': 'duration[ns][pyarrow]',
+        'MinuteVector': 'duration[s][pyarrow]',
+        'SecondVector': 'duration[s][pyarrow]',
+        'TimeVector': 'duration[ms][pyarrow]'
+    }
+
+    _as_arrow_raw_map = {
+        'List': 'object',
+        'BooleanVector': 'bool[pyarrow]',
+        'GUIDVector': 'object',
+        'ByteVector': 'uint8[pyarrow]',
+        'ShortVector': 'int16[pyarrow]',
+        'IntVector': 'int32[pyarrow]',
+        'LongVector': 'int64[pyarrow]',
+        'RealVector': 'float[pyarrow]',
+        'FloatVector': 'double[pyarrow]',
+        'CharVector': pd.ArrowDtype(pa.binary(1)),
+        'SymbolVector': pd.ArrowDtype(pa.binary()),
+        'TimestampVector': 'int64[pyarrow]',
+        'DatetimeVector': 'double[pyarrow]',
+        'MonthVector': 'int32[pyarrow]',
+        'DateVector': 'int32[pyarrow]',
+        'TimespanVector': 'int64[pyarrow]',
+        'MinuteVector': 'int32[pyarrow]',
+        'SecondVector': 'int32[pyarrow]',
+        'TimeVector': 'int32[pyarrow]',
+    }
+
+
 class Vector(Collection, abc.Sequence):
     """Base type for all q vectors, which are ordered collections of a particular type."""
     @property
@@ -1490,7 +1538,7 @@ class Vector(Collection, abc.Sequence):
             type_char = ' bg xhijefcspmdznuvts'[self.t]
         except IndexError:
             return False
-        return q(f'{{any any -0W 0W{type_char}=\\:x}}')(self).py()
+        return q(f'{{any -0W 0W{type_char}=\\:x}}')(self).py()
 
     def __len__(self):
         return _wrappers.k_n(self)
@@ -1535,8 +1583,19 @@ class Vector(Collection, abc.Sequence):
         *,
         raw: bool = False,
         has_nulls: Optional[bool] = None,
+        as_arrow: Optional[bool] = False,
     ):
         res = pd.Series(self.np(raw=raw, has_nulls=has_nulls), copy=False)
+        if as_arrow:
+            if not pandas_2:
+                raise RuntimeError('Pandas Version must be at least 2.0 to use as_arrow=True')
+            if pa is None:
+                raise PyArrowUnavailable # nocov
+            if raw:
+                if type(self).__name__ != 'GUIDVector':
+                    res = res.astype(_as_arrow_raw_map[type(self).__name__])
+            else:
+                res = res.astype(_as_arrow_map[type(self).__name__])
         return res
 
     def pa(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
@@ -1959,7 +2018,7 @@ class List(Vector):
 
     def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         """Provides a Numpy representation of the list."""
-        return _wrappers.list_np(self, raw, has_nulls)
+        return _wrappers.list_np(self, False, has_nulls)
 
 
 class NumericVector(Vector):
@@ -2006,11 +2065,24 @@ class IntegralNumericVector(NumericVector):
         *,
         raw: bool = False,
         has_nulls: Optional[bool] = None,
+        as_arrow: Optional[bool] = False,
     ):
+        if as_arrow:
+            if not pandas_2:
+                raise RuntimeError('Pandas Version must be at least 2.0 to use as_arrow=True')
+            if pa is None:
+                raise PyArrowUnavailable # nocov
         arr = self.np(raw=raw, has_nulls=has_nulls)
-        if isinstance(arr, np.ma.MaskedArray):
-            arr = pd.arrays.IntegerArray(arr, mask=arr.mask, copy=False)
-        res = pd.Series(arr, copy=False)
+        if as_arrow:
+            arr = pa.array(arr)
+            if raw:
+                res = pd.Series(arr, copy=False, dtype=_as_arrow_raw_map[type(self).__name__])
+            else:
+                res = pd.Series(arr, copy=False, dtype=_as_arrow_map[type(self).__name__])
+        else:
+            if isinstance(arr, np.ma.MaskedArray):
+                arr = pd.arrays.IntegerArray(arr, mask=arr.mask, copy=False)
+            res = pd.Series(arr, copy=False)
         return res
 
 
@@ -2172,6 +2244,7 @@ class GUIDVector(Vector):
         *,
         raw: bool = False,
         has_nulls: Optional[bool] = None,
+        as_arrow: Optional[bool] = False,
     ):
         if raw:
             return PandasUUIDArray(self.np(raw=raw))
@@ -2596,9 +2669,17 @@ class EnumVector(Vector):
         *,
         raw: bool = False,
         has_nulls: Optional[bool] = None,
+        as_arrow: Optional[bool] = False,
     ):
         if raw:
-            return super(self).pd(raw=raw, has_nulls=has_nulls)
+            res = super().pd(raw=raw, has_nulls=has_nulls)
+            if as_arrow:
+                if not pandas_2:
+                    raise RuntimeError('Pandas Version must be at least 2.0 to use as_arrow=True')
+                if pa is None:
+                    raise PyArrowUnavailable # nocov
+                res = res.astype('int64[pyarrow]')
+            return res
         res = pd.Series(self.np(raw=raw, has_nulls=has_nulls), dtype='category')
         return res
 
@@ -2621,8 +2702,9 @@ class Anymap(List):
         *,
         raw: bool = False,
         has_nulls: Optional[bool] = None,
+        as_arrow: Optional[bool] = False,
     ):
-        res = self._as_list().pd(raw=raw, has_nulls=has_nulls)
+        res = self._as_list().pd(raw=raw, has_nulls=has_nulls, as_arrow=as_arrow)
         return res
 
     def pa(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
@@ -2786,7 +2868,10 @@ class Table(PandasAPI, Mapping):
         raw: bool = False,
         has_nulls: Optional[bool] = None,
         raw_guids=False,
+        as_arrow: Optional[bool] = False,
     ):
+        if raw_guids:
+            warnings.warn("Keyword 'raw_guids' is deprecated", DeprecationWarning)
         if raw_guids and not raw:
             v = [x.np(raw=isinstance(x, GUIDVector), has_nulls=has_nulls) for x in self._values]
             v = [PandasUUIDArray(x) if x.dtype == complex else x for x in v]
@@ -2805,8 +2890,19 @@ class Table(PandasAPI, Mapping):
         for i, v in enumerate(self._values):
             if not raw and isinstance(v, EnumVector):
                 df = df.astype({self._keys.py()[i]: 'category'})
-            _pykx_base_types[self._keys.py()[i]] = str(type(v)).split('.')[-1]
+            _pykx_base_types[self._keys.py()[i]] = str(type(v).__name__)
         df.attrs['_PyKX_base_types'] = _pykx_base_types
+        if as_arrow:
+            if not pandas_2:
+                raise RuntimeError('Pandas Version must be at least 2.0 to use as_arrow=True')
+            if pa is None:
+                raise PyArrowUnavailable # nocov
+            if raw:
+                t_dict = dict(filter(lambda i: i[1] != 'GUIDVector', _pykx_base_types.items()))
+                df = df.astype(dict([(k, _as_arrow_raw_map[v])
+                                    for k, v in t_dict.items()]))
+            else:
+                df = df.astype(dict([(k, _as_arrow_map[v]) for k, v in _pykx_base_types.items()]))
         return df
 
     def pa(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
@@ -2987,6 +3083,116 @@ class Table(PandasAPI, Mapping):
                 raise QError('Object does not support the grouped attribute')
             else:
                 raise e
+
+    def xbar(self, values):
+        """
+        Apply `xbar` round down operations on the column(s) of a table to a specified
+            value
+
+        Parameters:
+            values: Provide a dictionary mapping the column to apply rounding to with
+                the rounding value as follows `{column: value}`.
+
+        Returns:
+            A table with rounding applied to the specified columns.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> N = 5
+        >>> kx.random.seed(42)
+        >>> tab = kx.Table(data = {
+        ...     'x': kx.random.random(N, 100.0),
+        ...     'y': kx.random.random(N, 10.0)})
+        >>> tab
+        pykx.Table(pykx.q('
+        x        y
+        -----------------
+        77.42128 8.200469
+        70.49724 9.857311
+        52.12126 4.629496
+        99.96985 8.518719
+        1.196618 9.572477
+        '))
+        >>> tab.xbar({'x': 10})
+        pykx.Table(pykx.q('
+        x  y
+        -----------
+        70 8.200469
+        70 9.857311
+        50 4.629496
+        90 8.518719
+        0  9.572477
+        '))
+        >>> tab.xbar({'x': 10, 'y': 2})
+        pykx.Table(pykx.q('
+        x  y
+        ----
+        70 8
+        70 8
+        50 4
+        90 8
+        0  8
+        '))
+        ```
+        """
+        return q("{if[11h<>type key y;"
+                 " '\"Column(s) supplied must convert to type pykx.SymbolAtom\"];"
+                 " ![x;();0b;key[y]!{(xbar;x;y)}'[value y;key y]]}", self, values)
+
+    def window_join(self, table, windows, cols, aggs):
+        """
+        Window joins provide the ability to analyse the behaviour of data
+        in one table in the neighborhood of another.
+
+        Parameters:
+            table: A `pykx.Table` or Python table equivalent containing a `['sym' and 'time']`
+                column (or equivalent) with a `parted` attribute on `'sym'`.
+            windows: A pair of lists containing times/timestamps denoting the beginning and
+                end of the windows
+            cols: The names of the common columns `['sym' and 'time']` within each table
+            aggs: A dictionary mapping the name of a new derived column to a list
+                specifying the function to be applied as the first element and the columns
+                which should be passed from the `table` to this function. These are mapped
+                {'new_col0': [f0, 'c0'], 'new_col1': [f1, 'c0', 'c1']}.
+
+        Returns:
+            For each record of the original table, a record with additional columns
+                denoted by the `new_col0` entries in the `aggs` argument are added which is
+                the result of applying the function `f0` with the content of column `c0` over
+                the matching intervals in the `table`.
+
+        Example:
+
+        ```python
+        >>> trades = kx.Table(data={
+        ...     'sym': ['ibm', 'ibm', 'ibm'],
+        ...     'time': kx.q('10:01:01 10:01:04 10:01:08'),
+        ...     'price': [100, 101, 105]})
+        >>> quotes = kx.Table(data={
+        ...     'sym': 'ibm',
+        ...     'time': kx.q('10:01:01+til 9'),
+        ...     'ask': [101, 103, 103, 104, 104, 107, 108, 107, 108],
+        ...     'bid': [98, 99, 102, 103, 103, 104, 106, 106, 107]})
+        >>> windows = kx.q('{-2 1+\:x}', trades['time'])
+        >>> trades.window_join(quotes,
+        ...                    windows,
+        ...                    ['sym', 'time'],
+        ...                    {'ask_max': [lambda x: max(x), 'ask'],
+        ...                     'ask_minus_bid': [lambda x, y: x - y, 'ask', 'bid']})
+        pykx.Table(pykx.q('
+        sym time     price ask_minus_bid ask_max
+        ----------------------------------------
+        ibm 10:01:01 100   3 4           103
+        ibm 10:01:04 101   4 1 1 1       104
+        ibm 10:01:08 105   3 2 1 1       108
+        '))
+        ```
+        """
+        return q("{[t;q;w;c;a]"
+                 "(cols[t], key a) xcol wj[w; c; t;enlist[q],value a]}",
+                 self, table, windows, cols, aggs)
 
     def _repr_html_(self):
         if not licensed:
@@ -3417,6 +3623,7 @@ class KeyedTable(Dictionary, PandasAPI):
         *,
         raw: bool = False,
         has_nulls: Optional[bool] = None,
+        as_arrow: Optional[bool] = False,
     ):
         kk = self._keys._keys
         vk = self._values._keys
@@ -3425,6 +3632,12 @@ class KeyedTable(Dictionary, PandasAPI):
         if len(self) == 0:
             df = pd.DataFrame(columns=kk.py() + vk.py())
             df = df.set_index(kk.py())
+            if as_arrow:
+                if not pandas_2:
+                    raise RuntimeError('Pandas Version must be at least 2.0 to use as_arrow=True')
+                if pa is None:
+                    raise PyArrowUnavailable # nocov
+                df = df.convert_dtypes(dtype_backend='pyarrow')
             return df
         idx = [kvg(i).np(raw=raw, has_nulls=has_nulls).reshape(-1)
                for i in range(len(kk))]
@@ -3439,11 +3652,22 @@ class KeyedTable(Dictionary, PandasAPI):
         for i, col in enumerate(kk.py()):
             if not raw and isinstance(kvg(i), EnumVector):
                 df[col] = df[col].astype('category')
-            _pykx_base_types[col] = str(type(kvg(i))).split('.')[-1]
+            _pykx_base_types[col] = str(type(kvg(i)).__name__)
         for i, col in enumerate(vk.py()):
             if not raw and isinstance(vvg(i), EnumVector):
                 df[col] = df[col].astype('category')
-            _pykx_base_types[col] = str(type(vvg(i))).split('.')[-1]
+            _pykx_base_types[col] = str(type(vvg(i)).__name__)
+        if as_arrow:
+            if not pandas_2:
+                raise RuntimeError('Pandas Version must be at least 2.0 to use as_arrow=True')
+            if pa is None:
+                raise PyArrowUnavailable # nocov
+            if raw:
+                t_dict = dict(filter(lambda i: i[1] != 'GUIDVector', _pykx_base_types.items()))
+                df = df.astype(dict([(k, _as_arrow_raw_map[v])
+                                    for k, v in t_dict.items()]))
+            else:
+                df = df.astype(dict([(k, _as_arrow_map[v]) for k, v in _pykx_base_types.items()]))
         df.set_index(kk.py(), inplace=True)
         df.attrs['_PyKX_base_types'] = _pykx_base_types
         return df

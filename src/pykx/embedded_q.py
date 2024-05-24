@@ -118,12 +118,28 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
     def __init__(self): # noqa
 
         if licensed:
-            kxic_path = (pykx_dir/'lib'/'kxic.k').as_posix()
+            kxic_path = (pykx_dir/'lib').as_posix()
+            kxic_file = 'kxic.k'
             pykx_qlib_path = (pykx_dir/'pykx').as_posix()
             # This q code is run as a single call into q to improve startup performance:
             code = ''
+            code += '''
+                    .pykx.util.loadfile:{[folder;file]
+                      cache:system"cd";
+                      res:.[{system"cd ",x;res:system"l ",y;(0b;res)};
+                            (folder;file);
+                            {(1b;x)}
+                            ];
+                      if[folder~system"cd";system"cd ",cache];
+                      $[res[0];'res[1];res[1]]
+                      };
+                    '''
             if not no_qce:
-                code += f'if[not `comkxic in key `;system"l {kxic_path}"];'
+                code += f'''
+                         if[not `comkxic in key `;
+                           .pykx.util.loadfile["{kxic_path}";"{kxic_file}"]
+                           ];
+                         '''
             if os.getenv('PYKX_UNDER_Q') is None:
                 os.environ['PYKX_UNDER_PYTHON'] = 'true'
                 code += 'setenv[`PYKX_UNDER_PYTHON;"true"];'
@@ -165,8 +181,8 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                                 break
                     else:
                         raise err
-                pykx_qini_path = (Path(__file__).parent.absolute()/'pykx_init.q_')
-                self._call(f'\l {pykx_qini_path}', skip_debug=True) # noqa
+                pykx_qini_path = Path(__file__).parent.absolute().as_posix()
+                self._call(f'.pykx.util.loadfile["{pykx_qini_path}";"pykx_init.q_"]', skip_debug=True) # noqa
                 pykx_q_path = (Path(__file__).parent.absolute()/'pykx.q')
                 with open(pykx_q_path, 'r') as f:
                     code = f.read()
@@ -222,7 +238,7 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
         query = wrappers.CharVector(query)
         if (not skip_debug) and (debug or pykx_qdebug):
             if 0 != len(args):
-                query = wrappers.List([bytes(query), *[wrappers.K(x) for x in args]])
+                query = wrappers.List([query, *[wrappers.K(x) for x in args]])
             result = _keval(
                 b'{[pykxquery] .Q.trp[value; pykxquery; {2@"backtrace:\n",.Q.sbt y;\'x}]}',
                 query

@@ -132,7 +132,8 @@ class QContext:
             attr = self._q._call(
                 'k){x:. x;$[99h<@x;:`$"_pykx_fn_marker";99h~@x;if[` in!x;if[(::)~x`;:`$"_pykx_ctx_marker"]]]x}', # noqa: E501
                 fqn_with_key,
-                wait=True
+                wait=True,
+                skip_debug=True
             )
         except QError as err:
             if '_' in str(key):

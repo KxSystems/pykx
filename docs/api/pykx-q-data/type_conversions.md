@@ -1,31 +1,58 @@
 # PyKX to Pythonic data type mapping
 
-A breakdown of each of the `pykx.K` types and their analogous `numpy`, `pandas`, and `pyarrow` types.
+A breakdown of each of the `pykx.K` types and their analogous `Python`, `NumPy`, `Pandas`, and `PyArrow` types.
 
-??? "Cheat Sheet"
+??? "Cheat Sheet: `Python`, `NumPy`, `PyArrow`"
 
-    PyKX type                       | Python type | Numpy dtype     | Pandas dtype    | PyArrow type   |
-    ------------------------------- | ----------- | --------------- | --------------- | -------------- |
-    [List](#pykxlist)               | list        | object          | object          | Not Supported  |
-    [Boolean](#pykxbooleanatom)     | bool        | bool            | bool            | Not Supported  | 
-    [GUID](#pykxguidatom)           | uuid4       | uuid4           | uuid4           | uuid4          |
-    [Byte](#pykxbyteatom)           | int         | uint8           | uint8           | uint8          |
-    [Short](#pykxshortatom)         | int         | int16           | int16           | int16          |
-    [Int](#pykxintatom)             | int         | int32           | int32           | int32          |
-    [Long](#pykxlongatom)           | int         | int64           | int64           | int64          |
-    [Real](#pykxrealatom)           | float       | float32         | float32         | FloatArray     |
-    [Float](#pykxfloatatom)         | float       | float64         | float64         | DoubleArray    |
-    [Char](#pykxcharatom)           | bytes       | \|S1            | bytes8          | BinaryArray    |
-    [Symbol](#pykxsymbolatom)       | str         | object          | object          | StringArray    |
-    [Timestamp](#pykxtimestampatom) | datetime    | datetime64[ns]  | datetime64[ns]  | TimestampArray |
-    [Month](#pykxmonthatom)         | date        | datetime64[M]   | datetime64[ns]  | Not Supported  |
-    [Date](#pykxdateatom)           | date        | datetime64[D]   | datetime64[ns]  | Date32Array    |
-    [Timespan](#pykxtimespanatom)   | timedelta   | timedelta[ns]   | timedelta64[ns] | DurationArray  |
-    [Minute](#pykxminuteatom)       | timedelta   | timedelta64[m]  | timedelta64[ns] | Not Supported  |
-    [Second](#pykxsecondatom)       | timedelta   | timedelta64[s]  | timedelta64[ns] | DurationArray  |
-    [Time](#TimeAtom)               | timedelta   | timedelta64[ms] | timedelta64[ns] | DurationArray  |
-    [Dictionary](#pykxdictionary)   | dict        | Not Supported   | Not Supported   | Not Supported  |
-    [Table](#pykxtable)             | dict        | records         | DataFrame       | Table          |
+	| PyKX type                       | Python type | Numpy dtype     | PyArrow type   |
+	| ------------------------------- | ----------- | --------------- | -------------- |
+	| [List](#pykxlist)               | list        | object          | Not Supported  |
+	| [Boolean](#pykxbooleanatom)     | bool        | bool            | Not Supported  |
+	| [GUID](#pykxguidatom)           | uuid4       | uuid4           | uuid4          |
+	| [Byte](#pykxbyteatom)           | int         | uint8           | uint8          |
+	| [Short](#pykxshortatom)         | int         | int16           | int16          |
+	| [Int](#pykxintatom)             | int         | int32           | int32          |
+	| [Long](#pykxlongatom)           | int         | int64           | int64          |
+	| [Real](#pykxrealatom)           | float       | float32         | FloatArray     |
+	| [Float](#pykxfloatatom)         | float       | float64         | DoubleArray    |
+	| [Char](#pykxcharatom)           | bytes       | \\\|S1          | BinaryArray    |
+	| [Symbol](#pykxsymbolatom)       | str         | object          | StringArray    |
+	| [Timestamp](#pykxtimestampatom) | datetime    | datetime64[ns]  | TimestampArray |
+	| [Month](#pykxmonthatom)         | date        | datetime64[M]   | Not Supported  |
+	| [Date](#pykxdateatom)           | date        | datetime64[D]   | Date32Array    |
+	| [Timespan](#pykxtimespanatom)   | timedelta   | timedelta64[ns] | DurationArray  |
+	| [Minute](#pykxminuteatom)       | timedelta   | timedelta64[m]  | Not Supported  |
+	| [Second](#pykxsecondatom)       | timedelta   | timedelta64[s]  | DurationArray  |
+	| [Time](#TimeAtom)               | timedelta   | timedelta64[ms] | DurationArray  |
+	| [Dictionary](#pykxdictionary)   | dict        | Not Supported   | Not Supported  |
+	| [Table](#pykxtable)             | dict        | records         | Table          |
+
+??? "Cheat Sheet: `Pandas 1.*`, `Pandas 2.*`, `Pandas 2.* PyArrow backed`"
+
+	**Note:** Creating PyArrow backed Pandas objects uses `as_arrow=True` using NumPy arrays as an intermediate data format. 
+
+	| PyKX type                       | Pandas 1.\* dtype | Pandas 2.\* dtype | Pandas 2.\* as_arrow=True dtype |
+	| ------------------------------- | ----------------- | ----------------- | ------------------------------- |
+	| [List](#pykxlist)               | object            | object            | object                          |
+	| [Boolean](#pykxbooleanatom)     | bool              | bool              | bool[pyarrow]                   |
+	| [GUID](#pykxguidatom)           | object            | object            | object                          |
+	| [Byte](#pykxbyteatom)           | uint8             | uint8             | uint8[pyarrow]                  |
+	| [Short](#pykxshortatom)         | int16             | int16             | int16[pyarrow]                  |
+	| [Int](#pykxintatom)             | int32             | int32             | int32[pyarrow]                  |
+	| [Long](#pykxlongatom)           | int64             | int64             | int64[pyarrow]                  |
+	| [Real](#pykxrealatom)           | float32           | float32           | float[pyarrow]                  |
+	| [Float](#pykxfloatatom)         | float64           | float64           | double[pyarrow]                 |
+	| [Char](#pykxcharatom)           | bytes8            | bytes8            | fixed_size_binary[1][pyarrow]   |
+	| [Symbol](#pykxsymbolatom)       | object            | object            | string[pyarrow]                 |
+	| [Timestamp](#pykxtimestampatom) | datetime64[ns]    | datetime64[ns]    | timestamp[ns][pyarrow]          |
+	| [Month](#pykxmonthatom)         | datetime64[ns]    | datetime64[s]     | timestamp[s][pyarrow]           |
+	| [Date](#pykxdateatom)           | datetime64[ns]    | datetime64[s]     | timestamp[s][pyarrow]           |
+	| [Timespan](#pykxtimespanatom)   | timedelta64[ns]   | timedelta64[ns]   | duration[ns][pyarrow]           |
+	| [Minute](#pykxminuteatom)       | timedelta64[ns]   | timedelta64[s]    | duration[s][pyarrow]            |
+	| [Second](#pykxsecondatom)       | timedelta64[ns]   | timedelta64[s]    | duration[s][pyarrow]            |
+	| [Time](#TimeAtom)               | timedelta64[ns]   | timedelta64[ms]   | duration[ms][pyarrow]           |
+	| [Dictionary](#pykxdictionary)   | Not Supported     | Not Supported     | Not Supported                   |
+	| [Table](#pykxtable)             | DataFrame         | DataFrame         | DataFrame                       |
 
 ## `pykx.List`
 
@@ -611,14 +638,25 @@ True
 	```
 
 === "Pandas"
-	Calling `.pd()` on a `pykx.TimestampVector` will return a pandas `Series` with `dtype` `datetime64[ns]`.
+	Calling `.pd()` on a `pykx.TimestampVector` will return a pandas `Series` with `dtype`:
+	
+	1. `datetime64[ns]`:
 
-	```Python
-	>>> kx.TimestampVector([datetime(2150, 10, 22, 20, 31, 15, 70713), datetime(2050, 10, 22, 20, 31, 15, 70713)]).pd()
-	0   2150-10-22 20:31:15.070713
-	1   2050-10-22 20:31:15.070713
-	dtype: datetime64[ns]
-	```
+		```python
+		>>> kx.TimestampVector([datetime(2150, 10, 22, 20, 31, 15, 70713), datetime(2050, 10, 22, 20, 31, 15, 70713)]).pd()
+		0   2150-10-22 20:31:15.070713
+		1   2050-10-22 20:31:15.070713
+		dtype: datetime64[ns]
+		```
+
+	2. `timestamp[ns][pyarrow]` in pandas>=2.0 with `as_arrow=True`:
+
+		```python
+		>>> kx.TimestampVector([datetime(2150, 10, 22, 20, 31, 15, 70713), datetime(2050, 10, 22, 20, 31, 15, 70713)]).pd(as_arrow=True)
+		0    2150-10-22 20:31:15.070713
+		1    2050-10-22 20:31:15.070713
+		dtype: timestamp[ns][pyarrow]
+		```
 
 === "PyArrow"
 	Calling `.pa()` on a `pykx.TimestampVector` will return a pyarrow `TimestampArray`.
@@ -683,14 +721,34 @@ True
 	```
 
 === "Pandas"
-	Calling `.pd()` on a `pykx.MonthVector` will return a pandas `Series` with `dtype` `datetime64[ns]`.
+	Calling `.pd()` on a `pykx.MonthVector` will return a pandas `Series` with `dtype`:
 
-	```Python
-	>>> kx.MonthVector([date(1972, 5, 1), date(1999, 5, 1)]).pd()
-	0   1972-05-01
-	1   1999-05-01
-	dtype: datetime64[ns]
-	```
+	1. `datetime64[ns]` in `pandas<2.0`:
+   
+		```python
+		>>> kx.MonthVector([date(1972, 5, 1), date(1999, 5, 1)]).pd()
+		0   1972-05-01
+		1   1999-05-01
+		dtype: datetime64[ns]
+		```
+
+	2.  `datetime64[s]` in `pandas>=2.0`:
+
+		```python
+		>>> kx.MonthVector([date(1972, 5, 1), date(1999, 5, 1)]).pd()
+		0   1972-05-01
+		1   1999-05-01
+		dtype: datetime64[s]
+		```
+
+	3. `timestamp[s][pyarrow]` in `pandas>=2.0` with `as_arrow=True`:
+
+		```python
+		>>> kx.MonthVector([date(1972, 5, 1), date(1999, 5, 1)]).pd(as_arrow=True)
+		0    1972-05-01 00:00:00
+		1    1999-05-01 00:00:00
+		dtype: timestamp[s][pyarrow]
+		```
 
 ## `pykx.DateAtom`
 
@@ -742,14 +800,35 @@ True
 	```
 
 === "Pandas"
-	Calling `.pd()` on a `pykx.DateVector` will return a pandas `Series` with `dtype` `datetime64[ns]`.
+	Calling `.pd()` on a `pykx.DateVector` will return a pandas `Series` with `dtype`:
 
-	```Python
-	>>> kx.DateVector([date(1972, 5, 1), date(1999, 5, 1)]).pd()
-	0   1972-05-01
-	1   1999-05-01
-	dtype: datetime64[ns]
-	```
+	1.  `datetime64[ns]` in `pandas<2.0`:
+
+		```python
+		# pandas<2.0
+		>>> kx.DateVector([date(1972, 5, 1), date(1999, 5, 1)]).pd()
+		0   1972-05-01
+		1   1999-05-01
+		dtype: datetime64[ns]
+		```
+
+	2. `datetime64[s]` in `pandas>=2.0`:
+
+		```python
+		>>> kx.DateVector([date(1972, 5, 1), date(1999, 5, 1)]).pd()
+		0   1972-05-01
+		1   1999-05-01
+		dtype: datetime64[s]
+		```
+
+	3. `timestamp[s][pyarrow]` in `pandas>=2.0` with `as_arrow=True`:
+
+		```python
+		>>> kx.DateVector([date(1972, 5, 1), date(1999, 5, 1)]).pd(as_arrow=True)
+		0    1972-05-01 00:00:00
+		1    1999-05-01 00:00:00
+		dtype: timestamp[s][pyarrow]
+		```
 
 === "PyArrow"
 	Calling `.pa()` on a `pykx.DateVector` will return a pyarrow `Date32Array`.
@@ -830,14 +909,25 @@ True
 	```
 
 === "Pandas"
-	Calling `.pd()` on a `pykx.TimespanVector` will return a pandas `Series` with `dtype` `timedelta64[ns]`.
+	Calling `.pd()` on a `pykx.TimespanVector` will return a pandas `Series` with `dtype`:
 
-	```Python
-	>>> kx.TimespanVector([timedelta(days=43938, seconds=68851, microseconds=664551), timedelta(days=43938, seconds=68851, microseconds=664551)]).pd()
-	0   43938 days 19:07:31.664551
-	1   43938 days 19:07:31.664551
-	dtype: timedelta64[ns]
-	```
+	1.  `timedelta64[ns]`:
+
+		```python
+		>>> kx.TimespanVector([timedelta(days=43938, seconds=68851, microseconds=664551), timedelta(days=43938, seconds=68851, microseconds=664551)]).pd()
+		0   43938 days 19:07:31.664551
+		1   43938 days 19:07:31.664551
+		dtype: timedelta64[ns]
+		```
+
+	2.  `duration[ns][pyarrow]` in `pandas>=2.0` with `as_arrow=True`:
+
+		```python
+		>>> kx.TimespanVector([timedelta(days=43938, seconds=68851, microseconds=664551), timedelta(days=43938, seconds=68851, microseconds=664551)]).pd(as_arrow=True)
+		0    43938 days 19:07:31.664551
+		1    43938 days 19:07:31.664551
+		dtype: duration[ns][pyarrow]
+		```
 
 === "PyArrow"
 	Calling `.pa()` on a `pykx.TimespanVector` will return a pyarrow `DurationArray`.
@@ -901,14 +991,34 @@ True
 	```
 
 === "Pandas"
-	Calling `.pd()` on a `pykx.MinuteVector` will return a pandas `Series` with `dtype` `timedelta64[ns]`.
+	Calling `.pd()` on a `pykx.MinuteVector` will return a pandas `Series` with `dtype`:
 
-	```Python
-	>>> kx.MinuteVector([timedelta(minutes=216), timedelta(minutes=67)]).pd()
-	0   0 days 03:36:00
-	1   0 days 01:07:00
-	dtype: timedelta64[ns]
-	```
+    1. `timedelta64[ns]` in `pandas<2.0`:
+
+		```python
+		>>> kx.MinuteVector([timedelta(minutes=216), timedelta(minutes=67)]).pd()
+		0   0 days 03:36:00
+		1   0 days 01:07:00
+		dtype: timedelta64[ns]
+		```
+
+	2. `timedelta64[s]` in `pandas>=2.0`:
+
+		```python
+		>>> kx.MinuteVector([timedelta(minutes=216), timedelta(minutes=67)]).pd()
+		0   0 days 03:36:00
+		1   0 days 01:07:00
+		dtype: timedelta64[s]
+		```
+
+	3.  `duration[s][pyarrow]` in `pandas>=2.0` with `as_arrow=True`:
+   
+		```python
+		>>> kx.MinuteVector([timedelta(minutes=216), timedelta(minutes=67)]).pd(as_arrow=True)
+		0    0 days 03:36:00
+		1    0 days 01:07:00
+		dtype: duration[s][pyarrow]
+		```
 
 ## `pykx.SecondAtom`
 
@@ -960,14 +1070,34 @@ True
 	```
 
 === "Pandas"
-	Calling `.pd()` on a `pykx.SecondVector` will return a pandas `Series` with `dtype` `timedelta64[ns]`.
+	Calling `.pd()` on a `pykx.SecondVector` will return a pandas `Series` with `dtype`:
 
-	```Python
-	>>> kx.SecondVector([timedelta(seconds=13019), timedelta(seconds=1019)]).pd()
-	0   0 days 03:36:59
-	1   0 days 00:16:59
-	dtype: timedelta64[ns]
-	```
+	1. `timedelta64[ns]` in `pandas<2.0`:
+		```python
+		# pandas<2.0
+		>>> kx.SecondVector([timedelta(seconds=13019), timedelta(seconds=1019)]).pd()
+		0   0 days 03:36:59
+		1   0 days 00:16:59
+		dtype: timedelta64[ns]
+		```
+
+	2. `timedelta64[s]` in `pandas>=2.0`:
+
+		```python
+		>>> kx.SecondVector([timedelta(seconds=13019), timedelta(seconds=1019)]).pd()
+		0   0 days 03:36:59
+		1   0 days 00:16:59
+		dtype: timedelta64[s]
+		```
+
+ 	3. `duration[s][pyarrow]` in `pandas>=2.0` with `as_arrow=True`:
+
+		```python
+		>>> kx.SecondVector([timedelta(seconds=13019), timedelta(seconds=1019)]).pd(as_arrow=True)
+		0    0 days 03:36:59
+		1    0 days 00:16:59
+		dtype: duration[s][pyarrow]
+		```
 
 === "PyArrow"
 	Calling `.pa()` on a `pykx.SecondVector` will return a pyarrow `DurationArray`.
@@ -1033,14 +1163,34 @@ True
 
 === "Pandas"
 
-	Calling `.pd()` on a `pykx.TimeVector` will return a pandas `Series` with `dtype` `timedelta64[ns]`.
+	Calling `.pd()` on a `pykx.TimeVector` will return a pandas `Series` with `dtype`:
 
-	```Python
-	>>> kx.TimeVector([timedelta(seconds=59789, microseconds=214000), timedelta(seconds=23789, microseconds=214000)]).pd()
-	0   0 days 16:36:29.214000
-	1   0 days 06:36:29.214000
-	dtype: timedelta64[ns]
-	```
+	1.  `timedelta64[ns]` in `pandas<2.0`:
+
+		```python
+		>>> kx.TimeVector([timedelta(seconds=59789, microseconds=214000), timedelta(seconds=23789, microseconds=214000)]).pd()
+		0   0 days 16:36:29.214000
+		1   0 days 06:36:29.214000
+		dtype: timedelta64[ns]
+		```
+
+	2. `timedelta[ms]` in `pandas>=2.0`:
+
+		```python
+		>>> kx.TimeVector([timedelta(seconds=59789, microseconds=214000), timedelta(seconds=23789, microseconds=214000)]).pd()
+		0   0 days 16:36:29.214000
+		1   0 days 06:36:29.214000
+		dtype: timedelta64[ms]
+		```
+
+	3. `duration[ms][pyarrow]` in `pandas>=2.0` with `as_arrow=True`:
+
+		```python
+		>>> kx.TimeVector([timedelta(seconds=59789, microseconds=214000), timedelta(seconds=23789, microseconds=214000)]).pd(as_arrow=True)
+		0    0 days 16:36:29.214000
+		1    0 days 06:36:29.214000
+		dtype: duration[ms][pyarrow]
+		```
 
 === "PyArrow"
 	Calling `.pa()` on a `pykx.TimeVector` will return a pyarrow `DurationArray`.

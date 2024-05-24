@@ -8,7 +8,7 @@
 
 Remote Functions let you define Python functions within your Python environment which can interact with kdb+ data on a q process. Once defined, these functions are registered to a [remote session object]() along with any Python dependencies which need to be imported. The [remote session object]() establishes and manages the remote connection to the kdb+/q server.
 
-To execute kdb+/q functions using PyKX, please see [PyKX under q](../pykx-under-q/intro.html)
+To execute kdb+/q functions using PyKX, please see [PyKX under q](../pykx-under-q/intro.md)
 
 ## Requirements and limitations
 

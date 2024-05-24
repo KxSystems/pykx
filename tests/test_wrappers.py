@@ -1525,7 +1525,6 @@ class Test_List:
     @pytest.mark.nep49
     def test_np(self, q, kx):
         qv = q(self.v)
-        assert qv.np(raw=True).dtype == np.uintp
         assert qv.np().dtype == object
         assert qv.np()[1] == UUID(int=1)
         assert isinstance(qv.np()[-1], float)
@@ -1565,7 +1564,6 @@ class Test_List:
 
     def test_empty_vector(self, q):
         assert q('0h$()').np().dtype == object
-        assert q('0h$()').np(raw=True).dtype == np.uint64
 
 
 # NaN is tricky to compare, so we generate GUID vectors until we get one whose complex form has no
@@ -2227,6 +2225,15 @@ class Test_EnumVector:
         with pytest.raises(TypeError):
             bool(q('0#', q(self.q_vec_str)))
 
+    def test_pd(self, q, kx):
+        assert all(q(self.q_vec_str).pd(raw=True).to_numpy() == [0, 1, 2, 0, 1, 2])
+        assert all(q(self.q_vec_str).pd().to_numpy() == ['abc', 'xyz', 'hmm', 'abc', 'xyz', 'hmm'])
+
+        if kx.config.pandas_2:
+            assert all(q(self.q_vec_str).pd(raw=True, as_arrow=True) == [0, 1, 2, 0, 1, 2])
+            assert all(
+                q(self.q_vec_str).pd(as_arrow=True) == ['abc', 'xyz', 'hmm', 'abc', 'xyz', 'hmm'])
+
 
 class Test_Anymap:
     def test_anymap(self, kx, q, tmp_path):
@@ -2500,6 +2507,65 @@ class Test_Table:
             tab[10]
         with pytest.raises(IndexError):
             tab[-6]
+
+    def test_xbar(self, kx, q):
+        tab = q('([]10?100f;10?10f;10?1f)')
+        assert q('~',
+                 tab.xbar({'x': 10}),
+                 q('{[tab]update 10 xbar x from tab}', tab))
+        assert q('~',
+                 tab.xbar({'x': 10, 'x1': 2}),
+                 q('{[tab]update 10 xbar x, 2 xbar x1 from tab}', tab))
+
+        with pytest.raises(kx.QError) as err:
+            tab.xbar({10: 10})
+        assert 'Column(s) supplied' in str(err)
+
+    @pytest.mark.skipif(
+        os.getenv('PYKX_THREADING') is not None,
+        reason='Not supported with PYKX_THREADING'
+    )
+    def test_window_join(self, kx, q):
+        trades = kx.Table(data={
+            'sym': ['ibm', 'ibm', 'ibm'],
+            'time': q('10:01:01 10:01:04 10:01:08'),
+            'price': [100, 101, 105]})
+        q['trades'] = trades
+        quotes = kx.Table(data={
+            'sym': 'ibm',
+            'time': q('10:01:01+til 9'),
+            'ask': [101, 103, 103, 104, 104, 107, 108, 107, 108],
+            'bid': [98, 99, 102, 103, 103, 104, 106, 106, 107]})
+        q['quotes'] = quotes
+        windows = q('{-2 1+\\:x}', trades['time'])
+        columns = ['sym', 'time']
+        q['columns'] = columns
+        q['windows'] = windows
+        py_join = trades.window_join(quotes,
+                                     windows,
+                                     columns,
+                                     {'ask': [lambda x: max(x), 'ask'],
+                                      'bid': [lambda x: min(x), 'bid']})
+        q_join = trades.window_join(quotes,
+                                    windows,
+                                    columns,
+                                    {'ask': [kx.q('max'), 'ask'],
+                                     'bid': [kx.q('min'), 'bid']})
+
+        only_q = kx.q('wj[windows; columns;trades;(quotes;(max;`ask);(min;`bid))]')
+        assert q('~', py_join, q_join)
+        assert q('~', py_join, only_q)
+
+        py_multi_join = trades.window_join(quotes,
+                                           windows,
+                                           columns,
+                                           {'ask_min_bid': [lambda x, y: x - y, 'ask', 'bid']})
+
+        q_multi_join = trades.window_join(quotes,
+                                          windows,
+                                          columns,
+                                          {'ask_min_bid': [kx.q('{x - y}'), 'ask', 'bid']})
+        assert q('~', py_multi_join, q_multi_join)
 
 
 @pytest.mark.filterwarnings('ignore:Splayed tables are not yet implemented')
@@ -4101,19 +4167,6 @@ def test_repr_html(kx, q):
 
 
 @pytest.mark.unlicensed
-@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
-def test_pyarrow_pandas_ci_only(q):
-    if os.getenv('CI'):
-        with pytest.raises(NotImplementedError):
-            q('get`:a set ('
-              '(1 2;3 4);'
-              '`time`price`vol!(2022.03.29D16:45:14.880819;1.;100i);'
-              '([]a:1 2;b:("ab";"cd")))'
-            ).pd(as_arrow=True)
-
-
-@pytest.mark.unlicensed
-@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
 @pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
 def test_pyarrow_pandas_all_ipc(kx, q_port):
     with kx.QConnection(port=q_port) as q:
@@ -4129,27 +4182,17 @@ def test_pyarrow_pandas_all_ipc(kx, q_port):
 
         gen_q_datatypes_table(q, 'tab', 100)
         for vec in q('tab'):
-            assert 'pyarrow' in str(vec.pd(as_arrow=True))
+            assert 'pyarrow' in vec.pd(as_arrow=True).dtype.__repr__()
         q('tab: flip (`a`b`c`d`e`f`g`h`i`j`k`l`m`n)!(tab)')
 
         cols = q('cols tab').py()
         dfa = q('tab').pd(as_arrow=True)
         for c in cols:
-            assert 'pyarrow' in str(dfa[c].dtype)
+            assert 'pyarrow' in dfa[c].dtype.__repr__()
         q('tab: (til 100)!(tab)')
-
-        with pytest.raises(NotImplementedError):
-            q('10?0Ng').pd(as_arrow=True)
-
-        with pytest.raises(NotImplementedError):
-            q('0Nm').pd(as_arrow=True)
-
-        with pytest.raises(NotImplementedError):
-            q('0Nu').pd(as_arrow=True)
 
 
 @pytest.mark.unlicensed
-@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
 @pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
 def test_pyarrow_pandas_all(q):
     def gen_q_datatypes_table(q, table_name: str, num_rows: int = 100) -> str:
@@ -4164,30 +4207,96 @@ def test_pyarrow_pandas_all(q):
 
     gen_q_datatypes_table(q, 'tab', 100)
     for vec in q('tab'):
-        assert 'pyarrow' in str(vec.pd(as_arrow=True))
+        assert 'pyarrow' in vec.pd(as_arrow=True).dtype.__repr__()
     q('tab: flip (`a`b`c`d`e`f`g`h`i`j`k`l`m`n)!(tab)')
 
     cols = q('cols tab').py()
     dfa = q('tab').pd(as_arrow=True)
     for c in cols:
-        assert 'pyarrow' in str(dfa[c].dtype)
+        assert 'pyarrow' in str(dfa[c].dtype.__repr__())
     q('tab: (til 100)!(tab)')
 
-    with pytest.raises(NotImplementedError):
-        q('10?0Ng').pd(as_arrow=True)
 
-    with pytest.raises(NotImplementedError):
-        q('`u$v:6#u:`abc`xyz`hmm').pd(as_arrow=True)
+@pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
+def test_pyarrow_pandas_all_with_null_inf(kx):
 
-    with pytest.raises(NotImplementedError):
-        q('0Nm').pd(as_arrow=True)
+    def make_t(keycol=False):
+        t = kx.q('{d:"hijefpmdnuvt";flip (`$/:d)!(d$\\:1 0N),\'value each\'("-0W";"0W"),\\:/:d}',
+                 None)
+        t = kx.q('''
+            {update b:0101b,x:0x00112233,g:{0Ng,3?0Ng}[],
+                    c:"0 24",s:`a``bb`cc,C:("aa";"";enlist "b";"cc") from x}
+            ''', t)
+        t = kx.q.xcol({'i': 'ii'}, t)
 
-    with pytest.raises(NotImplementedError):
-        q('0Nu').pd(as_arrow=True)
+        if keycol:
+            t = kx.q('{`keycol xkey update keycol:i from x}', t)
+        return t
+
+    t=make_t()
+
+    def test_pd(t, hn, r):
+        t_rt = kx.toq(t.pd(raw=r), handle_nulls=hn)
+        t_rt_as = kx.toq(t.pd(raw=r, as_arrow=True), handle_nulls=hn)
+        assert kx.q('~', t_rt, t_rt_as)
+        assert kx.q('~', t_rt.dtypes, t_rt_as.dtypes)
+
+        # KXI-44586 g guids cannot convert
+        t=t.drop(columns=['g'])
+        t_rt_a = kx.toq([t[c].pd(raw=r) for c in t.columns.py()], handle_nulls=hn)
+        t_rt_as_a = kx.toq([t[c].pd(raw=r, as_arrow=True) for c in t.columns.py()], handle_nulls=hn)
+
+        for x, y in zip(t_rt_a, t_rt_as_a):
+            assert kx.q('~', x, y)
+            assert type(x) == type(y)
+
+    test_pd(t, hn=False, r=False)
+    test_pd(t, hn=True, r=False)
+
+    # KXI-44569 C List return is junk
+    t=t.drop(columns=['C'])
+
+    test_pd(t, hn=False, r=True)
+    test_pd(t, hn=True, r=True)
+
+    t=make_t()
+    # Minute overflows Seconds when roundtripping
+    t=t.drop(columns=['u'])
+
+    # Exclude nulls to test non masked array logic
+    test_pd(t.iloc[[0, 2, 3]], hn=False, r=False)
+    test_pd(t.iloc[[0, 2, 3]], hn=True, r=False)
+
+    t=t.drop(columns=['C'])
+
+    test_pd(t.iloc[[0, 2, 3]], hn=False, r=True)
+    test_pd(t.iloc[[0, 2, 3]], hn=True, r=True)
+
+    t=make_t(keycol=True)
+    test_pd(t, hn=False, r=False)
+    test_pd(t, hn=True, r=False)
+
+    # KXI-44569 C List return is junk
+    t=t.drop(columns=['C'])
+
+    test_pd(t, hn=False, r=True)
+    test_pd(t, hn=True, r=True)
+
+    t=make_t(keycol=True)
+    # Minute overflows Seconds when roundtripping
+    t=t.drop(columns=['u'])
+
+    # Exclude nulls to test non masked array logic
+    test_pd(t.iloc[[0, 2, 3]], hn=False, r=False)
+    test_pd(t.iloc[[0, 2, 3]], hn=True, r=False)
+
+    t=t.drop(columns=['C'])
+
+    test_pd(t.iloc[[0, 2, 3]], hn=False, r=True)
+    test_pd(t.iloc[[0, 2, 3]], hn=True, r=True)
 
 
 @pytest.mark.embedded
-@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
 @pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
 def test_pyarrow_pandas_table_roundtrip(kx):
     kx.q('gen_data:{@[;0;string]x#/:prd[x]?/:(`6;`6;0Ng),("bxhijefpdnuvt"$\\:0)}')
@@ -4206,11 +4315,185 @@ def test_pyarrow_pandas_table_roundtrip(kx):
             assert (tab[x]._values == tab2[x]._values).all()
 
 
-@pytest.mark.embedded
-@pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
-@pytest.mark.xfail(reason="as_arrow functionality currently awaiting introduction", strict=False)
-def test_pyarrow_pandas_timedeltas(kx):
-    tds = kx.toq(kx.q('''
-            ([] a:1D 1D01 1D01:02 1D01:01:01 1D01:01:01.001 1D01:01:01.001001 1D01:01:01.001001001)
-            ''').pd(as_arrow=True)['a'])
-    assert ([-17, -17, -17, -18, -19, -16, -16] == kx.q('{type each x}', tds)).all()
+@pytest.mark.unlicensed
+def test_all_timetypes(kx, q_port):
+    with kx.QConnection(port=q_port) as q:
+        # timestamp
+        td = q('''
+                ([] a:2000.01.01D 2000.01.01D01 2000.01.01D01:02 2000.01.01D01:01:01
+                    2000.01.01D01:01:01.001 2000.01.01D01:01:01.001001
+                    2000.01.01D01:01:01.001001001)
+                ''')
+        if kx.config.pandas_2:
+            df = td.pd(as_arrow=True)
+            td_roundtrip = kx.toq(df)
+            assert 'timestamp[ns][pyarrow]' == str(df.dtypes['a'])
+            if kx.licensed:
+                assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
+                assert all(td == td_roundtrip)
+                td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
+                assert all(td['a'] == td_a_roundtrip)
+        df = td.pd()
+        assert 'datetime64[ns]' == str(df.dtypes['a'])
+        td_roundtrip = kx.toq(df)
+        if kx.licensed:
+            assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
+            assert all(td == td_roundtrip)
+            td_a_roundtrip = kx.toq(td['a'].pd())
+            assert all(td['a'] == td_a_roundtrip)
+
+        # month
+        td = q('''([] a:2000.01 2000.12m)''')
+        if kx.config.pandas_2:
+            df = td.pd(as_arrow=True)
+            td_roundtrip = kx.toq(df)
+            assert 'timestamp[s][pyarrow]' == str(df.dtypes['a'])
+            if kx.licensed:
+                assert 'kx.TimestampAtom' == str(td_roundtrip.dtypes['datatypes'][0])
+                assert all(td == td_roundtrip)
+                td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
+                assert all(td['a'] == td_a_roundtrip)
+        df = td.pd()
+        if kx.config.pandas_2:
+            assert 'datetime64[s]' == str(df.dtypes['a'])
+        else:
+            assert 'datetime64[ns]' == str(df.dtypes['a'])
+        td_roundtrip = kx.toq(df)
+        if kx.licensed:
+            assert 'kx.TimestampAtom' == str(td_roundtrip.dtypes['datatypes'][0])
+            assert all(td == td_roundtrip)
+            td_a_roundtrip = kx.toq(td['a'].pd())
+            assert all(td['a'] == td_a_roundtrip)
+
+        # date
+        td = q('([] a:2000.01.01 2000.01.02)')
+        if kx.config.pandas_2:
+            df = td.pd(as_arrow=True)
+            td_roundtrip = kx.toq(df)
+            assert 'timestamp[s][pyarrow]' == str(df.dtypes['a'])
+            if kx.licensed:
+                assert 'kx.TimestampAtom' == str(td_roundtrip.dtypes['datatypes'][0])
+                assert all(td == td_roundtrip)
+                td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
+                assert all(td['a'] == td_a_roundtrip)
+        df = td.pd()
+        if kx.config.pandas_2:
+            assert 'datetime64[s]' == str(df.dtypes['a'])
+        else:
+            assert 'datetime64[ns]' == str(df.dtypes['a'])
+        td_roundtrip = kx.toq(df)
+        if kx.licensed:
+            assert 'kx.TimestampAtom' == str(td_roundtrip.dtypes['datatypes'][0])
+            assert all(td == td_roundtrip)
+            td_a_roundtrip = kx.toq(td['a'].pd())
+            assert all(td['a'] == td_a_roundtrip)
+
+        # timespan
+        td = q('''
+                ([] a:1D 1D01 1D01:02 1D01:01:01 1D01:01:01.001 1D01:01:01.001001
+                1D01:01:01.001001001)
+                ''')
+        if kx.config.pandas_2:
+            df = td.pd(as_arrow=True)
+            td_roundtrip = kx.toq(df)
+            assert 'duration[ns][pyarrow]' == str(df.dtypes['a'])
+            if kx.licensed:
+                assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
+                assert all(td == td_roundtrip)
+                td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
+                assert all(td['a'] == td_a_roundtrip)
+        df = td.pd()
+        assert 'timedelta64[ns]' == str(df.dtypes['a'])
+        td_roundtrip = kx.toq(df)
+        if kx.licensed:
+            assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
+            assert all(td == td_roundtrip)
+            td_a_roundtrip = kx.toq(td['a'].pd())
+            assert all(td['a'] == td_a_roundtrip)
+
+        # minute
+        td = q('([] a:00:00 00:01 00:10 01:00 24:00)')
+        if kx.config.pandas_2:
+            df = td.pd(as_arrow=True)
+            td_roundtrip = kx.toq(df)
+            assert 'duration[s][pyarrow]' == str(df.dtypes['a'])
+            if kx.licensed:
+                assert 'kx.SecondAtom' == str(td_roundtrip.dtypes['datatypes'][0])
+                assert all(td == td_roundtrip)
+                td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
+                assert all(td['a'] == td_a_roundtrip)
+        df = td.pd()
+        if kx.config.pandas_2:
+            assert 'timedelta64[s]' == str(df.dtypes['a'])
+        else:
+            assert 'timedelta64[ns]' == str(df.dtypes['a'])
+        td_roundtrip = kx.toq(df)
+        if kx.licensed:
+            if kx.config.pandas_2:
+                assert 'kx.SecondAtom' == str(td_roundtrip.dtypes['datatypes'][0])
+            else:
+                assert 'kx.TimespanAtom' == str(td_roundtrip.dtypes['datatypes'][0])
+            assert all(td == td_roundtrip)
+            td_a_roundtrip = kx.toq(td['a'].pd())
+            assert all(td['a'] == td_a_roundtrip)
+
+        # second
+        td = q('([] a:00:00:00 00:00:01 00:00:10 00:01:00 00:10:00 01:00:00 24:00:00)')
+        if kx.config.pandas_2:
+            df = td.pd(as_arrow=True)
+            td_roundtrip = kx.toq(df)
+            assert 'duration[s][pyarrow]' == str(df.dtypes['a'])
+            if kx.licensed:
+                assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
+                assert all(td == td_roundtrip)
+                td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
+                assert all(td['a'] == td_a_roundtrip)
+        df = td.pd()
+        if kx.config.pandas_2:
+            assert 'timedelta64[s]' == str(df.dtypes['a'])
+        else:
+            assert 'timedelta64[ns]' == str(df.dtypes['a'])
+        td_roundtrip = kx.toq(df)
+        if kx.licensed:
+            if kx.config.pandas_2:
+                assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
+            else:
+                assert 'kx.TimespanAtom' == str(td_roundtrip.dtypes['datatypes'][0])
+            assert all(td == td_roundtrip)
+            td_a_roundtrip = kx.toq(td['a'].pd())
+            assert all(td['a'] == td_a_roundtrip)
+
+        # time
+        td = q('''
+                ([] a:00:00:00.000 00:00:00.001 00:00:01.000 00:00:10.000
+                00:01:00.000 00:10:00.000 01:00:00.000 24:00:00.000)
+                ''')
+        if kx.config.pandas_2:
+            df = td.pd(as_arrow=True)
+            td_roundtrip = kx.toq(df)
+            assert 'duration[ms][pyarrow]' == str(df.dtypes['a'])
+            if kx.licensed:
+                assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
+                assert all(td == td_roundtrip)
+                td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
+                assert all(td['a'] == td_a_roundtrip)
+        df = td.pd()
+        if kx.config.pandas_2:
+            assert 'timedelta64[ms]' == str(df.dtypes['a'])
+        else:
+            assert 'timedelta64[ns]' == str(df.dtypes['a'])
+        td_roundtrip = kx.toq(df)
+        if kx.licensed:
+            if kx.config.pandas_2:
+                assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
+            else:
+                assert 'kx.TimespanAtom' == str(td_roundtrip.dtypes['datatypes'][0])
+            assert all(td == td_roundtrip)
+            td_a_roundtrip = kx.toq(td['a'].pd())
+            assert all(td['a'] == td_a_roundtrip)
+
+
+@pytest.mark.unlicensed
+def test_datetime64(kx):
+    df = pd.DataFrame(data={'a': np.array([9999, 1577899899], dtype='datetime64[s]')})
+    all(df['a'] == kx.toq(df).pd()['a'])

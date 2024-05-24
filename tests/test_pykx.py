@@ -357,3 +357,9 @@ def test_PYKX_Q_LIB_LOCATION():
     import pykx as kx
     kx.q('\\l PYKX_Q_LIB_LOCATION.q')
     assert 42 == kx.q('.pytest.a').py()
+
+
+@pytest.mark.unlicensed
+def test_subnormals(kx):
+    import numpy as np
+    assert '5e-324' == str(np.finfo(np.float64).smallest_subnormal + 0.)

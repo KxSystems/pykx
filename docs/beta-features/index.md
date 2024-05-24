@@ -15,7 +15,7 @@ Within PyKX beta features are enabled through the use of a configuration/environ
 >>> os.environ['PYKX_BETA_FEATURES'] = 'True'
 >>> import pykx as kx
 >>> kx.beta_features
-['Database Management', 'Remote Functions']
+['Streamlit Integration', 'Compression and Encryption', 'Database Management', 'Remote Functions']
 ```
 
 Alternatively you can set beta features to be available at all times by adding `PYKX_BETA_FEATURES` to your `.pykx-config` file as outlined [here](../user-guide/configuration.md#configuration-file). An example of a configuration making use of this is as follows:
@@ -50,3 +50,4 @@ The following are the currently available beta features:
 
 - [Remote Functions](remote-functions.md) let you define functions in Python which interact directly with kdb+ data on a q process. These functions can seamlessly integrate into existing Python infrastructures and also benefit systems that use q processes over Python for performance reasons or as part of legacy applications.
 - [PyKX Threading](threading.md) provides users with the ability to call into `EmbeddedQ` from multithreaded python programs and allow any thread to modify global state safely.
+- [Streamlit Integration](streamlit.md) provides users with the ability to query kdb+ infrastructure through direct integration with Streamlit.

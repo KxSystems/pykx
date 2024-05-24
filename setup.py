@@ -177,6 +177,8 @@ def ext(name: str,
         '-O3',
         '-Wall',
         '-Wextra',
+        '-Wno-error=incompatible-pointer-types', # Warning became an error in GCC 14.x
+        '-Wno-error=int-conversion', # Warning became an error in GCC 14.x
         # It'd be nice if we could leave -Wunused-variable enabled, but when Cython's binding
         # option is True (which it needs to be to generate signatures for its callables) tons of
         # unused variables are created. This clutters the compiler output, which could hide

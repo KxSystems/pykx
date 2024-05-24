@@ -60,11 +60,13 @@ def preparse_computations(tab, axis=0, skipna=True, numeric_only=False, bool_onl
     if bool_only:
         (tab, cols) = _get_bool_only_subtable(tab)
     res = q(
-        '{[tab;skipna;axis]'
-        'r:value flip tab;'
-        'if[not axis~0;r:flip r];'
-        'if[skipna;r:{x where not null x} each r];'
-        'r}',
+        '''
+        {[tab;skipna;axis]
+          r:value flip tab;
+          if[not axis~0;r:flip r];
+          if[skipna;r:{x where not null x} each r];
+          r}
+        ''',
         tab,
         skipna,
         axis
@@ -149,15 +151,18 @@ class PandasMeta:
         if numeric_only:
             tab = _get_numeric_only_subtable(tab)
 
-        key_str = '' if axis == 0 else '`$string '
-        val_str = '' if axis == 0 else '"f"$value '
-        query_str = 'cols tab' if axis == 0 else 'til count tab'
-        where_str = ' where not (::)~/:r[;1]'
         return q(
-            '{[tab]'
-            f'r:{{[tab; x] ({key_str}x; avg {val_str}tab[x])}}[tab;] each {query_str};'
-            f'(,/) {{(enlist x 0)!(enlist x 1)}} each r{where_str}}}',
-            tab
+            '''
+            {[tab;axis]
+              idx:$[axis;til count tab;cols tab];
+              r:{[tab;axis;idx]
+                  (
+                   $[axis;`$string@;]idx;
+                   avg $[axis;"f"$value@;]tab idx
+                  )
+                  }[tab;axis]each idx;
+              {x[;0]!x[;1]} r where not (::)~/:r[;1]}
+            ''', tab, axis
         )
 
     @api_return
@@ -173,15 +178,14 @@ class PandasMeta:
         if ddof == len(tab):
             return q('{x!count[x]#0n}', axis_keys)
 
-        return q(
-            '''{[tab;axis;ddof;axis_keys]
-                tab:$[0~axis;(::);flip] value flip tab;
-                d:$[0~ddof;dev;
-                    1~ddof;sdev;
-                    {[ddof;x] avg sqrt (sum xexp[x-avg x;2]) % count[x]-ddof}ddof];
-                axis_keys!d each tab
-            }''', tab, axis, ddof, axis_keys
-        )
+        return q('''
+                 {[tab;axis;ddof;axis_keys]
+                  tab:$[0~axis;(::);flip] value flip tab;
+                  d:$[0~ddof;dev;
+                      1~ddof;sdev;
+                      {[ddof;x] avg sqrt (sum xexp[x-avg x;2]) % count[x]-ddof}ddof];
+                  axis_keys!d each tab
+                 }''', tab, axis, ddof, axis_keys)
 
     @api_return
     def median(self, axis: int = 0, numeric_only: bool = False):
@@ -191,26 +195,27 @@ class PandasMeta:
         if numeric_only:
             tab = _get_numeric_only_subtable(tab)
 
-        key_str = '' if axis == 0 else '`$string '
-        val_str = '' if axis == 0 else '"f"$value '
-        query_str = 'cols tab' if axis == 0 else 'til count tab'
-        where_str = ' where not (::)~/:r[;1]'
-        return q(
-            '{[tab]'
-            f'r:{{[tab; x] ({key_str}x; med {val_str}tab[x])}}[tab;] each {query_str};'
-            f'(,/) {{(enlist x 0)!(enlist x 1)}} each r{where_str}}}',
-            tab
-        )
+        return q('''
+                 {[tab;axis]
+                  idx:$[axis;til count tab;cols tab];
+                  r:{[tab;axis;idx]
+                    (
+                     $[axis;`$string@;]idx;
+                     med $[axis;"f"$value@;]tab idx
+                    )
+                    }[tab;axis]each idx;
+                  raze{(enlist x 0)!enlist x 1}each r where not (::)~/:r[;1]}
+                 ''', tab, axis)
 
     @convert_result
     def skew(self, axis=0, skipna=True, numeric_only=False):
         res, cols = preparse_computations(self, axis, skipna, numeric_only)
-        return (q(
-            '''{[row]
-                m:{(sum (x - avg x) xexp y) % count x};
-                g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];
-                (g1 each row) * {sqrt[n * n-1] % neg[2] + n:count x} each row
-            }''', res), cols)
+        return (q('''
+                  {[row]
+                    m:{(sum (x - avg x) xexp y) % count x};
+                    g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];
+                    (g1 each row) * {sqrt[n * n-1] % neg[2] + n:count x} each row
+                    }''', res), cols)
 
     @api_return
     def mode(self, axis: int = 0, numeric_only: bool = False, dropna: bool = True):
@@ -219,27 +224,26 @@ class PandasMeta:
             tab = q('{(keys x) _ 0!x}', tab)
         if numeric_only:
             tab = _get_numeric_only_subtable(tab)
-        x_str = 'x: x where not null x; ' if dropna else ''
-        query_str = 'cols tab' if axis == 0 else 'til count tab'
-        cols_str = 'tab[x]' if axis == 0 else 'value tab[x]'
-        maxc_str = 'x[1]' if axis ==0 else 'raze x _ 0'
-        cs_str = 'cols tab' if axis == 0 else '`idx,`$string each til count r[0][1]'
-        m_str = '{1 _ raze x}' if axis == 0 else '{x: raze x; x iasc null x}'
-        flip_m = 'flip ' if axis == 0 else ''
-        mode_query = f'{{{x_str}(x l) where d=max d:1_deltas (l:where differ x),count x:asc x}}' \
-            if numeric_only else f'{{{x_str}x where f=max f:@[0*i;i:x?x;+;1]}}'
-        return q(
-            '{[tab]'
-            f'r:{{[tab; x] (x; {mode_query}'
-            f'[{cols_str}])}}[tab;] each {query_str};'
-            f'maxc: max {{count {maxc_str}}} each r;'
-            'r:{[x; y] $[not y=t:count x 1;'
-            '[qq: x 1; (x 0;(y - t){[z; t]z,z[t]}[;t]/qq)];'
-            '(x 0; x 1)]}[;maxc] each r;'
-            f'cs: {cs_str};'
-            f'm: {m_str} each r;'
-            f'cs !/: {flip_m}m}}',
-            tab
+
+        return q('''
+            {[tab; axis; numeric; drop]
+              idx:$[axis;til count tab;cols tab];
+              modeQuery:$[numeric;
+                {x[l] where d=max d:1_deltas (l:where differ x),count x:asc x};
+                {x where f=max f:@[0*i;i:x?x;+;1]}
+                ];
+              r:{[tab; axis; modeQuery; drop; x]
+                  (x; modeQuery $[drop;{x where not null x};] $[axis;value;]tab x)
+                  }[tab;axis;modeQuery;drop]each idx;
+              maxc: max{count x y}[$[axis;{raze x _ 0};{x 1}]]each r;
+              r:{[x; y]
+                  $[not y=t:count x 1;
+                    [qq: x 1; (x 0;(y - t){[z; t]z,z[t]}[;t]/qq)];
+                    (x 0; x 1)]}[;maxc] each r;
+              cs:$[axis;`idx,`$string each til count r[0][1];cols tab];
+              m:$[axis;{x: raze x; x iasc null x};{1 _ raze x}] each r;
+              cs!/:$[axis;;flip]m
+            }''', tab, axis, numeric_only, dropna
         )
 
     @api_return
@@ -278,23 +282,23 @@ class PandasMeta:
     @convert_result
     def prod(self, axis=0, skipna=True, numeric_only=False, min_count=0):
         res, cols = preparse_computations(self, axis, skipna, numeric_only)
-        return (q(
-            '{[row; minc] {$[y > 0; $[y>count[x]; 0N; prd x]; prd x]}[;minc] each row}',
-            res,
-            min_count
-        ), cols)
+        return (q('''
+                  {[row; minc]
+                    {$[y > 0; $[y>count[x]; 0N; prd x]; prd x]}[;minc] each row
+                    }
+                  ''', res, min_count),
+                cols)
 
     @convert_result
     def sum(self, axis=0, skipna=True, numeric_only=False, min_count=0):
         res, cols = preparse_computations(self, axis, skipna, numeric_only)
-        return (q(
-            '{[row; minc]'
-            '{$[y > 0;'
-            '$[y>count[x]; 0N; $[11h=type x; `$"" sv string x;sum x]];'
-            '$[11h=type x; `$"" sv string x;sum x]]}[;minc] each row}',
-            res,
-            min_count
-        ), cols)
+        return (q('''
+                 {[row;minc]
+                  {$[y > 0;
+                    $[y>count[x]; 0N; $[11h=type x; `$"" sv string x;sum x]];
+                    $[11h=type x; `$"" sv string x;sum x]
+                    ]}[;minc] each row}
+                  ''', res, min_count), cols)
 
     def agg(self, func, axis=0, *args, **kwargs): # noqa: C901
         if 'KeyedTable' in str(type(self)):

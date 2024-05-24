@@ -11,6 +11,7 @@ from pandas.core.internals import BlockManager, make_block
 from .config import qargs, qhome, qlic
 from ._version import version as __version__
 from .exceptions import PyKXException
+from .reimporter import PyKXReimport
 
 
 __all__ = [
@@ -256,8 +257,101 @@ def get_default_args(f: Callable) -> Dict[str, Any]:
     }
 
 
-def debug_environment(detailed=False, return_info=False):
-    """Displays information about your environment to help debug issues."""
+def debug_environment(detailed: bool = False, return_info: bool = False) -> Union[str, None]:
+    """
+    Functionality for the retrieval of information about a users environment
+
+    Parameters:
+        detailed: When returning information about a users license print the content of both
+            `QHOME` and `QLIC` directories
+        return_info: Should the information returned from the function be printed to console
+            (default) or provided as a str
+
+    Returns:
+        Returns `None` if return information is printed to console otherwise
+            returns a `str` representation
+
+    Examples:
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.util.debug_environment()
+    **** PyKX information ****
+    pykx.args: ()
+    pykx.qhome: /usr/local/anaconda3/envs/qenv/q
+    pykx.qlic: /usr/local/anaconda3/envs/qenv/q
+    pykx.licensed: True
+    pykx.__version__: 2.4.3
+    pykx.file: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py
+
+    **** Python information ****
+    sys.version: 3.8.3 (default, Jul  2 2020, 11:26:31)
+    [Clang 10.0.0 ]
+    pandas: 2.0.3
+    numpy: 1.24.4
+    pytz: 2023.3.post1
+    which python: /usr/local/bin/python
+    which python3: /Library/Frameworks/Python.framework/Versions/3.12/bin/python3
+    find_libpython: /usr/local/anaconda3/lib/libpython3.8.dylib
+
+    **** Platform information ****
+    platform.platform: macOS-10.16-x86_64-i386-64bit
+
+    **** PyKX Environment Variables ****
+    PYKX_IGNORE_QHOME:
+    PYKX_KEEP_LOCAL_TIMES:
+    PYKX_ALLOCATOR:
+    PYKX_GC:
+    PYKX_LOAD_PYARROW_UNSAFE:
+    PYKX_MAX_ERROR_LENGTH:
+    PYKX_NOQCE:
+    PYKX_Q_LIB_LOCATION:
+    PYKX_RELEASE_GIL:
+    PYKX_Q_LOCK:
+    PYKX_DEFAULT_CONVERSION:
+    PYKX_SKIP_UNDERQ:
+    PYKX_UNSET_GLOBALS:
+    PYKX_DEBUG_INSIGHTS_LIBRARIES:
+    PYKX_EXECUTABLE: /usr/local/anaconda3/bin/python
+    PYKX_PYTHON_LIB_PATH:
+    PYKX_PYTHON_BASE_PATH:
+    PYKX_PYTHON_HOME_PATH:
+    PYKX_DIR: /usr/local/anaconda3/lib/python3.8/site-packages/pykx
+    PYKX_QDEBUG:
+    PYKX_THREADING:
+    PYKX_4_1_ENABLED:
+
+    **** PyKX Deprecated Environment Variables ****
+    SKIP_UNDERQ:
+    UNSET_PYKX_GLOBALS:
+    KEEP_LOCAL_TIMES:
+    IGNORE_QHOME:
+    UNDER_PYTHON:
+    PYKX_NO_SIGINT:
+
+    **** q Environment Variables ****
+    QARGS:
+    QHOME: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib
+    QLIC: /usr/local/anaconda3/envs/qenv/q
+    QINIT:
+
+    **** License information ****
+    pykx.qlic directory: True
+    pykx.qhome writable: True
+    pykx.qhome lics: ['k4.lic']
+    pykx.qlic lics: ['k4.lic']
+
+    **** q information ****
+    which q: /usr/local/anaconda3/envs/qenv/q/q
+    q info:
+    (`m64;4f;2020.05.04)
+    "insights.lib.embedq insights.lib.pykx..
+    ```
+
+
+
+
+    """
     debug_info = ""
     debug_info += pykx_information()
     debug_info += python_information()
@@ -376,10 +470,16 @@ def q_information():
         q_info += f"which q: {whichq}\n"
         if whichq is not None:
             q_info += ('q info: \n')
-            if platform.system() == 'Windows': # nocov:
-                q_info += subprocess.check_output("powershell -NoProfile -ExecutionPolicy ByPass \"echo \\\"-1 .Q.s1 (.z.o;.z.K;.z.k);-1 .Q.s1 .z.l 4;\\\" | q -c 200 200\"", shell=True).decode(encoding='utf-8') # noqa: E501
-            else: # nocov:
-                q_info += subprocess.check_output("echo \"-1 .Q.s1 (.z.o;.z.K;.z.k);-1 .Q.s1 .z.l 4;\" | q -c 200 200", shell=True).decode(encoding='utf-8') # noqa: E501
-    except Exception:
-        pass
+            if platform.system() == 'Windows':
+                cmd = "powershell -NoProfile -ExecutionPolicy ByPass \"echo \\\"-1 .Q.s1 (.z.o;.z.K;.z.k);-1 .Q.s1 .z.l 4;\\\" | q -c 200 200\"" # noqa: E501
+            else:
+                cmd = "echo \"-1 .Q.s1 (.z.o;.z.K;.z.k);-1 .Q.s1 .z.l 4;\" | q -c 200 200"
+            with PyKXReimport():
+                out = subprocess.run(cmd, shell=True, capture_output=True)
+            if out.returncode == 0:
+                q_info += (out.stdout).decode(encoding='utf-8')
+            else:
+                q_info += "Failed to gather q information: " + (out.stderr).decode(encoding='utf-8')
+    except Exception as e:
+        q_info += f"Failed to gather q information: {e}"
     return q_info

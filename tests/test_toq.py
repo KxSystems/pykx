@@ -384,24 +384,94 @@ def test_from_datetime64(kx):
 
 @pytest.mark.unlicensed
 @pytest.mark.nep49
-def test_from_datetime64_smsus(kx):
-    d = np.array(['2020-09-08T07:06:05.000004'], dtype='datetime64[us]')
+def test_from_datetime64_smsusns(kx):
+    d = np.array(['2020-09-08T07:06:05.000004', '2020-09-08T07:06:05.000004'],
+                 dtype='datetime64[ns]')
+    dn = np.array(['', ''], dtype='datetime64[ns]')
+    dnm = np.array(['', '2020-09-08T07:06:05.000004'], dtype='datetime64[ns]')
+    df = pd.DataFrame(data={'d': d, 'dn': dn, 'dnm': dnm})
 
     kd = kx.K(d)
-    assert isinstance(kd, kx.TimestampVector)
+    kd_hn = kx.K(d, handle_nulls=True)
+    kdn = kx.K(dn)
+    kdn_hn = kx.K(dn, handle_nulls=True)
+    assert all([isinstance(x, kx.TimestampVector) for x in [kd, kd_hn, kdn, kdn_hn]])
     assert (kd.np() == d.astype(np.dtype('datetime64[ns]'))).all()
+    if kx.licensed:
+        assert (kx.toq(df) == kx.toq(kx.toq(df).pd())).all().all()
+        assert (kx.toq(df, handle_nulls=True)
+                == kx.toq(kx.toq(df, handle_nulls=True).pd(), handle_nulls=True)).all().all()
+        if kx.config.pandas_2:
+            assert (kx.toq(df) == kx.toq(kx.toq(df).pd(as_arrow=True))).all().all()
+            assert (kx.toq(df, handle_nulls=True)
+                    == kx.toq(kx.toq(df, handle_nulls=True).pd(as_arrow=True),
+                              handle_nulls=True)).all().all()
 
-    d = np.array(['2020-09-08T07:06:05.004'], dtype='datetime64[ms]')
+    d = np.array(['2020-09-08T07:06:05.000004', '2020-09-08T07:06:05.000004'],
+                 dtype='datetime64[us]')
+    dn = np.array(['', ''], dtype='datetime64[us]')
+    dnm = np.array(['', '2020-09-08T07:06:05.000004'], dtype='datetime64[us]')
+    df = pd.DataFrame(data={'d': d, 'dn': dn, 'dnm': dnm})
 
     kd = kx.K(d)
-    assert isinstance(kd, kx.TimestampVector)
+    kd_hn = kx.K(d, handle_nulls=True)
+    kdn = kx.K(dn)
+    kdn_hn = kx.K(dn, handle_nulls=True)
+    assert all([isinstance(x, kx.TimestampVector) for x in [kd, kd_hn, kdn, kdn_hn]])
     assert (kd.np() == d.astype(np.dtype('datetime64[ns]'))).all()
+    if kx.licensed:
+        assert (kx.toq(df) == kx.toq(kx.toq(df).pd())).all().all()
+        assert (kx.toq(df, handle_nulls=True)
+                == kx.toq(kx.toq(df, handle_nulls=True).pd(), handle_nulls=True)).all().all()
+        if kx.config.pandas_2:
+            assert (kx.toq(df) == kx.toq(kx.toq(df).pd(as_arrow=True))).all().all()
+            assert (kx.toq(df, handle_nulls=True)
+                    == kx.toq(kx.toq(df, handle_nulls=True).pd(as_arrow=True),
+                              handle_nulls=True)).all().all()
 
-    d = np.array(['2020-09-08T07:06:05'], dtype='datetime64[s]')
+    d = np.array(['2020-09-08T07:06:05.000004', '2020-09-08T07:06:05.000004'],
+                 dtype='datetime64[ms]')
+    dn = np.array(['', ''], dtype='datetime64[ms]')
+    dnm = np.array(['', '2020-09-08T07:06:05.000004'], dtype='datetime64[ms]')
+    df = pd.DataFrame(data={'d': d, 'dn': dn, 'dnm': dnm})
 
     kd = kx.K(d)
-    assert isinstance(kd, kx.TimestampVector)
+    kd_hn = kx.K(d, handle_nulls=True)
+    kdn = kx.K(dn)
+    kdn_hn = kx.K(dn, handle_nulls=True)
+    assert all([isinstance(x, kx.TimestampVector) for x in [kd, kd_hn, kdn, kdn_hn]])
     assert (kd.np() == d.astype(np.dtype('datetime64[ns]'))).all()
+    if kx.licensed:
+        assert (kx.toq(df) == kx.toq(kx.toq(df).pd())).all().all()
+        assert (kx.toq(df, handle_nulls=True)
+                == kx.toq(kx.toq(df, handle_nulls=True).pd(), handle_nulls=True)).all().all()
+        if kx.config.pandas_2:
+            assert (kx.toq(df) == kx.toq(kx.toq(df).pd(as_arrow=True))).all().all()
+            assert (kx.toq(df, handle_nulls=True)
+                    == kx.toq(kx.toq(df, handle_nulls=True).pd(as_arrow=True),
+                              handle_nulls=True)).all().all()
+
+    d = np.array(['2020-09-08T07:06:05.000004', '2020-09-08T07:06:05.000004'],
+                 dtype='datetime64[s]')
+    dn = np.array(['', ''], dtype='datetime64[s]')
+    dnm = np.array(['', '2020-09-08T07:06:05.000004'], dtype='datetime64[s]')
+    df = pd.DataFrame(data={'d': d, 'dn': dn, 'dnm': dnm})
+
+    kd = kx.K(d)
+    kd_hn = kx.K(d, handle_nulls=True)
+    kdn = kx.K(dn)
+    kdn_hn = kx.K(dn, handle_nulls=True)
+    assert all([isinstance(x, kx.TimestampVector) for x in [kd, kd_hn, kdn, kdn_hn]])
+    assert (kd.np() == d.astype(np.dtype('datetime64[ns]'))).all()
+    if kx.licensed:
+        assert (kx.toq(df) == kx.toq(kx.toq(df).pd())).all().all()
+        assert (kx.toq(df, handle_nulls=True)
+                == kx.toq(kx.toq(df, handle_nulls=True).pd(), handle_nulls=True)).all().all()
+        if kx.config.pandas_2:
+            assert (kx.toq(df) == kx.toq(kx.toq(df).pd(as_arrow=True))).all().all()
+            assert (kx.toq(df, handle_nulls=True)
+                    == kx.toq(kx.toq(df, handle_nulls=True).pd(as_arrow=True),
+                              handle_nulls=True)).all().all()
 
 
 @pytest.mark.unlicensed
@@ -924,19 +994,6 @@ def test_from_pandas_dataframe_licensed(q, kx):
     assert nested_tab.equals(kx.K(nested_tab).pd())
     time_tab = q('([]a:1 2 3;b:("a";"ab";"abc");(1;"t"$1 2;("abc";`a)))').pd()
     assert time_tab.equals(kx.K(time_tab).pd())
-
-
-@pytest.mark.nep49
-def test_from_pandas_dataframe_licensed_warning(q, kx):
-    if pd.__version__.split('.')[0] == '2':
-        q('N:100')
-        gen_q_datatypes_table(q, 'dset_1D', int(q('N')))
-        q('gen_names:{"dset_",/:x,/:string til count y}')
-        type_tab = q('flip (`$gen_names["tab";dset_1D])!N#\'dset_1D')
-        df = type_tab.pd()
-        del df.attrs['_PyKX_base_types']
-        with pytest.warns(RuntimeWarning):
-            kx.K(df)
 
 
 @pytest.mark.unlicensed
