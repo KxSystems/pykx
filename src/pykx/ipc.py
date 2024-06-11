@@ -41,7 +41,7 @@ from .config import max_error_length, pykx_lib_dir, pykx_qdebug, system
 from .core import licensed
 from .exceptions import FutureCancelled, NoResults, PyKXException, QError, UninitializedConnection
 from .util import get_default_args, normalize_to_bytes, normalize_to_str
-from .wrappers import CharVector, Composition, Foreign, Function, K, List, SymbolAtom
+from .wrappers import CharVector, Composition, Foreign, Function, K, List, SymbolAtom, SymbolicFunction # noqa : E501
 from . import _wrappers
 from . import _ipc
 
@@ -640,6 +640,10 @@ class QConnection(Q):
             raise RuntimeError("Attempted to use a closed IPC connection")
         tquery = type(query)
         debugging = (not skip_debug) and (debug or pykx_qdebug)
+        if issubclass(tquery, SymbolicFunction):
+            if licensed:
+                query = query.func
+                tquery = type(query)
         if not (issubclass(tquery, K) or isinstance(query, (str, bytes))):
             raise ValueError('Cannot send object of passed type over IPC: ' + str(tquery))
         if debugging:

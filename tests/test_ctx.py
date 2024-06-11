@@ -225,9 +225,9 @@ def test_expunge(kx, q):
 
 @pytest.mark.ipc(licensed_only=True)
 def test_reserved_words(q):
-    assert q.abs == q.q.abs == q('abs')
-    assert q.like == q.q.like == q('like')
-    assert q.xexp == q.q.xexp == q('xexp')
+    assert q.abs(-10) == q.q.abs(-10) == q('abs', -10)
+    assert q.like(b'ta', b't*') == q.q.like(b'ta', b't*') == q('like', b'ta', b't*')
+    assert q.xexp(10, 2) == q.q.xexp(10, 2) == q('xexp', 10, 2)
 
 
 def test_with_block(q):

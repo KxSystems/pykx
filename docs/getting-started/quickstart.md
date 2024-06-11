@@ -13,18 +13,17 @@ To complete the quickstart guide below you will need to have completed the follo
 To access PyKX and it's functionality import it within your Python code using the following syntax
 
 ```python
-import pykx as kx
+>>> import pykx as kx
 ```
 
 The use of the shortened name `kx` is intended to provide a terse convention for interacting with methods and objects from this library.
 
 ## How to generate PyKX objects
 
-The generation of PyKX objects is supported pricipally in two ways
+The generation of PyKX objects is supported principally in two ways
 
 1. Execution of q code to create these entities
-2. Conversion of Python objects to analagous PyKX objects
-
+2. Conversion of Python objects to analogous PyKX objects
 
 ### Creation of PyKX objects using inbuilt PyKX functions
 
@@ -52,7 +51,7 @@ x         x1
 
 ### Creation of PyKX objects from Python data types
 
-Generation of PyKX objects from Python, Numpy, Pandas and PyArrow objects can be completed as follows using the `kx.toq` method.
+Generation of PyKX objects from Python, NumPy, Pandas and PyArrow objects can be completed as follows using the `kx.toq` method.
 
 ```python
 >>> pylist = [10, 20, 30]
@@ -60,11 +59,13 @@ Generation of PyKX objects from Python, Numpy, Pandas and PyArrow objects can be
 >>> qlist
 pykx.LongVector(pykx.q('10 20 30'))
 
+>>> import numpy as np
 >>> nplist = np.arange(0, 10, 2)
 >>> qlist = kx.toq(nplist)
 >>> qlist
 pykx.LongVector(pykx.q('0 2 4 6 8'))
 
+>>> import pandas as pd
 >>> df = pd.DataFrame({'col1': [1, 2], 'col2': [3, 4]})
 >>> df
    col1  col2
@@ -78,6 +79,7 @@ col1 col2
 2    4   
 '))
 
+>>> import pyarrow as pa
 >>> patab = pa.Table.from_pandas(df)
 >>> patab
 pyarrow.Table
@@ -115,8 +117,7 @@ x         x1   x2
 
 ## Interacting with PyKX Objects
 
-PyKX objects can be interacted with in a variety of ways, through indexing using Pythonic syntax, passing PyKX objects to q/numpy functions, querying via SQL/qSQL syntax or through the use of q functionality via the context interface. Each of these is described in more depth throughout this documentation but examples of each are provided here
-
+PyKX objects can be interacted with in a variety of ways, through indexing using Pythonic syntax, passing PyKX objects to q/NumPy functions, querying via SQL/qSQL syntax or through the use of q functionality via the context interface. Each of these is described in more depth throughout this documentation but examples of each are provided here.
 
 * Create a PyKX list and interact with the list using indexing and slices.
 
@@ -192,7 +193,7 @@ PyKX objects can be interacted with in a variety of ways, through indexing using
     0.2062569 3.852387   a 
     0.481821  0.07970141 a 
     '))
-    ``` 
+    ```
 
 * Pass a PyKX object to q function
 
@@ -211,8 +212,6 @@ PyKX objects can be interacted with in a variety of ways, through indexing using
     >>> qvec.apply(lambda x:x+1)
     pykx.LongVector(pykx.q('5 8 3 3 10 5 3 1 9 1'))
     ```
-    
-    
 
 * Pass a PyKX array objects to a Numpy functions
 

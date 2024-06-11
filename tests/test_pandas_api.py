@@ -2057,14 +2057,19 @@ def test_pandas_max(q):
     assert float(pmax['ints']) == qmax['ints']
 
 
-def test_pandas_idxmax(q):
-    tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
+def test_pandas_idxmax(pd, q):
+    tab = q('([] price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
+
     df = tab.pd()
 
     p_m = df.idxmax()
     q_m = tab.idxmax()
     for c in q.key(q_m).py():
         assert p_m[c] == q_m[c].py()
+
+    tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
+
+    df = tab.pd()
 
     q_m = tab.idxmax(axis=1, numeric_only=True, skipna=True)
     p_m = df.idxmax(axis=1, numeric_only=True, skipna=True)
@@ -2080,14 +2085,19 @@ def test_pandas_idxmax(q):
         assert p_m[c] == q_m[c].py()
 
 
-def test_pandas_idxmin(q):
-    tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
+def test_pandas_idxmin(pd, q):
+    tab = q('([] price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
+
     df = tab.pd()
 
     p_m = df.idxmin()
     q_m = tab.idxmin()
     for c in q.key(q_m).py():
         assert p_m[c] == q_m[c].py()
+
+    tab = q('([] sym: 100?`foo`bar`baz`qux; price: 250.0f - 100?500.0f; ints: 100 - 100?200)')
+
+    df = tab.pd()
 
     q_m = tab.idxmin(axis=1, numeric_only=True, skipna=True)
     p_m = df.idxmin(axis=1, numeric_only=True, skipna=True)

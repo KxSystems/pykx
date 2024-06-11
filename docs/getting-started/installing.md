@@ -14,7 +14,7 @@ _This section explains how to install PyKX on your machine._
 Before you start, make sure you have:
 
 - **Python** (versions 3.8-3.12)
-- **Pip**
+- **pip**
 
 Recommended: a virtual environment with packages such as [venv](https://docs.python.org/3/library/venv.html) from the standard library.
 

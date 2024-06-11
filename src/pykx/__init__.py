@@ -231,7 +231,9 @@ class Q(metaclass=ABCMeta):
             self._call(
                 f'{"" if name[0] == "." else "."}{name}:(enlist`)!enlist(::);'
                 f'system "d {"" if name[0] == "." else "."}{name}";'
-                f'.pykx.util.loadfile["{path.parent}";"{path.name}"];',
+                '$[@[{get x;1b};`.pykx.util.loadfile;{0b}];'
+                f' .pykx.util.loadfile["{path.parent}";"{path.name}"];'
+                f' system"l {path}"];',
                 wait=True,
             )
             return name[1:] if name[0] == '.' else name

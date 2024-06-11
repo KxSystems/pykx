@@ -21,7 +21,7 @@ If you need a feature that's not included in this list please let us know by rai
 	>>> table.select(kx.col('x1').wavg('x2'))
 	```
 
-- Addition of support for q primatives as methods off PyKX Vector and Table objects. Syntax for this will be similar to the following
+- Addition of support for q primitives as methods off PyKX Vector and Table objects. Syntax for this will be similar to the following:
 
 	```python
 	>>> import pykx as kx
@@ -31,13 +31,7 @@ If you need a feature that's not included in this list please let us know by rai
 	>>> vec.abs()
 	```
 
-- Performance improvements for conversions from Numpy arrays to PyKX Vector objects and vice-versa through enhanced use of C++ over Cython.
-- Additions to the Pandas Like API for PyKX.
-	- `isnull`
-	- `idxmax`
-	- `kurt`
-	- `sem`
-
+- Performance improvements for conversions from NumPy arrays to PyKX Vector objects and vice-versa through enhanced use of C++ over Cython.
 - Addition of functionality for the development of streaming workflows using PyKX.
 - Configurable initialisation logic in the absence of a license. Thus allowing users who have their own workflows for license access to modify the instructions for their users.
 - Promotion of Beta functionality currently available in PyKX to full production support

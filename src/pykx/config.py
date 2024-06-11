@@ -74,7 +74,7 @@ for path in pykx_config_locs:
 pykx_dir = Path(__file__).parent.resolve(strict=True)
 os.environ['PYKX_DIR'] = str(pykx_dir)
 os.environ['PYKX_EXECUTABLE'] = sys.executable
-pykx_libs_dir = Path(pykx_dir/'lib') if _get_config_value('PYKX_4_1_ENABLED', None) is None else Path(pykx_dir/'lib'/'4-1-libs') # noqa
+pykx_libs_dir = Path(pykx_dir/'lib'/'4-1-libs') if _is_enabled('PYKX_4_1_ENABLED') else Path(pykx_dir/'lib') # noqa
 pykx_lib_dir = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_libs_dir))
 pykx_platlib_dir = pykx_lib_dir/q_lib_dir_name
 lib_prefix = '' if system == 'Windows' else 'lib'
@@ -97,6 +97,7 @@ _qlic = os.getenv('QLIC', '')
 _pwd = os.getcwd()
 license_located = False
 lic_path = ''
+lic_type = ''
 for loc in (_pwd, _qlic, qhome):
     if loc=='':
         pass
@@ -104,6 +105,7 @@ for loc in (_pwd, _qlic, qhome):
         try:
             lic_path = Path(str(loc) + '/' + lic).resolve(strict=True)
             license_located=True
+            lic_type = lic
             qlic=Path(loc)
         except FileNotFoundError:
             continue

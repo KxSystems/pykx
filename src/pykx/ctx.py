@@ -15,7 +15,6 @@ from weakref import proxy
 
 from . import Q
 from .config import ignore_qhome, pykx_lib_dir, qhome
-from .core import licensed
 from .exceptions import PyKXException, QError
 from .wrappers import Identity, SymbolicFunction
 
@@ -121,7 +120,7 @@ class QContext:
             raise AttributeError(f'{key}: {self._unsupported_keys_with_msg[key]}')
         if self._fqn in {'', '.q'} and key in self._q.reserved_words:
             # Reserved words aren't actually part of the `.q` context dict
-            if not licensed:
+            if 'QConnection' in str(self._q._call):
                 return lambda *args: self._q._call(key, *args, wait=True)
             else:
                 return self._q._call(key, wait=True)
