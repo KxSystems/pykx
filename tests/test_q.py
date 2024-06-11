@@ -244,6 +244,8 @@ def test_debug_global():
     assert kx.q('til 10').py() == list(range(10))
     cache_sbt = kx.q('.Q.sbt')
     kx.q('.Q.sbt:{.pykx_test.cache:x}')
+
+    assert kx.q('=', kx.q('"z"'), b'z').py()
     try:
         kx.q('til "asd"')
     except Exception as e:
@@ -276,3 +278,14 @@ def test_41():
         kx.q('(`a;):(`b;1.2)')
     assert 'match' in str(err)
     os.unsetenv('PYKX_4_1_ENABLED')
+
+
+@pytest.mark.isolate
+def test_load_spacefile(tmp_path):
+    test_location = tmp_path/'test directory'
+    os.makedirs(test_location, exist_ok=True)
+    with open(test_location/'file.q', 'w') as f:
+        f.write('.pykx_test.tmp.variable:1b')
+    import pykx as kx
+    kx.q('{.pykx.util.loadfile[1_string x;y]}', test_location, b'file.q')
+    assert kx.q('.pykx_test.tmp.variable')

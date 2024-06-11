@@ -2,7 +2,7 @@
 
 When q is run embedded within a Python process (as opposed to over IPC), it is restricted in how it can operate. This is a result of the fact that when running embedded it does not have the main loop or timers that one would expect from a typical q process. The following are a number of examples showing these limitations in action
 
-## IPC Interface 
+## IPC Interface
 
 As a result of the lack of a main loop PyKX cannot be used to respond to q IPC requests as a server. Callback functions such as [`.z.pg`](https://code.kx.com/q/ref/dotz/#zpg-get) defined within a Python process will not operate as expected.
 
@@ -52,4 +52,3 @@ Attempting to use the timer callback function directly using PyKX will raise an 
 >>> kx.q.z.ts
 AttributeError: ts: .z.ts is not exposed through the context interface because the main loop is inactive in PyKX.
 ```
-

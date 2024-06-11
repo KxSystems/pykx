@@ -9,7 +9,7 @@ import sys
 
 from . import beta_features
 from .util import num_available_cores
-from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _check_beta, _get_config_value, pykx_lib_dir, ignore_qhome
+from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _check_beta, _get_config_value, pykx_lib_dir, ignore_qhome, lic_path
 
 
 def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
@@ -294,17 +294,21 @@ if not pykx_threading:
                 if _qinit_check_proc.returncode: # Fallback to unlicensed mode
                     if _qinit_output != '    ':
                         _capout_msg = f'Captured output from initialization attempt:\n{_qinit_output}'
+                        _lic_location = f'License location used:\n{lic_path}'
                     else:
                         _capout_msg = '' # nocov - this can only occur under extremely weird circumstances.
+                        _lic_location = '' # nocov - this additional line is to ensure this code path is covered.
                     if hasattr(sys, 'ps1'):
                         if re.compile('exp').search(_capout_msg):
                             _exp_license = 'Your PyKX license has now expired.\n\n'\
                                            f'{_capout_msg}\n\n'\
+                                           f'{_lic_location}\n\n'\
                                            'Would you like to renew your license? [Y/n]: '
-                            _license_message = _license_install(_exp_license, True)
+                            _license_message = _license_install(_exp_license, True, True, 'exp')
                         elif re.compile('embedq').search(_capout_msg):
                             _ce_license = 'You appear to be using a non kdb Insights license.\n\n'\
                                           f'{_capout_msg}\n\n'\
+                                           f'{_lic_location}\n\n'\
                                           'Running PyKX in the absence of a kdb Insights license '\
                                           'has reduced functionality.\nWould you like to install '\
                                           'a kdb Insights personal license? [Y/n]: '
@@ -313,14 +317,16 @@ if not pykx_threading:
                             _upd_license = 'Your installed license is out of date for this version'\
                                            ' of PyKX and must be updated.\n\n'\
                                            f'{_capout_msg}\n\n'\
+                                           f'{_lic_location}\n\n'\
                                            'Would you like to install an updated kdb '\
                                            'Insights personal license? [Y/n]: '
                             _license_message = _license_install(_upd_license, True)
                 if (not _license_message) and _qinit_check_proc.returncode:
                     if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed'):
-                        raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}')
+                        raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}\n\n{_lic_location}')
                     else:
-                        warn(f'Failed to initialize PyKX successfully with the following error: {_capout_msg}', PyKXWarning)
+                        warn('Failed to initialize PyKX successfully with '
+                             f'the following error: {_capout_msg}\n\n{_lic_location}', PyKXWarning)
                     _libq_path_py = bytes(find_core_lib('e'))
                     _libq_path = _libq_path_py
                     _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)

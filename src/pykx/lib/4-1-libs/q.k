@@ -117,7 +117,7 @@ IN:{$[99h<@x;x in y;0]};qa:{$[qb x;0;IN[*x;a0];1;|/qa'1_x]};qb:{(2>#x)|(@x)&~11=
 / CAN EXIT HERE FOR SMALL Q
 / pt(tables) pf(date/month/year/int) pd(dirs) pv(values) pn(count)   pt::0#pf::`
 vt:(,`)!,()!();
-bv:{g:$[(::)~x;max;min];x:`:.;d:{`/:'x,'d@&(d:!x)like"[0-9]*"}'P:$[`par.txt in!x;-1!'`$0:`/:x,`par.txt;,x];
+bv:{g:$[(::)~x;max;min];x:.Q.d;d:{`/:'x,'d@&(d:!x)like"[0-9]*"}'P:$[`par.txt in!x;jp[x]'`$0:`/:x,`par.txt;,x];
  t:?,/!:'.Q.vt:{(&#:'x)(=,/. x)}'{({("DMJJ"`date`month`year`int?.Q.pf)$$last@x:`\:x}'x)!!:'x}'d;
  d:{`/:'x[(. y)[;0]],'(`$$(. y)[;1]),'!y}[P]@{i:y@&:x=y x:@[x;&x~\:();:;*0#`. pf];(i;x i)}[;g]'+:t#/:g''.Q.vt:t#/:.Q.vt;.Q.vt:P!.q.except[. .Q.pf]''.Q.vt;
  .Q.vp:t!{(+(,.Q.pf)!,0#. .Q.pf),'+(-2!'.+x)#'+|0#x:?[x;();0b;()]}'d;.Q.pt,:{.[x;();:;+.q.except[!+.Q.vp x;.Q.pf]!x];x}'.q.except[t;.Q.pt];}

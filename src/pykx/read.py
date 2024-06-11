@@ -80,7 +80,8 @@ class QReader:
             path: The path to the CSV file.
             types: Can be a dictionary of columns and their types or a `str`-like object of
                 uppercase characters representing the types. Space is used to drop a column.
-                If `None`, the types will be guessed using `.csvutil.info`.
+                If `None`, the types will be guessed using [csvutil.q](https://github.com/KxSystems/kdb/blob/master/utils/csvutil.q).
+                A breakdown of this process is illustrated in the table below.
             delimiter: A single character representing the delimiter between values.
             as_table: `True` if the first line of the CSV file should be treated as column names,
                 in which case a `pykx.Table` is returned. If `False` a `pykx.List` of
@@ -91,6 +92,29 @@ class QReader:
 
         See Also:
             [`q.write.csv`][pykx.write.QWriter.csv]
+
+
+        CSV Type Guessing Table:
+            | Type Character | Type  | Condition(s)   |
+            |---|---|---|
+            | *  | List  |- Any type of width greater than 30.<br>- Remaining unknown types. |
+            | B  | BooleanAtom  |- Matching Byte or Char, maxwidth 1, no decimal points, at least 1 of `[0fFnN]` and 1 of `[1tTyY]` in columns.<br>- Matching Byte or Char, maxwidth 1, no decimal points, all elements in `[01tTfFyYnN]`.   |
+            | G  | GUIDAtom  |- Matches GUID-like structure.<br>- Matches structure wrapped in `{ }`.  |
+            | X  | ByteAtom  |- Maxwidth of 2, comprised of `[0-9]` AND `[abcdefABCDEF]`.  |
+            | H  | ShortAtom   |- Matches Integer with maxwidth less than 7. |
+            | I  | IntAtom   |- Numerical of size between 7 and 15 with exactly 3 decimal points (IP Address).<br>- Matches Long with maxwidth less than 12. |
+            | J  | LongAtom  |- Numerical, no decimal points, all elements `+-` or `0-9`. |
+            | E  | RealAtom |- Matches float with maxwidth less than 9.  |
+            | F  | FloatAtom |-  Numerical, maxwidth greater than 2, fewer than 2 decimal points, `/` present.<br>- Numerical, fewer than 2 decimal points, maxwidth greater than 1.  |
+            | C  | CharAtom |- Empty columns. Remaining unknown types of size 1.  |
+            | S  | SymbolAtom  |- Remaining unknown types of maxwidth 2-11 and granularity of less than 10. |
+            | P  | TimestampAtom  |- Numerical, maxwidth 11-29, fewer than 4 decimals matching `YYYY[./-]MM[./-]DD` |
+            | M  | MonthAtom   |- Matching either numerical, Int, Byte, Real or Float, fewer than 2 decimal points, maxwidth 4-7 |
+            | D  | DateAtom |- Matching Integer, maxwidth 6 or 8.<br>- Numerical, 0 decimal points, maxwidth 8-10.<br>- Numerical, 2 decimal points, maxwidth 8-10.<br>- No decimal points maxwidth 5-9, matching date with 3 letter month code eg.(9nov1989). |
+            | N  | TimespanAtom  |- Numerical, maxwidth 15, no decimal points, all values `0-9`.<br>- Numerical, maxwidth 3-29, 1 decimal point, matching `*[0-9]D[0-9]*`.<br>- Numerical, maxwidth 3-28, 1 decimal point.   |
+            | U  | MinuteAtom |- Matching Byte, maxwidth 4, matching `[012][0-9][0-5][0-9]`.<br>- Numerical, maxwidth 4 or 5, no decimal points, matching `*[0-9]:[0-5][0-9]`.  |
+            | V  | SecondAtom |- Matching Integer, maxwidth 6, matching `[012][0-9][0-5][0-9][0-5][0-9]`.<br>- Matching Time, maxwidth 7 or 8, no decimal points. |
+            | T  | TimeAtom  |- Numerical, maxwidth 9, no decimal points, all values numeric.<br>- Numerical, maxwidth 7 - 12, fewer than 2 decimal points, matching  `[0-9]:[0-5][0-9]:[0-5][0-9]`.<br>- Matching Real or Float, maxwidth 7-12, 1 decimal point, matching `[0-9][0-5][0-9][0-5][0-9]`.   |
 
         Examples:
 
@@ -121,7 +145,7 @@ class QReader:
         ```python
         table = q.read.csv('example.csv', {'x1':kx.IntAtom,'x2':kx.GUIDAtom,'x3':kx.TimestampAtom})
         ```
-        """
+        """ # noqa: E501
         as_table = 'enlist' if as_table else ''
         dict_conversion = None
         if types is None or isinstance(types, dict):

@@ -42,7 +42,7 @@ class PyKXReimport:
                         'QHOME',
                         'PYKX_EXECUTABLE',
                         'PYKX_DIR')
-        self.envvals = [str(os.getenv(x)) for x in self.envlist]
+        self.envvals = [os.getenv(x) for x in self.envlist]
 
     def __enter__(self):
         self.reset()
@@ -54,7 +54,10 @@ class PyKXReimport:
         Note: It is not recommended to use this function directly instead use the `with` syntax.
             This will automatically manage setting and restoring the environment variables for you.
         """
-        [os.unsetenv(x) for x in self.envlist]
+        for x, y in zip(self.envlist, self.envvals):
+            os.unsetenv(x)
+            if y is not None:
+                del os.environ[x]
         os.environ['QHOME'] = original_qhome
 
     def restore(self):
@@ -64,7 +67,8 @@ class PyKXReimport:
             This will automatically manage setting and restoring the environment variables for you.
         """
         for x, y in zip(self.envlist, self.envvals):
-            os.environ[x] = y
+            if y is not None:
+                os.environ[x] = y
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.restore()

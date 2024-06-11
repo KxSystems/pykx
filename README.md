@@ -35,18 +35,19 @@ For more information on using q/kdb+ and getting started with see the following 
 
 Ensure you have a recent version of pip:
 
+```bash
 pip install --upgrade pip
-
+```
 
 Then install the latest version of PyKX with the following command:
 
-```
+```bash
 pip install pykx
 ```
 
 To install a specific version of PyKX run the following command replacing <INSERT_VERSION> with a specific released semver version of the interface
 
-```
+```bash
 pip install pykx==<INSERT_VERSION>
 ```
 
@@ -68,9 +69,9 @@ The following steps outline the process by which a user can gain access to an in
 
 #### Commercial Evaluation License
 
-The following steps outline the process by which a user can gain access to an install a kdb Insights license which provides access to PyKX 
+The following steps outline the process by which a user can gain access to an install a kdb Insights license which provides access to PyKX
 
-1. Visit https://kx.com/kdb-insights-commercial-evaluation-license-download/ and fill in the attached form following the instructions provided.
+1. Contact you KX sales representative or sales@kx.com requesting a trial license for PyKX evaluation. Alternately apply through https://kx.com/book-demo.
 2. On receipt of an email from KX providing access to your license download this file and save to a secure location on your computer.
 3. Set an environment variable on your computer pointing to the folder containing the license file (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
 	* Variable Name: `QLIC`
@@ -106,6 +107,8 @@ PyKX also has an optional Python dependency of `pyarrow>=3.0.0`, which can be in
 When using PyKX with KX Dashboards users will be required to install `ast2json~=0.3` this can be installed using the `dashboards` extra, e.g. `pip install pykx[dashboards]`
 
 When using PyKX Beta features users will be required to install `dill>=0.2.0` this can be installed using the `beta` extra, e.g. `pip install pykx[beta]`
+
+When using Streamlit users will be required to install `streamlit~=1.28` this can be installed using the `streamlit` extra, e.g. `pip install pykx[streamlit]`
 
 **Warning:** Trying to use the `pa` conversion methods of `pykx.K` objects or the `pykx.toq.from_arrow` method when PyArrow is not installed (or could not be imported without error) will raise a `pykx.PyArrowUnavailable` exception. `pyarrow` is supported Python 3.8-3.10 but remains in Beta for Python 3.11.
 

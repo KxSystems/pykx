@@ -22,9 +22,6 @@ def __dir__():
     return __all__
 
 
-consolidate = '{$[0>type x;x;(0h>v 0)&1~count v:distinct type each x;raze x;x]}'
-
-
 class QSQL:
     """Generates and submits functional q SQL queries.
 
@@ -399,7 +396,7 @@ class QSQL:
             query_char = '!' if query_type in ('delete', 'update') else '?'
         try:
             res = self._q(
-                f'{{{query_char}[{table_code};x;y;z]}}',
+                f'{{{query_char}[{table_code};value x;value y;value z]}}',
                 where_clause,
                 by_clause,
                 select_clause,
@@ -422,9 +419,9 @@ class QSQL:
         if clause_value is None:
             if clause_name in ('columns', 'where'):
                 b = query_type == 'delete' and clause_name == 'columns'
-                return self._q._call('`symbol$()', wait=True) if b else []
+                return [b'{`symbol$()}', None] if b else [b'{x}', []]
             elif clause_name == 'by':
-                return [] if query_type == 'exec' else False
+                return [b'{x}', []] if query_type == 'exec' else [b'{x}', False]
         else:
             if clause_name in ('columns', 'by'):
                 return self._generate_clause_columns_by(clause_value, clause_name, query_type)
@@ -439,23 +436,18 @@ class QSQL:
             if isinstance(clause_value, str):
                 if clause_value == '':
                     raise ValueError('q query specifying column cannot be empty')
-                clause_value = [clause_value]
-            return self._q._call('raze',
-                                 [self._q._call('parse',
-                                                k.CharVector(x),
-                                                wait=True) for x in clause_value],
-                                 wait=True,
-            )
+                clause_value = [k.CharVector(clause_value)]
+            else:
+                clause_value = [k.CharVector(x) for x in clause_value]
+            return [b'{parse each x}', clause_value]
         elif (query_type in ['select', 'exec']) and (clause_name in ['columns', 'by']):
             if isinstance(clause_value, list):
-                return self._q._call('{x!x}',
-                                     self._q._call(consolidate, clause_value, wait=True),
-                                     wait=True)
+                return [b'{v!v:{$[0>type x;x;(0h>v 0)&1~count v:distinct type each x;raze x;x]}x}', clause_value] # noqa: E501
             elif isinstance(clause_value, str) and query_type == 'select':
-                return self._q._call('{x!x}enlist@', clause_value, wait=True)
-            return k.K(clause_value)
+                return [b'{x!x}enlist@', clause_value]
+            return [b'{x}', k.K(clause_value)]
         elif isinstance(clause_value, k.K):
-            return clause_value
+            return [b'{x}', clause_value]
         raise TypeError(f"Unsupported type for '{clause_name}' clause")
 
     def _generate_clause_columns_by_dict(self, clause_value):
@@ -464,22 +456,21 @@ class QSQL:
             if isinstance(val, str):
                 if val == '':
                     raise ValueError(f'q query specifying column for key {key!r} cannot be empty')
-                clause_dict[key] = self._q._call('parse', k.CharVector(val), wait=True)
+                clause_dict[key] = [True, k.CharVector(val)]
             else:
-                clause_dict[key] = self._q._call(consolidate, val, wait=True)
-        return k.K(clause_dict)
+                clause_dict[key] = [False, val]
+        return [b'{key[x]!{$[x 0;parse;{$[0>type x;x;(0h>v 0)&1~count v:distinct type each x;raze x;x]}]x 1}each value x}', clause_dict] # noqa: E501
 
     def _generate_clause_where(self, clause_value) -> k.List:
         if isinstance(clause_value, k.List):
-            return clause_value # clause value is a parse tree
+            return [b'{x}', clause_value]
         if isinstance(clause_value, k.BooleanVector):
-            return self._q._call('enlist', clause_value, wait=True)
+            return [b'{enlist x}', clause_value]
         if isinstance(clause_value, str):
-            clause_value = [clause_value]
-        try:
-            return k.K([self._q._call('parse', k.CharVector(x), wait=True) for x in clause_value])
-        except Exception as ex:
-            raise TypeError("Unsupported type for 'where' clause") from ex
+            clause_value = [k.CharVector(clause_value)]
+        else:
+            clause_value = [k.CharVector(x) for x in clause_value]
+        return [b'{parse each x}', clause_value]
 
 
 class SQL:

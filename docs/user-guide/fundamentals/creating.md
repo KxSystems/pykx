@@ -360,11 +360,13 @@ x1: double
 
 	Care should be taken in particular when converting q temporal data to Python native data types. As Python temporal data types only support microsecond precision roundtrip conversions will reduce temporal granularity for q data.
 
-		```python
-		>>> import pykx as kx
-		>>> qtime = kx.TimestampAtom('now')
-		>>> qtime
-		pykx.TimestampAtom(pykx.q('2024.01.05D03:16:23.736627552'))
-		>>> kx.toq(qtime.py())
-		pykx.TimestampAtom(pykx.q('2024.01.05D03:16:23.736627000'))
-		```
+	```python
+	>>> import pykx as kx
+	>>> qtime = kx.TimestampAtom('now')
+	>>> qtime
+	pykx.TimestampAtom(pykx.q('2024.01.05D03:16:23.736627552'))
+	>>> kx.toq(qtime.py())
+	pykx.TimestampAtom(pykx.q('2024.01.05D03:16:23.736627000'))
+	```
+
+	See [here](../fundamentals/conversion_considerations.md#temporal-types) for further details.

@@ -65,6 +65,11 @@ __pycache__/
 !e.*
 !libkurl.*
 !libobjstor.*
+**/4-1-libs/*.q
+**/4-1-libs/*.q_
+**/4-1-libs/*.k_
+**/4-1-libs/*.k
+!**/4-1-libs/q.k
 
 # Distribution / packaging
 .Python
@@ -223,6 +228,8 @@ coverage.xml
 
 # CCLS files
 .ccls-cache/*
+.ccls
+compile_commands.json
 
 # HDB Test files
 HDB/**

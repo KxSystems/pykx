@@ -6,6 +6,36 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 2.5.0
+
+#### Release Date
+
+TBD
+
+### Fixes and Improvements
+
+- When loading PyKX under from a source file path containing a space initialisation would fail with an `nyi` error message, this has now been resolved.
+
+## PyKX 2.4.1
+
+#### Release Date
+
+2024-03-27
+
+### Fixes and Improvements
+
+- When loading PyKX under q users who had previously loaded [embedPy](https://github.com/KxSystems/embedPy) into their process would cause a segfault of unspecified origin. With this release we have added a warning prior to loading of PyKX which specifies that if a value of `.p.e` has been specified which does not match that expected of PyKX a user should consider installing PyKX under q fully:
+
+	```q
+	q)\l p.q     // Load embedPy
+	q)\l pykx.q
+	Warning: Detected invalid '.p.e' function definition expected for PyKX.
+	Have you loaded another Python integration first?
+
+	Please consider full installation of PyKX under q following instructions at:
+	https://code.kx.com/pykx/pykx-under-q/intro.html#installation
+	```
+
 ## PyKX 2.3.1
 
 #### Release Date
