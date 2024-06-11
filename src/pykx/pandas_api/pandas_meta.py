@@ -71,7 +71,7 @@ def preparse_computations(tab, axis=0, skipna=True, numeric_only=False, bool_onl
         skipna,
         axis
     )
-    return (res, cols if axis == 0 else q.til(len(res)))
+    return (res, cols if axis == 0 else q.til(len(res)), cols)
 
 
 # The simple computation functions all return a tuple of the results and the col names the results
@@ -166,7 +166,33 @@ class PandasMeta:
         )
 
     @api_return
+    def kurt(self, axis: int = 0, numeric_only: bool = False):
+        tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q.value(tab)
+        if numeric_only:
+            tab = _get_numeric_only_subtable(tab)
+
+        axis_keys = q('{[axis;tab] $[0~axis;cols;`$string til count @] tab}', axis, tab)
+
+        return q(
+            '''{[tab;axis;axis_keys]
+                tab:$[0~axis;(::);flip] value flip tab;
+                kurt:{[x]
+                      res: x - avg x;
+                      n: count x;
+                      m2: sum rsq: res xexp 2;
+                      m4: sum rsq xexp 2;
+                      adj: 3 * xexp[n - 1;2] % (n - 2) * (n - 3);
+                      num: n * (n + 1) * (n - 1) * m4;
+                      den: (n - 2) * (n - 3) * m2 xexp 2;
+                      (num % den) - adj};
+                axis_keys!kurt each tab}
+            ''', tab, axis, axis_keys
+        )
+
     def std(self, axis: int = 0, ddof: int = 1, numeric_only: bool = False):
+
         tab = self
         if 'Keyed' in str(type(tab)):
             tab = q.value(tab)
@@ -209,13 +235,13 @@ class PandasMeta:
 
     @convert_result
     def skew(self, axis=0, skipna=True, numeric_only=False):
-        res, cols = preparse_computations(self, axis, skipna, numeric_only)
-        return (q('''
-                  {[row]
-                    m:{(sum (x - avg x) xexp y) % count x};
-                    g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];
-                    (g1 each row) * {sqrt[n * n-1] % neg[2] + n:count x} each row
-                    }''', res), cols)
+        res, cols, _ = preparse_computations(self, axis, skipna, numeric_only)
+        return (q(
+            '''{[row]
+                m:{(sum (x - avg x) xexp y) % count x};
+                g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];
+                (g1 each row) * {sqrt[n * n-1] % neg[2] + n:count x} each row
+            }''', res), cols)
 
     @api_return
     def mode(self, axis: int = 0, numeric_only: bool = False, dropna: bool = True):
@@ -247,6 +273,27 @@ class PandasMeta:
         )
 
     @api_return
+    def sem(self, axis: int = 0, ddof: int = 1, numeric_only: bool = False):
+        tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q.value(tab)
+        if numeric_only:
+            tab = _get_numeric_only_subtable(tab)
+
+        axis_keys = q('{[axis;tab] $[0~axis;cols;`$string til count @] tab}', axis, tab)
+
+        if ddof == len(tab):
+            return q('{x!count[x]#0n}', axis_keys)
+
+        return q(
+            '''{[tab;axis;ddof;axis_keys]
+                tab:$[0~axis;(::);flip] value flip tab;
+                d:{dev[x] % sqrt count[x] - y}[;ddof];
+                axis_keys!d each tab}
+            ''', tab, axis, ddof, axis_keys
+        )
+
+    @api_return
     def abs(self, numeric_only=False):
         tab = self
         if numeric_only:
@@ -255,17 +302,17 @@ class PandasMeta:
 
     @convert_result
     def all(self, axis=0, bool_only=False, skipna=True):
-        res, cols = preparse_computations(self, axis, skipna, bool_only=bool_only)
+        res, cols, _ = preparse_computations(self, axis, skipna, bool_only=bool_only)
         return (q('{"b"$x}', [all(x) for x in res]), cols)
 
     @convert_result
     def any(self, axis=0, bool_only=False, skipna=True):
-        res, cols = preparse_computations(self, axis, skipna, bool_only=bool_only)
+        res, cols, _ = preparse_computations(self, axis, skipna, bool_only=bool_only)
         return (q('{"b"$x}', [any(x) for x in res]), cols)
 
     @convert_result
     def max(self, axis=0, skipna=True, numeric_only=False):
-        res, cols = preparse_computations(self, axis, skipna, numeric_only)
+        res, cols, _ = preparse_computations(self, axis, skipna, numeric_only)
         return (q(
             '{[row] {$[11h=type x; {[x1; y1] $[x1 > y1; x1; y1]} over x; max x]} each row}',
             res
@@ -273,32 +320,56 @@ class PandasMeta:
 
     @convert_result
     def min(self, axis=0, skipna=True, numeric_only=False):
-        res, cols = preparse_computations(self, axis, skipna, numeric_only)
+        res, cols, _ = preparse_computations(self, axis, skipna, numeric_only)
         return (q(
             '{[row] {$[11h=type x; {[x1; y1] $[x1 < y1; x1; y1]} over x; min x]} each row}',
             res
         ), cols)
 
     @convert_result
+    def idxmax(self, axis=0, skipna=True, numeric_only=False):
+        tab = self
+        axis = q('{$[11h~type x; `index`columns?x; x]}', axis)
+        res, cols, ix = preparse_computations(tab, axis, skipna, numeric_only)
+        return (q(
+            '''{[row;tab;axis]
+                row:{$[11h~type x; {[x1; y1] $[x1 > y1; x1; y1]} over x; max x]} each row;
+                m:$[0~axis; (::); flip] value flip tab;
+                $[0~axis; (::); cols tab] m {$[abs type y;x]?y}' row}
+            ''', res, tab[ix], axis), cols)
+
+    @convert_result
+    def idxmin(self, axis=0, skipna=True, numeric_only=False):
+        tab = self
+        axis = q('{$[11h~type x; `index`columns?x; x]}', axis)
+        res, cols, ix = preparse_computations(tab, axis, skipna, numeric_only)
+        return (q(
+            '''{[row;tab;axis]
+                row:{$[11h~type x; {[x1; y1] $[x1 < y1; x1; y1]} over x; min x]} each row;
+                m:$[0~axis; (::); flip] value flip tab;
+                $[0~axis; (::); cols tab] m {$[abs type y;x]?y}' row}
+            ''', res, tab[ix], axis), cols)
+
+    @convert_result
     def prod(self, axis=0, skipna=True, numeric_only=False, min_count=0):
-        res, cols = preparse_computations(self, axis, skipna, numeric_only)
-        return (q('''
-                  {[row; minc]
-                    {$[y > 0; $[y>count[x]; 0N; prd x]; prd x]}[;minc] each row
-                    }
-                  ''', res, min_count),
-                cols)
+        res, cols, _ = preparse_computations(self, axis, skipna, numeric_only)
+        return (q(
+            '{[row; minc] {$[y > 0; $[y>count[x]; 0N; prd x]; prd x]}[;minc] each row}',
+            res,
+            min_count
+        ), cols)
 
     @convert_result
     def sum(self, axis=0, skipna=True, numeric_only=False, min_count=0):
-        res, cols = preparse_computations(self, axis, skipna, numeric_only)
-        return (q('''
-                 {[row;minc]
-                  {$[y > 0;
-                    $[y>count[x]; 0N; $[11h=type x; `$"" sv string x;sum x]];
-                    $[11h=type x; `$"" sv string x;sum x]
-                    ]}[;minc] each row}
-                  ''', res, min_count), cols)
+        res, cols, _ = preparse_computations(self, axis, skipna, numeric_only)
+        return (q(
+            '{[row; minc]'
+            '{$[y > 0;'
+            '$[y>count[x]; 0N; $[11h=type x; `$"" sv string x;sum x]];'
+            '$[11h=type x; `$"" sv string x;sum x]]}[;minc] each row}',
+            res,
+            min_count
+        ), cols)
 
     def agg(self, func, axis=0, *args, **kwargs): # noqa: C901
         if 'KeyedTable' in str(type(self)):
@@ -357,5 +428,21 @@ class PandasMeta:
 
     @convert_result
     def count(self, axis=0, numeric_only=False):
-        res, cols = preparse_computations(self, axis, True, numeric_only)
+        res, cols, _ = preparse_computations(self, axis, True, numeric_only)
         return (q('count each', res), cols)
+
+    @api_return
+    def isna(self):
+        return q.null(self)
+
+    @api_return
+    def isnull(self):
+        return self.isna()
+
+    @api_return
+    def notna(self):
+        return q('not', self.isna())
+
+    @api_return
+    def notnull(self):
+        return self.notna()
