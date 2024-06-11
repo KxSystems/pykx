@@ -289,3 +289,11 @@ def test_load_spacefile(tmp_path):
     import pykx as kx
     kx.q('{.pykx.util.loadfile[1_string x;y]}', test_location, b'file.q')
     assert kx.q('.pykx_test.tmp.variable')
+
+
+@pytest.mark.isolate
+def test_41_enabled():
+    os.environ['PYKX_4_1_ENABLED'] = 'JUNK'
+    import pykx as kx
+    assert kx.q('~', kx.q.z.K, 4.0).py()
+    os.unsetenv('PYKX_4_1_ENABLED')

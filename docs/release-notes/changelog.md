@@ -8,6 +8,116 @@
 
     Currently PyKX is not compatible with Pandas 2.2.0 or above as it introduced breaking changes which cause data to be cast to the incorrect type.
 
+## PyKX 2.5.1
+
+#### Release Date
+
+2024-06-11
+
+### Additions
+
+- [Pandas API](../user-guide/advanced/Pandas_API.ipynb) additions: `isnull`, `isna`, `notnull`, `notna`, `idxmax`, `idxmin`, `kurt`, `sem`.
+- Addition of `filter_type`, `filter_columns`, and `custom` parameters to `QReader.csv()` to add options for CSV type guessing.
+	
+	```python
+	>>> import pykx as kx
+	>>> reader = kx.QReader(kx.q)
+	>>> reader.csv("myFile0.csv", filter_type = "like", filter_columns="*name", custom={"SYMMAXGR":15})
+	pykx.Table(pykx.q('
+	firstname  lastname   
+	----------------------
+	"Frieda"   "Bollay"   
+	"Katuscha" "Paton"    
+	"Devina"   "Reinke"   
+	"Maurene"  "Bow"      
+	"Iseabal"  "Bashemeth"
+	..
+	'))
+	```
+
+### Fixes and Improvements
+
+- Fix to regression in PyKX 2.5.0 where PyKX initialisation on Windows would result in a segmentation fault when using an `k4.lic` license type.
+- Previously user could not make direct use of `kx.SymbolicFunction` type objects against a remote process, this has been rectified
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> kx.q('.my.func:{x+1}')
+		pykx.Identity(pykx.q('::'))
+		>>> kx.q.my.func
+		pykx.SymbolicFunction(pykx.q('`.my.func'))
+		>>> conn = kx.q.SyncQConnection(port=5050)
+		>>> conn(kx.q.my.func, 1)
+		... Error Message ...
+		pykx.exceptions.QError: .my.func
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		>>> import pykx as kx
+		>>> kx.q('.my.func:{x+1}')
+		pykx.Identity(pykx.q('::'))
+		>>> kx.q.my.func
+		pykx.SymbolicFunction(pykx.q('`.my.func'))
+		>>> conn = kx.q.SyncQConnection(port=5050)
+		>>> conn(kx.q.my.func, 1)
+		pykx.LongAtom(pykx.q('2'))
+		```
+
+- Previously use of the context interface for q primitive functions in licensed mode via IPC would partially run the function on the client rather than server, thus limiting usage for named entities on the server.
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> conn = kx.SyncQConnection(port=5050)
+		>>> conn.q('tab:([]10?1f;10?1f)')
+		>>> conn.q.meta('tab')
+		... Error Message ...
+		pykx.exceptions.QError: tab
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		>>> import pykx as kx
+		>>> conn = kx.SyncQConnection(port=5050)
+		>>> conn.q('tab:([]10?1f;10?1f)')
+		>>> conn.q.meta('tab')
+		pykx.KeyedTable(pykx.q('
+		c | t f a
+		--| -----
+		x | f
+		x1| f
+		'))
+		```
+
+- With the release of PyKX 2.5.0 and support of PyKX usage in paths containing spaces the context interface functionality could fail to load a requested context over IPC if PyKX was not loaded on the server.
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> conn = kx.SyncQConnection(port=5050)
+		>>> conn.my_ctx
+		... Error Message ...
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		>>> import pykx as kx
+		>>> conn = kx.SyncQConnection(port=5050)
+		>>> conn.my_ctx
+		<pykx.ctx.QContext of .csvutil with [my_function]>
+		```
+
+- Updated CSV analysis logic to be based on `csvutil.q` 2020.06.20.
+- Fix for config value `PYKX_4_1_ENABLED` to only use 4.1 if set to `True`, `true`, or `1`. Previously any non empty value enabled 4.1.
+
 ## PyKX 2.5.0
 
 #### Release Date

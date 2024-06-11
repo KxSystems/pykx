@@ -57,6 +57,7 @@ def test_read_csv(kx, q, tmp_csv_path_1, tmp_csv_path_2):
 
 @pytest.mark.ipc
 def test_read_csv_with_type_guessing(kx, q, tmp_csv_path_1, tmp_csv_path_2):
+    reader = kx.QReader(q)
     if not kx.licensed:
         ctx = pytest.raises(kx.LicenseException)
     elif isinstance(q, kx.QConnection):
@@ -74,6 +75,43 @@ def test_read_csv_with_type_guessing(kx, q, tmp_csv_path_1, tmp_csv_path_2):
             q.read.csv(str(tmp_csv_path_1), None, kx.CharAtom(','), True),
             kx.Table,
         )
+    with ctx:
+        assert isinstance(
+            reader.csv(str(tmp_csv_path_1), filter_type="basic"),
+            kx.Table,
+        )
+
+    with ctx:
+        tab = reader.csv(str(tmp_csv_path_1), filter_type="only", filter_columns="a")
+        assert isinstance(tab, kx.Table)
+        assert len(tab.columns) == 1
+
+    with ctx:
+        tab = reader.csv(str(tmp_csv_path_1), filter_type="like", filter_columns="c*")
+        assert isinstance(tab, kx.Table)
+        assert len(tab.columns) == 2
+
+    with ctx:
+        tab = reader.csv(str(tmp_csv_path_1), filter_type="like",
+                         filter_columns=kx.CharVector("b*"))
+        assert isinstance(tab, kx.Table)
+        assert len(tab.columns) == 1
+
+    with ctx:
+        tab = reader.csv(str(tmp_csv_path_1), filter_type="only", filter_columns=("a", "b"))
+        assert isinstance(tab, kx.Table)
+        assert len(tab.columns) == 2
+
+    with ctx:
+        with pytest.raises(kx.QError) as err:
+            tab = reader.csv(str(tmp_csv_path_1), filter_type="like", filter_columns=0)
+            assert str(err) == "type"
+
+    with ctx:
+        with pytest.raises(kx.QError) as err:
+            tab = reader.csv(str(tmp_csv_path_1), filter_type="only", filter_columns=0)
+            assert str(err) == "type"
+
     with ctx:
         assert isinstance(q.read.csv(kx.SymbolAtom(str(tmp_csv_path_1))), kx.Table)
     with ctx:

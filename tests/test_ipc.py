@@ -203,6 +203,13 @@ def test_no_ctx_not_used(kx, q_port):
 
 
 @pytest.mark.unlicensed
+def test_pykx_ctx_remote(kx, q_port):
+    with kx.SyncQConnection(port=q_port) as q:
+        q('.pykx.test_tab:([]10?1f;10?1f)')
+        assert isinstance(q.meta('.pykx.test_tab'), kx.KeyedTable)
+
+
+@pytest.mark.unlicensed
 def test_no_pykx_namespace(kx, q_port):
     with kx.QConnection(port=q_port) as q:
         assert 'pykx' not in q('key `').py()
@@ -219,6 +226,12 @@ def test_no_wrap_over_ipc(kx, q_port):
     q = kx.QConnection(port=q_port)
     with pytest.raises(ValueError):
         q('{x}', kx.q('{x}', round))
+
+
+def test_symbolic_function(kx, q_port):
+    kx.q('.my.func:{x+1}')
+    with kx.SyncQConnection(port=q_port) as conn:
+        assert conn(kx.q.my.func, 1) == kx.q('2')
 
 
 @pytest.mark.asyncio
@@ -909,6 +922,25 @@ def test_SyncQConnection_reconnect(kx):
     assert conn('til 10').py() == list(range(10))
     proc.kill()
     time.sleep(2)
+
+
+@pytest.mark.unlicensed
+def test_context_loadfile(kx):
+    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15001'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+
+    conn = kx.SyncQConnection(port=15001)
+    try:
+        assert isinstance(conn.csvutil, kx.ctx.QContext)
+    except BaseException:
+        proc.kill()
+        assert 1==0 # Force failure in the case csvutil not available as a ctx
+    proc.kill()
 
 
 @pytest.mark.unlicensed

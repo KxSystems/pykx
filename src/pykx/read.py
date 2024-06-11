@@ -37,6 +37,8 @@ _type_mapping = {
     'Time': "T",
 }
 
+_filter_types = [None, "basic", "only", "like"]
+
 JSONKTypes = Union[
     k.Table, k.Dictionary, k.BooleanAtom, k.BooleanVector, k.FloatAtom, k.FloatVector,
     k.CharVector, k.List
@@ -71,6 +73,9 @@ class QReader:
             types: Optional[Union[bytes, k.CharAtom, k.CharVector]] = None,
             delimiter: Union[str, bytes, k.CharAtom] = ',',
             as_table: Union[bool, k.BooleanAtom] = True,
+            filter_type: Union[str, k.CharVector] = None,
+            filter_columns: Union[str, list, k.CharVector, k.SymbolAtom, k.SymbolVector] = None,
+            custom: dict = None,
     ) -> Union[k.Table, k.Dictionary]:
         """Reads a CSV file as a table or dictionary.
 
@@ -86,6 +91,13 @@ class QReader:
             as_table: `True` if the first line of the CSV file should be treated as column names,
                 in which case a `pykx.Table` is returned. If `False` a `pykx.List` of
                 `pykx.Vector` is returned - one for each column in the CSV file.
+            filter_type: Can be `basic`, `only`, or `like`. `basic` will not search for
+                any types with the `extended` flag in [csvutil.q]. `only` will only process
+                columns that are passed in `filter_columns`. `like` will only process columns that match
+                a string pattern passed in `filter_columns`.
+            filter_columns: Used in tandem with `filter_type` when `only` or `like` is passed.
+                `only` accepts str or list of str. `like` accepts only a str pattern.
+            custom: A dictionary used to change default values in [csvutil.q](https://github.com/KxSystems/pykx/blob/main/src/pykx/lib/csvutil.q#L34).
 
         Returns:
             The CSV data as a `pykx.Table` or `pykx.List`, depending on the value of `as_table`.
@@ -132,7 +144,7 @@ class QReader:
         table = q.read.csv('example.csv', 'SJJ', '	')
         ```
 
-        Read a comma seperated CSV file into a `pykx.Dictionary`, guessing the datatypes of
+        Read a comma separated CSV file into a `pykx.Dictionary`, guessing the datatypes of
         each column.
 
         ```python
@@ -145,6 +157,19 @@ class QReader:
         ```python
         table = q.read.csv('example.csv', {'x1':kx.IntAtom,'x2':kx.GUIDAtom,'x3':kx.TimestampAtom})
         ```
+
+        Read a comma separated CSV file specifying only columns that include the word "name" in them.
+
+        ```python
+        table = q.read.csv('example.csv', filter_type = "like", filter_columns = '*name*')
+        ```
+
+        Read a comma separated CSV file changing the guessing variables to change the number of lines
+        read and used to guess the type of the column.
+
+        ```python
+        table = q.read.csv('example.csv', custom = {"READLINES":1000})
+        ```
         """ # noqa: E501
         as_table = 'enlist' if as_table else ''
         dict_conversion = None
@@ -153,10 +178,32 @@ class QReader:
                 raise LicenseException('guess CSV column types')
             if isinstance(self._q, QConnection):
                 raise ValueError('Cannot guess types of CSV columns over IPC.')
-            if isinstance(types, dict):
-                dict_conversion = types
-                types = None
-            types = self._q.csvutil.info(k.SymbolAtom(path))['t']
+            if filter_type not in _filter_types:
+                raise ValueError(f'Filter type {filter_type} not in supported filter types.')
+            self._q.csvutil
+            cache = self._q('.csvutil')
+            try:
+                if custom is not None:
+                    self._q('''{
+                        if[0<count i:where not (r:type each value x)=e:type each .csvutil[key x];
+                        \'"csvutil setting type incorrect for:",.Q.s1[key[x]i]," received: ",.Q.s1[r i]," expected: ",.Q.s1[e i]]
+                        }''', custom) # noqa: E501
+                    for attr, val in custom.items():
+                        setattr(self._q.csvutil, attr, val)
+                if isinstance(types, dict):
+                    dict_conversion = types
+                    types = None
+                if filter_type == "basic":
+                    types = self._q.csvutil.basicinfo(k.SymbolAtom(path))['t']
+                elif filter_type == "only":
+                    types = self._q.csvutil.infoonly(k.SymbolAtom(path), filter_columns)['t']
+                elif filter_type == "like":
+                    types = self._q.csvutil.infolike(k.SymbolAtom(path),
+                                                     k.CharVector(filter_columns))['t']
+                else:
+                    types = self._q.csvutil.info(k.SymbolAtom(path))['t']
+            finally:
+                self._q['.csvutil'] = cache
         elif isinstance(types, k.CharAtom):
             # Because of the conversion to `CharVector` later, converting the char atom to bytes
             # here essentially causes `types` to be enlisted without executing any q code.

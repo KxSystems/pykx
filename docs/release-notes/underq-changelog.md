@@ -10,7 +10,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 #### Release Date
 
-TBD
+2024-05-15
 
 ### Fixes and Improvements
 

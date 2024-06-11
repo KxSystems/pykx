@@ -147,7 +147,7 @@ class PandasMeta:
     def mean(self, axis: int = 0, numeric_only: bool = False):
         tab = self
         if 'Keyed' in str(type(tab)):
-            tab = q('{(keys x) _ 0!x}', tab)
+            tab = q('value', tab)
         if numeric_only:
             tab = _get_numeric_only_subtable(tab)
 
@@ -191,8 +191,8 @@ class PandasMeta:
             ''', tab, axis, axis_keys
         )
 
+    @api_return
     def std(self, axis: int = 0, ddof: int = 1, numeric_only: bool = False):
-
         tab = self
         if 'Keyed' in str(type(tab)):
             tab = q.value(tab)
@@ -217,7 +217,7 @@ class PandasMeta:
     def median(self, axis: int = 0, numeric_only: bool = False):
         tab = self
         if 'Keyed' in str(type(tab)):
-            tab = q('{(keys x) _ 0!x}', tab)
+            tab = q('value', tab)
         if numeric_only:
             tab = _get_numeric_only_subtable(tab)
 
@@ -236,18 +236,18 @@ class PandasMeta:
     @convert_result
     def skew(self, axis=0, skipna=True, numeric_only=False):
         res, cols, _ = preparse_computations(self, axis, skipna, numeric_only)
-        return (q(
-            '''{[row]
-                m:{(sum (x - avg x) xexp y) % count x};
-                g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];
-                (g1 each row) * {sqrt[n * n-1] % neg[2] + n:count x} each row
-            }''', res), cols)
+        return (q('''
+                  {[row]
+                    m:{(sum (x - avg x) xexp y) % count x};
+                    g1:{[m;x]m:m[x]; m[3] % m[2] xexp 3%2}[m];
+                    (g1 each row) * {sqrt[n * n-1] % neg[2] + n:count x} each row
+                    }''', res), cols)
 
     @api_return
     def mode(self, axis: int = 0, numeric_only: bool = False, dropna: bool = True):
         tab = self
         if 'Keyed' in str(type(tab)):
-            tab = q('{(keys x) _ 0!x}', tab)
+            tab = q('value', tab)
         if numeric_only:
             tab = _get_numeric_only_subtable(tab)
 
@@ -329,6 +329,8 @@ class PandasMeta:
     @convert_result
     def idxmax(self, axis=0, skipna=True, numeric_only=False):
         tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q('value', tab)
         axis = q('{$[11h~type x; `index`columns?x; x]}', axis)
         res, cols, ix = preparse_computations(tab, axis, skipna, numeric_only)
         return (q(
@@ -341,6 +343,8 @@ class PandasMeta:
     @convert_result
     def idxmin(self, axis=0, skipna=True, numeric_only=False):
         tab = self
+        if 'Keyed' in str(type(tab)):
+            tab = q('value', tab)
         axis = q('{$[11h~type x; `index`columns?x; x]}', axis)
         res, cols, ix = preparse_computations(tab, axis, skipna, numeric_only)
         return (q(
@@ -353,23 +357,23 @@ class PandasMeta:
     @convert_result
     def prod(self, axis=0, skipna=True, numeric_only=False, min_count=0):
         res, cols, _ = preparse_computations(self, axis, skipna, numeric_only)
-        return (q(
-            '{[row; minc] {$[y > 0; $[y>count[x]; 0N; prd x]; prd x]}[;minc] each row}',
-            res,
-            min_count
-        ), cols)
+        return (q('''
+                  {[row; minc]
+                    {$[y > 0; $[y>count[x]; 0N; prd x]; prd x]}[;minc] each row
+                    }
+                  ''', res, min_count),
+                cols)
 
     @convert_result
     def sum(self, axis=0, skipna=True, numeric_only=False, min_count=0):
         res, cols, _ = preparse_computations(self, axis, skipna, numeric_only)
-        return (q(
-            '{[row; minc]'
-            '{$[y > 0;'
-            '$[y>count[x]; 0N; $[11h=type x; `$"" sv string x;sum x]];'
-            '$[11h=type x; `$"" sv string x;sum x]]}[;minc] each row}',
-            res,
-            min_count
-        ), cols)
+        return (q('''
+                 {[row;minc]
+                  {$[y > 0;
+                    $[y>count[x]; 0N; $[11h=type x; `$"" sv string x;sum x]];
+                    $[11h=type x; `$"" sv string x;sum x]
+                    ]}[;minc] each row}
+                  ''', res, min_count), cols)
 
     def agg(self, func, axis=0, *args, **kwargs): # noqa: C901
         if 'KeyedTable' in str(type(self)):

@@ -4253,9 +4253,6 @@ def test_pyarrow_pandas_all_with_null_inf(kx):
     test_pd(t, hn=False, r=False)
     test_pd(t, hn=True, r=False)
 
-    # KXI-44569 C List return is junk
-    t=t.drop(columns=['C'])
-
     test_pd(t, hn=False, r=True)
     test_pd(t, hn=True, r=True)
 
@@ -4267,17 +4264,12 @@ def test_pyarrow_pandas_all_with_null_inf(kx):
     test_pd(t.iloc[[0, 2, 3]], hn=False, r=False)
     test_pd(t.iloc[[0, 2, 3]], hn=True, r=False)
 
-    t=t.drop(columns=['C'])
-
     test_pd(t.iloc[[0, 2, 3]], hn=False, r=True)
     test_pd(t.iloc[[0, 2, 3]], hn=True, r=True)
 
     t=make_t(keycol=True)
     test_pd(t, hn=False, r=False)
     test_pd(t, hn=True, r=False)
-
-    # KXI-44569 C List return is junk
-    t=t.drop(columns=['C'])
 
     test_pd(t, hn=False, r=True)
     test_pd(t, hn=True, r=True)
@@ -4289,8 +4281,6 @@ def test_pyarrow_pandas_all_with_null_inf(kx):
     # Exclude nulls to test non masked array logic
     test_pd(t.iloc[[0, 2, 3]], hn=False, r=False)
     test_pd(t.iloc[[0, 2, 3]], hn=True, r=False)
-
-    t=t.drop(columns=['C'])
 
     test_pd(t.iloc[[0, 2, 3]], hn=False, r=True)
     test_pd(t.iloc[[0, 2, 3]], hn=True, r=True)

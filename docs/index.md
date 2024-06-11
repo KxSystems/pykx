@@ -2,7 +2,7 @@
 
 ## About
 
-PyKX is a Python-first interface for the q language and its time-series vector database kdb+.
+PyKX is a Python first interface to the world's fastest time-series database kdb+ and its underlying vector programming language, q.
 
 For Python developers, PyKX unlocks the speed and power of kdb+ for data processing and storage from within your Python environment. It enables anyone with Python knowledge to apply analytics against vast amounts of data, both in-memory and on-disk, in a fraction of the time, allowing you to focus on getting the best from your data.
 
