@@ -286,9 +286,11 @@ def test_load_spacefile(tmp_path):
     os.makedirs(test_location, exist_ok=True)
     with open(test_location/'file.q', 'w') as f:
         f.write('.pykx_test.tmp.variable:1b')
+    cd = os.getcwd()
     import pykx as kx
     kx.q('{.pykx.util.loadfile[1_string x;y]}', test_location, b'file.q')
     assert kx.q('.pykx_test.tmp.variable')
+    assert cd == os.getcwd()
 
 
 @pytest.mark.isolate

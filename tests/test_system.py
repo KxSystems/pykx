@@ -1,4 +1,5 @@
 import os
+from platform import system
 
 # Do not import pykx here - use the `kx` fixture instead!
 import pytest
@@ -219,11 +220,22 @@ def test_system_space_load(tmp_path):
     assert kx.q('.pykx_test.system.variable')
     assert cache_dir == os.getcwd()
 
+    kx.q('.pykx_test.system.variable:0b')
+    if system() == 'Windows':
+        file_location = test_location/'..\\test directory\\\\\\load_file.q'
+    else:
+        file_location = test_location/'../test directory///load_file.q'
+    kx.q.system.load(file_location)
+    assert kx.q('.pykx_test.system.variable')
+    assert cache_dir == os.getcwd()
+
     test_splay = test_location/'splay/'
     kx.q('{x set ([]10?1f;10?1f)}', test_splay)
 
     def test_load_splay(test_splay):
+        cd = os.getcwd()
         loaded = kx.q.system.load(test_splay)
+        assert cd == os.getcwd()
         assert loaded.py() == 'splay'
         assert isinstance(kx.q['splay'], kx.Table)
         kx.q('delete splay from `.')

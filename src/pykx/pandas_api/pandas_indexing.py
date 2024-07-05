@@ -13,6 +13,9 @@ def _init(_q):
 def _get(tab, key, default, cols_check=True):
     idxs = None
     _init_tab = None
+    single_col = False
+    if isinstance(key, SymbolAtom) or isinstance(key, str):
+        single_col = True
     if 'Keyed' in str(type(tab)):
         keys, idxs = key
         _init_tab = tab
@@ -33,6 +36,11 @@ def _get(tab, key, default, cols_check=True):
         return tab
     if isinstance(key, SymbolAtom):
         key = key.py()
+    if single_col:
+        warnings.warn("\n\tSingle column retrieval using 'get' method will return a vector/list "
+                      "object in release 3.0+\n\t"
+                      "To access the vector/list directly use table['column_name']",
+                      FutureWarning)
     if key in q('{key flip 0#x}', tab).py():
         tab = q(f'{{([] {key}: x[y])}}', tab, key)
         return tab
@@ -203,7 +211,6 @@ def _loc(tab, loc): # noqa
         return _iloc(tab, loc)
     if (((isinstance(loc, list) and (isinstance(loc[0], str) or isinstance(loc[0], SymbolAtom)))
         or isinstance(loc, SymbolVector)
-        or isinstance(loc, SymbolAtom)
         or (isinstance(loc, List) and q('{-11h~type x 0}', loc)))
         or ('Keyed' in str(type(tab)) and type(loc) is str)
     ):
@@ -238,7 +245,7 @@ def _loc(tab, loc): # noqa
         if 'Keyed' in str(type(tab)):
             return q('{(count keys x)!((0!x) each where y)}', tab, loc)
         return q('{x where y}', tab, loc)
-    if isinstance(loc, str):
+    if isinstance(loc, str) or isinstance(loc, SymbolAtom):
         if q('{not x in cols y}', loc, tab):
             raise QError(f'Attempted to retrieve inaccessible column: {loc}')
     return q('{x[enlist each y]}', tab, loc)

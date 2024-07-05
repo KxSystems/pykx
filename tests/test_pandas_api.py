@@ -107,6 +107,7 @@ def test_df_get(kx, q):
         'x': [x for x in range(10)],
         'y': [10 - x for x in range(10)]
     })
+
     assert df.get(['y', 'z']).py() == df[['y', 'z']].py()
     assert df.get(['x', 'y']).py() == df[['x', 'y']].py()
     assert df.get('r') is None
@@ -212,6 +213,9 @@ def test_df_getitem(kx, q):
             'z': ['a', 'a']
         }
     )
+    assert all(df[kx.SymbolAtom('x')] == df['x'])
+    assert all(df[kx.SymbolVector(['x', 'y'])] == df[['x', 'y']])
+    assert all(df[kx.SymbolVector(['x'])] == df[['x']])
 
 
 def test_df_loc_set(kx, q):
@@ -2523,6 +2527,56 @@ def test_std(kx, q):
         q_m = tab.std()
     with pytest.raises(kx.QError):
         q_m = tab.std(axis=1)
+
+
+def test_std_extended(kx, q):
+
+    df_full = pd.DataFrame(
+        {
+            # important to note that this is m*n array where m!=n
+            'a': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            'b': [10, 30, 20, 4, 9.5, 2.445, 999, 302, 11.11, 6], # mixed types
+            'c': [3, 4, 5, np.NaN, 6, np.NaN, 2, np.NaN, 9, 5], # NaN types included
+            'd': ['foo', 'bar', 'foobar', 'fizz', 'buzz', 'fizzbuzz', 'test', '123', 'test123', ''], # noqa: E501
+        })
+    numdf = df_full[['a', 'b', 'c']]  # numerical columns only
+
+    df = numdf
+    tab = kx.toq(df)
+
+    # Testing flipped axes
+    p_res = df.std(axis=1)
+    q_res = tab.std(axis=1)
+    for c in range(len(q.cols(tab))):
+        assert np.isclose(p_res[c], q_res[q('{`$string x}', c)].py(), atol=1e-20)
+
+    # Testing higher ddof
+    p_res = df.std(ddof=7)
+    q_res = tab.std(ddof=7)
+    for c in q.key(q_res).py():
+        assert np.isclose(p_res[c], q_res[c].py(), atol=1e-20) or \
+            (np.isnan(p_res[c]) and np.isnan(q_res[c].py()))
+
+    # Testing both
+    p_res = df.std(axis=1, ddof=3)
+    q_res = tab.std(axis=1, ddof=3)
+    for c in q.key(q_res).py():
+        assert np.isclose(p_res[int(c)], q_res[c].py(), atol=1e-20) or \
+            (np.isnan(p_res[int(c)]) and np.isnan(q_res[c].py()))
+
+    # Testing with full df
+    df = df_full
+    tab = kx.toq(df)
+
+    p_res = df.std(numeric_only=True)
+    q_res = tab.std(numeric_only=True)
+    for c in q.key(q_res).py():
+        assert np.isclose(p_res[c], q_res[c].py(), atol=1e-20)
+
+    p_res = df.std(axis=1, numeric_only=True)
+    q_res = tab.std(axis=1, numeric_only=True)
+    for c in q.key(q_res).py():
+        assert np.isclose(p_res[int(c)], q_res[c].py(), atol=1e-20)
 
 
 def test_merge_qjoin(kx):

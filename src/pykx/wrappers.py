@@ -229,12 +229,12 @@ def _key_preprocess(key, n, slice=False):
     return(key)
 
 
-def _rich_convert(x: 'K', stdlib: bool = True):
+def _rich_convert(x: 'K', stdlib: bool = True, raw=False):
     if stdlib:
-        return x.py(stdlib=stdlib)
+        return x.py(stdlib=stdlib, raw=raw)
     if isinstance(x, Mapping):
-        return x.pd()
-    return x.np()
+        return x.pd(raw=raw)
+    return x.np(raw=raw)
 
 
 def _null_gen(x):
@@ -2014,11 +2014,11 @@ class List(Vector):
         return any(x.is_inf if x.is_atom else False for x in self)
 
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
-        return [_rich_convert(x, stdlib) for x in self]
+        return [_rich_convert(x, stdlib, raw) for x in self]
 
     def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         """Provides a Numpy representation of the list."""
-        return _wrappers.list_np(self, False, has_nulls)
+        return _wrappers.list_np(self, False, has_nulls, raw)
 
 
 class NumericVector(Vector):
@@ -4398,7 +4398,7 @@ class Foreign(Atom):
     def __reduce__(self):
         raise TypeError('Unable to serialize pykx.Foreign objects')
 
-    def py(self, stdlib=None):
+    def py(self, stdlib=None, raw=None):
         """Turns the pointer stored within the Foreign back into a Python Object.
 
         Note: The resulting object is a reference to the same memory location as the initial object.

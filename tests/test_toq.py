@@ -1303,8 +1303,8 @@ def test_null_roundtrip(kx):
     t = kx.q('flip ({`$.Q.t x} each ty)!{enlist nulls[x]} each til count ty')
     for col in t:
         assert (
-            kx.q('{x 0}', kx.q.value(kx.q.flip(t[col])))
-            == kx.toq(kx.q.value(kx.q.flip(t[col])).np(), handle_nulls=True)
+            kx.q('{x 0}', t[col])
+            == kx.toq(t[col].np(), handle_nulls=True)
         ).all()
     assert (t == kx.toq(t.pd(), handle_nulls=True)).all().all()
 

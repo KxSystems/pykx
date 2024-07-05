@@ -204,14 +204,15 @@ class PandasMeta:
         if ddof == len(tab):
             return q('{x!count[x]#0n}', axis_keys)
 
-        return q('''
-                 {[tab;axis;ddof;axis_keys]
-                  tab:$[0~axis;(::);flip] value flip tab;
-                  d:$[0~ddof;dev;
-                      1~ddof;sdev;
-                      {[ddof;x] avg sqrt (sum xexp[x-avg x;2]) % count[x]-ddof}ddof];
-                  axis_keys!d each tab
-                 }''', tab, axis, ddof, axis_keys)
+        return q(
+            '''{[tab;axis;ddof;axis_keys]
+                tab:$[0~axis;(::);flip] value flip 9h$tab;
+                d:$[0~ddof;dev;
+                    1~ddof;sdev;
+                    {sqrt (n*var y*c>0)%c:0|(neg x)+n:sum not null y}ddof];
+                axis_keys!d each tab
+            }''', tab, axis, ddof, axis_keys
+        )
 
     @api_return
     def median(self, axis: int = 0, numeric_only: bool = False):

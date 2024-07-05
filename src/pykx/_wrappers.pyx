@@ -296,7 +296,7 @@ def guid_atom_py(self, bint raw, bint has_nulls, bint stdlib):
     return UUID(bytes=(_k(self).G0)[:16])
 
 
-def list_np(self, bint raw, bint has_nulls):
+def list_np(self, bint raw, bint has_nulls, bint raw_repr):
     cdef uintptr_t[:] addrs, razed_addrs
     cdef Py_ssize_t i
     cdef long long n = (<core.K><uintptr_t>self._addr).n
@@ -335,9 +335,9 @@ def list_np(self, bint raw, bint has_nulls):
     arr = np.empty(n, dtype=object)
     for i in range(n):
         if 10 == (<core.K>(addrs[i])).t:
-            arr[i] = wrappers._rich_convert(k_from_addr(wrappers.CharVector, addrs[i], True))
+            arr[i] = wrappers._rich_convert(k_from_addr(wrappers.CharVector, addrs[i], True), raw=raw_repr)
         else:
-            arr[i] = wrappers._rich_convert(factory(addrs[i], True), stdlib=False)
+            arr[i] = wrappers._rich_convert(factory(addrs[i], True), stdlib=False, raw=raw_repr)
     return arr
 
 

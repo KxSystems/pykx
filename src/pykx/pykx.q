@@ -47,7 +47,9 @@ util.startup:.Q.opt .z.x
 //     to allow loading of files at folder locations containing spaces
 util.loadfile:{[folder;file]
   cache:system"cd";
-  res:.[{system"cd ",x;res:system"l ",y;(0b;res)};(folder;file);{(1b;x)}];
+  system"cd ",folder;
+  folder:system"cd";
+  res:@[{res:system"l ",x;(0b;res)};file;{(1b;x)}];
   if[folder~system"cd";system"cd ",cache];
   $[res[0];'res[1];res[1]]
   }
@@ -1735,7 +1737,7 @@ loadExtension:{[ext]
   if[not 10h=type ext;'"Extension provided must be of type string"];
   if[not ext in listExtensions[];'"Extension provided '",ext,"' not available"];
   .[util.loadfile;
-    (pykxDir,"/extensions/";ext,".q");
+    (pykxDir,"/extensions";ext,".q");
     {'x," raised when attempting to load extension"}
     ];
   }
