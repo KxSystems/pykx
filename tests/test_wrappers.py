@@ -1565,6 +1565,44 @@ class Test_List:
     def test_empty_vector(self, q):
         assert q('0h$()').np().dtype == object
 
+    def test_raw_conversions(self, q, kx):
+        qarray = q("(1;2;3;`a;2024.01.01T12:00:00)")
+        with pytest.raises(TypeError) as err:
+            qarray.np()
+        assert 'The q datetime type is deprecated' in str(err.value)
+
+        pyarray = qarray.py(raw=True)
+        nparray = qarray.np(raw=True)
+        pdarray = qarray.pd(raw=True)
+
+        for arr in [pyarray, nparray, pdarray]:
+            qarr = kx.toq(arr)
+            assert isinstance(qarr, kx.List)
+            assert isinstance(qarr[4], kx.FloatAtom)
+            qarr[3] = q('`$', qarr[3])
+            qarr[4] = q('"z"$', qarr[4])
+            assert (qarray == qarr).all()
+
+        nestarr = q('''
+                    ((1;2;"a";2024.01.01T12:00:00);
+                     (2;3;"b";2024.01.01T12:00:00);
+                     (3;4;"c";2024.01.01T12:00:00))
+                    ''')
+
+        with pytest.raises(TypeError) as err:
+            nestarr.py()
+        assert 'The q datetime type is deprecated' in str(err.value)
+
+        pynest = nestarr.py(raw=True)
+        npnest = nestarr.np(raw=True)
+        pdnest = nestarr.pd(raw=True)
+
+        for arr in [pynest, npnest, pdnest]:
+            qnest = kx.toq(arr)
+            assert isinstance(qnest, kx.List)
+            assert isinstance(q('{x[;3]}', qnest), kx.FloatVector)
+            assert q('{x[;3]~"z"$y[;3]}', nestarr, qnest)
+
 
 # NaN is tricky to compare, so we generate GUID vectors until we get one whose complex form has no
 # NaNs in it.
@@ -4298,11 +4336,10 @@ def test_pyarrow_pandas_table_roundtrip(kx):
     tab2 = kx.toq(tab.pd(as_arrow=True))
 
     for x in tab.keys():
-        assert isinstance(tab2[x], type(tab[x]))
         if x == 'dset_1_tab12':
-            assert all([x < 1000 for x in (tab[x]._values - tab2[x]._values).np()[0].astype(int)]) # noqa
+            assert all([x < 1000 for x in (tab[x] - tab2[x]).np().astype(int)]) # noqa
         else:
-            assert (tab[x]._values == tab2[x]._values).all()
+            assert (tab[x] == tab2[x]).all()
 
 
 @pytest.mark.unlicensed

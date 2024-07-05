@@ -363,3 +363,10 @@ def test_PYKX_Q_LIB_LOCATION():
 def test_subnormals(kx):
     import numpy as np
     assert '5e-324' == str(np.finfo(np.float64).smallest_subnormal + 0.)
+
+
+@pytest.mark.isolate
+def test_import_cd():
+    cd = os.getcwd()
+    import pykx as kx # noqa: F401
+    assert cd == os.getcwd()

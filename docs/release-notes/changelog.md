@@ -8,6 +8,118 @@
 
     Currently PyKX is not compatible with Pandas 2.2.0 or above as it introduced breaking changes which cause data to be cast to the incorrect type.
 
+## PyKX 2.5.2
+
+#### Release Date
+
+2024-07-05
+
+### Fixes and Improvements
+
+- Converting PyKX generic lists using the keyword parameter `raw=True` would previously return incorrect results, the values received being the memory address of the individual elements of the list, this has now been resolved
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> a = kx.q('(1; 3.4f; `asad; "asd")')
+		>>> a.np(raw=True)
+		array([3012581664,      30547, 3012579792,      30547], dtype=uint64)
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		>>> a = kx.q('(1; 3.4f; `asad; "asd")')
+		>>> a.np(raw=True)
+		array([1, 3.4, b'asad', b'asd'], dtype=object)
+		```
+
+- Converting PyKX generic lists using the keyword parameter `raw=True` when explictly required previously would error indicating that the keyword argument was not supplied. This has been resolved with the parameter now appropriately passed to all items
+
+	=== "Behaviour prior to change"
+
+		The errors below are truncated for readability
+
+		```python
+		>>> kx.q("(1;2;3;`a;2024.01.01T12:00:00)").py(raw=True)
+		TypeError: The q datetime type is deprecated, and can only be accessed ..
+		>>> kx.q("(1;2;3;`a;2024.01.01T12:00:00)").np(raw=True)
+		TypeError: The q datetime type is deprecated, and can only be accessed ..
+		>>> kx.q("(1;2;3;`a;2024.01.01T12:00:00)").pd(raw=True)
+		TypeError: The q datetime type is deprecated, and can only be accessed ..
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		>>> kx.q("(1;2;3;`a;2024.01.01T12:00:00)").py(raw=True)
+		[1, 2, 3, b'a', 8766.5]
+		>>> kx.q("(1;2;3;`a;2024.01.01T12:00:00)").np(raw=True)
+		array([1, 2, 3, b'a', 8766.5], dtype=object)
+		>>> kx.q("(1;2;3;`a;2024.01.01T12:00:00)").pd(raw=True)
+		0         1
+		1         2
+		2         3
+		3      b'a'
+		4    8766.5
+		```
+
+- Use of `get` method on `kx.Table` with a `str` input will now raise a [`FutureWarning`](https://docs.python.org/3/library/exceptions.html#FutureWarning) indicating that the return type of this method will change with release 3.0.0. Currently this function returns a `kx.Table` with a single column, in version 3.0.0 this will return a list/vector containing the content of the column to better align with the Pandas API approach.
+
+	```python
+	>>> import pykx as kx
+	>>> tab = kx.Table(data={'x': [1, 2, 3], 'y': [2, 3, 4]})
+	>>> tab.get('x')
+	/usr/python/3.12/lib/python3.12/site-packages/pykx/pandas_api/pandas_indexing.py:42: FutureWarning:
+
+		Single column retrieval using 'get' method will return a vector/list object in release 3.0+
+		To access the vector/list directly use table['column_name']
+	  warnings.warn("Single column retrieval using 'get' method will a return vector/list object "
+	pykx.Table(pykx.q('
+	x
+	-
+	0
+	1
+	2
+	'))
+	>>> tab['x']
+	pykx.LongVector(pykx.q('1 2 3'))
+	```
+
+
+- Fix to issue where use of `kx.SymbolAtom` with `__getitem__` method on `kx.Table` objects would return a table rather then vector/list. The return now mirrors the expected return which matches `str` type inputs
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.Table(data={'x': [1, 2, 3], 'y': ['a', 'b', 'c']})
+		>>> tab['x']
+		pykx.LongVector(pykx.q('1 2 3'))
+		>>> tab[kx.SymbolAtom('x')]
+		pykx.Table(pykx.q('
+		x
+		-
+		1
+		2
+		3
+		'))
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.Table(data={'x': [1, 2, 3], 'y': ['a', 'b', 'c']})
+		>>> tab['x']
+		pykx.LongVector(pykx.q('1 2 3'))
+		>>> tab[kx.SymbolAtom('x')]
+		pykx.LongVector(pykx.q('1 2 3'))
+		```
+
+- Reworked `Table.std()` method to better handle edge cases relating to mixed columns and nulls. Now matching Pandas results. This addresses issues raised [here](https://github.com/KxSystems/pykx/issues/28).
+- Fix to issue where loading PyKX on Windows from 2.5.0 could result in a users working directory being changed to `site-packages/pykx`.
+
 ## PyKX 2.5.1
 
 #### Release Date

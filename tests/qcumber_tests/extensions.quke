@@ -11,7 +11,12 @@ feature General Extensions
 
 feature Dashboards Extension
     before
+        .test.cd:system"cd";
+        
+    should Not change working directory on load
+        expect to be in same dir after load
         .pykx.loadExtension["dashboards"];
+        .qu.compare[.test.cd;system"cd"]
 
     should Fail to run dashboards functionality under various conditions
         expect to fail when running a function using an invalid function definition

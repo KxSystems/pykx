@@ -126,8 +126,10 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             code += '''
                     .pykx.util.loadfile:{[folder;file]
                       cache:system"cd";
-                      res:.[{system"cd ",x;res:system"l ",y;(0b;res)};
-                            (folder;file);
+                      system"cd ",folder;
+                      folder:system"cd";
+                      res:@[{res:system"l ",x;(0b;res)};
+                            file;
                             {(1b;x)}
                             ];
                       if[folder~system"cd";system"cd ",cache];
