@@ -22,3 +22,4 @@ The aim of this page is to include a list of the contributors to our project bot
 - [nipsn](https://github.com/nipsn)
 - [marcosvm13](https://github.com/marcosvm13)
 - [tortolavivo23](https://github.com/tortolavivo23)
+- [MiguelGomezC](https://github.com/MiguelGomezC)

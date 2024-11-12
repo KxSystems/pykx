@@ -1,35 +1,42 @@
-# Using PyKX as a `q` Server
+---
+title:  PyKX as q server
+description: PyKX as q server example 
+date: October 2024
+author: KX Systems, Inc.,
+tags: PyKX, q, server
+---
 
-The purpose of this example is to provide a quick start for setting up PyKX as a `q` server that other
-`q` and PyKX sessions can connect to.
+# Use PyKX as a `#!python q` Server
 
-To follow along with this example please feel free to download this <a href="./archive.zip" download>zip archive</a> that contains a copy of the python script and this writeup.
+_This example provides a quick start for setting up PyKX as a `#!python q` server that other `#!python q` and PyKX sessions can connect to._
+
+To follow along, feel free to download this <a href="./archive.zip" download>zip archive</a> that contains a copy of the python script and this writeup.
 
 ## Quick start
 
-To run this example simply run the `server.py` script and it will launch a `PyKX` server on port 5000 or
-you can run `server_async.py` to run an asyncronous version of the server.
-The server will print out any queries it receives as well as the result of executing the query before replying.
+To run this example, run the `#!python server.py` script to launch a `#!python PyKX` server on port 5000. Alternatively, run `#!python server_async.py` to run an asynchronous version of the server. 
+
+The server prints out any queries it receives as well as the result of executing the query before replying.
 
 ```bash
 python server.py
 // or
 python server_async.py
 ```
+## Extra configuration options
 
-## Extra Configuration Options
+### User validation
 
-### User Validation
+You can add a function to validate users when they try to connect to the server. You can do so by overriding the `#!python .z.pw` function. By default all connection attempts will be accepted.
 
-It is possible to add a function to validate users when they try to connect to the server. This can
-be done by overriding the `.z.pw` function. By default all connection attempts will be accepted.
+The function receives 2 arguments when a user connects:
 
-The function will be passed 2 arguments when a user connects, the first will be the username, and the
-second will be the password (if no password is provided `None`/`::` will be passed in place of a password).
+ - username
+ - password (if no password is provided `#!python None`/`#!python ::` will be passed in place of a password).
 
-Note: The function needs to be overridden using `EmbeddedQ` not on the q connection.
+!!! note "Important! You need to override the function using `#!python EmbeddedQ` not on the q connection."
 
-Here is an example of overriding it using a python function as a validation function.
+Here is an example of overriding it using a Python function as a validation function:
 
 ```python
 def validate(user, password):
@@ -40,21 +47,21 @@ def validate(user, password):
 kx.q.z.pw = validate
 ```
 
-Here is an example of overriding it using a q function as a validation function.
+Here is an example of overriding it using a q function as a validation function:
 
 ```q
 kx.q.z.pw = kx.q('{[user; password] $[password=`password; 1b; 0b]}')
 ```
 
-### Message Handler
+### Message handler
 
-The message handler can be overridden to apply custom logic to incoming queries. By default it just returns
-the result of calling `kx.q.value()` on the incoming query. This function will be passed a `CharVector`
+You can override the message handler to apply custom logic to incoming queries. By default, it returns
+the result of calling `#!python kx.q.value()` on the incoming query. This function will be passed a `#!python CharVector`
 containing the incoming query.
 
-Note: The function needs to be overridden using `EmbeddedQ` not on the q connection.
+!!! note "Important! You need to override the function using `#!python EmbeddedQ` not on the q connection."
 
-Here is an example of overriding it using a python function as a message handler.
+Here is an example of overriding it using a Python function as a message handler:
 
 ```python
 def qval(query):
@@ -65,18 +72,19 @@ def qval(query):
 kx.q.z.pg = qval
 ```
 
-Here is an example of overriding it using a q function as a message handler.
+Here is an example of overriding it using a q function as a message handler:
 
 ```q
 kx.q.z.pg = kx.q('{[x] show x; show y: value x; y}')
 ```
 
-For async messages `kx.q.z.ps` can be managed in the same fashion.
+For async messages, manage `#!python kx.q.z.ps` in the same fashion.
 
-### Connection Garbage Collection Frequency
+### Connection garbage collection frequency
 
-One of the keyword arguments you can use when creating a server is `conn_gc_time` this argument takes
+One of the keyword arguments to use when creating a server is `#!python conn_gc_time`. This argument takes
 a float as input and the value denotes how often the server will attempt to clear old closed connections.
-By default the value is 0.0 and this will cause the list of connections to be cleaned on every call
-to `poll_recv`, with lots of incoming connections this can cause performance to deteriorate. If you
-set the `conn_gc_time` to `10.0` then this clean-up will happen at most every 10 seconds.
+
+By default the value is `#!python 0.0` and this will cause the list of connections to be cleaned on every call
+to `#!python poll_recv`. With lots of incoming connections, this can deteriorate the performance. If you
+set the `#!python conn_gc_time` to `#!python 10.0` then this clean-up happens every 10 seconds.

@@ -72,6 +72,10 @@ def test_dict_funcs(q, kx):
     assert isinstance(dict_str, kx.KeyedTable)
     assert q('{x~y}', dict_str_max, max_ret)
     assert q('{x~y}', dict_str_min, min_ret)
+    dict_str_max = kx.q.qsql.select(dict_str['x1'], where=kx.Column('function') == 'max')
+    dict_str_min = kx.q.qsql.select(dict_str['x'], where=kx.Column('function') == 'min')
+    assert q('{x~y}', dict_str_max, max_ret)
+    assert q('{x~y}', dict_str_min, min_ret)
 
     def mode(x):
         return statistics.mode(x)

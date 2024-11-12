@@ -10,6 +10,7 @@ from operator import index
 import os
 import pickle
 from platform import python_implementation
+import shutil
 from textwrap import dedent
 from uuid import UUID
 import itertools
@@ -244,51 +245,51 @@ class Test_K:
         assert not q('5') == None # noqa: E711
 
     def test_slicing(self, q, kx):
-        test_vector = q('1 2 3')
-        assert test_vector[0].py() == test_vector.py()[0]
-        assert test_vector[-1].py() == test_vector.py()[-1]
-        assert test_vector[1:].py() == test_vector.py()[1:]
-        assert test_vector[-1:].py() == test_vector.py()[-1:]
-        assert test_vector[-2:-1].py() == test_vector.py()[-2:-1]
-        assert test_vector[-5:].py() == test_vector.py()[-5:]
-        assert test_vector[:-1].py() == test_vector.py()[:-1]
-        assert test_vector[:-3].py() == test_vector.py()[:-3]
-        assert test_vector[::1].py() == test_vector.py()[::1]
-        assert test_vector[::2].py() == test_vector.py()[::2]
-        assert test_vector[-1:5:2].py() == test_vector.py()[-1:5:2]
-        assert test_vector[::-1].py() == test_vector.py()[::-1]
+        vector = q('1 2 3')
+        assert vector[0].py() == vector.py()[0]
+        assert vector[-1].py() == vector.py()[-1]
+        assert vector[1:].py() == vector.py()[1:]
+        assert vector[-1:].py() == vector.py()[-1:]
+        assert vector[-2:-1].py() == vector.py()[-2:-1]
+        assert vector[-5:].py() == vector.py()[-5:]
+        assert vector[:-1].py() == vector.py()[:-1]
+        assert vector[:-3].py() == vector.py()[:-3]
+        assert vector[::1].py() == vector.py()[::1]
+        assert vector[::2].py() == vector.py()[::2]
+        assert vector[-1:5:2].py() == vector.py()[-1:5:2]
+        assert vector[::-1].py() == vector.py()[::-1]
         with pytest.raises(ValueError) as err:
-            test_vector[::0]
+            vector[::0]
         assert 'slice step cannot be zero' in str(err)
 
-        test_list = q('(1 2 3; 4 5 6)')
-        assert test_list[0].py() == test_list.py()[0]
-        assert test_list[-1].py() == test_list.py()[-1]
-        assert test_list[:6].py() == test_list.py()[:6]
+        qlist = q('(1 2 3; 4 5 6)')
+        assert qlist[0].py() == qlist.py()[0]
+        assert qlist[-1].py() == qlist.py()[-1]
+        assert qlist[:6].py() == qlist.py()[:6]
         with pytest.raises(ValueError) as err:
-            test_list[::0]
+            qlist[::0]
         assert 'slice step cannot be zero' in str(err)
 
-        test_table = q('([] a:1 2 3)')
-        assert all(test_table[1:].pd() == test_table.pd()[1:].reset_index(drop=True))
-        assert all(test_table[-1:].pd() == test_table.pd()[-1:].reset_index(drop=True))
+        qtable = q('([] a:1 2 3)')
+        assert all(qtable[1:].pd() == qtable.pd()[1:].reset_index(drop=True))
+        assert all(qtable[-1:].pd() == qtable.pd()[-1:].reset_index(drop=True))
         with pytest.raises(ValueError) as err:
-            test_table[::0]
+            qtable[::0]
         assert 'slice step cannot be zero' in str(err)
 
-        test_table2 = q('([] a:1 2 3; b:4 5 6; c:7 8 9)')
-        assert all(test_table2[2:].pd() == test_table2.pd()[2:].reset_index(drop=True))
-        assert all(test_table2[-2:].pd() == test_table2.pd()[-2:].reset_index(drop=True))
-        assert all(test_table2[-3:].pd() == test_table2.pd()[-3:].reset_index(drop=True))
-        assert test_table2[6:] == test_table2[10:]
-        assert all(test_table2[-4:].pd() == test_table2.pd()[-4:].reset_index(drop=True))
-        assert all(test_table2[:4].pd() == test_table2.pd()[:4].reset_index(drop=True))
-        assert all(test_table2[::1].pd() == test_table2.pd()[::1].reset_index(drop=True))
-        assert all(test_table2[::2].pd() == test_table2.pd()[::2].reset_index(drop=True))
-        assert all(test_table2[-1:5:2].pd() == test_table2.pd()[-1:5:2].reset_index(drop=True))
-        assert all(test_table2[::-1].pd() == test_table2.pd()[::-1].reset_index(drop=True))
-        assert test_table2[:-9] == q('sublist', 0, test_table2)
-        assert all(test_table2[:-1].pd() == test_table2.pd()[:-1])
+        qtable2 = q('([] a:1 2 3; b:4 5 6; c:7 8 9)')
+        assert all(qtable2[2:].pd() == qtable2.pd()[2:].reset_index(drop=True))
+        assert all(qtable2[-2:].pd() == qtable2.pd()[-2:].reset_index(drop=True))
+        assert all(qtable2[-3:].pd() == qtable2.pd()[-3:].reset_index(drop=True))
+        assert qtable2[6:] == qtable2[10:]
+        assert all(qtable2[-4:].pd() == qtable2.pd()[-4:].reset_index(drop=True))
+        assert all(qtable2[:4].pd() == qtable2.pd()[:4].reset_index(drop=True))
+        assert all(qtable2[::1].pd() == qtable2.pd()[::1].reset_index(drop=True))
+        assert all(qtable2[::2].pd() == qtable2.pd()[::2].reset_index(drop=True))
+        assert all(qtable2[-1:5:2].pd() == qtable2.pd()[-1:5:2].reset_index(drop=True))
+        assert all(qtable2[::-1].pd() == qtable2.pd()[::-1].reset_index(drop=True))
+        assert qtable2[:-9] == q('sublist', 0, qtable2)
+        assert all(qtable2[:-1].pd() == qtable2.pd()[:-1])
 
         empty_vector = q('`long$()')
         assert empty_vector[1:] == empty_vector
@@ -320,7 +321,7 @@ class Test_K:
         assert (list_of_two[-1:] == q('enlist 2f')).all()
         assert (list_of_two[:-1] == q('enlist 1')).all()
 
-    def test_vector_indexing(self, q): # noqa: C901
+    def test_vector_indexing(self, q, kx):
         vector = q('til 3')
         vectorpy = vector.py()
         indexList = [-3, -2, -1, 0, 1, 2, 3, None]
@@ -330,8 +331,8 @@ class Test_K:
         for i in comboList:
             s = slice(*i)
             try:
-                q = vector[s]
-                qNoqNulls = [None if i.is_null else i.py() for i in q]
+                qpd = vector[s]
+                qNoqNulls = [None if i.is_null else i.py() for i in qpd]
                 qErr = False
             except Exception as ex:
                 qEx = ex
@@ -350,7 +351,7 @@ class Test_K:
                 print(s, qEx, p)
                 raise AssertionError
             elif not qErr and pErr:
-                print(s, q, pEx)
+                print(s, qpd, pEx)
                 raise AssertionError
             elif qErr and pErr:
                 if not qErr == pErr:
@@ -360,7 +361,7 @@ class Test_K:
                 print(s)
                 raise AssertionError
 
-    def test_list_indexing(self, q): # noqa: C901
+    def test_list_indexing(self, q, kx):
         vector = q('(1i;2f;3j)')
         vectorpy = vector.py()
         indexList = [-3, -2, -1, 0, 1, 2, 3, None]
@@ -370,8 +371,8 @@ class Test_K:
         for i in comboList:
             s = slice(*i)
             try:
-                q = vector[s]
-                qNoqNulls = [None if i.is_null else i.py() for i in q]
+                qpd = vector[s]
+                qNoqNulls = [None if i.is_null else i.py() for i in qpd]
                 qErr = False
             except Exception as ex:
                 qEx = ex
@@ -390,7 +391,7 @@ class Test_K:
                 print(s, qEx, p)
                 raise AssertionError
             elif not qErr and pErr:
-                print(s, q, pEx)
+                print(s, qpd, pEx)
                 raise AssertionError
             elif qErr and pErr:
                 if not qErr == pErr:
@@ -400,7 +401,7 @@ class Test_K:
                 print(s)
                 raise AssertionError
 
-    def test_table_indexing(self, q): # noqa: C901
+    def test_table_indexing(self, q, kx):
         tab = q('([] a:1 2 3; b:4 5 6; c:7 8 9)')
         tabpd = tab.pd()
         indexList = [-3, -2, -1, 0, 1, 2, 3, None]
@@ -410,7 +411,7 @@ class Test_K:
         for i in comboList:
             s = slice(*i)
             try:
-                q = tab[s].pd()
+                qpd = tab[s].pd()
                 qErr = False
             except Exception as ex:
                 qEx = ex
@@ -422,14 +423,14 @@ class Test_K:
                 pEx = ex
                 pErr = True
             if not qErr and not pErr:
-                if len(q) != len(p) or not all(q == p):
+                if len(qpd) != len(p) or not all(q == p):
                     print(s, q, p)
                     raise AssertionError
             elif qErr and not pErr:
                 print(s, qEx, p)
                 raise AssertionError
             elif not qErr and pErr:
-                print(s, q, pEx)
+                print(s, qpd, pEx)
                 raise AssertionError
             elif qErr and pErr:
                 if not qErr == pErr:
@@ -454,7 +455,8 @@ class Test_Atom:
         assert bool(t) is True
         assert bool(f) is False
 
-    def test_null_gen_lic(self, kx):
+    @pytest.mark.unlicensed()
+    def test_null_gen(self, kx):
         qtypes = [kx.GUIDAtom, kx.ShortAtom, kx.IntAtom,
                   kx.LongAtom, kx.RealAtom, kx.FloatAtom,
                   kx.CharAtom, kx.SymbolAtom, kx.TimestampAtom,
@@ -466,7 +468,8 @@ class Test_Atom:
             assert type(null_val) == i
             assert null_val.is_null
 
-    def test_inf_pos_lic(self, kx):
+    @pytest.mark.unlicensed()
+    def test_inf_pos(self, kx):
         qtypes = [kx.ShortAtom, kx.IntAtom,
                   kx.LongAtom, kx.RealAtom, kx.FloatAtom,
                   kx.TimestampAtom, kx.MonthAtom, kx.DateAtom,
@@ -475,21 +478,34 @@ class Test_Atom:
         for i in qtypes:
             inf_val = getattr(i, 'inf') # noqa: B009
             assert type(inf_val) == i
-            assert inf_val>0
+            assert inf_val>0 if kx.licensed else True
             assert inf_val.is_inf
+            assert inf_val.is_pos_inf
+            assert not inf_val.is_neg_inf
 
-    def test_inf_neg_lic(self, kx):
+    @pytest.mark.unlicensed()
+    def test_inf_neg(self, kx):
         qtypes = [kx.ShortAtom, kx.IntAtom,
                   kx.LongAtom, kx.RealAtom, kx.FloatAtom,
                   kx.TimestampAtom, kx.MonthAtom, kx.DateAtom,
                   kx.DatetimeAtom, kx.TimespanAtom, kx.MinuteAtom,
                   kx.SecondAtom, kx.TimeAtom]
         for i in qtypes:
-            inf_val = -getattr(i, 'inf') # noqa: B009
-            assert type(inf_val) == i
-            assert inf_val<0
-            assert inf_val.is_inf
+            if kx.licensed:
+                inf_val = -getattr(i, 'inf') # noqa: B009
+                assert type(inf_val) == i
+                assert inf_val<0
+                assert inf_val.is_inf
+                assert not inf_val.is_pos_inf
+                assert inf_val.is_neg_inf
+            inf_neg_val = getattr(i, 'inf_neg') # noqa: B009
+            assert type(inf_neg_val) == i
+            assert inf_neg_val<0 if kx.licensed else True
+            assert inf_neg_val.is_inf
+            assert not inf_neg_val.is_pos_inf
+            assert inf_neg_val.is_neg_inf
 
+    @pytest.mark.unlicensed()
     def test_null_fail(self, kx):
         qtypes = [kx.BooleanAtom, kx.ByteAtom]
         for i in qtypes:
@@ -497,6 +513,7 @@ class Test_Atom:
                 getattr(i, 'null') # noqa: B009
             assert 'Retrieval of null values' in str(err)
 
+    @pytest.mark.unlicensed()
     def test_inf_fail(self, kx):
         qtypes = [kx.BooleanAtom, kx.ByteAtom, kx.GUIDAtom,
                   kx.CharAtom, kx.SymbolAtom]
@@ -504,24 +521,35 @@ class Test_Atom:
             with pytest.raises(NotImplementedError) as err:
                 getattr(i, 'inf') # noqa: B009
             assert 'Retrieval of infinite values' in str(err)
+            with pytest.raises(NotImplementedError) as err:
+                getattr(i, 'inf_neg') # noqa: B009
+            assert 'Retrieval of infinite values' in str(err)
 
-    @pytest.mark.unlicensed(unlicensed_only=True)
+    @pytest.mark.unlicensed()
     @pytest.mark.skipif(
         os.getenv('PYKX_THREADING') is not None,
         reason='Not supported with PYKX_THREADING'
     )
-    def test_null_inf_unlic(self, kx):
-        qtypes = [kx.ByteAtom, kx.GUIDAtom, kx.ShortAtom,
-                  kx.IntAtom, kx.LongAtom, kx.RealAtom,
-                  kx.FloatAtom, kx.CharAtom, kx.SymbolAtom,
-                  kx.TimestampAtom, kx.MonthAtom, kx.DateAtom,
-                  kx.DatetimeAtom, kx.TimespanAtom, kx.MinuteAtom,
-                  kx.SecondAtom, kx.TimeAtom]
+    def test_null_inf(self, kx):
+        qtypes = [kx.GUIDAtom, kx.ShortAtom, kx.IntAtom, kx.LongAtom, kx.RealAtom, kx.FloatAtom,
+                  kx.CharAtom, kx.SymbolAtom, kx.TimestampAtom, kx.MonthAtom, kx.DateAtom,
+                  kx.DatetimeAtom, kx.TimespanAtom, kx.MinuteAtom, kx.SecondAtom, kx.TimeAtom]
         for i in qtypes:
-            for j in ['null', 'inf']:
-                with pytest.raises(kx.QError) as err:
-                    getattr(i, j)()
-                assert 'not supported in unlicensed mode' in str(err)
+            assert isinstance(i.null, i)
+            assert i.null.is_null
+
+        qtypes = [kx.ShortAtom, kx.IntAtom, kx.LongAtom, kx.RealAtom, kx.FloatAtom,
+                  kx.TimestampAtom, kx.MonthAtom, kx.DateAtom, kx.DatetimeAtom, kx.TimespanAtom,
+                  kx.MinuteAtom, kx.SecondAtom, kx.TimeAtom]
+        for i in qtypes:
+            assert isinstance(i.inf, i)
+            assert i.inf.is_inf
+            assert i.inf.is_pos_inf
+            assert not i.inf.is_neg_inf
+            assert isinstance(i.inf_neg, i)
+            assert i.inf_neg.is_inf
+            assert i.inf_neg.is_neg_inf
+            assert not i.inf_neg.is_pos_inf
 
     def test_is_null_and_is_inf(self, q):
         assert q('0Ng').is_null
@@ -531,73 +559,145 @@ class Test_Atom:
         assert not q('first 1?0h').is_null
         assert q('0Wh').is_inf
         assert q('-0Wh').is_inf
+        assert q('0Wh').is_pos_inf
+        assert not q('-0Wh').is_pos_inf
+        assert q('-0Wh').is_neg_inf
+        assert not q('0Wh').is_neg_inf
         assert not q('first 1?0h').is_inf
+        assert not q('first 1?0h').is_pos_inf
+        assert not q('first 1?0h').is_neg_inf
 
         assert q('0Ni').is_null
         assert not q('first 1?0i').is_null
         assert q('0Wi').is_inf
         assert q('-0Wi').is_inf
+        assert q('0Wi').is_pos_inf
+        assert not q('-0Wi').is_pos_inf
+        assert q('-0Wi').is_neg_inf
+        assert not q('0Wi').is_neg_inf
         assert not q('first 1?0i').is_inf
+        assert not q('first 1?0i').is_pos_inf
+        assert not q('first 1?0i').is_neg_inf
 
         assert q('0Nj').is_null
         assert not q('first 1?0j').is_null
         assert q('0Wj').is_inf
         assert q('-0Wj').is_inf
+        assert q('0Wj').is_pos_inf
+        assert not q('-0Wj').is_pos_inf
+        assert q('-0Wj').is_neg_inf
+        assert not q('0Wj').is_neg_inf
         assert not q('first 1?0j').is_inf
+        assert not q('first 1?0j').is_pos_inf
+        assert not q('first 1?0j').is_neg_inf
 
         assert q('0Ne').is_null
         assert not q('first 1?1e').is_null
         assert q('0We').is_inf
         assert q('-0We').is_inf
+        assert q('0We').is_pos_inf
+        assert not q('-0We').is_pos_inf
+        assert q('-0We').is_neg_inf
+        assert not q('0We').is_neg_inf
         assert not q('first 1?1e').is_inf
+        assert not q('first 1?1e').is_pos_inf
+        assert not q('first 1?1e').is_neg_inf
 
         assert q('0Nf').is_null
         assert not q('first 1?1f').is_null
         assert q('0Wf').is_inf
         assert q('-0Wf').is_inf
+        assert q('0Wf').is_pos_inf
+        assert not q('-0Wf').is_pos_inf
+        assert q('-0Wf').is_neg_inf
+        assert not q('0Wf').is_neg_inf
         assert not q('first 1?1f').is_inf
+        assert not q('first 1?1f').is_pos_inf
+        assert not q('first 1?1f').is_neg_inf
 
         assert q('0Np').is_null
         assert not q('first 1?1f').is_null
         assert q('0Wp').is_inf
         assert q('-0Wp').is_inf
+        assert q('0Wp').is_pos_inf
+        assert not q('-0Wp').is_pos_inf
+        assert q('-0Wp').is_neg_inf
+        assert not q('0Wp').is_neg_inf
         assert not q('first 1?0p').is_inf
+        assert not q('first 1?0p').is_pos_inf
+        assert not q('first 1?0p').is_neg_inf
 
         assert q('0Nm').is_null
         assert not q('first 1?2000.01m').is_null
         assert q('0Wm').is_inf
         assert q('-0Wm').is_inf
+        assert q('0Wm').is_pos_inf
+        assert not q('-0Wm').is_pos_inf
+        assert q('-0Wm').is_neg_inf
+        assert not q('0Wm').is_neg_inf
         assert not q('first 1?2000.01m').is_inf
+        assert not q('first 1?2000.01m').is_pos_inf
+        assert not q('first 1?2000.01m').is_neg_inf
 
         assert q('0Nd').is_null
         assert not q('first 1?2000.01.01').is_null
         assert q('0Wd').is_inf
         assert q('-0Wd').is_inf
+        assert q('0Wd').is_pos_inf
+        assert not q('-0Wd').is_pos_inf
+        assert q('-0Wd').is_neg_inf
+        assert not q('0Wd').is_neg_inf
         assert not q('first 1?2000.01.01').is_inf
+        assert not q('first 1?2000.01.01').is_pos_inf
+        assert not q('first 1?2000.01.01').is_neg_inf
 
         assert q('0Nn').is_null
         assert not q('first "n"$1?0').is_null
         assert q('0Wn').is_inf
         assert q('-0Wn').is_inf
+        assert q('0Wn').is_pos_inf
+        assert not q('-0Wn').is_pos_inf
+        assert q('-0Wn').is_neg_inf
+        assert not q('0Wn').is_neg_inf
         assert not q('first "n"$1?0').is_inf
+        assert not q('first "n"$1?0').is_pos_inf
+        assert not q('first "n"$1?0').is_neg_inf
 
         assert q('0Nu').is_null
         assert not q('first 1?0u').is_null
         assert q('0Wu').is_inf
         assert q('-0wu').is_inf
+        assert q('0Wn').is_pos_inf
+        assert not q('-0Wn').is_pos_inf
+        assert q('-0Wn').is_neg_inf
+        assert not q('0Wn').is_neg_inf
         assert not q('first 1?0u').is_inf
+        assert not q('first 1?0u').is_pos_inf
+        assert not q('first 1?0u').is_neg_inf
 
         assert q('0Nv').is_null
         assert not q('first 1?0v').is_null
         assert q('0Wv').is_inf
         assert q('-0Wv').is_inf
+        assert q('0Wv').is_pos_inf
+        assert not q('-0Wv').is_pos_inf
+        assert q('-0Wv').is_neg_inf
+        assert not q('0Wv').is_neg_inf
         assert not q('first 1?0v').is_inf
+        assert not q('first 1?0v').is_pos_inf
+        assert not q('first 1?0v').is_neg_inf
 
         assert q('0Nt').is_null
         assert not q('first 1?0t').is_null
         assert q('0Wt').is_inf
         assert q('-0Wt').is_inf
+        assert q('0Wn').is_pos_inf
+        assert not q('-0Wt').is_pos_inf
+        assert q('-0Wt').is_neg_inf
+        assert not q('0Wt').is_neg_inf
         assert not q('first 1?0t').is_inf
+        assert not q('first 1?0t').is_pos_inf
+        assert not q('first 1?0t').is_neg_inf
 
         assert not q('{x*y+z}').is_null
         assert not q('{x*y+z}').is_inf
@@ -605,8 +705,7 @@ class Test_Atom:
     @pytest.mark.nep49
     def test_null_np(self, q, kx):
         for type_char in 'hij':
-            with pytest.raises(kx.PyKXException):
-                q(f'0N{type_char}').np()
+            q(f'0N{type_char}').np()
 
         for type_char in 'ef':
             assert np.isnan(q(f'0N{type_char}').np())
@@ -617,8 +716,7 @@ class Test_Atom:
     @pytest.mark.nep49
     def test_null_pd(self, q, kx, pd):
         for type_char in 'hij':
-            with pytest.raises(kx.PyKXException):
-                q(f'0N{type_char}').pd()
+            q(f'0N{type_char}').pd()
 
         for type_char in 'ef':
             assert pd.isna(q(f'0N{type_char}').pd())
@@ -743,21 +841,21 @@ class Test_Atom:
         assert q('0xFF').py() == 2 ** 8 - 1
         assert q('0xFF').t == -4
 
-        assert(q('0Nh').py() == kx.ShortAtom(q('0Nh')))
+        assert pd.isna(q('0Nh').py())
         try:
             q('0Wh').py()
         except kx.PyKXException:
             pass
         assert q('0Wh').t == -5
 
-        assert (q('0Ni').py() == kx.IntAtom(q('0Ni')))
+        assert pd.isna(q('0Ni').py())
         try:
             q('0Wi').py()
         except kx.PyKXException:
             pass
         assert q('0Wi').t == -6
 
-        assert (q('0N').py() == kx.LongAtom(q('0N')))
+        assert pd.isna(q('0N').py())
         try:
             q('0Wj').py()
         except kx.PyKXException:
@@ -945,6 +1043,32 @@ class Test_EnumAtom:
         assert e.py() == 'xyz'
         assert e.py(raw=True) == 1
 
+    def test_enum_init(self, q, kx):
+        q('tc:`a`b`c')
+        v = 'c'
+
+        e = kx.EnumAtom('tc', value=v, extend=False)
+        assert e == q('`tc$`c')
+        assert e.value() == v
+        assert e.domain() == 'tc'
+        assert e.index() == 2
+
+        v_ex = 'd'
+        e = kx.EnumAtom('tc', value=v_ex, extend=True)
+        assert e == q('`tc$`d')
+        tc_mod = ('a', 'b', 'c', 'd')
+        assert (kx.q('tc') == tc_mod).all()
+        assert e.value() == v_ex
+        assert e.domain() == 'tc'
+        assert e.index() == 3
+
+        i = 2
+        e = kx.EnumAtom('tc', index=i)
+        assert e == q('`tc$`c')
+        assert e.value() == v
+        assert e.domain() == kx.toq('tc')
+        assert e.index() == i
+
 
 class Test_TemporalSpanAtom:
     @pytest.mark.nep49
@@ -1019,6 +1143,23 @@ class Test_TemporalAtom:
         assert timestamp.np(raw=True) == 4759072275070713856
         assert timestamp.py(raw=True) == 4759072275070713856
 
+        assert timestamp == kx.TimestampAtom(2150, 10, 22, 20, 31, 15, 70713856)
+        with pytest.raises(TypeError) as err:
+            kx.TimestampAtom(2150, 10, 22, 20, 31, 70713856)
+            assert "Too few values" in str(err)
+        with pytest.raises(TypeError) as err:
+            kx.TimestampAtom(2150, 10, 22, 20, 31, 15, 21, 70713856)
+            assert "Too few values" in str(err)
+        with pytest.raises(TypeError) as err:
+            kx.TimestampAtom(2150, 10, "22", 20, 31, 15, 70713856)
+            assert "All values must be of type int" in str(err)
+
+    @pytest.mark.unlicensed(unlicensed_only=True)
+    def test_timestamp_unlicensed(self, q, kx):
+        with pytest.raises(kx.LicenseException) as err:
+            kx.TimestampAtom(2150, 10, 22, 20, 31, 15, 70713856)
+            assert "numerical values" in str(err)
+
     @pytest.mark.nep49
     def test_timestamp_timezone(self, kx):
         kx.config._set_keep_local_times(False)
@@ -1049,6 +1190,23 @@ class Test_TemporalAtom:
         assert q_date.np(raw=True) == -10076
         assert q_date.py(raw=True) == -10076
 
+        assert kx.DateAtom(1972, 5, 31) == q_date
+        with pytest.raises(TypeError) as err:
+            kx.DateAtom(2021, 19)
+            assert "Too few values" in str(err)
+        with pytest.raises(TypeError) as err:
+            kx.DateAtom(2021, 19, 8, 3)
+            assert "Too few values" in str(err)
+        with pytest.raises(TypeError) as err:
+            kx.DateAtom(1972, '5', 31)
+            assert "All values must be of type int" in str(err)
+
+    @pytest.mark.unlicensed(unlicensed_only=True)
+    def test_date_unlicensed(self, q, kx):
+        with pytest.raises(kx.LicenseException) as err:
+            kx.DateAtom(1972, 5, 31)
+            assert "numerical values" in str(err)
+
     @pytest.mark.nep49
     def test_datetime(self, q, kx):
         with pytest.warns(DeprecationWarning):
@@ -1070,6 +1228,23 @@ class Test_TemporalAtom:
             days=43938, seconds=68851, microseconds=664551)
         assert timespan.np(raw=True) == 3796312051664551936
         assert timespan.py(raw=True) == 3796312051664551936
+
+        assert timespan == kx.TimespanAtom(43938, 19, 7, 31, 664551936)
+        with pytest.raises(TypeError) as err:
+            kx.TimespanAtom(43938, 19, 7, 664551936)
+            assert "Too few values" in str(err)
+        with pytest.raises(TypeError) as err:
+            kx.TimespanAtom(43938, 19, 7, 31, 12, 664551936)
+            assert "Too few values" in str(err)
+        with pytest.raises(TypeError) as err:
+            kx.TimespanAtom(43938, 19, '7', 31, 664551936)
+            assert "All values must be of type int" in str(err)
+
+    @pytest.mark.unlicensed(unlicensed_only=True)
+    def test_timespan_unlicensed(self, q, kx):
+        with pytest.raises(kx.LicenseException) as err:
+            kx.TimespanAtom(43938, 19, 7, 31, 664551936)
+            assert "numerical values" in str(err)
 
     @pytest.mark.nep49
     def test_minute(self, q, kx):
@@ -1186,10 +1361,12 @@ class Test_Vector:
         q1 = kx.toq(p1)
         p1.append('a')
         p1.append([1, 2, 3])
+        p1.append(['a', 1])
         q1.append('a')
         q1.append([1, 2, 3])
+        q1.append(['a', 1])
         assert q('{x~y}', p1, q1)
-        assert 5 == len(q1)
+        assert 6 == len(q1)
 
     def test_extend(self, q, kx):
         p0 = [1, 2, 3]
@@ -1438,6 +1615,11 @@ class Test_Vector:
         assert not q('(`o;7;{x*y+z})').has_nulls
         assert q('(`;7;{x*y+z})').has_nulls
         assert q('(`hmmm;0N;{x*y+z})').has_nulls
+        assert not q('([]1 2 3;3?1f)').has_nulls
+        assert q('([]1 2 0N;3?1f)').has_nulls
+        assert q('([x:1 2 3]x1:(1 2 3;"123";0n);x2:(1f;0n;2f))').has_nulls
+        assert not q('([x:1 0N 1] x1:1 2 3)').has_nulls
+        assert q('([x:1 0N 1] x1:1 0N 3)').has_nulls
 
         assert not q('(`hmmm;0N;"not inf";123456789;{x*y+z})').has_infs
         assert q('(`hmmm;0N;"not inf";0W;{x*y+z})').has_infs
@@ -1469,14 +1651,14 @@ class Test_Vector:
             f(type_code, zero)
 
     def test_np_timestampvector_nulls(self, kx):
-        assert kx.q('0Np').py() is None
+        assert pd.isna(kx.q('0Np').py())
         assert kx.q('enlist 0Np').py() == [kx.TimestampAtom(kx.q('0Np'))]
 
     @pytest.mark.unlicensed
     def test_np_timestampvector_nulls_IPC(self, kx, q_port):
         with kx.QConnection(port=q_port) as conn:
             r = conn('([] t:2#0Np)').py()
-            assert r['t'][0].py() is None
+            assert pd.isna(r['t'][0])
 
 
 class Test_List:
@@ -1519,8 +1701,8 @@ class Test_List:
     #     assert all(a == 0 for a in x[4:7])
 
     def test_py(self, q, kx):
-        assert q('1 0N 3h').py() == [1, q('0Nh'), 3]
-        assert isinstance(q('1 0N 3h').py()[1], kx.ShortAtom)
+        assert q('1 0N 3h').py() == [1, pd.NA, 3]
+        assert isinstance(q('1 0N 3h').py()[1], type(pd.NA))
 
     @pytest.mark.nep49
     def test_np(self, q, kx):
@@ -2272,6 +2454,32 @@ class Test_EnumVector:
             assert all(
                 q(self.q_vec_str).pd(as_arrow=True) == ['abc', 'xyz', 'hmm', 'abc', 'xyz', 'hmm'])
 
+    def test_enum_init(self, q, kx):
+        q('tc:`a`b`c')
+        v = ('a', 'c')
+
+        e = kx.EnumVector('tc', values=v, extend=False)
+        assert (e == q('`tc$`a`c')).all()
+        assert (e.values() == v).all()
+        assert (e.domain() == 'tc')
+        assert (e.indices() == (0, 2)).all()
+
+        v_ex = ('a', 'b', 'b', 'c', 'd', 'd')
+        e = kx.EnumVector('tc', values=v_ex, extend=True)
+        assert (e == q('`tc$`a`b`b`c`d`d')).all()
+        tc_mod = ('a', 'b', 'c', 'd')
+        assert (kx.q('tc') == tc_mod).all()
+        assert (e.values() == v_ex).all()
+        assert (e.domain() == 'tc')
+        assert (e.indices() == (0, 1, 1, 2, 3, 3)).all()
+
+        i = (0, 2)
+        e = kx.EnumVector('tc', indices=i)
+        assert (e == q('`tc$`a`c')).all()
+        assert (e.values() == v).all()
+        assert (e.domain() == kx.toq('tc'))
+        assert (e.indices() == i).all()
+
 
 class Test_Anymap:
     def test_anymap(self, kx, q, tmp_path):
@@ -2605,6 +2813,129 @@ class Test_Table:
                                           {'ask_min_bid': [kx.q('{x - y}'), 'ask', 'bid']})
         assert q('~', py_multi_join, q_multi_join)
 
+    def test_reorder(self, kx, q):
+        tab = kx.Table(data={
+            'col1': kx.random.random(100, ['a', 'b', 'c']),
+            'col2': kx.random.random(100, 1.0),
+            'col3': kx.random.random(100, False),
+            'col4': kx.random.random(100, 10.0)})
+
+        assert tab.columns.py() == ['col1', 'col2', 'col3', 'col4']
+        assert tab.reorder_columns('col4').columns.py() == ['col4', 'col1', 'col2', 'col3']
+        assert tab.reorder_columns(['col4', 'col3']).columns.py() == ['col4', 'col3', 'col1', 'col2'] # noqa: E501
+        with pytest.raises(kx.QError) as err:
+            tab.reorder_columns('col5')
+        assert 'Supplied column "col5" not in' in str(err.value)
+        with pytest.raises(kx.QError) as err:
+            tab.reorder_columns(['col4', 'col5'])
+        assert 'Supplied column "col5" not in' in str(err.value)
+        with pytest.raises(kx.QError) as err:
+            tab.reorder_columns(1)
+        assert 'Supplied column is not a string or list' in str(err.value)
+        assert tab.reorder_columns(['col4', 'col3'], inplace=True).columns.py() == ['col4', 'col3', 'col1', 'col2'] # noqa: E501
+        assert tab.columns.py() == ['col4', 'col3', 'col1', 'col2']
+
+    def test_method_query(self, kx, q):
+        tab = kx.Table(data={
+            'col1': kx.random.random(100, ['a', 'b', 'c']),
+            'col2': kx.random.random(100, 1.0),
+            'col3': kx.random.random(100, False),
+            'col4': kx.random.random(100, 10.0)})
+        ktab = tab.set_index('col1')
+
+        for table in [tab, ktab]:
+            # The below exception is related to a bug currently not allowing keyed tables
+            # to be passed as positional arguments in `.s.sp`
+            if not isinstance(ktab, kx.KeyedTable):
+                noarg_sql_method = table.sql("select * from $1 where col2 > 0.5")
+                noarg_sql_basic = kx.q.sql("select * from $1 where col2 > 0.5", table)
+                assert q('~', noarg_sql_method, noarg_sql_basic)
+
+                multi_sql_method = table.sql("select * from $1 where col1 = $2 and col2 < $3", 'a', 0.5) # noqa: E501
+                multi_sql_basic = kx.q.sql("select * from $1 where col1 = $2 and col2 < $3",
+                                           table,
+                                           'a',
+                                           0.5)
+                assert q('~', multi_sql_method, multi_sql_basic)
+
+            with pytest.raises(kx.QError) as err:
+                table.sql('select * from table')
+            assert 'Supplied query does not contain' in str(err.value)
+
+            with pytest.raises(TypeError) as err:
+                table.sql(1)
+            assert 'Supplied query is not of type' in str(err.value)
+
+            select_basic = kx.q.qsql.select(table)
+            select_method = table.select()
+            assert q('~', select_basic, select_method)
+
+            select_basic_where = kx.q.qsql.select(table, where='col2<0.5')
+            select_method_where = table.select(where='col2<0.5')
+            assert q('~', select_basic_where, select_method_where)
+
+            select_basic_complex = kx.q.qsql.select(table,
+                                                    columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, # noqa: E501
+                                                    by={'col1': 'col1'},
+                                                    where='col3=0b')
+            select_method_complex = table.select(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, # noqa: E501
+                                                 by={'col1': 'col1'},
+                                                 where='col3=0b')
+            assert q('~', select_basic_complex, select_method_complex)
+
+            exec_basic = kx.q.qsql.exec(table)
+            exec_method = table.exec()
+            assert q('~', exec_basic, exec_method)
+
+            exec_basic_cols = kx.q.qsql.exec(table, {'symcol': 'col1', 'boolcol': 'col3'})
+            exec_method_cols = table.exec({'symcol': 'col1', 'boolcol': 'col3'})
+            assert q('~', exec_basic_cols, exec_method_cols)
+
+            exec_basic_complex = kx.q.qsql.exec(table,
+                                                columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, # noqa: E501
+                                                by={'col1': 'col1'},
+                                                where='col3=0b')
+            exec_method_complex = table.exec(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'},
+                                             by={'col1': 'col1'},
+                                             where='col3=0b')
+            assert q('~', exec_basic_complex, exec_method_complex)
+
+        delete_tab = kx.Table(data={
+            'name': ['tom', 'dick', 'harry'],
+            'age': [28, 29, 35],
+            'hair': ['fair', 'dark', 'fair'],
+            'eye': ['green', 'brown', 'gray']})
+        delete_ktab = delete_tab.set_index('name')
+
+        for table in [delete_tab, delete_ktab]:
+            delete_basic = kx.q.qsql.delete(table)
+            delete_method = table.delete()
+            assert q('~', delete_basic, delete_method)
+
+            delete_basic_columns = kx.q.qsql.delete(table, ['age', 'eye'])
+            delete_method_columns = table.delete(['age', 'eye'])
+            assert q('~', delete_basic_columns, delete_method_columns)
+
+            delete_basic_where = kx.q.qsql.delete(table, where=['hair=`fair', 'age=28'])
+            delete_method_where = table.delete(where=['hair=`fair', 'age=28'])
+            assert q('~', delete_basic_where, delete_method_where)
+
+        update_tab = kx.Table(data={
+            'name': ['tom', 'dick', 'harry'],
+            'age': [28, 29, 35],
+            'hair': ['fair', 'dark', 'fair'],
+            'eye': ['green', 'brown', 'gray']})
+        update_ktab = update_tab.set_index('hair')
+
+        for table in [update_tab, update_ktab]:
+            update_basic = kx.q.qsql.update(table, {'eye': '`blue`brown`green'})
+            update_method = table.update({'eye': '`blue`brown`green'})
+            assert q('~', update_basic, update_method)
+
+            update_basic_by = kx.q.qsql.update(table, {'age': 'avg age'}, by={'hair': 'hair'})
+            update_method_by = table.update({'age': 'avg age'}, by={'hair': 'hair'})
+            assert q('~', update_basic_by, update_method_by)
+
 
 @pytest.mark.filterwarnings('ignore:Splayed tables are not yet implemented')
 class Test_SplayedTable:
@@ -2622,7 +2953,7 @@ class Test_SplayedTable:
         assert list(t) == ['a', 'b', 'c']
         assert len(t) == 3
 
-    def test_not_implemented_methods(self, q, tmp_path):
+    def test_not_implemented_methods(self, q, tmp_path, kx):
         t = self.create_splayed_table(q, tmp_path)
         assert t._values is None
         with pytest.raises(NotImplementedError):
@@ -2641,6 +2972,42 @@ class Test_SplayedTable:
             t.pd()
         with pytest.raises(NotImplementedError):
             t.py()
+        with pytest.raises(AttributeError):
+            t.add_prefix(prefix='test')
+        with pytest.raises(AttributeError):
+            t.add_suffix(suffix='test')
+        with pytest.raises(AttributeError):
+            t.agg('sum')
+        with pytest.raises(AttributeError):
+            t.apply(q.sqrt)
+        with pytest.raises(AttributeError):
+            t.cast(kx.PartitionedTable)
+        with pytest.raises(AttributeError):
+            t.count()
+        with pytest.raises(AttributeError):
+            t.drop_duplicates()
+        with pytest.raises(AttributeError):
+            t.exec()
+        with pytest.raises(AttributeError):
+            t.groupby()
+        with pytest.raises(AttributeError):
+            t.grouped()
+        with pytest.raises(AttributeError):
+            t.has_infs()
+        with pytest.raises(AttributeError):
+            t.has_nulls()
+        with pytest.raises(AttributeError):
+            t.merge(t)
+        with pytest.raises(AttributeError):
+            t.merge_asof(t)
+        with pytest.raises(AttributeError):
+            t.prototype()
+        with pytest.raises(AttributeError):
+            t.ungroup()
+        with pytest.raises(AttributeError):
+            t.upsert(0)
+        with pytest.raises(AttributeError):
+            t.window_join(t, t, 'test', t)
 
 
 @pytest.mark.filterwarnings('ignore:(Splayed|Partitioned) tables are not yet implemented')
@@ -2660,7 +3027,7 @@ class Test_ParitionedTable:
         assert list(t) == ['a', 'b', 'c']
         assert len(t) == 9
 
-    def test_not_implemented_methods(self, q, tmp_path):
+    def test_not_implemented_methods(self, q, tmp_path, kx):
         t = self.create_partitioned_table(q, tmp_path)
         assert t._values is None
         with pytest.raises(NotImplementedError):
@@ -2679,6 +3046,82 @@ class Test_ParitionedTable:
             t.pd()
         with pytest.raises(NotImplementedError):
             t.py()
+        with pytest.raises(AttributeError):
+            t.add_prefix(prefix='test')
+        with pytest.raises(AttributeError):
+            t.add_suffix(suffix='test')
+        with pytest.raises(AttributeError):
+            t.agg('sum')
+        with pytest.raises(AttributeError):
+            t.apply(q.sqrt)
+        with pytest.raises(AttributeError):
+            t.cast(kx.PartitionedTable)
+        with pytest.raises(AttributeError):
+            t.count()
+        with pytest.raises(AttributeError):
+            t.drop_duplicates()
+        with pytest.raises(AttributeError):
+            t.exec()
+        with pytest.raises(AttributeError):
+            t.groupby()
+        with pytest.raises(AttributeError):
+            t.grouped()
+        with pytest.raises(AttributeError):
+            t.has_infs()
+        with pytest.raises(AttributeError):
+            t.has_nulls()
+        with pytest.raises(AttributeError):
+            t.merge(t)
+        with pytest.raises(AttributeError):
+            t.merge_asof(t)
+        with pytest.raises(AttributeError):
+            t.prototype()
+        with pytest.raises(AttributeError):
+            t.ungroup()
+        with pytest.raises(AttributeError):
+            t.upsert(0)
+        with pytest.raises(AttributeError):
+            t.window_join(t, t, 'test', t)
+        with pytest.raises(AttributeError):
+            t.astype(kx.CharVector)
+        with pytest.raises(AttributeError):
+            t.delete()
+        with pytest.raises(AttributeError):
+            t.drop()
+        with pytest.raises(AttributeError):
+            t.get(0)
+        with pytest.raises(AttributeError):
+            t.head()
+        with pytest.raises(AttributeError):
+            t.iloc()
+        with pytest.raises(AttributeError):
+            t.loc()
+        with pytest.raises(AttributeError):
+            t.mode()
+        with pytest.raises(AttributeError):
+            t.nlargest(n=2)
+        with pytest.raises(AttributeError):
+            t.nsmallest(n=2)
+        with pytest.raises(AttributeError):
+            t.sort_values()
+        with pytest.raises(AttributeError):
+            t.prod()
+        with pytest.raises(AttributeError):
+            t.sample()
+        with pytest.raises(AttributeError):
+            t.select_dtypes()
+        with pytest.raises(AttributeError):
+            t.sorted()
+        with pytest.raises(AttributeError):
+            t.sum()
+        with pytest.raises(AttributeError):
+            t.std()
+        with pytest.raises(AttributeError):
+            t.tail()
+        with pytest.raises(AttributeError):
+            t.unique()
+        with pytest.raises(AttributeError):
+            t.xbar(5)
 
 
 class Test_Dictionary:
@@ -2912,7 +3355,7 @@ class Test_KeyedTable:
 
     def test_getting(self, kx, q):
         kt = q(self.kt)
-        assert kt[q('404')].py() == {'x': q('0N'), 'y': ''}
+        assert kt[q('404')].py() == {'x': pd.NA, 'y': ''}
         assert kt[q('100')].py() == {'x': 0, 'y': 'singly'}
         assert kt[q('enlist 100')].py() == {'x': [0], 'y': ['singly']}
         assert kt[(100,)].py() == {'x': [0], 'y': ['singly']}
@@ -2929,8 +3372,10 @@ class Test_KeyedTable:
 
     def test_attributes(self, q, kx):
         mkt = q(self.mkt)
-        assert list(mkt) == [('a', 100), ('b', 101), ('a', 102)]
-        assert mkt.keys() == [('a', 100), ('b', 101), ('a', 102)]
+        assert list(mkt) == [[kx.LongAtom(kx.q('0')), kx.SymbolAtom(kx.q('`multi'))],
+                             [kx.LongAtom(kx.q('1')), kx.SymbolAtom(kx.q('`keyed'))],
+                             [kx.LongAtom(kx.q('2')), kx.SymbolAtom(kx.q('`table'))]]
+        assert all(mkt.keys() == kx.q('([] k1:`a`b`a; k2: 100 101 102)'))
         v1 = mkt.values().py()
         v2 = {
             'x': [0, 1, 2],
@@ -3054,6 +3499,21 @@ class Test_KeyedTable:
             columns=['idx', 'index']
         ).py() == q('([idx1: til 10] idx: til 10; index: 10 - til 10)').py()
 
+    def test_keyed_table_iterator(self, kx, q):
+        tab = q('([a:1 2 3 4] b:4#enlist 6 7 8 9; c:4#enlist til 4; d:til 4)')
+        res = []
+        for x in tab['d']:
+            res.append(x)
+            assert isinstance(x, kx.LongAtom)
+        assert (res == kx.q('til 4')).all()
+
+        res = []
+        for x in tab[['b', 'c']]:
+            res.append(x)
+        assert ((len(res) == 4) and len(res[0]) == 2)
+        assert (res[0][0] == kx.q('6 7 8 9')).all()
+        assert (res[0][1] == kx.q('til 4')).all()
+
 
 class Test_Function:
     def test_bool(self, q):
@@ -3069,8 +3529,8 @@ class Test_Function:
         assert q('{}\':')
         assert q('{}/:')
         assert q('{}\\:')
-        assert q('.pykx.i.pyfunc')
-        assert q.pykx.i.pyfunc
+        assert q('.pykx.util.isf')
+        assert q.pykx.util.isf
 
     def test_call(self, q):
         assert list(range(8)) == q('til')(8).py()
@@ -3188,7 +3648,7 @@ class Test_Function:
         assert isinstance(q('{}\':'), kx.EachPrior)
         assert isinstance(q('{}/:'), kx.EachRight)
         assert isinstance(q('{}\\:'), kx.EachLeft)
-        assert isinstance(q('.pykx.i.pyfunc'), kx.Foreign)
+        assert isinstance(q('.pykx.util.isf'), kx.Foreign)
         assert isinstance(q.Q.ajf0, kx.SymbolicFunction)
 
     def test_args_property(self, q):
@@ -3225,7 +3685,7 @@ class Test_Function:
         f3 = q.pykx.modpow
         assert f3(10, 2, 19) == f3(10, 2, 19) == 5
 
-        f4 = q.pykx.i.pyfunc
+        f4 = q.pykx.util.isf
         assert isinstance(f4, kx.SymbolicFunction)
         assert not isinstance(f4, kx.Foreign)
         assert isinstance(f4.func, kx.Foreign)
@@ -3306,6 +3766,306 @@ class Test_Function:
             assert not conn('testAlias')
             f3()
             assert conn('testAlias')
+
+
+def test_nulls(kx, q, pa):
+
+    def compare_nulls(q_null, py_null):
+        assert type(q_null) == type(py_null)
+        if isinstance(py_null, (float, np.float32, np.float64)) and math.isnan(py_null):
+            assert math.isnan(q_null)
+        elif isinstance(py_null, (np.datetime64, np.timedelta64)):
+            assert np.isnat(q_null)
+        elif isinstance(py_null, (pa.lib.FloatScalar, pa.lib.DoubleScalar)):
+            assert pa.compute.is_nan(q_null)
+        elif isinstance(py_null, (type(pd.NaT), type(pd.NA))):
+            assert pd.isnull(q_null)
+        else:
+            assert q_null == py_null
+
+    # Atom Nulls
+    nulls = q('(0Ng;0Nh;0Ni;0Nj;0Ne;0n;" ";`;0Np;0Nm;0Nd;0Nn;0Nu;0Nv;0Nt)')
+    # Atom Nulls in mixed lists
+    mixed_nulls = q('{{(x;(::))} each x}', nulls)
+    # Nulls in typed vectors
+    typed_nulls = q('{enlist each x}', nulls)
+
+    # Atom Nulls .py()
+    py_nulls = [UUID(int=0), pd.NA, pd.NA, pd.NA, float('nan'), float('nan'), b' ',
+                '', pd.NaT, pd.NaT, pd.NaT, pd.NaT, pd.NaT, pd.NaT, pd.NaT]
+    for i in range(len(nulls)):
+        q_null = nulls[i].py()
+        py_null = py_nulls[i]
+        compare_nulls(q_null, py_null)
+
+    # Nulls in List .py()
+    for i in range(len(mixed_nulls)):
+        q_null = mixed_nulls[i].py()[0]
+        py_null = py_nulls[i]
+        compare_nulls(q_null, py_null)
+
+    for i in range(len(typed_nulls)):
+        if isinstance(typed_nulls[i], kx.wrappers.CharVector):
+            q_null = typed_nulls[i].py()
+        else:
+            q_null = typed_nulls[i].py()[0]
+        py_null = py_nulls[i]
+        compare_nulls(q_null, py_null)
+
+    # Atom Nulls .np()
+    np_nulls = [UUID(int=0), np.int16(-32768), np.int32(-2147483648),
+                np.int64(-9223372036854775808), np.float32('nan'), np.float64('nan'),
+                b' ', '', np.datetime64('NaT'), np.datetime64('NaT'), np.datetime64('NaT'),
+                np.timedelta64('NaT'), np.timedelta64('NaT'), np.timedelta64('NaT'),
+                np.timedelta64('NaT')]
+    skip = []
+    for i in range(len(nulls)):
+        if i not in skip:
+            q_null = nulls[i].np()
+            py_null = np_nulls[i]
+            compare_nulls(q_null, py_null)
+
+    # Nulls in List .np()
+    for i in range(len(mixed_nulls)):
+        if i not in skip:
+            q_null = mixed_nulls[i].np()[0]
+            py_null = np_nulls[i]
+            compare_nulls(q_null, py_null)
+
+    np_nulls[6] = np.bytes_(' ')
+
+    # Nulls in Vectors .np()
+    skip = []
+    for i in range(len(typed_nulls)):
+        q_null = typed_nulls[i].np()
+        if isinstance(q_null, np.ma.core.MaskedArray):
+            q_null = q_null.filled()[0]
+        else:
+            q_null = q_null[0]
+        py_null = np_nulls[i]
+        compare_nulls(q_null, py_null)
+
+    # Atom Nulls .pd()
+    pd_nulls = [UUID(int=0), pd.NA, pd.NA, pd.NA, np.float32('nan'), np.float64('nan'), b' ',
+                '', pd.NaT, pd.NaT, pd.NaT, pd.NaT, pd.NaT, pd.NaT, pd.NaT]
+    skip = []
+    for i in range(len(nulls)):
+        if i not in skip:
+            q_null = nulls[i].pd()
+            py_null = pd_nulls[i]
+            compare_nulls(q_null, py_null)
+
+    # Nulls in List .pd()
+    for i in range(len(mixed_nulls)):
+        if i not in skip:
+            q_null = mixed_nulls[i].pd()[0]
+            py_null = pd_nulls[i]
+            compare_nulls(q_null, py_null)
+
+    # Nulls in Vectors .pd()
+    skip = []
+    pd_nulls[6] = np.bytes_(' ')
+    for i in range(len(typed_nulls)):
+        q_null = typed_nulls[i].pd()[0]
+        py_null = pd_nulls[i]
+        compare_nulls(q_null, py_null)
+
+    # Atom Nulls .pa()
+    pa_nulls = [UUID(int=0), pd.NA, pd.NA, pd.NA, np.float32('nan'), np.float64('nan'), b' ',
+                '', pd.NaT, pd.NaT, pd.NaT, pd.NaT, pd.NaT, pd.NaT, pd.NaT]
+    skip = []
+    for i in range(len(nulls)):
+        if i not in skip:
+            q_null = nulls[i].pa()
+            py_null = pa_nulls[i]
+            compare_nulls(q_null, py_null)
+
+    pa_nulls = [UUID(int=0), pa.array([None])[0], pa.array([None])[0],
+                pa.array([None])[0], pa.array([None], pa.float32())[0],
+                pa.array([None], pa.float64())[0], pa.array([b' '], pa.binary())[0],
+                pa.array([''], pa.string())[0], None, None, None,
+                None, None, None, None]
+
+    # Nulls in List .pa()
+    skip = [0, 8, 9, 10, 11, 12, 13, 14]
+    # 0 Could not convert UUID('00000000-0000-0000-0000-000000000000') with type UUID:
+    #             did not recognize Python value type when inferring an Arrow data type
+    # 8, 9, 10 pyarrow.lib.ArrowNotImplementedError: Unbound or generic datetime64 time unit
+    # 11, 12, 13, 14 pyarrow.lib.ArrowNotImplementedError: Unbound or generic timedelta64 time unit
+    for i in range(len(mixed_nulls)):
+        if i not in skip:
+            q_null = mixed_nulls[i].pa()[0]
+            py_null = pa_nulls[i]
+            compare_nulls(q_null, py_null)
+
+    # Nulls in Vectors .pa()
+    skip = [9, 12]
+    # 9 Month - pyarrow.lib.ArrowNotImplementedError: Unsupported datetime64 time unit
+    # 12 Minute - pyarrow.lib.ArrowNotImplementedError: Unsupported timedelta64 time unit
+    pa_nulls = [pa.ExtensionArray.from_storage(
+        kx.wrappers.arrow_uuid_type,
+        pa.array([b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'],
+                pa.binary(16)))[0],
+                pa.array([None], pa.int16())[0], pa.array([None], pa.int32())[0],
+                pa.array([None], pa.int64())[0], pa.array([None], pa.float32())[0],
+                pa.array([None], pa.float64())[0], pa.array([b' '], pa.binary())[0],
+                pa.array([''], pa.string())[0], pa.array([None], pa.timestamp('ns'))[0], None,
+                pa.array([None], pa.date32())[0], pa.array([None], pa.duration('ns'))[0],
+                pa.array([None], pa.duration('ns'))[0], pa.array([None], pa.duration('s'))[0],
+                pa.array([None], pa.duration('ms'))[0]]
+    for i in range(len(typed_nulls)):
+        if i not in skip:
+            q_null = typed_nulls[i].pa()[0]
+            py_null = pa_nulls[i]
+            compare_nulls(q_null, py_null)
+
+
+def test_infinites(kx, q, pa):
+    import datetime
+
+    def compare_infinites(q_infinite, py_infinite):
+        assert type(q_infinite) == type(py_infinite)
+        assert q_infinite == py_infinite
+
+    def compare_all_infinites(q_infinites, py_infinites, conv, ind=None, skip=None):
+        for i in range(len(py_infinites)):
+            if skip is None or i not in skip:
+                if ind is None:
+                    q_infinite = getattr(q_infinites[i], conv)()
+                    py_infinite = py_infinites[i]
+                else:
+                    q_infinite = getattr(q_infinites[i], conv)()[ind]
+                    py_infinite = py_infinites[i][ind]
+                compare_infinites(q_infinite, py_infinite)
+
+    # Atom infinites
+    positive_infinites = q('(0Wh;0Wi;0Wj;0We;0w;0Wp;0Wm;0Wd;0Wn;0Wu;0Wv;0Wt)')
+    negative_infinites = q('(-0Wh;-0Wi;-0Wj;-0We;-0w;-0Wp;-0Wm;-0Wd;-0Wn;-0Wu;-0Wv;-0Wt)')
+    # infinites in typed vectors
+    infinites = q('{flip (x;y)}', positive_infinites, negative_infinites)
+
+    # Atom infinites .py()
+    py_positive_infinites = [math.inf, math.inf, math.inf, float('inf'), float('inf'),
+                             datetime.datetime(2262, 4, 11, 23, 47, 16, 854775), 2147484007,
+                             2147494604, datetime.timedelta(106751, 16, 854775, 0, 47, 23),
+                             datetime.timedelta(-3220, 4, 33138, 0, 5, 5),
+                             datetime.timedelta(24855, 7, 0, 0, 14, 3),
+                             datetime.timedelta(24, 23, 647000, 0, 31, 20)]
+    compare_all_infinites(positive_infinites, py_positive_infinites, 'py')
+
+    py_negative_infinites = [-math.inf, -math.inf, -math.inf, float('-inf'), float('-inf'),
+                             datetime.datetime(1707, 9, 22, 0, 12, 43, 145224), -2147483287,
+                             -2147472690, datetime.timedelta(-106752, 43, 145224, 0, 12),
+                             datetime.timedelta(3219, 55, 966861, 0, 54, 18),
+                             datetime.timedelta(-24856, 53, 0, 0, 45, 20),
+                             datetime.timedelta(-25, 36, 353000, 0, 28, 3)]
+    compare_all_infinites(negative_infinites, py_negative_infinites, 'py')
+
+    # infinites in Vectors .py()
+    py_infinites = [[x, y] for x, y in zip(py_positive_infinites, py_negative_infinites)]
+    py_infinites[5][0] = datetime.datetime(1707, 9, 22, 0, 12, 43, 145224)
+    compare_all_infinites(infinites, py_infinites, 'py', ind=0)
+    py_infinites[5][1] = datetime.datetime(1707, 9, 22, 0, 12, 43, 145224)
+    compare_all_infinites(infinites, py_infinites, 'py', ind=1)
+
+    # Atom infinites .np()
+    np_positive_infinites = [np.int16(32767), np.int32(2147483647), np.int64(9223372036854775807),
+                             np.float32('inf'), np.float64('inf'),
+                             np.datetime64('2262-04-11T23:47:16.854775807'),
+                             np.datetime64('178958970-08'), np.datetime64('5881610-07-11'),
+                             np.timedelta64(9223372036854775807, 'ns'),
+                             np.timedelta64(2147483647, 'm'), np.timedelta64(2147483647, 's'),
+                             np.timedelta64(2147483647, 'ms')]
+    np_negative_infinites = [np.int16(-32767), np.int32(-2147483647),
+                             np.int64(-9223372036854775807),
+                             np.float32('-inf'), np.float64('-inf'),
+                             np.datetime64('1707-09-22T00:12:43.145224193'),
+                             np.datetime64('-178954971-06'), np.datetime64('-5877611-06-23'),
+                             np.timedelta64(-9223372036854775807, 'ns'),
+                             np.timedelta64(-2147483647, 'm'), np.timedelta64(-2147483647, 's'),
+                             np.timedelta64(-2147483647, 'ms')]
+    skip = []
+    compare_all_infinites(positive_infinites, np_positive_infinites, 'np', skip=skip)
+    compare_all_infinites(negative_infinites, np_negative_infinites, 'np', skip=skip)
+
+    # infinites in Vectors .np()
+    skip = []
+    np_infinites = [[x, y] for x, y in zip(np_positive_infinites, np_negative_infinites)]
+    np_infinites[5][0] = np.datetime64('1707-09-22T00:12:43.145224191')
+    np_infinites[6][0] = np.datetime64('-178954971-04')
+    np_infinites[7][0] = np.datetime64('-5877611-06-21')
+    compare_all_infinites(infinites, np_infinites, 'np', ind=0)
+    np_infinites[5][1] = np.datetime64('1707-09-22T00:12:43.145224193')
+    compare_all_infinites(infinites, np_infinites, 'np', ind=1)
+
+    # Atom infinites .pd()
+    pd_positive_infinites = [np.int16(32767), np.int32(2147483647), np.int64(9223372036854775807),
+                             np.float32('inf'), np.float64('inf'),
+                             pd.Timestamp('2262-04-11T23:47:16.854775807'), None, None,
+                             pd.Timedelta(9223372036854775807, 'ns'), None,
+                             pd.Timedelta(2147483647, 's'), pd.Timedelta(2147483647, 'ms')]
+    pd_negative_infinites = [np.int16(-32767), np.int32(-2147483647),
+                             np.int64(-9223372036854775807), np.float32('-inf'),
+                             np.float64('-inf'), pd.Timestamp('1707-09-22 00:12:43.145224193'),
+                             None, None, pd.Timedelta(-9223372036854775807, 'ns'), None,
+                             pd.Timedelta(-2147483647, 's'), pd.Timedelta(-2147483647, 'ms')]
+    skip = [6, 7, 9]
+    # 6 7 9 Values out of range - Pandas constructors block them
+    compare_all_infinites(positive_infinites, pd_positive_infinites, 'pd', skip=skip)
+    compare_all_infinites(negative_infinites, pd_negative_infinites, 'pd', skip=skip)
+
+    # infinites in Vectors .pd()
+    skip = [6, 7, 9]  # 6 7 9 Values out of range - Pandas constructors block them
+    pd_infinites = [[x, y] for x, y in zip(pd_positive_infinites, pd_negative_infinites)]
+    pd_infinites[5][0] = pd.Timestamp('1707-09-22T00:12:43.145224191')
+    compare_all_infinites(infinites, pd_infinites, 'pd', ind=0, skip=skip)
+    pd_infinites[5][1] = pd.Timestamp('1707-09-22 00:12:43.145224193')
+    compare_all_infinites(infinites, pd_infinites, 'pd', ind=1, skip=skip)
+
+    # Atom infinites .pa()
+    pa_positive_infinites = [np.int16(32767), np.int32(2147483647), np.int64(9223372036854775807),
+                             np.float32('inf'), np.float64('inf'),
+                             pd.Timestamp('2262-04-11T23:47:16.854775807'),
+                             None, None, pd.Timedelta(9223372036854775807, 'ns'), None,
+                             pd.Timedelta(2147483647, 's'), pd.Timedelta(2147483647, 'ms')]
+    pa_negative_infinites = [np.int16(-32767), np.int32(-2147483647),
+                             np.int64(-9223372036854775807),
+                             np.float32('-inf'), np.float64('-inf'),
+                             pd.Timestamp('1707-09-22 00:12:43.145224193'),
+                             None, None, pd.Timedelta(-9223372036854775807, 'ns'), None,
+                             pd.Timedelta(-2147483647, 's'),
+                             pd.Timedelta(-2147483647, 'ms')]
+    skip = [6, 7, 9]
+    # 6, 7, 9 .pa runs but creates out of bounds objects
+    compare_all_infinites(positive_infinites, pa_positive_infinites, 'pa', skip=skip)
+    compare_all_infinites(negative_infinites, pa_negative_infinites, 'pa', skip=skip)
+
+    # infinites in Vectors .pa()
+    skip = [5, 6, 7, 9]
+    # 5, 6 pyarrow.lib.ArrowNotImplementedError: Unsupported datetime64 time unit
+    # 7 OverflowError: days=-2147472692; must have magnitude <= 999999999
+    # 9 pyarrow.lib.ArrowNotImplementedError: Unsupported timedelta64 time unit
+    pa_infinites = [[x, y] for x, y in zip(pa_positive_infinites, pa_negative_infinites)]
+    pa_infinites[0][0] = pa.array([32767], pa.int16())[0]
+    pa_infinites[1][0] = pa.array([2147483647], pa.int32())[0]
+    pa_infinites[2][0] = pa.array([9223372036854775807], pa.int64())[0]
+    pa_infinites[3][0] = pa.array([np.float32('inf')], pa.float32())[0]
+    pa_infinites[4][0] = pa.array([np.float64('inf')], pa.float64())[0]
+    pa_infinites[5][0] = pa.array([-9223372036854775809+946684800000000000], pa.timestamp('ns'))[0]
+    pa_infinites[8][0] = pa.array([9223372036854775807], pa.duration('ns'))[0]
+    pa_infinites[10][0] = pa.array([2147483647], pa.duration('s'))[0]
+    pa_infinites[11][0] = pa.array([2147483647], pa.duration('ms'))[0]
+    compare_all_infinites(infinites, pa_infinites, 'pa', ind=0, skip=skip)
+    pa_infinites[0][1] = pa.array([-32767], pa.int16())[0]
+    pa_infinites[1][1] = pa.array([-2147483647], pa.int32())[0]
+    pa_infinites[2][1] = pa.array([-9223372036854775807], pa.int64())[0]
+    pa_infinites[3][1] = pa.array([np.float32('-inf')], pa.float32())[0]
+    pa_infinites[4][1] = pa.array([np.float64('-inf')], pa.float64())[0]
+    pa_infinites[5][1] = pa.array([-9223372036854775809+946684800000000000], pa.timestamp('ns'))[0]
+    pa_infinites[8][1] = pa.array([-9223372036854775807], pa.duration('ns'))[0]
+    pa_infinites[10][1] = pa.array([-2147483647], pa.duration('s'))[0]
+    pa_infinites[11][1] = pa.array([-2147483647], pa.duration('ms'))[0]
+    compare_all_infinites(infinites, pa_infinites, 'pa', ind=1, skip=skip)
 
 
 # Conversions of nested K lists requires a license, We need to be able to call
@@ -3806,6 +4566,8 @@ def test_magic_dates_times(kx):
     assert curr_time <= kx.TimeAtom('now')
     curr_tstamp = kx.q('.z.P')
     assert curr_tstamp <= kx.TimestampAtom('now')
+    curr_tspan = kx.q('.z.N')
+    assert curr_tspan <= kx.TimespanAtom('now')
 
 
 def checkHTML(tab):
@@ -3817,16 +4579,20 @@ def checkHTML(tab):
 def test_repr_html(kx, q):
     H = 10
     W = 20
+    console = q.system.console_size.py()
     q.system.console_size = [H, W]
 
     # Many datatypes
-    q('t:flip {(`$/:t)!2#/:(t:{x where not x in " z"}.Q.t)$\\:()}[]')
-    q('T:flip {(`$/:upper t)!2#/:enlist each 2#/:(t:{x where not x in " z"}.Q.t)$\\:()}[]')
+    q('typs:{neg[1]_x where not x in " z"}.Q.t') # Remove duplicate "s" column
+    q('tcols:`$/:typs')
+    q('tcols:@[tcols;where tcols=`i;:;`int]') # Removal of i is to limit issue with .Q.id
+    q('t:flip {tcols!2#/:typs$\\:()}[]')
+    q('T:flip {(upper tcols)!2#/:enlist each 2#/:typs$\\:()}[]')
     q('wideManyDatatypes:t,\'T')
-    tab = q('wideManyDatatypes')
+    tab = q['wideManyDatatypes']
 
     # (rows, headers, details)
-    assert (3, 44, 40) == checkHTML(tab)
+    assert (3, 46, 42) == checkHTML(tab)
 
     # Single column table
     q('singleColTab:([] a:.z.d-til 2000)')
@@ -3836,10 +4602,14 @@ def test_repr_html(kx, q):
     assert (2, 5, 1) == checkHTML(tab)
     tab = q('2#singleColTab')
     assert (3, 6, 2) == checkHTML(tab)
-    tab = q('10#singleColTab')
+    tab = q('9#singleColTab')
     assert (H, 13, 9) == checkHTML(tab)
-    tab = q('11#singleColTab')
+    tab = q('10#singleColTab')
     assert (H+1, 14, 10) == checkHTML(tab)
+    tab = q('11#singleColTab')
+    assert (H+2, 15, 11) == checkHTML(tab)
+    tab = q('12#singleColTab')
+    assert (H+2, 15, 11) == checkHTML(tab)
 
     # Multi column table
     q('multiColTab:([] a:.z.d-til 2000; sym:2000?`7)')
@@ -3850,9 +4620,9 @@ def test_repr_html(kx, q):
     tab = q('2#multiColTab')
     assert (3, 8, 4) == checkHTML(tab)
     tab = q('10#multiColTab')
-    assert (H, 15, 18) == checkHTML(tab)
-    tab = q('11#multiColTab')
     assert (H+1, 16, 20) == checkHTML(tab)
+    tab = q('11#multiColTab')
+    assert (H+2, 17, 22) == checkHTML(tab)
 
     q('n:-1+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
     tab = q('0#extraWide')
@@ -3861,10 +4631,14 @@ def test_repr_html(kx, q):
     assert (2, 41, 19) == checkHTML(tab)
     tab = q('2#extraWide')
     assert (3, 42, 38) == checkHTML(tab)
-    tab = q('10#extraWide')
+    tab = q('9#extraWide')
     assert (H, 49, 171) == checkHTML(tab)
-    tab = q('11#extraWide')
+    tab = q('10#extraWide')
     assert (H+1, 50, 190) == checkHTML(tab)
+    tab = q('11#extraWide')
+    assert (H+2, 51, 209) == checkHTML(tab)
+    tab = q('11#extraWide')
+    assert (H+2, 51, 209) == checkHTML(tab)
 
     q('n:last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
     tab = q('0#extraWide')
@@ -3874,9 +4648,11 @@ def test_repr_html(kx, q):
     tab = q('2#extraWide')
     assert (3, 44, 40) == checkHTML(tab)
     tab = q('10#extraWide')
-    assert (H, 51, 180) == checkHTML(tab)
-    tab = q('11#extraWide')
     assert (H+1, 52, 200) == checkHTML(tab)
+    tab = q('11#extraWide')
+    assert (H+2, 53, 220) == checkHTML(tab)
+    tab = q('12#extraWide')
+    assert (H+2, 53, 220) == checkHTML(tab)
 
     q('n:1+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
     tab = q('0#extraWide')
@@ -3885,10 +4661,14 @@ def test_repr_html(kx, q):
     assert (2, 45, 21) == checkHTML(tab)
     tab = q('2#extraWide')
     assert (3, 46, 42) == checkHTML(tab)
-    tab = q('10#extraWide')
+    tab = q('9#extraWide')
     assert (H, 53, 189) == checkHTML(tab)
-    tab = q('11#extraWide')
+    tab = q('10#extraWide')
     assert (H+1, 54, 210) == checkHTML(tab)
+    tab = q('11#extraWide')
+    assert (H+2, 55, 231) == checkHTML(tab)
+    tab = q('12#extraWide')
+    assert (H+2, 55, 231) == checkHTML(tab)
 
     q('n:50+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
     tab = q('0#extraWide')
@@ -3897,10 +4677,14 @@ def test_repr_html(kx, q):
     assert (2, 45, 21) == checkHTML(tab)
     tab = q('2#extraWide')
     assert (3, 46, 42) == checkHTML(tab)
-    tab = q('10#extraWide')
+    tab = q('9#extraWide')
     assert (H, 53, 189) == checkHTML(tab)
-    tab = q('11#extraWide')
+    tab = q('10#extraWide')
     assert (H+1, 54, 210) == checkHTML(tab)
+    tab = q('11#extraWide')
+    assert (H+2, 55, 231) == checkHTML(tab)
+    tab = q('12#extraWide')
+    assert (H+2, 55, 231) == checkHTML(tab)
 
     # Many keys
     tab = q('(-1+last system"c")!0#extraWide')
@@ -3909,10 +4693,14 @@ def test_repr_html(kx, q):
     assert (2, 61, 2) == checkHTML(tab)
     tab = q('(-1+last system"c")!2#extraWide')
     assert (3, 80, 4) == checkHTML(tab)
-    tab = q('(-1+last system"c")!10#extraWide')
+    tab = q('(-1+last system"c")!9#extraWide')
     assert (H, 213, 18) == checkHTML(tab)
-    tab = q('(-1+last system"c")!11#extraWide')
+    tab = q('(-1+last system"c")!10#extraWide')
     assert (H+1, 232, 20) == checkHTML(tab)
+    tab = q('(-1+last system"c")!11#extraWide')
+    assert (H+2, 251, 22) == checkHTML(tab)
+    tab = q('(-1+last system"c")!12#extraWide')
+    assert (H+2, 251, 22) == checkHTML(tab)
 
     tab = q('(last system"c")!0#extraWide')
     assert (1, 42, 0) == checkHTML(tab)
@@ -3920,10 +4708,14 @@ def test_repr_html(kx, q):
     assert (2, 61, 2) == checkHTML(tab)
     tab = q('(last system"c")!2#extraWide')
     assert (3, 80, 4) == checkHTML(tab)
-    tab = q('(last system"c")!10#extraWide')
+    tab = q('(last system"c")!9#extraWide')
     assert (H, 213, 18) == checkHTML(tab)
-    tab = q('(last system"c")!11#extraWide')
+    tab = q('(last system"c")!10#extraWide')
     assert (H+1, 232, 20) == checkHTML(tab)
+    tab = q('(last system"c")!11#extraWide')
+    assert (H+2, 251, 22) == checkHTML(tab)
+    tab = q('(last system"c")!12#extraWide')
+    assert (H+2, 251, 22) == checkHTML(tab)
 
     tab = q('(1+last system"c")!0#extraWide')
     assert (1, 42, 0) == checkHTML(tab)
@@ -3931,10 +4723,14 @@ def test_repr_html(kx, q):
     assert (2, 61, 2) == checkHTML(tab)
     tab = q('(1+last system"c")!2#extraWide')
     assert (3, 80, 4) == checkHTML(tab)
-    tab = q('(1+last system"c")!10#extraWide')
+    tab = q('(1+last system"c")!9#extraWide')
     assert (H, 213, 18) == checkHTML(tab)
-    tab = q('(1+last system"c")!11#extraWide')
+    tab = q('(1+last system"c")!10#extraWide')
     assert (H+1, 232, 20) == checkHTML(tab)
+    tab = q('(1+last system"c")!11#extraWide')
+    assert (H+2, 251, 22) == checkHTML(tab)
+    tab = q('(1+last system"c")!12#extraWide')
+    assert (H+2, 251, 22) == checkHTML(tab)
 
     # Dictionaries
     assert '<p>Empty pykx.Dictionary: ' == q('()!()')._repr_html_()[:26]
@@ -3970,10 +4766,14 @@ def test_repr_html(kx, q):
     assert (2, 5, 1) == checkHTML(tab)
     tab = q('2#singleKeyTab')
     assert (3, 6, 2) == checkHTML(tab)
-    tab = q('10#singleKeyTab')
+    tab = q('9#singleKeyTab')
     assert (H, 13, 9) == checkHTML(tab)
-    tab = q('11#singleKeyTab')
+    tab = q('10#singleKeyTab')
     assert (H+1, 14, 10) == checkHTML(tab)
+    tab = q('11#singleKeyTab')
+    assert (H+2, 15, 11) == checkHTML(tab)
+    tab = q('12#singleKeyTab')
+    assert (H+2, 15, 11) == checkHTML(tab)
 
     # Multi Key
     q('multiKeyTab:`sym`blah xkey ([] a:.z.d-til 2000; sym:2000?`7;blah:-2000?1000000)')
@@ -3983,10 +4783,14 @@ def test_repr_html(kx, q):
     assert (2, 8, 1) == checkHTML(tab)
     tab = q('2#multiKeyTab')
     assert (3, 10, 2) == checkHTML(tab)
-    tab = q('10#multiKeyTab')
+    tab = q('9#multiKeyTab')
     assert (H, 24, 9) == checkHTML(tab)
-    tab = q('11#multiKeyTab')
+    tab = q('10#multiKeyTab')
     assert (H+1, 26, 10) == checkHTML(tab)
+    tab = q('11#multiKeyTab')
+    assert (H+2, 28, 11) == checkHTML(tab)
+    tab = q('12#multiKeyTab')
+    assert (H+2, 28, 11) == checkHTML(tab)
 
     # Single column splay table
     tab = q('{x set 0#([] a:.z.d-til 2000);get x}`:singleColSplay/')
@@ -3995,10 +4799,14 @@ def test_repr_html(kx, q):
     assert (2, 5, 1) == checkHTML(tab)
     tab = q('{x set 2#([] a:.z.d-til 2000);get x}`:singleColSplay/')
     assert (3, 6, 2) == checkHTML(tab)
-    tab = q('{x set 10#([] a:.z.d-til 2000);get x}`:singleColSplay/')
+    tab = q('{x set 9#([] a:.z.d-til 2000);get x}`:singleColSplay/')
     assert (H, 13, 9) == checkHTML(tab)
-    tab = q('{x set 11#([] a:.z.d-til 2000);get x}`:singleColSplay/')
+    tab = q('{x set 10#([] a:.z.d-til 2000);get x}`:singleColSplay/')
     assert (H+1, 14, 10) == checkHTML(tab)
+    tab = q('{x set 11#([] a:.z.d-til 2000);get x}`:singleColSplay/')
+    assert (H+2, 15, 11) == checkHTML(tab)
+    tab = q('{x set 12#([] a:.z.d-til 2000);get x}`:singleColSplay/')
+    assert (H+2, 15, 11) == checkHTML(tab)
 
     # Multi column splay
     tab = q('{x set 0#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
@@ -4007,10 +4815,14 @@ def test_repr_html(kx, q):
     assert (2, 7, 2) == checkHTML(tab)
     tab = q('{x set 2#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
     assert (3, 8, 4) == checkHTML(tab)
-    tab = q('{x set 10#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
+    tab = q('{x set 9#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
     assert (H, 15, 18) == checkHTML(tab)
-    tab = q('{x set 11#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
+    tab = q('{x set 10#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
     assert (H+1, 16, 20) == checkHTML(tab)
+    tab = q('{x set 11#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
+    assert (H+2, 17, 22) == checkHTML(tab)
+    tab = q('{x set 12#([] a:.z.d-til 2000; b:til 2000);get x}`:multiColSplay/')
+    assert (H+2, 17, 22) == checkHTML(tab)
 
     q('n:-1+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
     tab = q('{x set y;get x}[`:multiColSplay/]0#extraWide')
@@ -4019,10 +4831,14 @@ def test_repr_html(kx, q):
     assert (2, 41, 19) == checkHTML(tab)
     tab = q('{x set y;get x}[`:multiColSplay/]2#extraWide')
     assert (3, 42, 38) == checkHTML(tab)
-    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
+    tab = q('{x set y;get x}[`:multiColSplay/]9#extraWide')
     assert (H, 49, 171) == checkHTML(tab)
-    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
     assert (H+1, 50, 190) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    assert (H+2, 51, 209) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]12#extraWide')
+    assert (H+2, 51, 209) == checkHTML(tab)
 
     q('n:last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
     tab = q('{x set y;get x}[`:multiColSplay/]0#extraWide')
@@ -4031,10 +4847,14 @@ def test_repr_html(kx, q):
     assert (2, 43, 20) == checkHTML(tab)
     tab = q('{x set y;get x}[`:multiColSplay/]2#extraWide')
     assert (3, 44, 40) == checkHTML(tab)
-    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
+    tab = q('{x set y;get x}[`:multiColSplay/]9#extraWide')
     assert (H, 51, 180) == checkHTML(tab)
-    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
     assert (H+1, 52, 200) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    assert (H+2, 53, 220) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]12#extraWide')
+    assert (H+2, 53, 220) == checkHTML(tab)
 
     q('n:1+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
     tab = q('{x set y;get x}[`:multiColSplay/]0#extraWide')
@@ -4043,10 +4863,14 @@ def test_repr_html(kx, q):
     assert (2, 45, 21) == checkHTML(tab)
     tab = q('{x set y;get x}[`:multiColSplay/]2#extraWide')
     assert (3, 46, 42) == checkHTML(tab)
-    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
+    tab = q('{x set y;get x}[`:multiColSplay/]9#extraWide')
     assert (H, 53, 189) == checkHTML(tab)
-    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
     assert (H+1, 54, 210) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    assert (H+2, 55, 231) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]12#extraWide')
+    assert (H+2, 55, 231) == checkHTML(tab)
 
     q('n:50+last system"c";extraWide:flip (`$"col",/:string 1+til n)!n#enlist til 1000')
     tab = q('{x set y;get x}[`:multiColSplay/]0#extraWide')
@@ -4055,10 +4879,14 @@ def test_repr_html(kx, q):
     assert (2, 45, 21) == checkHTML(tab)
     tab = q('{x set y;get x}[`:multiColSplay/]2#extraWide')
     assert (3, 46, 42) == checkHTML(tab)
-    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
+    tab = q('{x set y;get x}[`:multiColSplay/]9#extraWide')
     assert (H, 53, 189) == checkHTML(tab)
-    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    tab = q('{x set y;get x}[`:multiColSplay/]10#extraWide')
     assert (H+1, 54, 210) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]11#extraWide')
+    assert (H+2, 55, 231) == checkHTML(tab)
+    tab = q('{x set y;get x}[`:multiColSplay/]12#extraWide')
+    assert (H+2, 55, 231) == checkHTML(tab)
 
     # Syms and enums
     q('enums:`sym?`aa`cc`bb')
@@ -4139,6 +4967,11 @@ def test_repr_html(kx, q):
     tab = q('partitionedTab')
     assert (3, 8, 4) == checkHTML(tab)
 
+    q('(`$":2001.01.01/partitionedTab/") set 9#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H, 15, 18) == checkHTML(tab)
+
     q('(`$":2001.01.01/partitionedTab/") set 10#([] a:.z.d-til 2000;b:til 2000)')
     q('system"l ."')
     tab = q('partitionedTab')
@@ -4147,7 +4980,12 @@ def test_repr_html(kx, q):
     q('(`$":2001.01.01/partitionedTab/") set 11#([] a:.z.d-til 2000;b:til 2000)')
     q('system"l ."')
     tab = q('partitionedTab')
-    assert (H+1, 16, 20) == checkHTML(tab)
+    assert (H+2, 17, 22) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 12#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H+2, 17, 22) == checkHTML(tab)
 
     q('(`$":2001.01.01/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
     q('(`$":2001.01.02/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
@@ -4161,11 +4999,23 @@ def test_repr_html(kx, q):
     tab = q('partitionedTab')
     assert (2, 9, 3) == checkHTML(tab)
 
+    q('(`$":2001.01.01/partitionedTab/") set 4#([] a:.z.d-til 2000;b:til 2000)')
+    q('(`$":2001.01.02/partitionedTab/") set 5#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H, 17, 27) == checkHTML(tab)
+
+    q('(`$":2001.01.01/partitionedTab/") set 5#([] a:.z.d-til 2000;b:til 2000)')
+    q('(`$":2001.01.02/partitionedTab/") set 5#([] a:.z.d-til 2000;b:til 2000)')
+    q('system"l ."')
+    tab = q('partitionedTab')
+    assert (H+1, 18, 30) == checkHTML(tab)
+
     q('(`$":2001.01.01/partitionedTab/") set 10#([] a:.z.d-til 2000;b:til 2000)')
     q('(`$":2001.01.02/partitionedTab/") set 10#([] a:.z.d-til 2000;b:til 2000)')
     q('system"l ."')
     tab = q('partitionedTab')
-    assert (H+1, 18, 30) == checkHTML(tab)
+    assert (H+2, 19, 33) == checkHTML(tab)
 
     q('(`$":2001.01.01/partitionedTab/") set 1#([] a:.z.d-til 2000;b:til 2000)')
     q('(`$":2001.01.02/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
@@ -4177,19 +5027,19 @@ def test_repr_html(kx, q):
     q('(`$":2001.01.02/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
     q('system"l ."')
     tab = q('partitionedTab')
-    assert (H+1, 18, 30) == checkHTML(tab)
+    assert (H+2, 19, 33) == checkHTML(tab)
 
     q('(`$":2001.01.01/partitionedTab/") set 0#([] a:.z.d-til 2000;b:til 2000)')
     q('(`$":2001.01.02/partitionedTab/") set 35#([] a:.z.d-til 2000;b:til 2000)')
     q('system"l ."')
     tab = q('partitionedTab')
-    assert (H+1, 18, 30) == checkHTML(tab)
+    assert (H+2, 19, 33) == checkHTML(tab)
 
     q('(`$":2001.01.01/partitionedTab/") set 11#([] a:.z.d-til 2000;b:til 2000)')
     q('(`$":2001.01.02/partitionedTab/") set 11#([] a:.z.d-til 2000;b:til 2000)')
     q('system"l ."')
     tab = q('partitionedTab')
-    assert (H+1, 18, 30) == checkHTML(tab)
+    assert (H+2, 19, 33) == checkHTML(tab)
 
     q('(`$":2001.01.01/partitionedTab/") set 0#extraWide')
     q('(`$":2001.01.02/partitionedTab/") set 0#extraWide')
@@ -4202,6 +5052,8 @@ def test_repr_html(kx, q):
     q('system"l ."')
     tab = q('partitionedTab')
     assert (6, 49, 105) == checkHTML(tab)
+
+    q.system.console_size = console
 
 
 @pytest.mark.unlicensed
@@ -4230,7 +5082,6 @@ def test_pyarrow_pandas_all_ipc(kx, q_port):
         q('tab: (til 100)!(tab)')
 
 
-@pytest.mark.unlicensed
 @pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
 def test_pyarrow_pandas_all(q):
     def gen_q_datatypes_table(q, table_name: str, num_rows: int = 100) -> str:
@@ -4340,6 +5191,18 @@ def test_pyarrow_pandas_table_roundtrip(kx):
             assert all([x < 1000 for x in (tab[x] - tab2[x]).np().astype(int)]) # noqa
         else:
             assert (tab[x] == tab2[x]).all()
+
+
+@pytest.mark.unlicensed
+def test_pyarrow_list_error(kx, q_port):
+    with kx.QConnection(port=q_port) as q:
+        qlist1 = q('(.z.p;4)')
+        qlist2 = q('(4;.z.p)')
+        qtab = q('([](1;2.0;`a);1 2 3)')
+        for i in [qlist1, qlist2, qtab]:
+            with pytest.raises(kx.QError) as err:
+                i.pa()
+            assert 'Unable to convert pykx.List ' in str(err)
 
 
 @pytest.mark.unlicensed
@@ -4524,3 +5387,12 @@ def test_all_timetypes(kx, q_port):
 def test_datetime64(kx):
     df = pd.DataFrame(data={'a': np.array([9999, 1577899899], dtype='datetime64[s]')})
     all(df['a'] == kx.toq(df).pd()['a'])
+
+
+@pytest.mark.order(-1)
+def test_cleanup(kx):
+    shutil.rmtree('HDB', ignore_errors=True)
+    shutil.rmtree('symsEnumsSplay', ignore_errors=True)
+    shutil.rmtree('singleColSplay', ignore_errors=True)
+    shutil.rmtree('multiColSplay', ignore_errors=True)
+    assert True

@@ -1,29 +1,15 @@
 from contextlib import nullcontext
+from platform import system
+from pathlib import Path
 
 import pytest
 
 
-@pytest.fixture
-def tmp_csv_path_1(tmp_path):
-    p = tmp_path/'tmp1.csv'
-    p.write_text('\n'.join((
-        'col,a,b,c',
-        *(f'{"abc"[i % 3]},{i},{10 - i},{3 * i}' for i in range(10)),
-    )))
-    yield p
-    p.unlink()
-
-
-@pytest.fixture
-def tmp_csv_path_2(tmp_path):
-    p = tmp_path/'tmp2.csv'
-    p.write_text('\n'.join(('a', *(str(x) for x in range(10)))))
-    yield p
-    p.unlink()
-
-
 @pytest.mark.ipc
-def test_read_csv(kx, q, tmp_csv_path_1, tmp_csv_path_2):
+def test_read_csv(kx, q):
+    basePath = Path(__file__).parent.parent.parent
+    tmp_csv_path_1 = (basePath/'data\\tmp1.csv') if system() == 'Windows' else 'tests/data/tmp1.csv'
+    tmp_csv_path_2 = (basePath/'data\\tmp2.csv') if system() == 'Windows' else 'tests/data/tmp2.csv'
     assert isinstance(
         q.read.csv(str(tmp_csv_path_1), kx.CharVector('JJJ'), kx.CharAtom(','), True),
         kx.Table,
@@ -56,7 +42,10 @@ def test_read_csv(kx, q, tmp_csv_path_1, tmp_csv_path_2):
 
 
 @pytest.mark.ipc
-def test_read_csv_with_type_guessing(kx, q, tmp_csv_path_1, tmp_csv_path_2):
+def test_read_csv_with_type_guessing(kx, q):
+    basePath = Path(__file__).parent.parent.parent
+    tmp_csv_path_1 = (basePath/'data\\tmp1.csv') if system() == 'Windows' else 'tests/data/tmp1.csv'
+    tmp_csv_path_2 = (basePath/'data\\tmp2.csv') if system() == 'Windows' else 'tests/data/tmp2.csv'
     reader = kx.QReader(q)
     if not kx.licensed:
         ctx = pytest.raises(kx.LicenseException)

@@ -93,13 +93,14 @@ cdef class _K:
         return self.k.r
 
 
-def k_from_addr(cls, uintptr_t addr, bint incref):
+def k_from_addr(cls, uintptr_t addr, bint incref, str name=''):
     instance = object.__new__(cls)
     instance._addr = addr
     instance._k = _K(addr, incref)
     instance.__init__(None) # placeholder argument
+    if name != '':
+        instance._name = name
     return instance
-
 
 def k_str(self):
     if not licensed:
@@ -474,10 +475,37 @@ cdef inline object select_wrapper(core.K k):
 _current_exception = {}
 
 
-cdef inline factory(uintptr_t addr, bint incref, bint err_preamble=0):
+cdef inline factory(uintptr_t addr, bint incref, str name='', bint err_preamble=0):
+    cdef core.K k = <core.K>addr
+    cdef signed char ktype = k.t
     wrapper = select_wrapper(<core.K>addr)
     if wrapper is QError:
-        q_exception = wrapper(('Failed to serialize IPC message: ' if err_preamble else '') + str((<core.K>addr).s, 'utf-8'))
+        err_string = str((<core.K>addr).s, 'utf-8')
+        if err_string == 'nosocket':
+            err_string = 'nosocket: Cannot open or use a socket on a thread other than main.\n'\
+                         'Read https://code.kx.com/user-guide/advanced/threading.html for more information'
+        elif err_string == 'noupdate':
+            err_string = 'noupdate: Cannot update a global variable while using:\n\t- Multithreaded mode'\
+                         '\n\t- peach with secondary threads\n\t- `-b` command line argument or reval code.\n'\
+                         'Read https://code.kx.com/user-guide/advanced/threading.html for more information'
+        elif err_string == 'par':
+            err_string = 'par: Cannot execute an unsupported operation on a partitioned table or its '\
+                         'constituent parts'
+        elif err_string == 'splay':
+            err_string = 'splay: Cannot execute an unsupported operation on a splayed table'
+        elif err_string == 's-fail':
+            err_string = 's-fail: Cannot set "sorted" attribute on an unsorted list\nRead '\
+                         'Read https://code.kx.com/q/ref/set-attribute/ for more information'
+        elif err_string == 'u-fail':
+            err_string = 'u-fail: Failed to do one of the following:\n\t- Set the "unique" '\
+                         'attribute on a non-unique list\n\t- Set the "parted" attribute on '\
+                         'list with non-adjacent repeated values.\n'\
+                         'Read https://code.kx.com/q/ref/set-attribute/ for more information'
+        elif err_string == 'insert':
+            err_string = 'insert: Cannot insert a record with an existing key into a keyed table'
+        elif err_string == 'assign':
+            err_string = 'assign: Cannot redefine a reserved word'
+        q_exception = wrapper(('Failed to serialize IPC message: ' if err_preamble else '') + err_string)
         # `pop` the exception object out to prevent it from being handled multiple times.
         _current_exception_in_thread = _current_exception.pop(threading.get_ident(), None)
         if _current_exception_in_thread is None:
@@ -486,11 +514,11 @@ cdef inline factory(uintptr_t addr, bint incref, bint err_preamble=0):
             raise q_exception
         else:
             raise q_exception from _current_exception_in_thread
-    return k_from_addr(wrapper, addr, incref)
+    return(k_from_addr(wrapper, addr, incref, name))
 
 
-def _factory(addr: int, incref: bool):
-    return factory(addr, incref)
+def _factory(addr: int, incref: bool, name: str = ''):
+    return factory(addr, incref, name)
 
 
 def _pyfactory(addr: int, incref: bool, typenum: int, raw: bool = False):

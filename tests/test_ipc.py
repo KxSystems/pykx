@@ -3,7 +3,7 @@ from contextlib import contextmanager
 from datetime import date
 from io import StringIO
 import os
-from platform import system
+from platform import system, uname
 import signal
 import subprocess
 import sys
@@ -273,7 +273,7 @@ def test_async_with_q_features(kx, q_port):
     assert q.qsql.select('t').py() == t
     assert q.qsql.exec('t', where=['m>2022.02.02']).py() == \
         {'k1': 3, 'k2': 'z', 'm': date(2022, 3, 3)}
-    q.qsql.update('t', modify='sure', columns={'j': '"j"$m*2'}, where=['m>2022.02.01', 'k1<3'])
+    q.qsql.update('t', inplace='sure', columns={'j': '"j"$m*2'}, where=['m>2022.02.01', 'k1<3'])
     assert q('t . ((2;`y);`j)', wait=True).py() == 16136
     assert q.qsql.delete('t', 'm').values().keys().py() == ['j']
 
@@ -383,8 +383,12 @@ async def test_uninitialized_connection(kx, q_port):
 
 
 @pytest.mark.unlicensed
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='SSL test updates not presently implemented on Windows'
+)
 def test_ssl_info(kx):
-    if system() == 'Linux':
+    if (system() == 'Linux') & (uname()[4] == 'x86_64'):
         assert isinstance(kx.ssl_info(), kx.Dictionary)
 
 
@@ -563,6 +567,13 @@ def test_tls():
                 assert q('til 10').py() == list(range(10))
             with kx.SecureQConnection(port=port, tls=True) as q:
                 assert q('til 10').py() == list(range(10))
+            with kx.QConnection(port=port, tls=True) as q:
+                q('func:{x}')
+                assert q('func', 1).py() == 1
+                assert q(b'func', 1).py() == 1
+                assert q(kx.CharVector('func'), 1).py() == 1
+                assert q(kx.SymbolAtom('func'), 1).py() == 1
+                assert q(q('{x}'), 1).py() == 1
         finally:
             if proc is not None:
                 proc.stdin.close()
@@ -895,45 +906,18 @@ async def test_debug_kwarg_embedded(kx, q):
         assert '[1]' in str(e)
 
 
-@pytest.mark.unlicensed
-def test_SyncQConnection_reconnect(kx):
-    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
-    proc = subprocess.Popen(
-        [q_exe_path, '-p', '15001'],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
-    time.sleep(2)
-
-    conn = kx.QConnection(port=15001, reconnection_attempts=1)
-
-    assert conn('til 20').py() == list(range(20))
-    proc.kill()
-    time.sleep(2)
-    with pytest.raises(BaseException):
-        conn('til 5')
-
-    proc = subprocess.Popen(
-        [q_exe_path, '-p', '15001'],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
-    time.sleep(2)
-    assert conn('til 10').py() == list(range(10))
-    proc.kill()
-    time.sleep(2)
-
-
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Temporary file testing flaky, requires rework'
+)
 @pytest.mark.unlicensed
 def test_context_loadfile(kx):
     q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
-    proc = subprocess.Popen(
-        [q_exe_path, '-p', '15001'],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15001'],
+        )
     time.sleep(2)
-
     conn = kx.SyncQConnection(port=15001)
     try:
         assert isinstance(conn.csvutil, kx.ctx.QContext)
@@ -943,9 +927,89 @@ def test_context_loadfile(kx):
     proc.kill()
 
 
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
 @pytest.mark.unlicensed
+def test_SyncQConnection_reconnect(kx, capsys):
+    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15001'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
+    time.sleep(2)
+
+    conn = kx.QConnection(port=15001, reconnection_attempts=3)
+
+    assert conn('til 20').py() == list(range(20))
+    proc.kill()
+    time.sleep(2)
+
+    with pytest.raises(BaseException):
+        conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
+
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15001'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
+    time.sleep(2)
+    assert conn('til 10').py() == list(range(10))
+
+    conn = kx.QConnection(port=15001, reconnection_attempts=3, reconnection_delay=1.0)
+    assert conn('til 10').py() == list(range(10))
+
+    proc.kill()
+    time.sleep(2)
+
+    with pytest.raises(BaseException):
+        conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' not in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
+    assert 'trying again in 2.0 seconds' in captured.err
+
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15001'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
+    time.sleep(2)
+    conn = kx.QConnection(port=15001,
+                          reconnection_attempts=3,
+                          reconnection_delay=1.0,
+                          reconnection_function=lambda x: x)
+    assert conn('til 10').py() == list(range(10))
+
+    proc.kill()
+    time.sleep(2)
+
+    with pytest.raises(BaseException):
+        conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' not in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
+    assert 'trying again in 2.0 seconds' not in captured.err
+
+    proc.kill()
+    time.sleep(2)
+
+
+@pytest.mark.unlicensed
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
 @pytest.mark.xfail(reason='Flaky on several platforms')
-def test_SecureQConnection_reconnect(kx):
+def test_SecureQConnection_reconnect(kx, capsys):
     q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
     proc = subprocess.Popen(
         [q_exe_path, '-p', '15002'],
@@ -954,13 +1018,16 @@ def test_SecureQConnection_reconnect(kx):
     )
     time.sleep(2)
 
-    conn = kx.SecureQConnection(port=15002, reconnection_attempts=1)
+    conn = kx.SecureQConnection(port=15002, reconnection_attempts=3)
 
     assert conn('til 20').py() == list(range(20))
     proc.kill()
     time.sleep(2)
     with pytest.raises(BaseException):
         conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
 
     proc = subprocess.Popen(
         [q_exe_path, '-p', '15002'],
@@ -969,24 +1036,65 @@ def test_SecureQConnection_reconnect(kx):
     )
     time.sleep(2)
     assert conn('til 10').py() == list(range(10))
+
+    conn = kx.SecureQConnection(port=15002, reconnection_attempts=3, reconnection_delay=1.0)
+    assert conn('til 10').py() == list(range(10))
+
+    proc.kill()
+    time.sleep(2)
+
+    with pytest.raises(BaseException):
+        conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' not in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
+    assert 'trying again in 2.0 seconds' in captured.err
+
+    proc = subprocess.Popen(
+        [q_exe_path, '-p', '15002'],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.STDOUT
+    )
+    time.sleep(2)
+    conn = kx.SecureQConnection(port=15002,
+                                reconnection_attempts=3,
+                                reconnection_delay=1.0,
+                                reconnection_function=lambda x: x)
+    assert conn('til 10').py() == list(range(10))
+
+    proc.kill()
+    time.sleep(2)
+
+    with pytest.raises(BaseException):
+        conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' not in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
+    assert 'trying again in 2.0 seconds' not in captured.err
+
     proc.kill()
     time.sleep(2)
 
 
 @pytest.mark.asyncio
 @pytest.mark.unlicensed
-async def test_AsyncQConnection_reconnect(kx):
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
+async def test_AsyncQConnection_reconnect(kx, capsys):
     q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
-    proc = subprocess.Popen(
-        [q_exe_path, '-p', '15003'],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15003'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
     time.sleep(2)
 
     conn = await kx.AsyncQConnection(
         port=15003,
-        reconnection_attempts=1,
+        reconnection_attempts=3,
         event_loop=asyncio.get_event_loop()
     )
 
@@ -995,12 +1103,16 @@ async def test_AsyncQConnection_reconnect(kx):
     time.sleep(2)
     with pytest.raises(BaseException):
         await conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
 
-    proc = subprocess.Popen(
-        [q_exe_path, '-p', '15003'],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15003'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
     time.sleep(2)
     assert (await conn('10?`a`b`c`d')).py() is None
     assert (await conn('til 10')).py() == list(range(10))
@@ -1010,47 +1122,80 @@ async def test_AsyncQConnection_reconnect(kx):
     time.sleep(2)
     with pytest.raises(BaseException):
         await fut
-    proc = subprocess.Popen(
-        [q_exe_path, '-p', '15003'],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
+
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15003'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
     time.sleep(2)
     assert (await fut2) is None
     assert (await conn('10?`a`b`c`d')).py() is None
     assert (await conn('til 10')).py() == list(range(10))
+
+    conn = await kx.AsyncQConnection(
+        port=15003,
+        reconnection_attempts=3,
+        reconnection_delay=1.0,
+        reconnection_function=lambda x: x,
+        event_loop=asyncio.get_event_loop()
+    )
+
+    assert (await conn('til 20')).py() == list(range(20))
     proc.kill()
     time.sleep(2)
+
+    with pytest.raises(BaseException):
+        await conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' not in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
+    assert 'trying again in 2.0 seconds' not in captured.err
 
 
 @pytest.mark.asyncio
 @pytest.mark.unlicensed
-async def test_AsyncQConnection_reconnect_with_event_loop(kx, event_loop):
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
+async def test_AsyncQConnection_reconnect_with_event_loop(kx, event_loop, capsys):
     q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
-    proc = subprocess.Popen(
-        [q_exe_path, '-p', '15004'],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
+
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15004'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
     time.sleep(2)
 
     conn = await kx.AsyncQConnection(
         port=15004,
-        reconnection_attempts=1,
+        reconnection_attempts=3,
         event_loop=event_loop
     )
 
     assert (await conn('til 20')).py() == list(range(20))
     proc.kill()
     time.sleep(2)
+
     with pytest.raises(BaseException):
         await conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
 
-    proc = subprocess.Popen(
-        [q_exe_path, '-p', '15004'],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15004'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
     time.sleep(2)
     assert (await conn('10?`a`b`c`d')).py() is None
     assert (await conn('til 10')).py() == list(range(10))
@@ -1060,14 +1205,35 @@ async def test_AsyncQConnection_reconnect_with_event_loop(kx, event_loop):
     time.sleep(2)
     with pytest.raises(BaseException):
         await fut
-    proc = subprocess.Popen(
-        [q_exe_path, '-p', '15004'],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.STDOUT
-    )
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
+
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15004'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
     time.sleep(2)
     assert (await fut2) is None
     assert (await conn('10?`a`b`c`d')).py() is None
     assert (await conn('til 10')).py() == list(range(10))
+
+    conn = await kx.AsyncQConnection(
+        port=15004,
+        reconnection_attempts=3,
+        reconnection_delay=1.0,
+        reconnection_function=lambda x: x,
+        event_loop=event_loop
+    )
+    assert (await conn('til 20')).py() == list(range(20))
     proc.kill()
     time.sleep(2)
+
+    with pytest.raises(BaseException):
+        await conn('til 5')
+    captured = capsys.readouterr()
+    assert 'trying again in 0.5 seconds' not in captured.err
+    assert 'trying again in 1.0 seconds' in captured.err
+    assert 'trying again in 2.0 seconds' not in captured.err

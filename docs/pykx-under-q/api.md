@@ -1,5 +1,7 @@
 # pykx.q Library Reference Card
 
+!!! tip "Tip: For the best experience, read [How to use PyKX within q](../pykx-under-q/intro.md) and [Why upgrade from embedPy](../pykx-under-q/upgrade.md) first." 
+
 This page documents the functions found in the `pykx.q` q library that are available.
 
 This library can be installed by calling a helper function within `PyKX`, this function will move
@@ -49,6 +51,7 @@ q)\l pykx.q
 **Data Conversions:**
 [setdefault                        define the default conversion for KX objects to Python](#pykxsetdefault)
 [toq                               convert an (un)wrapped `PyKX` foreign object into a q type](#pykxtoq)
+[toq0                              convert an (un)wrapped `PyKX` foreign object into a q type, use 2nd parameter to allow str objects to return as strings](#pykxtoq0)
 [tok                               tag a q object to be indicate conversion to a Pythonic PyKX object when called in Python](#pykxtok)
 [topy                              tag a q object to be indicate conversion to a Python object when called in Python](#pykxtopy)
 [tonp                              tag a q object to be indicate conversion to a Numpy object when called in Python](#pykxtonp)
@@ -127,7 +130,7 @@ q).pykx.console[]
 >>> kx.q['table'] = kx.q('([]2?1f;2?0Ng;2?`3)'
 >>> quit()
 q)table
-x         x1                                   x2 
+x         x1                                   x2
 --------------------------------------------------
 0.439081  49f2404d-5aec-f7c8-abba-e2885a580fb6 mil
 0.5759051 656b5e69-d445-417e-bfe7-1994ddb87915 igf
@@ -274,6 +277,68 @@ q)np[`:arange][10]`
 0 1 2 3 4 5 6 7 8 9
 ```
 
+## `.pykx.listExtensions`
+
+
+_List all q scripts in the extensions directory which can be loaded_
+
+```q
+.pykx.listExtensions[]
+```
+
+**Returns:**
+
+type   | description
+-------|------------
+`list` | A list of strings denoting the available extensions in your version of PyKX
+
+**Example:**
+
+```q
+q)\l pykx.q
+q).pykx.listExtensions[]
+"dashboards"
+```
+
+## `.pykx.loadExtension`
+
+
+_Loading of a PyKX extension_
+
+```q
+.pykx.loadExtension[ext]
+```
+
+**Parameters:**
+
+name   | type     | description
+-------|----------|-------------
+`ext`  | `string` | The name of the extension which is to be loaded
+
+**Returns:**
+
+type   | description
+-------|------------
+`null` | On successful execution this function will load the extension and return null
+
+**Example:**
+
+```q
+q)\l pykx.q
+q)`dash in key `.pykx
+0b
+q).pykx.listExtensions[]
+"dashboards"
+q)`dash in key `.pykx
+1b
+```
+
+**Parameter:**
+
+|Name|Type|Description|
+|---|---|---|
+|ext|||
+
 ## `.pykx.print`
 
 
@@ -295,10 +360,6 @@ name           | type              | description |
 type | description
 -----|------------
 `::` | Will print the output to stdout but return null
-
-!!! Note
-
-        For back compatibility with embedPy this function is also supported in the shorthand form `print` which uses the `.q` namespace. To not overwrite `print` in your q session and allow use only of the longhand form `.pykx.print` set the environment variable `UNSET_PYKX_GLOBALS` to any value.
 
 ```q
 // Use a wrapped foreign object
@@ -371,7 +432,7 @@ _Convert a Python foreign object to a callable function which returns a Python f
 
 **Parameters:**
 
-name         | type      | description                                  
+name         | type      | description
 -------------|-----------|-------------
 `pyObject`   | `foreign` | A Python object representing an underlying callable function
 
@@ -575,6 +636,11 @@ _Isolated execution of a q function which relies on importing PyKX_
 .pykx.safeReimport[qFunction]
 ```
 
+For more information on the reimporter module which this functionality calls see
+    https://code.kx.com/pykx/api/reimporting.html#pykx.reimporter.PyKXReimport
+
+
+
 **Parameters:**
 
 name         | type       | description
@@ -589,11 +655,40 @@ type   | description
 
 **Example:**
 
+Initializing a Python process which imports PyKX
+
 ```q
 q)\l pykx.q
 q).pykx.safeReimport[{system"python -c 'import pykx as kx'";til 5}]
 0 1 2 3 4
 ```
+
+Initializing a q child process which uses pykx.q
+
+```q
+q)\cat child.q
+"\l pykx.q"
+".pykx.print \"Hello World\""
+
+q)\l pykx.q
+q)system"q child.q"     // Failing execution
+q)'2024.08.29T12:29:39.967 util.whichPython
+  [5]  /usr/local/anaconda3/envs/qenv/q/pykx.q:123: 
+        (`os             ; util.os);
+        (`whichPython    ; util.whichPython)
+                           ^
+        )
+  [2]  /usr/projects/pykx/child.q:1: \l pykx.q
+                                     ^
+q).pykx.safeReimport {system"q child.q"}
+"Hello World"                 
+```
+
+**Parameter:**
+
+|Name|Type|Description|
+|---|---|---|
+|x|||
 
 ## `.pykx.set`
 
@@ -740,7 +835,7 @@ type | description |
 
 ??? "Supported Options"
 
-    The following outline the supported conversion types and the associated values which can be passed to set these values
+    The following outlines the supported conversion types and the associated values which can be passed to set these values
 
     Conversion Format                                              | Accepted inputs              |
     ---------------------------------------------------------------|------------------------------|
@@ -748,10 +843,9 @@ type | description |
     [Pandas](https://pandas.pydata.org/docs/user_guide/index.html) | `"pd", "pandas", "Pandas"`   |
     [Python](https://docs.python.org/3/library/datatypes.html)     | `"py", "python", "Python"`   |
     [PyArrow](https://arrow.apache.org/docs/python/index.html)     | `"pa", "pyarrow", "PyArrow"` |
-    [K](../api/pykx-q-data/type_conversions.md)                    | `"k", "q"`                   |
+    K                                                              | `"k", "q"`                   |
     raw                                                            | `"raw"`                      |
     default                                                        | `"default"`                  |
-
 
 ```q
 // Default value on startup is "default"
@@ -790,7 +884,7 @@ type         | description
 
 ```q
 // Denote that a q object once passed to Python should be managed as a default object
-// in this case a q list is converted to numpy 
+// in this case a q list is converted to numpy
 q).pykx.todefault til 10
 enlist[`..numpy;;][0 1 2 3 4 5 6 7 8 9]
 
@@ -981,6 +1075,50 @@ q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
 q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.topy til 10
 <class 'list'>
 ```
+
+## `.pykx.toq0`
+
+
+_Convert an (un)wrapped `PyKX` foreign object into an analogous q type._
+
+```q
+.pykx.toq0[pythonObject;strAsChar]
+```
+
+**Parameters:**
+
+name           | type                   | description |
+---------------|------------------------|-------------|
+`pythonObject` | foreign/composition    | A foreign Python object or composition containing a Python foreign to be converted to q
+`strAsChar`    | Optional[boolean]      | A boolean indicating if when returned to q a Python `str` should be converted to a q string rather than the default symbol
+
+**Return:**
+
+type  | description
+------|------------
+`any` | A q object converted from Python
+
+```q
+// Convert a wrapped PyKX foreign object to q
+q)show a:.pykx.eval["1+1"]
+{[f;x].pykx.util.pykx[f;x]}[foreign]enlist
+q).pykx.toq0 a
+2
+
+// Convert an unwrapped PyKX foreign object to q
+q)show b:a`.
+foreign
+q).pykx.toq0 b
+2
+```
+
+// Convert a Python string to q symbol or string
+
+q).pykx.toq0[.pykx.eval"\"test\""]
+`test
+
+q).pykx.toq0[.pykx.eval"\"test\"";1b]
+"test"
 
 ## `.pykx.toraw`
 
@@ -1175,7 +1313,7 @@ name       | type     | description
 
 type         | description
 -------------|------------
-`projection` | A projection which when used with a wrapped callable Python 
+`projection` | A projection which when used with a wrapped callable Python
 
 **Example:**
 
@@ -1201,7 +1339,7 @@ pykwargs argDict
 
 !!! Warning
 
-     This function will be set in the root `.q` namespace 
+     This function will be set in the root `.q` namespace
 
 **Parameters:**
 
@@ -1310,3 +1448,102 @@ hello
 q).pykx.wrap[.pykx.getattr[a;`y]]`
 `hello
 ```
+
+
+
+## `.pykx.dash.available`
+
+
+_Function to denote if all Python libraries required for dashboards are available_
+
+## `.pykx.dash.runFunction`
+
+
+_Generate and execute a callable Python function using supplied arguments_
+
+```q
+.pykx.dash.runFunction[pycode;args]
+```
+**Parameters:**
+
+name     | type     | description                                                            |
+---------|----------|------------------------------------------------------------------------|
+`pycode` | `string` | The Python code this is to be executed for use as a function           |
+`args`   | `list`   | A mixed/generic list of arguments to be used when calling the function |
+
+**Returns:**
+
+type   | description                                                            |
+-------|------------------------------------------------------------------------|
+`list` | The list of argument names associated with the user specified function |
+
+**Example:**
+
+Single argument function usage:
+
+```q
+q).pykx.dash.runFunction["def func(x):\n\treturn x";enlist ([]5?1f;5?1f)]
+x         x1
+-------------------
+0.9945242 0.6298664
+0.7930745 0.5638081
+0.2073435 0.3664924
+0.4677034 0.9240405
+0.4126605 0.5420167
+```
+
+Multiple argument function usage:
+
+```q
+q).pykx.dash.runFunction["def func(x, y):\n\treturn x*y";(2;5)]
+10
+```
+
+Function using Python dependencies:
+
+```q
+q).pykx.dash.runFunction["import numpy as np\n\ndef func(x):\n\treturn np.linspace(0, x.py(), 5)";enlist 10]
+0 2.5 5 7.5 10
+```
+
+**Parameters:**
+
+|Name|Type|Description|
+|---|---|---|
+|pyCode|||
+|args|||
+
+
+
+## `.pykx.dash.util.getFunction`
+
+
+_Functionality for the generation of a Python function to be called from code_
+
+```q
+.pykx.dash.util.getFunction[pycode]
+```
+**Parameters:**
+
+name           | type     | description                                                  |
+---------------|----------|--------------------------------------------------------------|
+`pycode`       | `string` | The Python code this is to be executed for use as a function |
+
+**Returns:**
+
+type          | description |
+--------------|-------------|
+`composition` | A wrapped foreign Python object associated with the specified code
+
+**Example:**
+
+```q
+q).pykx.dash.util.getFunction["def func(x):\n\treturn 1"]
+{[f;x].pykx.util.pykx[f;x]}[foreign]enlist
+```
+
+**Parameter:**
+
+|Name|Type|Description|
+|---|---|---|
+|pyCode|||

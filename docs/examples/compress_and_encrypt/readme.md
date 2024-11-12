@@ -1,12 +1,20 @@
-# Compression and Encryption
+---
+title:  PyKX Compress and encrypt
+description: Compress and encrypt Examples
+date: October 2024
+author: KX Systems, Inc.,
+tags: compression, encryption, PyKX
+---
 
-This example shows how to use various `q` compression and encryption algorithms on a `PyKX` table.
+# Compress and encrypt example
 
-To follow along with this example please feel free to download this <a href="./archive.zip" download>zip archive</a> that contains a copy of the python script and this writeup.
+_This example shows how to use various `#!python q` compression and encryption algorithms on a `#!python PyKX` table._
 
-Here are the various compression algorithms used and the compression levels that they can use.
+To follow along, download this <a href="./archive.zip" download>zip archive</a> that contains a copy of the python script and this writeup.
 
-algorithm | compression level
+Here are the compression algorithms and their levels:
+
+**Algorithm** | **Compression level**
 --------- | -----------------
 `ipc`     | `0`
 `gzip`    | `0`-`9`
@@ -15,15 +23,15 @@ algorithm | compression level
 
 ## Quickstart
 
-This example can be ran by executing the `compress_and_encrypt.py` file.
+To run this example, execute the `#!python compress_and_encrypt.py` file.
 
-```
+```py
 $ python compress_and_encrypt.py
 ```
 
 ## Outcome
 
-```
+```py
 Writing in-memory trades table with gzip: {
     "compressedLength": 12503352,
     "uncompressedLength": 36666552,

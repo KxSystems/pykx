@@ -1,3 +1,5 @@
+\d .
+
 .pykx.i.kxic.loadfailed:()!();
 .comkxic.Kf:{[v]r:,/'$2\:'ri:"I"$raw:"."\:v:v@&v in .Q.n,".";if[max "b"$ri>1023;'version];vi:sum/ 2/:'.:'"0"^(r[0],20#"0";-20$r[1],10#"0";-10$r 2),\:"b";"***III"$`K`k`Kl`major`minor`patch!enlist[v],enlist["D"$"2022.03.10"],vi,raw};
 .[`.comkxic;();,;.comkxic.Kf "3.0.0"];

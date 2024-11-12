@@ -17,12 +17,10 @@ requirements:
     - git
     - python
     - setuptools>=68.0
-    - setuptools_scm[toml]>=7.1.0  # [py==37]
-    - setuptools_scm[toml]>=8.0.0  # [py!=37]
+    - setuptools_scm[toml]>=8.0.0
     - cython==3.0.0
     - numpy==1.26  # [py==312]
-    - numpy==1.22.*  # [py!=37 and py<312]
-    - numpy==1.20  # [py==37]
+    - numpy==1.22.*  # [py<312]
     - tomli>=2.0.1
     - wheel>=0.36
     - sysroot_linux-64 # [linux64]
@@ -30,9 +28,12 @@ requirements:
   run:
     - python
     - numpy>=1.22,<2.0
-    - pandas>=1.2, <2.2.0
+    - pandas>=1.2, <2.2.0 # [py>38]
+    - pandas<2.0 # [py==38]
     - pytz>=2022.1
     - toml>=0.10.2
+    - dill>=0.2.0
+    - requests>2.25.0
 
 test:
   imports:

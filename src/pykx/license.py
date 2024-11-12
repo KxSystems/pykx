@@ -2,6 +2,7 @@ import base64
 import os
 import shutil
 from pathlib import Path
+from typing import Optional
 
 from . import licensed
 from .config import qlic
@@ -23,10 +24,14 @@ def _init(_q):
     q = _q
 
 
-def check(license, *, format='FILE', license_type='kc.lic') -> bool:
+def check(license: str,
+          *,
+          format: Optional[str] = 'FILE',
+          license_type: Optional[str] = 'kc.lic'
+) -> bool:
     """
-    Validate that the license key information that you have provided matches the license
-        saved to disk which is used by PyKX
+    Validate the license key information you provided matches the license
+        saved to disk which is read by PyKX
 
     Parameters:
         license: If using "FILE" format this is the location of the file being used for comparison.
@@ -39,7 +44,44 @@ def check(license, *, format='FILE', license_type='kc.lic') -> bool:
 
     Returns:
         A boolean indicating if the license is correct or not and a printed message describing
-        the issue
+            the issue
+
+    Examples:
+
+    Validate that a provided license matches an existing persisted license
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.license.check('/usr/location/kc.lic')
+    True
+    ```
+
+    Attempt to check a new license against an existing installed license
+
+    ```python
+    >>> import pykx as kx
+    >>> check = kx.license.check('/usr/location/kc.lic')
+    Supplied license information does not match.
+    Please consider reinstalling your license using pykx.util.install_license
+
+    Installed license representation:
+    b'iIXSiEWzCNTkkCWK5Gggy..'
+    User expected license representation:
+    b'IyEvdXNyL2Jpbi9lbngDf..'
+    >>> check
+    False
+    ```
+
+    Attempt to check a license in the case no license is currently installed
+
+    ```python
+    >>> import pykx as kx
+    >>> check = kx.license.check('setup.py', license_type='kc.lic')
+    Unable to find an installed license: kc.lic at location: /usr/local/anaconda3/envs/qenv/q.
+    Please consider installing your license again using pykx.util.install_license
+    >>> check
+    False
+    ```
     """
     format = format.lower()
     if format not in ('file', 'string'):
@@ -81,19 +123,34 @@ def check(license, *, format='FILE', license_type='kc.lic') -> bool:
 
 def expires() -> int:
     """
-    The number of days until a license is set to expire
+    The number of days until the license is set to expire.
 
     Returns:
-        The number of days until a users license is set to expire
+        The number of days until the license is set to expire
+
+    Example:
+
+    The number of days until your license expires:
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.license.expires()
+    265
+    ```
     """
     if not licensed:
         raise Exception('Unlicensed user, unable to determine license expiry')
     return (q('"D"$', q.z.l[1]) - q.z.D).py()
 
 
-def install(license, *, format='FILE', license_type='kc.lic', force=False):
+def install(license: str,
+            *,
+            format: Optional[str] = 'FILE',
+            license_type: Optional[str] = 'kc.lic',
+            force: Optional[bool] = False
+) -> bool:
     """
-    (Re)install a KX license key optionally overwriting the currently installed license
+    (Re)install a KX license key, optionally overwriting the currently installed license.
 
     Parameters:
         license: If using "FILE" this is the location of the file being used for comparison.
@@ -107,6 +164,25 @@ def install(license, *, format='FILE', license_type='kc.lic', force=False):
 
     Returns:
         A boolean indicating if the license has been correctly overwritten
+
+    Examples:
+
+    Install a license using a supplied file location
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.license.install('/path/to/license')
+    True
+    ```
+
+    Install a k4.lic base64 encoded string representation of the license
+
+    ```python
+    >>> import pykx as kx
+    >>> b64_string = 'IdyannfDangfa4FasdjD9fcda' # Example
+    >>> kx.license.install(b64_string, format = "STRING", license_type = "k4.lic")
+    True
+    ```
     """
     format = format.lower()
     if format not in ('file', 'string'):

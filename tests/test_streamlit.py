@@ -1,4 +1,3 @@
-import os
 import sys
 
 # Do not import pykx here - use the `kx` fixture instead!
@@ -24,18 +23,3 @@ def test_streamlit(kx, q_port):
     with pytest.raises(kx.QError) as err:
         conn.query('tab', format='unsupported')
     assert 'Unsupported format provided for query' in str(err.value)
-
-
-@pytest.mark.isolate
-@pytest.mark.skipif(
-    os.getenv('PYKX_THREADING') is not None,
-    reason='Threading only works when beta features enabled so this will pass in threading tests'
-)
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="requires python3.8 or higher")
-def test_beta():
-    import pykx as kx
-
-    with pytest.raises(kx.QError) as err:
-        st.connection('pykx', type=kx.streamlit.PyKXConnection,
-                      host='localhost', port=5050)
-    assert 'Attempting to use a beta feature "Streamlit' in str(err.value)

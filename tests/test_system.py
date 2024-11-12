@@ -304,9 +304,11 @@ def test_system_console_size():
          ' "table"))')
     assert str(kx.q('tab')) != ('idx| x ..\n---| --..\n0  | ba..\n1  | qu..\n2  | ba..\n3  |'
                                 ' ba..\n4  | fo..\n..')
+    console = kx.q.system.console_size.py()
     kx.q.system.console_size = [10, 10]
     assert len(str(kx.q('tab'))) == len('idx| x ..\n---| --..\n0  | ba..\n1  | qu..\n2  | ba..\n3  '
                                         '| ba..\n4  | fo..\n..')
+    kx.q.system.console_size = console
 
 
 @pytest.mark.isolate

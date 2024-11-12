@@ -24,6 +24,7 @@ from Cython.Build import cythonize
 import numpy as np
 from setuptools import Extension
 from setuptools.command.build_ext import build_ext as default_build_ext
+from setuptools.command.install import install
 from setuptools import setup
 import tomli
 
@@ -50,6 +51,16 @@ windows_library_dirs = () if system != 'Windows' else (str(Path(sys.exec_prefix)
                                                        str(Path(sys.base_exec_prefix)/'libs'),
                                                        str(windows_vcpkg_content/'lib'))
 windows_libraries = () if system != 'Windows' else ('psapi', 'q')
+
+
+class CustomInstallCommand(install):
+    def run(self):
+        install.run(self)
+
+        source_file = 'docs/api/pykx-execution/q.md'
+        target_dir = os.path.join(self.install_lib, 'pykx', 'docs', 'api', 'pykx-execution')
+        os.makedirs(target_dir, exist_ok=True)
+        shutil.copy(source_file, target_dir)
 
 
 def rmrf(path: str):
@@ -257,6 +268,14 @@ if __name__ == '__main__':
             for f in
             [str(f) for f in os.listdir() if os.path.isfile(f) and str(f) != 'q.k']
         ]
+    for p in ('l64', 'l64arm', 'm64', 'm64arm', 'w64'):
+        with cd(src_dir/'lib'/p):
+            [
+                shutil.copy(f, f'../4-1-libs/{p}/{f}')
+                for f in
+                [str(f) for f in os.listdir()
+                 if str(f) != 'symbols.txt' and not os.path.exists(f'../4-1-libs/{p}/{f}')]
+            ]
     setup(
         name=pyproject['name'],
         description=pyproject['description'],
@@ -273,6 +292,7 @@ if __name__ == '__main__':
         package_dir={'pykx': str(Path('src/pykx'))},
         cmdclass={
             'build_ext': build_ext,
+            'install': CustomInstallCommand,
         },
         include_package_data=True, # makes setuptools use MANIFEST.in
         zip_safe=False, # required by Cython

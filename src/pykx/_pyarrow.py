@@ -9,7 +9,7 @@ the rest of PyKX to use under the name `pyarrow`. Otherwise `pyarrow` is set to 
 """
 import os
 
-from .config import load_pyarrow_unsafe
+from .config import load_pyarrow_unsafe, suppress_warnings
 
 if load_pyarrow_unsafe:
     import pyarrow
@@ -55,8 +55,11 @@ else:
         if p.returncode: # nocov
             import_attempt_output = p.stdout if p.stdout else _msg_from_return_code(p.returncode)
             # Don't print out `import_attempt_output` by default.
-            warn('PyArrow failed to load - PyArrow related functionality has been disabled. Check '
-                 '`pykx._pyarrow.import_attempt_output` for the reason.', PyKXWarning)
+            if not suppress_warnings:
+                warn('PyArrow failed to load - PyArrow related functionality has been disabled. '
+                     'Check `pykx._pyarrow.import_attempt_output` for the reason. '
+                     'To suppress this warning please set the configuration/environment variable '
+                     'PYKX_SUPPRESS_WARNINGS=True', PyKXWarning)
             # Replace the `__import__` function to prevent other from trying to import PyArrow
             builtins.__import__ = pyarrow_importer
         else:

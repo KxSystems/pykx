@@ -290,7 +290,11 @@ test_libs = [
     'from textwrap import dedent',
     'from operator import index',
     'import pytz',
-    'import pandas as pd'
+    'import pandas as pd',
+    'import subprocess',
+    'from packaging import version',
+    'import uuid',
+    'import itertools'
 ]
 
 
@@ -301,18 +305,19 @@ for test_file in files:
                       'from time import sleep\n', 'utf-8'))
 
         if 'ipc' in test_file[0]:
-            f.write(bytes('''original_QHOME = os.environ['QHOME']
+            f.write(bytes(
+                '''
+original_QHOME = os.environ['QHOME']
 from contextlib import closing, contextmanager
 import signal
 import socket
 import subprocess
-from platform import system
+from platform import system\n
 def random_free_port():
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind(('localhost', 0))
-        return s.getsockname()[1]
+        return s.getsockname()[1]\n
 def q_proc(q_init):
-    proc = None
     port = random_free_port()
     proc = subprocess.Popen(
         (lambda x: x.split() if system() != 'Windows' else x)(f'q -p {port}'),
@@ -325,8 +330,9 @@ def q_proc(q_init):
     proc.stdin.write(b'\\n'.join((*q_init, b'')))
     proc.stdin.flush()
     sleep(2) # Windows does not support the signal-based approach used here
-    return port
-import pykx as kx\n''', 'utf-8'))
+    return port\n
+import pykx as kx\n
+''', 'utf-8'))
             f.write(bytes('q = kx.QConnection(port=q_proc([b""]))\n', 'utf-8'))
         else:
             f.write(bytes('import pykx as kx\nq = kx.q\n', 'utf-8'))

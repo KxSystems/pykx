@@ -1,56 +1,69 @@
-# Numpy Integration
+---
+title: NumPy Integration
+description: Integrate PyKX with NumPy
+date: July 2024
+author: KX Systems, Inc.,
+tags: PyKX, NumPy
+---
 
-PyKX is designed for advanced integration with Numpy. 
-This integration is built on three pillars: [NEP-49](https://numpy.org/neps/nep-0049.html), the Numpy [array interface](https://numpy.org/doc/stable/reference/arrays.interface.html), and [universal functions](https://numpy.org/doc/stable/reference/ufuncs.html). 
+# NumPy Integration
+_This page explains how to integrate PyKX with NumPy._
+
+PyKX is designed for advanced integration with NumPy. This integration is built on three pillars: 
+
+- [NEP-49](https://numpy.org/neps/nep-0049.html)
+- the NumPy [array interface](https://numpy.org/doc/stable/reference/arrays.interface.html)
+- [universal functions](https://numpy.org/doc/stable/reference/ufuncs.html) 
 
 ## Support for NEP-49 and 0-copy data transfer from Numpy to q (when possible)
 
-To use NEP-49 and benefit from 0-copy data transfers from Numpy to q, the following environment variable needs to be set before importing PyKX: `PYKX_ALLOCATOR=1`.
-Once enabled, PyKX leverages NEP-49 to replace Numpy's memory allocator with the q/k memory allocator. This makes Numpy arrays directly available to q (by passing only a pointer) and accelerates the conversion time from Numpy arrays to q significantly.
+To use NEP-49 and benefit from 0-copy data transfers from NumPy to q, you need to set the `#!python PYKX_ALLOCATOR=1` environment variable before importing PyKX. 
+Once enabled, PyKX leverages NEP-49 to replace NumPy's memory allocator with the q/k memory allocator. This makes NumPy arrays directly available to q (by passing only a pointer) and accelerates the conversion time from NumPy arrays to q significantly.
 
-Without NEP-49 (`PYKX_ALLOCATOR=0`):
+Without NEP-49 (`#!python PYKX_ALLOCATOR=0`):
 ```python
 In [1]: arr = np.random.rand(1000000)
 In [2]: %timeit kx.toq(arr)
 421 µs ± 9.42 µs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
 ```
 
-With NEP-49 (`PYKX_ALLOCATOR=1`):
+With NEP-49 (`#!python PYKX_ALLOCATOR=1`):
 ```python
 In [1]: arr = np.random.rand(1000000)
 In [2]: %timeit kx.toq(arr)
 5.4 µs ± 150 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)
 ```
 
-In the example above, transferring a Numpy array of one million `float64` numbers runs 80x faster with NEP-49 enabled (`PYKX_ALLOCATOR=1`).
+In the example above, transferring a NumPy array of one million `#!python float64` numbers runs 80x faster with NEP-49 enabled (`#!python PYKX_ALLOCATOR=1`).
 
 !!! Note
 
-    With NEP-49 enabled, 0-copy data transfer will happen for the following target q types: booleans (`1h`), bytes (`4h`), shorts (`5h`), integers (`6h`), longs (`7h`), reals (`8h`), floats (`9h`), timespan (`16h`), minutes (`17h`), seconds (`18h`) and times (`19h`).
+    With NEP-49 enabled, 0-copy data transfer happens for the following target q types: booleans (`1h`), bytes (`4h`), shorts (`5h`), integers (`6h`), longs (`7h`), reals (`8h`), floats (`9h`), timespan (`16h`), minutes (`17h`), seconds (`18h`) and times (`19h`).
     
-    A data copy will happen for the following target q types: guids (`2h`), chars (`10h`), symbols (`11h`), timestamps (`12h`), months (`13h`) and dates (`14h`).
+    A data copy happens for the following target q types: guids (`2h`), chars (`10h`), symbols (`11h`), timestamps (`12h`), months (`13h`) and dates (`14h`).
 
-## Support for Numpy array interface and universal functions on pykx/q vectors
+## Support for NumPy array interface and universal functions on pykx/q vectors
 
-PyKX vectors implement the Numpy array interface and are compatible with universal functions. This means all those Numpy functions (and more) can be used directly on PyKX vectors and hence, on q vectors.
-The following are a number of useful links relating to universal functions which can be leveraged using this:
+PyKX vectors implement the NumPy array interface and are compatible with universal functions. This means all those NumPy functions (and more) can be used directly on PyKX vectors and hence, on q vectors.
 
-* [Numpy universal functions](https://numpy.org/doc/stable/reference/ufuncs.html#available-ufuncs)
+Here are several helpful links related to universal functions that you can use with this:
+
+* [NumPy universal functions](https://numpy.org/doc/stable/reference/ufuncs.html#available-ufuncs)
 * [Scipy universal functions](https://docs.scipy.org/doc/scipy/reference/special.html#available-functions)
-* [CuPy universal functions (GPU)](https://docs.cupy.dev/en/stable/reference/ufunc.html) (q vectors will be transferred to GPU)
+* [CuPy universal functions (GPU)](https://docs.cupy.dev/en/stable/reference/ufunc.html) (transfers q vectors to GPU)
 * [Custom universal functions with Numba](https://numba.readthedocs.io/en/stable/user/vectorize.html)
 * [Custom universal functions with C++ and the Boost library](https://www.boost.org/doc/libs/1_65_1/libs/python/doc/html/numpy/tutorial/ufunc.html)
 
-## A little experiment with universal functions
+## Experiment with universal functions
 
-Let's take the Greater Common Divisor problem (GCD) to compare different implementations using Python, q, and some custom universal functions.
+Let's take the Greater Common Divisor problem (GCD) to compare different implementations using Python, q, and custom universal functions.
 The script below implements 5 different solutions for GCD calculation:
 
-* `qgcd`: Naive q implementation, process one pair of integers at a time.
-* `qgcd2`: q vectorized implementation.
-* `gcd`: Naive python implementation, process one pair of integers at a time.
-* `gcd2`: Custom `ufunc` vectorized and compiled JIT with Numba.
-* `gcd3`: Custom `ufunc` vectorized, parallelized on all cores and compiled JIT with Numba.
+* `#!python qgcd`: Naive q implementation, process one pair of integers at a time.
+* `#!python qgcd2`: q vectorized implementation.
+* `#!python gcd`: Naive python implementation, process one pair of integers at a time.
+* `#!python gcd2`: Custom `#!python ufunc` vectorized and compiled JIT with Numba.
+* `#!python gcd3`: Custom `#!python ufunc` vectorized, parallelized on all cores and compiled JIT with Numba.
 
 ```python
 import numpy as np
@@ -94,7 +107,7 @@ qa = kx.toq(a)
 qb = kx.toq(b)
 ```
 
-We can use IPython to load this script and benchmark the different implementations with `%timeit`. We will also compare to `np.gcd`, the Numpy ufunc for GCD calculation.
+We can use IPython to load this script and benchmark the different implementations with `#!python %timeit`. We will also compare to `#!python np.gcd`, the NumPy ufunc for GCD calculation.
 
 ```bash
 $ PYKX_ALLOCATOR=1 ipython -i test_numpy_ufuncs.py

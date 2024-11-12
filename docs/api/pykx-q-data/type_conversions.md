@@ -143,7 +143,7 @@ True
 	[True, False, True]
 	```
 
-=== "Numpy, Pandas, Pyarrow"
+=== "Numpy, Pandas, PyArrow"
 	Converting a `pykx.BoolVector` will result in an array of objects with the `bool` `dtype`, arrays of that `dtype` can also be converted into `pykx.BoolVector` objects.
 
 ## `pykx.GUIDAtom`

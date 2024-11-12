@@ -2,32 +2,40 @@
 
 ## About
 
-PyKX is a Python first interface to the world's fastest time-series database kdb+ and its underlying vector programming language, q.
+Welcome to [PyKX](./getting-started/what_is_pykx.md)! PyKX is a Python first interface to the world's fastest time-series database kdb+ and its underlying vector programming language, q.
 
 For Python developers, PyKX unlocks the speed and power of kdb+ for data processing and storage from within your Python environment. It enables anyone with Python knowledge to apply analytics against vast amounts of data, both in-memory and on-disk, in a fraction of the time, allowing you to focus on getting the best from your data.
 
 For q developers, PyKX brings together Python's data science ecosystem and the power of kdb+'s vector and time-series analytics. This makes them available in both q and Python environments. You can use it to run q code within a Python environment or embed Python analytics within your q session.
 
-To begin your journey with PyKX follow the sections below.
+To begin your journey with PyKX, follow the sections below:
 
-## Documentation Breakdown
+## Documentation overview
 
-### [Getting Started](getting-started/what_is_pykx.md)
+!!! home-page "[Get Started](./getting-started/installing.md)"
 
-Documentation for users new to PyKX! Contains installation instructions alongside quickstart guides and sample getting started notebooks.
+    This section is for new users. Includes everything you need to begin your journey with PyKX: [installation instructions](../docs/getting-started/installing.md) and a [quickstart guide](../docs/getting-started/quickstart.md).
 
-### [User Guide](user-guide/index.md)
+!!! home-page "[Learn](./getting-started/what_is_pykx.md)"
 
-Useful information allowing users to understand the key concepts behind PyKX. Including how the library is intended to be used and examples of this functionality.
+    Explore the core concepts of our technology. This section provides you with detailed explanations and access to [KX Academy](https://learninghub.kx.com/courses/introduction-to-pykx/) materials.
 
-### [API](api/pykx-execution/q.md)
+!!! home-page "[How To](./user-guide/configuration.md)"
 
-Detailed descriptions of the functions, modules and objects managed by PyKX. Using the API reference assumes you have an understanding of how PyKX is intended to be used through the getting started and user guide.
+    Follow step-by-step guides to take you from initial setup to advanced production systems. You’ll find practical advice and best practices here.
 
-### [Release Notes](release-notes/changelog.md)
+!!! home-page "[Reference](./api/pykx-execution/q.md)"
 
-The latest additions and fixes for PyKX alongside historical changes.
+    Find detailed technical references for methods, functions, and APIs. This is your go-to source for all technical definitions and usage examples.
 
-### [Roadmap](roadmap.md)
+!!! home-page "[Integrations](./user-guide/advanced/numpy.md)"
 
-What to look out for in the next weeks, months and years from the PyKX team.
+    Learn how to integrate PyKX with other tools and platforms. This section includes guides and compatibility information to ensure seamless interoperability.
+
+!!! home-page "[Releases](./release-notes/changelog.md)"
+
+    Stay updated with the latest release notes and roadmap details. You’ll find information on the latest releases/fixes, previous versions, and upcoming features.
+
+!!! home-page "[Help and Support](./help/troubleshooting.md)"
+
+    Get assistance with any questions or issues you might have. This section includes [troubleshooting](../docs/help/troubleshooting.md) guides, [FAQs](../docs/help/faq.md), and [support](../docs/help/support.md) contact information.

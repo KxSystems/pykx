@@ -303,15 +303,56 @@ def test_subview(kx):
 
 
 @pytest.mark.isolate
-@pytest.mark.skipif(
-    os.getenv('PYKX_THREADING') is not None,
-    reason='Not supported with PYKX_THREADING'
-)
-def test_beta():
+def test_q_lo_move_dir():
+    os.environ['PYKX_4_1_ENABLED'] = 'True'
+    os.environ['PYKX_BETA_FEATURES'] = 'True'
+    curr_dir = os.getcwd()
     import pykx as kx
-    with pytest.raises(kx.QError) as err:
-        kx.DB()
-    assert 'Attempting to use a beta feature "Data' in str(err.value)
+    db = kx.DB(path='db') # noqa: F841
+    assert curr_dir != os.getcwd()
+    os.unsetenv('PYKX_4_1_ENABLED')
+    os.unsetenv('PYKX_BETA_FEATURES')
+
+
+@pytest.mark.isolate
+def test_q_lo_keep_dir():
+    os.environ['PYKX_4_1_ENABLED'] = 'True'
+    os.environ['PYKX_BETA_FEATURES'] = 'True'
+    curr_dir = os.getcwd()
+    import pykx as kx
+    db = kx.DB(path='db', change_dir=False) # noqa: F841
+    assert curr_dir == os.getcwd()
+    os.unsetenv('PYKX_4_1_ENABLED')
+    os.unsetenv('PYKX_BETA_FEATURES')
+
+
+def test_q_lo_40(kx):
+    if os.getenv('PYKX_4_1_ENABLED') is None:
+        with pytest.raises(kx.QError) as err:
+            db = kx.DB(path='db', change_dir=False) # noqa: F841
+        assert 'behavior only supported with PYKX_4_1_ENABLED' in str(err.value)
+        with pytest.raises(kx.QError) as err:
+            db = kx.DB(path='db', load_scripts=False) # noqa: F841
+        assert 'behavior only supported with PYKX_4_1_ENABLED' in str(err.value)
+
+
+@pytest.mark.isolate
+def test_spaces_load(tmp_path):
+    # prior to using util.loadfile the db.create/load would fail with nyi
+    test_location = tmp_path/'test directory/db'
+    import pykx as kx
+    db = kx.DB(path=test_location)
+    tab = kx.Table(data={
+        'date': kx.q('2015.01.01 2015.01.01 2015.01.02 2015.01.02'),
+        'ti': kx.q('09:30:00 09:31:00 09:30:00 09:31:00'),
+        'p': kx.q('101 102 101.5 102.5'),
+        'sz': kx.q('100 200 150 210'),
+        'sym': kx.q('`a`b`b`c')
+    })
+    db.create(tab, 't', 'date', by_field='sym', sym_enum='sym')
+    assert db.tables == ['t']
+    db.load(path=test_location, overwrite=True)
+    assert db.tables == ['t']
 
 
 @pytest.mark.order(-1)

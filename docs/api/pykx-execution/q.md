@@ -1,8 +1,17 @@
-# PyKX native function reference card
+---
+title: PyKX q functions and operators
+description: PyKX implementation of a subset of the q language's functions and operators
+author: KX Systems
+date: September 2024
+tags: operators
+---
+# q functions and operators
 
-This page documents the functions found in the q global namespace that are available in PyKX as attributes of `pykx.q`, or as attributes of `pykx.QConnection` instances. Refer to [the q reference card in the q docs](https://code.kx.com/q/ref/#by-category) for more details about using these functions in q. This page documents how one might use them from Python via PyKX.
+_This page documents the PyKX implementations of a selection of keywords and operators available in q._
 
-All of these functions take and return q objects, which are wrapped in PyKX as `pykx.K` objects. Arguments of other types will have `pykx.K` called on them to convert them into q objects. Refer to [the PyKX wrappers documentation](../pykx-q-data/wrappers.md) for more information about `pykx.K` objects.
+The functions listed here are accessible in PyKX as attributes of `#!python pykx.q`, or as attributes of `#!python pykx.QConnection` instances. Refer to [the q reference card in the q docs](https://code.kx.com/q/ref/#by-category) for more details about these functions as they are used in a q process. This page documents using them in Python via PyKX.
+
+These functions take and return q objects, which are wrapped in PyKX as `#!python pykx.K` objects. Any arguments of other types are converted appropriately. Refer to [the PyKX wrappers documentation](../pykx-q-data/wrappers.md) for more information about `#!python pykx.K` objects.
 
 ## By Category
 
@@ -21,10 +30,15 @@ Category                    | Elements
 [Sort](#sort)               | [`asc`](#asc), [`bin`](#bin), [`binr`](#binr), [`desc`](#desc), [`differ`](#differ), [`distinct`](#distinct), [`iasc`](#iasc), [`idesc`](#idesc), [`rank`](#rank), [`xbar`](#xbar), [`xrank`](#xrank)
 [Table](#table)             | [`cols`](#cols), [`csv`](#csv), [`fkeys`](#fkeys), [`insert`](#insert), [`key`](#key), [`keys`](#keys), [`meta`](#meta), [`ungroup`](#ungroup), [`upsert`](#upsert), [`xasc`](#xasc), [`xcol`](#xcol), [`xcols`](#xcols), [`xdesc`](#xdesc), [`xgroup`](#xgroup), [`xkey`](#xkey)
 [Text](#text)               | [`like`](#like), [`lower`](#lower), [`ltrim`](#ltrim), [`md5`](#md5), [`rtrim`](#rtrim), [`ss`](#ss), [`ssr`](#ssr), [`string`](#string), [`trim`](#trim), [`upper`](#upper)
+[Operators](#operators)     | [`drop`](#drop), [`coalesce`](#coalesce), [`fill`](#fill), [`take`](#take), [`set_attribute`](#set_attribute), [`join`](#join), [`find`](#find), [`enum_extend`](#enum_extend), [`roll`](#roll), [`deal`](#deal), [`dict`](#dict), [`enkey`](#enkey), [`unkey`](#unkey), [`enumeration`](#enumeration), [`enumerate`](#enumerate), [`pad`](#pad), [`cast`](#cast), [`tok`](#tok), [`compose`](#compose)
 
-Not all functions listed on [the q reference card](https://code.kx.com/q/ref/#by-category) are available as attributes of `pykx.q`, or as attributes of `pykx.QConnection` instances. These include elements such as `select`, `exec`, `update`, and `delete` which are not actually q functions, but rather part of the q language itself (i.e. handled by the parser), and functions whose names would result in syntax errors in Python, such as `not` and `or`.
+Some keywords listed on [the q reference card](https://code.kx.com/q/ref/#by-category) are unavailable in this API:
 
-Because arbitrary q code can be executed using PyKX (except in unlicensed mode, in which none of these functions are available), these limitations can be circumvented as necessary by running q code instead of using [the context interface](ctx.md). For example, `pykx.q('not')` can be used instead of `pykx.q.not`. Consider using [the qSQL query documentation](../query.md) as an alternative to writing qSQL queries as q code.
+ - `#!q select`, `#!q exec`, `#!q update` and `#!q delete` are not q functions, but a part of the q language itself
+
+ - functions that have names which would result in syntax errors in Python, such as `#!q not` and `#!q or`
+
+The unavailable functions can still be used in PyKX by executing q code with `#!python pykx.q`, i.e. `#!python pykx.q('not')` instead of `#!python pykx.q.not`. For the qSQL functions (`#!q select`, `#!q exec`, `#!q update`, and `#!q delete`) use [PyKX qSQL](../query.md).
 
 ## Environment
 
@@ -319,9 +333,9 @@ Assign a value to a global variable.
 
 Persist an object as a file or directory.
 
-| Types                        | Result                               |
-|------------------------------|--------------------------------------|
-| pykx.q.set(nam, y)                  | set global `nam` to `y`             |
+| Types                               | Result                             |
+|-------------------------------------|------------------------------------|
+| pykx.q.set(nam, y)                  | set global `nam` to `y`                |
 | pykx.q.set(fil, y)                  | write `y` to a file                  |
 | pykx.q.set(dir, y)                  | splay `y` to a directory             |
 | pykx.q.set([fil, lbs, alg, lvl], y) | write `y` to a file, compressed      |
@@ -424,7 +438,7 @@ pykx.LongVector(q('1 3 6 10 15'))
 
 Performs an as-of join across temporal columns in tables. Returns a table with records from the left-join of the first table and the second table. For each record in the first table, it is matched with the second table over the columns specified in the first input parameter and if there is a match  the most recent match will be joined to the record.
 
-The resulting time column is the value of the boundry used in the first table.
+The resulting time column is the value of the boundary used in the first table.
 
 ```python
 >>> import pandas as pd
@@ -2104,7 +2118,7 @@ Where x is a table, in which some cells are lists, but for any row, all lists ar
 >>> a = pykx.Table([['a', [2, 3], 10], ['b', [5, 6, 7], 20], ['c', [11], 30]], columns=['s', 'x', 'q'])
 >>> a
 pykx.Table(pykx.q('
-s x       q 
+s x       q
 ------------
 a (2;3)   10
 b (5;6;7) 20
@@ -2452,4 +2466,372 @@ Shift case to upper case.
 pykx.SymbolAtom(q('`HELLO'))
 >>> pykx.q.upper(b'hello')
 pykx.CharVector(q('"HELLO"'))
+```
+
+## Operators
+
+### [drop](https://code.kx.com/q/ref/drop/)
+
+Drop items from a list, entries from a dictionary or rows from a table.
+
+Examples:
+
+Drop the first 3 items from a list
+
+```python
+>>> import pykx as kx
+>>> kx.q.drop(3, kx.q('1 2 3 4 5 6'))
+pykx.LongVector(pykx.q('4 5 6'))
+```
+
+Drop the last 10 rows from a table
+        
+```python
+>>> import pykx as kx
+>>> tab = kx.Table(data={
+...     'x': kx.q.til(100),
+...     'y': kx.random.random(100, 10.0)
+... })
+>>> kx.q.drop(-10, tab)
+pykx.Table(pykx.q('
+x  y        
+------------
+0  3.927524 
+1  5.170911 
+2  5.159796 
+3  4.066642 
+4  1.780839
+..
+'))
+>>> len(kx.q.drop(-10, tab))
+90
+```
+
+### [coalesce](https://code.kx.com/q/ref/coalesce/)
+
+Merge two keyed tables ignoring null objects
+
+Example:
+
+Coalesce two keyed tables one containing nulls
+
+```python
+>> tab1 = kx.Table(data={
+...     'x': kx.q.til(10),
+...     'y': kx.random.random(10, 10.0)
+...     }).set_index('x')
+>>> tab2 = kx.Table(data={
+...     'x': kx.q.til(10),
+...     'y':kx.random.random(10, [1.0, kx.FloatAtom.null, 10.0])
+...     }).set_index('x')
+>>> kx.q.coalesce(tab1, tab2)
+pykx.KeyedTable(pykx.q('
+x| y         z
+-| ------------
+0| 9.006991  10
+1| 8.505909
+2| 8.196014  10
+3| 0.9982673 1
+4| 8.187707
+..
+'))
+```
+
+### [fill](https://code.kx.com/q/ref/fill)
+
+Replace nulls in lists, dictionaries or tables
+
+Examples:
+
+Replace null values in a list
+
+```python
+>>> null_list = kx.random.random(10, [10, kx.LongAtom.null, 100])
+>>> kx.q.fill(0, null_list)
+```
+
+Replace all null values in a table
+
+```python
+>>> table = kx.Table(data={
+...     'x': kx.random.random(10, [10.0, kx.FloatAtom.null, 100.0]),
+...     'y': kx.random.random(10, [10.0, kx.FloatAtom.null, 100.0])
+...     })
+>>> kx.q.fill(10.0, table)
+```
+
+### [take](https://code.kx.com/q/ref/take)
+
+Select leading or trailing items from a list or dictionary, named entries from a dictionary, or named columns from a table
+
+Examples:
+
+Retrieve the last 3 items from a list
+
+```python
+>>> lst = kx.q.til(100)
+>>> kx.q.take(-3, lst)
+pykx.LongVector(pykx.q('97 98 99'))
+```
+
+Retrieve named columns from a table using take
+
+```python
+>>> table = kx.Table(data={
+...     'x': kx.random.random(5, 10.0),
+...     'y': kx.random.random(5, 10.0),
+...     'z': kx.random.random(5, 10.0),
+...     })
+>>> kx.q.take(['x', 'y'], table)
+pykx.Table(pykx.q('
+x        y       
+-----------------
+6.916099 9.672398
+2.296615 2.306385
+6.919531 9.49975 
+4.707883 4.39081 
+6.346716 5.759051
+'))
+```
+
+### [set_attribute](https://code.kx.com/q/ref/set-attribute/)
+
+Set an attribute for a supplied list or dictionary, the supplied attribute must be one of: 's', 'u', 'p' or 'g'.
+
+```python
+>>> kx.q.set_attribute('s', kx.q.til(10))
+pykx.LongVector(pykx.q('`s#0 1 2 3 4 5 6 7 8 9'))
+>>> kx.q.set_attribute('g', [2, 1, 2, 1])
+pykx.LongVector(pykx.q('`g#2 1 2 1'))
+```
+
+### [join](https://code.kx.com/q/ref/join/)
+
+Join atoms, lists, dictionaries or tables
+
+```python
+>>> kx.q.join([1, 2, 3], [4, 5, 6])
+pykx.LongVector(pykx.q('1 2 3 4 5 6'))
+```
+
+Join multiple dictionaries together
+
+```python
+>>> kx.q.join({'x': 1, 'y': 2}, {'z': 3})
+pykx.Dictionary(pykx.q('
+x| 1
+y| 2
+z| 3
+'))
+```
+
+Join multiple columns row wise
+
+```python
+>>> t = kx.q('([]a:1 2 3;b:`a`b`c)')
+>>> s = kx.q('([]a:10 11;b:`d`e)')
+>>> kx.q.join(t, s)
+pykx.Table(pykx.q('
+a  b
+----
+1  a
+2  b
+3  c
+10 d
+11 e
+'))
+```
+
+### [find](https://code.kx.com/q/ref/find/)
+
+Find the first occurrence of an item(s) in a list
+
+```python
+>>> lst = [10, -8, 3, 5, -1, 2, 3]
+>>> kx.q.find(lst, -8)
+pykx.LongAtom(pykx.q('1'))
+>>> kx.q.find(lst, [10, 3])
+pykx.LongVector(pykx.q('0 2'))
+```
+
+### [enum_extend](https://code.kx.com/q/ref/enum-extend/)
+
+Extend a defined variable enumeration
+
+```python
+>>> kx.q['foo'] = ['a', 'b']
+>>> kx.q.enum_extend('foo', ['a', 'b', 'c', 'a', 'b'])
+pykx.EnumVector(pykx.q('`foo$`a`b`c`a`b'))
+>>> kx.q['foo']
+pykx.SymbolVector(pykx.q('`a`b`c'))
+```
+
+Extend a filepath enumeration
+
+```python
+>>> import os
+>>> from pathlib import Path
+>>> kx.q['bar'] = ['c', 'd']    # about to be overwritten
+>>> kx.q.enum_extend(Path('bar'), ['a', 'b', 'c', 'b', 'b', 'a'])
+pykx.EnumVector(pykx.q('`bar$`a`b`c`b`b`a'))
+>>> os.system('ls -l bar')
+-rw-r--r--  1 username  staff  14 20 Aug 09:34 bar
+>>> kx.q['bar']
+pykx.SymbolVector(pykx.q('`a`b`c'))
+```
+
+### [roll](https://code.kx.com/q/ref/roll/)
+
+Generate a random list of values with duplicates, for this the first parameter must be positive.
+
+```python
+>>> kx.q.roll(3, 10.0)
+pykx.FloatVector(pykx.q('3.927524 5.170911 5.159796'))
+>>> kx.q.roll(4, [1, 'a', 10.0])
+pykx.List(pykx.q('
+`a
+1
+`a
+10f
+'))
+```
+
+### [deal](https://code.kx.com/q/ref/deal/)
+
+Generate a random list of values without duplicates, for this the first parameter must be negative.
+
+```python
+>>> kx.q.deal(-5, 5)
+pykx.LongVector(pykx.q('1 3 2 0 4'))
+>>> kx.q.deal(-3, ['the', 'quick', 'brown', 'fox'])
+pykx.SymbolVector(pykx.q('`the`brown`quick'))
+```
+
+### [dict](https://code.kx.com/q/ref/dict/)
+
+Generate a dictionary by passing two lists of equal lengths
+
+```python
+>>> kx.q.dict(['a', 'b', 'c'], [1, 2, 3])
+pykx.Dictionary(pykx.q('
+a| 1
+b| 2
+c| 3
+'))
+```
+
+### [enkey](https://code.kx.com/q/ref/enkey/)
+
+Create a keyed table by passing an integer to a simple table. This is similar to `set_index`
+
+```python
+>>> simple_tab = kx.Table(data = {
+...     'x': [1, 2, 3],
+...     'y': [4, 5, 6]
+...     })
+>>> kx.q.dict(1, simple_tab)
+pykx.KeyedTable(pykx.q('
+x| y
+-| -
+1| 4
+2| 5
+3| 6
+'))
+```
+
+### [unkey](https://code.kx.com/q/ref/unkey/)
+
+Remove the keys from a keyed table returning a simple table, this is similar to `reset_index`
+with no arguments
+
+```python
+>>> keyed_tab = kx.Table(data = {
+...     'x': [1, 2, 3],
+...     'y': [4, 5, 6]
+...     }).set_index(1)
+>>> kx.q.unkey(0, keyed_tab)
+pykx.Table(pykx.q('
+x y
+---
+1 4
+2 5
+3 6
+'))
+```
+
+### [enumeration](https://code.kx.com/q/ref/enumeration/)
+
+Enumerate a symbol list
+- First argument is a variable in q memory denoting a symbol list
+- Second argument is a vector of integers in the domain 0-length(first argument)
+
+```python
+>>> kx.q['x'] = ['a', 'b', 'c', 'd']
+>>> kx.q.enumeration('x', [1, 2, 3])
+pykx.EnumVector(pykx.q('`x$`b`c`d'))
+```
+
+### [enumerate](https://code.kx.com/q/ref/enumerate/)
+
+Enumerate a list of symbols based on the symbols in a global q variable
+
+```python
+>>> kx.q['d'] = ['a', 'b', 'c']
+>>> y = ['a', 'b', 'c', 'b', 'a', 'b', 'c']
+>>> kx.q.enumerate('d', y)
+pykx.EnumVector(pykx.q('`d$`a`b`c`b`a`b`c'))
+```
+
+### [pad](https://code.kx.com/q/ref/pad/)
+
+Pad a supplied PyKX string (Python bytes) to the length supplied by the user.
+In the case that you are padding the front of a string use a negative value.
+
+```python
+>>> kx.q.pad(-5, b'abc')
+pykx.CharVector(pykx.q('"  abc"'))
+>>> kx.q.pad(10, [b'test', b'string', b'length'])
+pykx.List(pykx.q('
+"test      "
+"string    "
+"length    "
+'))
+```
+
+### [cast](https://code.kx.com/q/ref/cast/)
+
+Convert to another datatype, this should be a single lower case character byte, or name of the type.
+See https://code.kx.com/q/ref/cast/ for the accepted list.
+
+```python
+>>> long_vec = kx.q('til 10')
+>>> kx.q.cast('short', long_vec)
+pykx.ShortVector(pykx.q('0 1 2 3 4 5 6 7 8 9h'))
+>>> kx.q.cast(b'b', long_vec)
+pykx.BooleanVector(pykx.q('0111111111b'))
+```
+
+### [tok](https://code.kx.com/q/ref/tok/)
+
+Interpret a PyKX string as a data value(s), this should use a single upper case character byte or
+a non-positive PyKX short value.
+See https://code.kx.com/q/ref/tok/ for more information on accepted lists for casting
+
+```python
+>>> kx.q.tok(b'F', b'3.14')
+pykx.FloatAtom(pykx.q('3.14'))
+>>> float_int = kx.toq(-9, kx.ShortAtom)
+>>> kx.qkx.toq(int(1), kx.ShortAtom)
+```
+
+### [compose](https://code.kx.com/q/ref/compose/)
+
+Compose a unary value function with another.
+
+```python
+>>> f = kx.q('{2*x}')
+>>> ff = kx.q('{[w;x;y;z]w+x+y+z}')
+>>> d = kx.q.compose(f, ff)
+>>> d(1, 2, 3, 4)
+pykx.LongAtom(pykx.q('20'))
 ```

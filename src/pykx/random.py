@@ -16,13 +16,27 @@ def _init(_q):
 
 
 def seed(seed: int) -> None:
-    """Set random seed for PyKX random data generation
+    """Set random seed for PyKX random data generation.
 
     Parameters:
         seed: Integer value defining the seed value to be set
 
     Returns:
         On successful invocation this function returns None
+
+    Examples:
+
+    Set the random seed for generated data to 42 validating random generation is deterministic
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.random.seed(42)
+    >>> kx.random.random(10, 10)
+    pykx.LongVector(pykx.q('4 7 2 2 9 4 2 0 8 0'))
+    >>> kx.random.random(42)
+    >>> kx.random.random(10, 10)
+    pykx.LongVector(pykx.q('4 7 2 2 9 4 2 0 8 0'))
+    ```
     """
     q('{system"S ",string x}', seed)
 
@@ -31,22 +45,78 @@ def random(dimensions: Union[int, List[int]],
            data: Any,
            seed: Optional[int] = None
 ) -> Any:
-    """Return random data of specified dimensionality
+    """Generate random data in the shape of the specified dimensions.
 
     Parameters:
-        dimensions: The dimensions of the data returned. Will produce a 1D array if single integer
-        passed. Returns random data in shape of a list passed. Passing a negative value will perfom
-        a kdb Deal on the data.
+        dimensions: The dimensions of the data returned. A a 1D array is produced if the input for
+            this parameter is a single integer. A list input generates random data in the shape of
+            the list. Passing a negative value performs a kdb Deal on the data.
 
-        data: The data from which a random sample is chosen. If an int or a float is passed,
-        the random values are chosen in the range [0,data]. If a list is passed,
-        the values are chosen from that list.
+        data: The data from which a random sample is chosen. Input an [int][int] or [float][float]
+            to generate random values from the range [0,data]. Input a list to pick random values
+            from that list.
 
-        seed: Denotes whether or not a seed should be used in the generation of data. Defaulted to
-        None, any value passed will be used as a seed to generate the data.
+        seed: Optional parameter to force randomisation to use a specific seed. Defaults to None.
 
     Returns:
-        Randomised data in the shape specified by the 'dimensions' variable
+        Randomised data in the shape specified by the 'dimensions' variable.
+
+    Examples:
+
+    Generate a random vector of floats between 0 and 10.5 of length 20
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.random.random(20, 10.5)
+    pykx.FloatVector(pykx.q('5.233059 0.5785577 2.668026 4.834967 0.5733764..'))
+    ```
+
+    Generate a 1D generic list containing random values from a supplied list
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.random.random(20, ['a', 10, 1.5])
+    pykx.List(pykx.q('
+    10
+    10
+    1.5
+    `a
+    ..
+    '))
+    ```
+
+    Generate a 2D generic list containing random long atoms between 0 and 100
+
+    ```python
+    >>> import pykx as kx
+    >>> arr = kx.random.random([5, 5], 100)
+    >>> arr
+    pykx.List(pykx.q('
+    67 46 30 29 61
+    82 80 0  73 97
+    92 75 38 28 94
+    64 75 92 35 95
+    81 45 44 59 49
+    '))
+    >>> arr[0]
+    pykx.LongVector(pykx.q('67 46 30 29 61'))
+    ```
+
+    Generate a random vector of GUIDs using GUID null to generate full range with a defined seed
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.random.random(100, kx.GUIDAtom.null, seed=42)
+    pykx.GUIDVector(pykx.q('84cf32c6-c711-79b4-2f31-6e85923decff 223..'))
+    ```
+
+    Using a negative value perform a "deal" returning non repeating values from a list of strings
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.random.random(-3, ['the', 'quick', 'brown', 'fox'])
+    pykx.SymbolVector(pykx.q('`the`fox`brown'))
+    ```
     """
 
     if seed is not None:

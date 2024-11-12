@@ -27,9 +27,10 @@ def test_compress_encrypt_errors(kx):
         kx.Compress(block_size=24)
     assert 'block_size must be a power of 2' in str(err.value)
 
-    with pytest.raises(ValueError) as err:
-        kx.Compress(algo=kx.CompressionAlgorithm.zstd)
-    assert "'CompressionAlgorithm.zstd' only supported on" in str(err.value)
+    if os.getenv('PYKX_4_1_ENABLED') is None:
+        with pytest.raises(ValueError) as err:
+            kx.Compress(algo=kx.CompressionAlgorithm.zstd)
+        assert "'CompressionAlgorithm.zstd' only supported on" in str(err.value)
 
     with pytest.raises(ValueError) as err:
         kx.Compress(algo=kx.CompressionAlgorithm.gzip, level=100)
@@ -83,20 +84,3 @@ def test_encrypt_path():
     # If this has run, the encryption key has been loaded appropriately
     # this can be tested more rigorously once kdb+ 4.0 2024.03.02
     assert kx.q('-36!(::)').py()
-
-
-@pytest.mark.isolate
-@pytest.mark.skipif(
-    os.getenv('PYKX_THREADING') is not None,
-    reason='Not supported with PYKX_THREADING'
-)
-def test_beta():
-    import pykx as kx
-
-    with pytest.raises(kx.QError) as err:
-        kx.Compress()
-    assert 'Attempting to use a beta feature "Compress' in str(err.value)
-
-    with pytest.raises(kx.QError) as err:
-        kx.Encrypt()
-    assert 'Attempting to use a beta feature "Compress' in str(err.value)

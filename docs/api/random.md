@@ -1,6 +1,13 @@
+---
+title: Random data generation
+description: PyKX interface for accessing q random data generation
+author: KX Systems
+date: September 2024
+tags: random
+---
 # Random data generation
 
-The functionality presented here provides users with utilities for the creation of random data.
+_This page documents utility functions users can execute to create random data._
 
 ::: pykx.random
     rendering:

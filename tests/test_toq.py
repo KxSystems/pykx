@@ -270,6 +270,25 @@ def test_from_bytes(kx):
 
 
 @pytest.mark.unlicensed
+def test_from_bytes_np(kx):
+    b = kx.toq(np.bytes_(''))
+    assert isinstance(b, kx.CharVector)
+    assert b.py() == b''
+    b = kx.toq(np.bytes_('a'))
+    assert isinstance(b, kx.CharAtom)
+    assert b.py() == b'a'
+    b = kx.toq(np.bytes_('aa'))
+    assert isinstance(b, kx.CharVector)
+    assert b.py() == b'aa'
+    assert kx.toq(np.bytes_('abcdefghijklmnopqrstuvwxyz'), -11).py() == 'abcdefghijklmnopqrstuvwxyz'
+    for x in (np.bytes_(''), np.bytes_('12')):
+        with pytest.raises(ValueError):
+            kx.CharAtom(x)
+    with pytest.raises(TypeError):
+        kx.GUIDAtom(np.bytes_('x'))
+
+
+@pytest.mark.unlicensed
 def test_from_datetime_date(kx):
     d = date(2020, 9, 8)
 
@@ -495,6 +514,10 @@ def test_from_timedelta64(kx):
     assert isinstance(kd, kx.TimeAtom)
     assert kd.np() == np.timedelta64(60312222, 'ms')
 
+    kd = kx.TimespanAtom(d)
+    assert isinstance(kd, kx.TimespanAtom)
+    assert kd.np() == np.timedelta64(60312222971000, 'ns')
+
 
 @pytest.mark.unlicensed
 def test_from_UUID(kx):
@@ -563,6 +586,28 @@ def test_from_UUID_np_array(kx):
 
 
 @pytest.mark.unlicensed
+def test_from_UUID_pandas(kx):
+    values = [
+        (1.3942713164545354e+64 - 7.26060294431316e-266j),
+        (3.638224669629338e+199 - 7.695044086357459e-212j)
+    ]
+
+    def complex_to_guid(c):
+        real_part = c.real
+        imag_part = c.imag
+        real_bytes = real_part.hex().encode('utf-8')[:8]
+        imag_bytes = imag_part.hex().encode('utf-8')[:8]
+        guid_bytes = real_bytes.ljust(8, b'\x00') + imag_bytes.ljust(8, b'\x00')
+        return UUID(bytes=guid_bytes)
+
+    guid_values = [complex_to_guid(c) for c in values]
+    guid_vector = kx.GUIDVector(guid_values)
+    u = {'g': guid_vector}
+    res = kx.toq(u['g'].pd(raw=True))
+    assert isinstance(res, kx.K)
+
+
+@pytest.mark.unlicensed
 def test_to_UUID_np_array(kx):
     u = np.array([UUID('db712ca2-81b1-0080-95dd-7bdb502da77d')], dtype=object)
     assert kx.K(u).np() == u
@@ -596,6 +641,7 @@ def test_from_tuple(kx):
 
 @pytest.mark.unlicensed
 @pytest.mark.nep49
+@pytest.mark.xfail(reason='Flaky NEP-49 testing with datetime', strict=False)
 def test_from_list(kx):
     assert kx.K([]).py() == []
     assert kx.K([1, 2]).py() == [1, 2]
@@ -624,6 +670,7 @@ def test_from_list(kx):
     assert isinstance(kx.TimestampVector(np.datetime64(0, 'ns')), kx.TimestampVector)
     assert isinstance(kx.MonthVector(np.datetime64(0, 'M')), kx.MonthVector)
     assert isinstance(kx.DateVector(np.datetime64(0, 'D')), kx.DateVector)
+    assert isinstance(kx.TimespanVector(np.timedelta64(0, 'us')), kx.TimespanVector)
     assert isinstance(kx.TimespanVector(np.timedelta64(0, 'ns')), kx.TimespanVector)
     assert isinstance(kx.MinuteVector(np.timedelta64(0, 'W')), kx.MinuteVector)
     assert isinstance(kx.SecondVector(np.timedelta64(0, 's')), kx.SecondVector)
@@ -867,8 +914,42 @@ def test_from_numpy_ndarray_1(kx):
         == [1.2, 1.3, [1.4, 1.5]]
     assert kx.K(np.array([b'a', b'ab', 1.3, [1.3, 1.2], 'x'],
                 dtype=object)).py() == [b'a', b'ab', 1.3, [1.3, 1.2], 'x']
-    with pytest.raises(TypeError):
-        kx.LongVector(np.array([1, 2, 3], dtype=np.int32))
+
+    ar = np.array([1, 2], np.dtype('uint16'))
+    ark = kx.K(ar)
+    at = ar[0]
+    atk = kx.K(at)
+    assert isinstance(ark, kx.IntVector)
+    assert ark.py() == [1, 2]
+    assert isinstance(atk, kx.LongAtom) # ToDo
+    assert atk.py() == 1
+
+    ar = np.array([1, 2], np.dtype('uint32'))
+    ark = kx.K(ar)
+    at = ar[0]
+    atk = kx.K(at)
+    assert isinstance(ark, kx.LongVector)
+    assert ark.py() == [1, 2]
+    assert isinstance(atk, kx.LongAtom)
+    assert atk.py() == 1
+
+    ar = np.array([1, 2], np.dtype('int8'))
+    ark = kx.K(ar)
+    at = ar[0]
+    atk = kx.K(at)
+    assert isinstance(ark, kx.ShortVector)
+    assert ark.py() == [1, 2]
+    assert isinstance(atk, kx.LongAtom) # ToDo
+    assert atk.py() == 1
+
+    ar = np.array([1, 2], np.dtype('float16'))
+    ark = kx.K(ar)
+    at = ar[0]
+    atk = kx.K(at)
+    assert isinstance(ark, kx.RealVector)
+    assert ark.py() == [1, 2]
+    assert isinstance(atk, kx.RealAtom)
+    assert atk.py() == 1
 
 
 @pytest.mark.unlicensed
@@ -929,14 +1010,9 @@ def test_from_numpy_ndarray_3(kx):
 @pytest.mark.unlicensed
 @pytest.mark.nep49
 def test_from_numpy_incompatible_types(kx):
-    for ty in (np.int8, np.uint8, np.int16, np.uint16, np.int32, np.uint32):
-        with pytest.raises(TypeError):
-            kx.LongVector(np.arange(10).astype(ty))
     for ty in (np.int64, np.uint64):
         with pytest.raises(TypeError):
             kx.ShortVector(np.arange(10).astype(ty))
-    with pytest.raises(TypeError):
-        kx.FloatVector(np.random.rand(10).astype('float32'))
     with pytest.raises(TypeError):
         kx.RealVector(np.random.rand(10).astype('float64'))
     with pytest.raises(TypeError):
@@ -971,6 +1047,12 @@ def test_from_pandas_dataframe(kx, pd):
     assert all(kx.K(idxdf).pd().index == idxdf.index)
     with pytest.raises(TypeError):
         kx.List(df)
+
+
+@pytest.mark.unlicensed
+@pytest.mark.nep49
+def test_from_pandas_NA(kx, pd):
+    assert kx.toq(pd.NA).py() is None
 
 
 @pytest.mark.nep49
@@ -1063,6 +1145,8 @@ def test_from_pandas_series(kx, pd):
     symbol_vector = pd.Series(['a', 'b', 'c', 'd'])
     assert all(symbol_vector == kx.K(symbol_vector).pd())
     time_vector = pd.Series([1000000, 2000000, 3000000, 4000000, 5000000], dtype='timedelta64[ns]') # noqa
+    assert all(time_vector == kx.K(time_vector).pd())
+    time_vector = pd.Series([1000000, 2000000, 3000000, 4000000, 5000000], dtype='timedelta64[us]') # noqa
     assert all(time_vector == kx.K(time_vector).pd())
     timestamp_vector = pd.Series([0, 1, 2, 3, 4], dtype='datetime64[ns]')
     assert all(timestamp_vector == kx.K(timestamp_vector).pd())
@@ -1349,3 +1433,271 @@ def test_dir(kx):
 def test_Float64Index(kx):
     pdFloat64Index = pd.DataFrame(data={'a': [1.0, 2.0, 3.0], 'b': [3, 4, 5]}).set_index('a')
     assert all(kx.q('([a:1 2 3.0] b:3 4 5)') == kx.toq(pdFloat64Index))
+
+
+def test_str_as_char(kx):
+    string = 'qstring'
+    str_list = ['qstring0', 'qstring1']
+    str_dict = {'a': {'b': 'qstring0'}, 'b': 'qstring1'}
+    np_list = np.array(str_list)
+    np_list_2d = np.array([str_list, str_list])
+    str_tab = pd.DataFrame(data={'x': np_list})
+
+    assert isinstance(kx.toq(string), kx.SymbolAtom)
+    qchar_string = kx.toq(string, strings_as_char=True)
+    assert isinstance(qchar_string, kx.CharVector)
+    assert all(qchar_string == b'qstring')
+
+    assert isinstance(kx.toq(str_list), kx.SymbolVector)
+    qchar_list = kx.toq(str_list, strings_as_char=True)
+    assert isinstance(qchar_list, kx.List)
+    assert isinstance(qchar_list[0], kx.CharVector)
+    assert all(qchar_list[0] == b'qstring0')
+
+    qsym_dict = kx.toq(str_dict)
+    assert isinstance(qsym_dict['a']['b'], kx.SymbolAtom)
+    assert qsym_dict['a']['b'] == 'qstring0'
+    assert isinstance(qsym_dict['b'], kx.SymbolAtom)
+    assert qsym_dict['b'] == 'qstring1'
+
+    qchar_dict = kx.toq(str_dict, strings_as_char=True)
+    assert isinstance(qchar_dict['a']['b'], kx.CharVector)
+    assert all(qchar_dict['a']['b'] == b'qstring0')
+    assert isinstance(qchar_dict['b'], kx.CharVector)
+    assert all(qchar_dict['b'] == b'qstring1')
+
+    qsym_np_list = kx.toq(np_list)
+    assert isinstance(qsym_np_list, kx.SymbolVector)
+    qchar_np_list = kx.toq(np_list, strings_as_char=True)
+    assert isinstance(qchar_np_list, kx.List)
+    assert isinstance(qchar_np_list[0], kx.CharVector)
+    assert all(qchar_np_list[0] == b'qstring0')
+
+    qsym_np_list_2d = kx.toq(np_list_2d)
+    assert isinstance(qsym_np_list_2d, kx.List)
+    assert isinstance(qsym_np_list_2d[0], kx.SymbolVector)
+    qchar_np_list_2d = kx.toq(np_list_2d, strings_as_char=True)
+    assert isinstance(qchar_np_list_2d, kx.List)
+    assert isinstance(qchar_np_list_2d[0], kx.List)
+    assert isinstance(qchar_np_list_2d[0][0], kx.CharVector)
+    assert all(qchar_np_list_2d[0][0] == b'qstring0')
+
+    qsym_tab = kx.toq(str_tab)
+    assert isinstance(qsym_tab['x'], kx.SymbolVector)
+    qchar_tab = kx.toq(str_tab, strings_as_char=True)
+    assert isinstance(qchar_tab['x'], kx.List)
+    assert isinstance(qchar_tab['x'][0], kx.CharVector)
+
+
+def test_column_variable_tree_phrase(kx):
+    col = kx.Column('x')
+    assert kx.toq(col).py() == 'x'
+
+    col_gt = 1 < kx.Column('x')
+    assert kx.toq(col_gt).py() == [kx.Operator('>'), 'x', 1]
+
+    col_max = kx.Column('x').max()
+    assert kx.toq(col_max).py() == [kx.q('max'), 'x']
+
+    var = kx.Variable('nvar')
+    assert kx.toq(var) == 'nvar'
+
+    tree = kx.ParseTree(kx.q.parse(b'x=`a'))
+    assert kx.toq(tree).py() == [kx.Operator('='), 'x', ['a']]
+
+    phrase_0 = kx.QueryPhrase(kx.Column('x') == 'a')
+    assert kx.toq(phrase_0).py() == [[kx.Operator('='), 'x', ['a']]]
+
+    phrase_1 = kx.QueryPhrase({'asA': 'a', 'negB': [kx.q('neg'), 'b']})
+    assert {'asA': 'a', 'negB': [kx.q('neg'), 'b']} == phrase_1.to_dict()
+
+
+def test_pyarrow(kx):
+    import pyarrow as pa
+
+    def test_pa(arr, karr, kat):
+        at = arr[0]
+        arr_toq= kx.toq(arr)
+        at_toq = kx.toq(at)
+        assert kx.q('~', karr, arr_toq).py()
+        assert kx.q('~', kat, at_toq).py()
+
+    # pyarrow.int8
+    test_pa(pa.array([1], pa.int8()), kx.q('1'), kx.q('1')) # ToDo
+    test_pa(pa.array([1, 2], pa.int8()), kx.q('1 2h'), kx.q('1'))
+
+    # pyarrow.int16
+    test_pa(pa.array([1], pa.int16()), kx.q('1'), kx.q('1')) # ToDo
+    test_pa(pa.array([1, 2], pa.int16()), kx.q('1 2h'), kx.q('1'))
+
+    # pyarrow.int32
+    test_pa(pa.array([1], pa.int32()), kx.q('1'), kx.q('1')) # ToDo
+    test_pa(pa.array([1, 2], pa.int32()), kx.q('1 2i'), kx.q('1'))
+
+    # pyarrow.int64
+    test_pa(pa.array([1], pa.int64()), kx.q('1'), kx.q('1'))
+    test_pa(pa.array([1, 2], pa.int64()), kx.q('1 2'), kx.q('1'))
+
+    # pyarrow.uint8
+    test_pa(pa.array([0], type=pa.uint8()), kx.q('0'), kx.q('0')) # ToDo
+    test_pa(pa.array([0, 1, 2], type=pa.uint8()), kx.q('0x000102'), kx.q('0')) # ToDo
+
+    # pyarrow.uint16
+    test_pa(pa.array([0], type=pa.uint16()), kx.q('0'), kx.q('0')) # ToDo
+    test_pa(pa.array([0, 1, 2], type=pa.uint16()), kx.q('0 1 2i'), kx.q('0')) # ToDo
+
+    # pyarrow.uint32
+    test_pa(pa.array([0], type=pa.uint32()), kx.q('0'), kx.q('0'))
+    test_pa(pa.array([0, 1, 2], type=pa.uint32()), kx.q('0 1 2'), kx.q('0'))
+
+    # pyarrow.uint64
+    # test_pa(pa.array([0, 1, 2], type=pa.uint64()), kx.q('(),1'), kx.q('1'))
+
+    # pyarrow.float16
+    test_pa(pa.array([np.float16(1.0)], pa.float16()), kx.q('1e'), kx.q('1e')) # ToDo
+    test_pa(pa.array([np.float16(1.0), np.float16(2.0)], pa.float16()), kx.q('1 2e'),
+            kx.q('1e'))
+
+    # pyarrow.float32
+    test_pa(pa.array([np.float32(1.0)], pa.float32()), kx.q('1e'), kx.q('1f')) # ToDo
+    test_pa(pa.array([np.float32(1.0), np.float32(2.0)], pa.float32()), kx.q('1 2e'),
+            kx.q('1f'))
+
+    # pyarrow.float64
+    test_pa(pa.array([np.float64(1.0)], pa.float64()), kx.q('1f'), kx.q('1f')) # ToDo
+    test_pa(pa.array([np.float64(1.0), np.float64(2.0)], pa.float64()), kx.q('1 2f'),
+            kx.q('1f'))
+
+    # pyarrow.time32
+    test_pa(pa.array([1], pa.time32('s')), kx.q('0D00:00:01'), kx.q('0D00:00:01')) # ToDo
+    test_pa(pa.array([1, 2], pa.time32('s')), kx.q('0D00:00:01 0D00:00:02'), kx.q('0D00:00:01'))
+
+    # ToDo
+    test_pa(pa.array([1], pa.time32('ms')), kx.q('0D00:00:00.001'), kx.q('0D00:00:00.001'))
+    test_pa(pa.array([1, 2], pa.time32('ms')), kx.q('0D00:00:00.001 0D00:00:00.002'),
+            kx.q('0D00:00:00.001'))
+
+    # pyarrow.time64
+    test_pa(pa.array([1], pa.time64('us')), kx.q('0D00:00:00.000001'),
+            kx.q('0D00:00:00.000001')) # ToDo
+    test_pa(pa.array([1, 2], pa.time64('us')), kx.q('0D00:00:00.000001  0D00:00:00.000002'),
+            kx.q('0D00:00:00.000001'))
+
+    # ToDo: pyarrow.lib.ArrowInvalid: Value 1 has non-zero nanoseconds
+    # test_pa(pa.array([1], pa.time64('ns')), kx.q('(),1'), kx.q('1'))
+
+    test_pa(pa.array([0], pa.time64('ns')), kx.q('0D00'), kx.q('0D00')) # ToDo
+    test_pa(pa.array([0, 1000], pa.time64('ns')), kx.q('0D00 0D00:00:00.000001'), kx.q('0D00'))
+
+    # pyarrow.timestamp
+    test_pa(pa.array([1], pa.timestamp('ms')), kx.q('1970.01.01D00:00:00.001'),
+            kx.q('1970.01.01D00:00:00.001'))
+    test_pa(pa.array([1, 2], pa.timestamp('ms')),
+            kx.q('1970.01.01D00:00:00.001  1970.01.01D00:00:00.002'),
+            kx.q('1970.01.01D00:00:00.001'))
+
+    test_pa(pa.array([1], pa.timestamp('ns')), kx.q('1970.01.01D00:00:00.000000001'),
+            kx.q('1970.01.01D00:00:00.000000001'))
+    test_pa(pa.array([1, 2], pa.timestamp('ns')),
+            kx.q('1970.01.01D00:00:00.000000001  1970.01.01D00:00:00.000000002'),
+            kx.q('1970.01.01D00:00:00.000000001'))
+
+    test_pa(pa.array([1], pa.timestamp('us')), kx.q('1970.01.01D00:00:00.000001000'),
+            kx.q('1970.01.01D00:00:00.000001000'))
+    test_pa(pa.array([1, 2], pa.timestamp('us')),
+            kx.q('1970.01.01D00:00:00.000001000  1970.01.01D00:00:00.000002000'),
+            kx.q('1970.01.01D00:00:00.000001000'))
+
+    test_pa(pa.array([1], pa.timestamp('s')), kx.q('1970.01.01D00:00:01.000000000'),
+            kx.q('1970.01.01D00:00:01.000000000'))
+    test_pa(pa.array([1, 2], pa.timestamp('s')),
+            kx.q('1970.01.01D00:00:01.000000000 1970.01.01D00:00:02.000000000'),
+            kx.q('1970.01.01D00:00:01.000000000'))
+
+    # pyarrow.date32
+    test_pa(pa.array([pa.scalar(date(2012, 1, 1), type=pa.date32())]), kx.q('2012.01.01'),
+            kx.q('2012.01.01'))
+    test_pa(pa.array([pa.scalar(date(2012, 1, 1), type=pa.date32())]*2),
+            kx.q('2#(),2012.01.01'), kx.q('2012.01.01'))
+
+    # pyarrow.date64
+    test_pa(pa.array([pa.scalar(date(2012, 1, 1), type=pa.date64())]), kx.q('2012.01.01'),
+            kx.q('2012.01.01'))
+    test_pa(pa.array([pa.scalar(date(2012, 1, 1), type=pa.date64())]*2),
+            kx.q('2#(),2012.01.01'), kx.q('2012.01.01'))
+
+    # pyarrow.duration
+    test_pa(pa.array([1], pa.duration('ns')), kx.q('0D00:00:00.000000001'),
+            kx.q('0D00:00:00.000000001'))
+    test_pa(pa.array([1, 2], pa.duration('ns')),
+            kx.q('(),0D00:00:00.000000001 0D00:00:00.000000002'), kx.q('0D00:00:00.000000001'))
+
+    test_pa(pa.array([1], pa.duration('ms')), kx.q('0D00:00:00.001000000'),
+            kx.q('0D00:00:00.001000000'))
+    if kx.config.pandas_2:
+        test_pa(pa.array([1, 2], pa.duration('ms')), kx.q('00:00:00.001 00:00:00.002'),
+                kx.q('0D00:00:00.001000000'))
+    else:
+        test_pa(pa.array([1, 2], pa.duration('ms')), kx.q('0D00:00:00.001 0D00:00:00.002'),
+                kx.q('0D00:00:00.001000000'))
+
+    test_pa(pa.array([1], pa.duration('us')), kx.q('0D00:00:00.000001000'),
+            kx.q('0D00:00:00.000001000'))
+    test_pa(pa.array([1, 2], pa.duration('us')),
+            kx.q('0D00:00:00.000001000 0D00:00:00.000002000'), kx.q('0D00:00:00.000001000'))
+
+    test_pa(pa.array([1], pa.duration('s')), kx.q('0D00:00:01.000000000'),
+            kx.q('0D00:00:01.000000000'))
+    if kx.config.pandas_2:
+        test_pa(pa.array([1, 2], pa.duration('s')), kx.q('00:00:01 00:00:02'),
+                kx.q('0D00:00:01.000000000'))
+    else:
+        test_pa(pa.array([1, 2], pa.duration('s')), kx.q('0D00:00:01 0D00:00:02'),
+                kx.q('0D00:00:01.000000000'))
+
+    # pyarrow.binary
+    test_pa(pa.array(['foo'], type=pa.binary()), kx.q('"foo"'),
+            kx.q('"foo"'))
+    test_pa(pa.array(['foo', 'bar', 'baz'], type=pa.binary()), kx.q('("foo";"bar";"baz")'),
+            kx.q('"foo"'))
+
+    # pyarrow.string
+    test_pa(pa.array(['foo'], type=pa.string()), kx.q('`foo'),
+            kx.q('`foo'))
+    test_pa(pa.array(['foo', 'bar', 'baz'], type=pa.string()), kx.q('`foo`bar`baz'),
+            kx.q('`foo'))
+
+    # pyarrow.utf8
+    test_pa(pa.array(['foo'], type=pa.utf8()), kx.q('`foo'),
+            kx.q('`foo'))
+    test_pa(pa.array(['foo', 'bar', 'baz'], type=pa.utf8()), kx.q('`foo`bar`baz'),
+            kx.q('`foo'))
+
+    # pyarrow.large_binary
+    test_pa(pa.array(['foo'], type=pa.large_binary()), kx.q('"foo"'),
+            kx.q('"foo"'))
+    test_pa(pa.array(['foo', 'bar', 'baz'], type=pa.large_binary()),
+            kx.q('("foo";"bar";"baz")'), kx.q('"foo"'))
+
+    # pyarrow.large_string
+    test_pa(pa.array(['foo'], type=pa.large_string()), kx.q('`foo'), kx.q('`foo'))
+    test_pa(pa.array(['foo', 'bar'], type=pa.large_string()), kx.q('`foo`bar'), kx.q('`foo'))
+
+    # pyarrow.large_utf8
+    test_pa(pa.array(['foo'], type=pa.large_utf8()), kx.q('`foo'), kx.q('`foo'))
+    test_pa(pa.array(['foo', 'bar'], type=pa.large_utf8()), kx.q('`foo`bar'), kx.q('`foo'))
+
+
+def test_pandas_timedelta(kx):
+    if kx.config.pandas_2:
+        assert kx.toq(kx.q('16:36').pd()) == kx.q('16:36:00')
+        assert kx.toq(kx.q('16:36:29').pd()) == kx.q('16:36:29')
+        assert kx.toq(kx.q('16:36:29.214').pd()) == kx.q('16:36:29.214')
+        assert kx.toq(kx.q('16:36:29.214344').pd()) == kx.q('0D16:36:29.214344000')
+        assert kx.toq(kx.q('16:36:29.214344678').pd()) == kx.q('0D16:36:29.214344678')
+    else:
+        assert kx.toq(kx.q('16:36').pd()) == kx.q('0D16:36:00.000000000')
+        assert kx.toq(kx.q('16:36:29').pd()) == kx.q('0D16:36:29.000000000')
+        assert kx.toq(kx.q('16:36:29.214').pd()) == kx.q('0D16:36:29.214000000')
+        assert kx.toq(kx.q('16:36:29.214344').pd()) == kx.q('0D16:36:29.214344000')
+        assert kx.toq(kx.q('16:36:29.214344678').pd()) == kx.q('0D16:36:29.214344678')

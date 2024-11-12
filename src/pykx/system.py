@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from warnings import warn
 
-from . import Q, wrappers as k
+from . import help, Q, wrappers as k
 from .exceptions import PyKXWarning, QError
 
 
@@ -26,6 +26,10 @@ class SystemCommands:
 
     def __call__(self, x):
         return self._q('{system x}', k.CharVector(x))
+
+    @property
+    def __doc__(self):
+        return help.qhelp('system')
 
     def tables(self, namespace=None):
         """Lists the tables associated with a namespace/dictionary

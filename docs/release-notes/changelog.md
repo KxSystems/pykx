@@ -4,9 +4,1130 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
-!!! Warning
+## PyKX 3.0.0
 
-    Currently PyKX is not compatible with Pandas 2.2.0 or above as it introduced breaking changes which cause data to be cast to the incorrect type.
+#### Release Date
+
+2024-11-12
+
+!!! Note
+
+        PyKX 3.0.0 is currently not available for Mac x86/ARM for all Python versions. Updated builds will be provided once available. To install PyKX 3.0.0 on Mac please install from source [here](https://github.com/kxsystems/pykx).
+
+### Additions
+
+- Addition of functionality to allow for development of end-to-end streaming workflows consisting of data-ingestion, persistence and query. This functionality is outlined in-depth [here](../user-guide/advanced/streaming/index.md) with a worked example [here](../examples/streaming/index.md).
+
+- PyKX tabular objects now have access to `select`, `exec`, `update` and `delete` methods to allow queries to be performed directly against the objects. This provides a significant ease-of-use improvement while maintaining access to the previous behavior.
+
+	```python
+	>>> import pykx as kx
+	>>> N = 1000
+	>>> table = kx.Table(data={
+	...     'time': kx.TimespanAtom('now'),
+	...     'sym': kx.random.random(N, ['AAA', 'BBB', 'CCC']),
+	...     'price': kx.random.random(N, 10.0)})
+	>>> table.select(where = kx.Column('price') > 5)
+	>>> table.exec(kx.Column('sym'))
+	>>> table.delete(where = kx.Column('sym') == 'AAA')
+	>>> table.update(2*kx.Column('price'))
+	```
+
+- Update to the PyKX Query API in licensed mode to support a significantly more Python first approach to querying kdb+ in-memory and on-disk databases. The following are a number of basic examples, see [here](../user-guide/fundamentals/query/pyquery.md) for more details.
+
+	```python
+	>>> table = kx.Table(data={
+	...     'sym': kx.random.random(100, ['AAPL', 'GOOG', 'MSFT']),
+	...     'date': kx.random.random(100, kx.q('2022.01.01') + [0,1,2]),
+	...     'price': kx.random.random(100, 1000.0),
+	...     'size': kx.random.random(100, 100) 
+	... })
+	>>> table.select(columns=kx.Column('price').max(), where=kx.Column('size') > 5)
+	>>> table.update(column=kx.Column('price').wavg(kx.Column('size')).rename('vwap'), by=kx.Column('sym'))
+	>>> table.delete(column=kx.Column('sym'))
+	>>> table.update(column=(kx.Column('price') * kx.Column('size')).rename('total'))
+	```
+
+- Addition of a new method to PyKX IPC Connection objects `upd` which allows for the execution of a function `.u.upd` on remote processes with supplied data. In the case that data is supplied as a `#!python kx.Table` object the raw data required for execution of the update will be extracted.
+
+    ```python
+    >>> import pykx as kx
+    >>> N = 1000
+    >>> table = kx.Table(data={
+    ...     'time': kx.TimespanAtom('now'),
+    ...     'sym': kx.random.random(N, ['AAA', 'BBB', 'CCC']),
+    ...     'price': kx.random.random(N, 10.0)})
+    >>> with kx.SyncQConnection(port=5010) as q:
+    ...     q.upd('trade', table)
+    >>> with kx.SyncQConnection(port=5010) as q:
+    ...     q.upd('trade', [kx.TimespanAtom('now'), 'AAA', 10.101])
+    ```
+
+- Beta features available in the 2.* versions of PyKX have now been migrated to full support.
+	- The full list of these features are as follows:
+		- [Database Creation and Management](../user-guide/advanced/database/index.md)
+		- [Compression and Encryption Module](../user-guide/advanced/compress-encrypt.md)
+		- [Remote Function Execution](../user-guide/advanced/remote-functions.md)
+		- [Streamlit Integration](../user-guide/advanced/streamlit.md)
+		- [Multi-threaded use of PyKX](../user-guide/advanced/threading.md)
+	- Upgrade considerations for these features can be found [here](../upgrades/2030.md#remote-python-execution)
+
+- Allows user to overwrite jupyter notebook kernel with q code by setting `PYKX_JUPYTERQ` to `True` before starting the notebook. This can also be accessed at runtime using `#!python kx.util.jupyter_qfirst_enable()` and `#!python kx.util.jupyter_qfirst_disable()`
+- Tab completion for `reserved_words` list in `src/pykx/__init__.py` added for Jupyter Notebooks after the import of PyKX.
+- Addition of method `reorder_columns` to `pykx.Table` objects allowing users to change the order of columns within an in-memory table, if the list of columns does not contain all columns within the table the supplied columns will be used as the first `N` columns of the resulting table.
+
+	```python
+	>>> tab = kx.Table(data={
+	...     'a': [1, 2, 3],
+	...     'b': ['a', 'b', 'c'],
+	...     'c': [1.0, 2.0, 3.0]
+	... })
+	>>> tab.reorder_columns('c')
+	pykx.Table(pykx.q('
+	c a b
+	-----
+	1 1 a
+	2 2 b
+	3 3 c
+	'))
+	>>> tab.reorder_columns(['b', 'c', 'a'])
+	pykx.Table(pykx.q('
+	b c a
+	-----
+	a 1 1
+	b 2 2
+	c 3 3
+	'))
+	```
+
+- Addition of methods `map` and `applymap` to `#!python kx.Table` and `#!python kx.KeyedTable` objects allowing users to apply a supplied function to every element of a table
+
+	=== "Python lambda"
+
+		```python
+		>>> tab = kx.Table(data={
+		...     'x': [[1, 2, 3], 1, [1, 2]],
+		...     'y': [kx.LongAtom.null, 1, 2]})
+		>>> tab.map(lambda x:len(str(x)))
+		pykx.Table(pykx.q('
+		x y
+		---
+		5 2
+		1 1
+		3 1
+		'))
+		>>> tab.map(lambda x:len(str(x)), na_action='ignore')
+		pykx.Table(pykx.q('
+		x y
+		---
+		5
+		1 1
+		3 1
+		'))
+		>>> tab.map(lambda x, y: y+len(str(x)), y = 1)
+		pykx.Table(pykx.q('
+		x y
+		---
+		6 3
+		2 2
+		4 2
+		'))
+		```
+
+	=== "Python function"
+
+		```python
+		>>> tab = kx.Table(data={
+		...     'x': [[1, 2, 3], 1, [1, 2]],
+		...     'y': [kx.LongAtom.null, 1, 2]})
+		>>> def _multi_arg_count(x, y=1):
+		...      try:
+		...          count = len(x)
+		...      except TypeError as err:
+		...          count = 1
+		...      return count + y
+		>>> tab.map(_multi_arg_count)
+		pykx.Table(pykx.q('
+		x y
+		---
+		4 2
+		2 2
+		3 2
+		'))
+		>>> tab.map(_multi_arg_count, y=3)
+		pykx.Table(pykx.q('
+		x y
+		---
+		6 4
+		4 4
+		5 4
+		'))
+		```
+
+	=== "q function"
+
+		```python
+		>>> tab = kx.Table(data={
+		...     'x': [[1, 2, 3], 1, [1, 2]],
+		...     'y': [kx.LongAtom.null, 1, 2]})
+		>>> tab.map(kx.q.count)
+		pykx.Table(pykx.q('
+		x y
+		---
+		3 1
+		1 1
+		2 1
+		'))
+		>>> tab.map(kx.q('{count string x}'))
+		pykx.Table(pykx.q('
+		x y
+		---
+		3 0
+		1 1
+		2 1
+		'))
+		```
+
+- Added constructors for `EnumVector` and `EnumAtom` types. Added `values()` / `value()`, `domain()` and `indices()` / `index()` methods to access different components of the enumerations.
+
+	```python
+	>>>kx.q('l:`a`b`c')
+	>>>v=('a', 'c')
+	>>>e=kx.EnumVector('l', values=v)
+	>>>e
+	pykx.EnumVector(pykx.q('`l$`a`c'))
+	>>>e.domain()
+	pykx.SymbolAtom(pykx.q('`l'))
+	>>>e.values()
+	pykx.SymbolVector(pykx.q('`a`c'))
+	>>>e.indices()
+	pykx.LongVector(pykx.q('0 2'))
+	```
+
+- Addition to `#!python kx.DB` module to facilitate
+    - Loading of a database to not move current working directory
+
+        ```python
+        >>> import pykx as kx
+        >>> db = kx.DB(path='db', change_dir=False)
+        ```
+
+    - Loading of a database to not require loading of `.q` files which exist within the database.
+
+        ```python
+        >>> import pykx as kx
+        >>> db = kx.DB(path='db', load_scripts=False)
+        ```
+
+- Added `cloud_libraries` kwarg to `#!python kx.install_into_QHOME` allowing installation of the kdb Insights cloud libraries to QHOME
+
+- Addition of a new utility function `#!python kx.util.detect_bad_columns` to validate if the columns of a table object conform to the naming conventions supported by kdb+ and highlighting if the table contains duplicate column names raising a warning indicating potential issues and returning `#!python True` if the table contains invalid columns.
+
+	```python
+	>>> import pykx as kx
+	>>> tab = kx.q('flip (`a;`$"!";`a;`$"a b")!4 4#16?1f')
+	>>> kx.util.detect_bad_columns(tab)
+	/usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py:593: UserWarning: 
+	Duplicate columns or columns with reserved characters detected:
+		Duplicate columns: ['a']
+		Invalid columns: ['!', 'a b']
+	See https://code.kx.com/pykx/help/troubleshooting.html to learn more about updating your table
+	  warn(warn_string)
+	True
+	>>> kx.util.detect_bad_columns(tab, return_cols=True)
+	/usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py:588: UserWarning:
+	Duplicate columns or columns with reserved characters detected:
+		Duplicate columns: ['a']
+		Invalid columns: ['!', 'a b']
+	See https://code.kx.com/pykx/help/troubleshooting.html to learn more about updating your table
+	  warn(warn_string)
+	['a', '!', 'a b']
+	```
+
+- Addition of functionality to allow operators to be generated from an input string
+
+	```python
+	>>> import pykx as kx
+	>>> kx.Operator('?')
+	pykx.Operator(pykx.q('?'))
+	```
+
+- Addition of named operators to allow use of single character operators available in q, for example:
+	- [drop](../api/pykx-execution/q.md#drop)
+	- [fill](../api/pykx-execution/q.md#fill)
+	- [dict](../api/pykx-execution/q.md#dict)
+
+	=== "Using operators"
+
+		```python
+		>>> kx.q.dict(['a', 'b', 'c'], [1, 2, 3])
+		pykx.Dictionary(pykx.q('
+		a| 1
+		b| 2
+		c| 3
+		'))
+		```
+
+	=== "Getting help"
+
+		```python
+		>>> help(kx.q.fill)
+		Help on Operator in module pykx.wrappers:
+
+		pykx.Operator(pykx.q('!'))
+		    • dict
+
+		    Generate a dictionary by passing two lists of equal lengths
+
+		        >>> kx.q.dict(['a', 'b', 'c'], [1, 2, 3])
+		        pykx.Dictionary(pykx.q('
+		        a| 1
+		        b| 2
+		        c| 3
+		        '))
+		```
+
+- When generating IPC connections with `reconnection_attempts` users can now configure the initial delay between first and second attempts and the function which updates the delay on successive attempts using the `reconnection_delay` and `reconnection_function` keywords, for example setting a 1 second delay between successive attempts.
+
+	```python
+	>>> conn = kx.SyncQConnection(reconnection_attempts=5, reconnection_delay=1, reconnection_function=lambda x:x)
+        >>> conn('1+1')  # after this call the server on port 5050 is shutdown for 3 seconds
+	pykx.LongAtom(pykx.q('2'))
+	>>> conn('1+2')
+	WARNING: Connection lost attempting to reconnect.
+	Failed to reconnect, trying again in 1.0 seconds.
+	Failed to reconnect, trying again in 1.0 seconds.
+	Failed to reconnect, trying again in 1.0 seconds.
+	Connection successfully reestablished.
+	pykx.LongAtom(pykx.q('3'))
+	```
+
+- Two new options added on first initialisation of PyKX to allow users to:
+	- Use the path to their already downloaded `kc.lic`/`k4.lic` licenses without going through the "Do you want to install a license" workflow
+	- Allow users to persist for future use that they wish to use the IPC only unlicensed mode of PyKX, this will persist a file `~/.pykx-config` which sets configuration denoting unlicensed mode is to be used.
+
+- Addition of function `#!python kx.util.install_q` to allow users who do not have access to a `q` executable at the time of installing PyKX. See [here](../getting-started/installing.md) for instructions regarding its use
+- Addition of function `#!python kx.util.start_q_subprocess` to allow a `q` process to be started on a specified port with supplied initialisation arguments, for example:
+
+	```python
+	>>> kx.util.start_q_subprocess(5050, load_file='qfile.q', init_args = ['-t', '1000'])
+	```
+
+- Added new constructor methods for `#!python kx.DateAtom`, `#!python kx.TimestampAtom` and `#!python TimespanAtom` so now users can create Temporal Type objects directly by passing numeric values in licensed mode.
+
+    ```python
+    >>> kx.DateAtom(2024, 9, 21)
+    pykx.DateAtom(pykx.q('2024.09.21'))
+
+    >>> kx.TimestampAtom(2150, 10, 22, 20, 31, 15, 70713856)
+    pykx.TimestampAtom(pykx.q('2150.10.22D20:31:15.070713856'))
+
+    >>> kx.TimespanAtom(43938, 19, 7, 31, 664551936)
+    pykx.TimespanAtom(pykx.q('43938D19:07:31.664551936')))
+    ```
+
+- Added conversions for additional NumPy datatypes.
+
+    ```python
+    >>> kx.toq(np.array([1, 2], np.dtype('uint16')))
+    pykx.IntVector(pykx.q('1 2i'))
+
+    >>> kx.toq(np.array([1, 2], np.dtype('uint32')))
+    pykx.LongVector(pykx.q('1 2'))
+
+    >>> kx.toq(np.array([1, 2], np.dtype('int8')))
+    pykx.ShortVector(pykx.q('1 2h'))
+
+    >>> kx.toq(np.array([1, 2], np.dtype('float16')))
+    pykx.RealVector(pykx.q('1 2e'))
+
+    >>> kx.toq(np.bytes_('a'))
+    pykx.CharAtom(pykx.q('"a"'))
+
+    >>> kx.toq(np.bytes_('aa'))
+    pykx.CharVector(pykx.q('"aa"'))
+    ```
+
+- Added conversion for `pandas.NA` to the `pykx.Identity` `(::)`.
+- Added conversions for PyArrow Scalar types. Note: These conversions rely on PyArrow `.as_py()` and as such mirror it's limitations.
+
+    ```python
+    >>> kx.toq(pa.array([0.0, 1.0, 2.0], type=pa.float32())[0])
+    pykx.FloatAtom(pykx.q('0f'))
+    ```
+
+- Addition of `is_pos_inf` and `is_neg_inf` properties to PyKX atom objects to check for positive and negative infinity values.
+
+    ```python
+    >>> kx.q('0W').is_pos_inf
+    True
+    >>> kx.q('0W').is_neg_inf
+    False
+    >>> kx.q('-0W').is_neg_inf
+    True
+    ```
+
+- Addition of `inf_neg` property to PyKX atom objects.
+
+    ```python
+    >>> kx.IntAtom.inf
+    pykx.IntAtom(pykx.q('0Wi'))
+    >>> kx.IntAtom.inf_neg
+    pykx.IntAtom(pykx.q('-0Wi'))
+    ```
+
+- All infinity and null properties on atom classes are now usable in unlicensed mode: `null`, `inf`, `inf_pos`, `inf_neg`, `is_inf`, `is_neg_inf`, `is_pos_inf`.
+
+### Fixes and Improvements
+
+- Previously built-in `#!python help()` python function, when called on q keywords such as `#!python kx.q.rand` or `#!python kx.q.max` was displaying the generic `wrappers` object help message. As noted in [the installation docs](../getting-started/installing.md#dependencies), this functionality requires the installation of optional libraries available through `pip install pykx[help]`.
+
+	=== "Behavior prior to change"
+
+		```
+		Help on Lambda in module pykx.wrappers object:
+
+		class Lambda(Function)
+		|  Lambda(x: Any, *, cast: bool = None)
+		|
+		|  Wrapper for q lambda functions.
+		|
+		|  Lambda's are the most basic kind of function in q. They can take between 0 and 8 parameters
+		|  (inclusive), which all must be q objects themselves. If the provided parameters are not
+		|  [`pykx.K`][] objects, they will be converted into them using [`pykx.toq`][].
+		|
+		|  Unlike other [`pykx.Function`][] subclasses, `Lambda` objects can be called with keyword
+		|  arguments, using the names of the parameters from q.
+		```
+
+	=== "Behavior post change"
+
+		```
+		Help on Lambda in pykx:
+
+		pykx.Lambda = pykx.Lambda(pykx.q('k){*1?x}'))
+			• rand
+
+			Pick randomly.
+
+				>>> pykx.q.rand([1, 2, 3, 4, 5])
+				pykx.LongAtom(q('2'))
+		```
+
+- When establishing a `#!python kx.SecureQConnection` the first item could not be passed as a `#!python kx.SymbolAtom` object, this created issues for some users making IPC calls against restricted/secure APIs, this has been resolved.
+- Fix for `#!python TypeError` if `.pykx-config` config file exists but does not contain specified PyKX profile.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		Traceback (most recent call last):
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\config.py", line 68, in <module>
+			_pykx_profile_content = _pykx_config_content[pykx_config_profile]
+									~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+		KeyError: 'default'
+
+		During handling of the above exception, another exception occurred:
+
+		Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\__init__.py", line 17, in <module>
+			from ._pyarrow import pyarrow
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\_pyarrow.py", line 12, in <module>
+			from .config import load_pyarrow_unsafe
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\config.py", line 71, in <module>
+			print("Unable to locate specified 'PYKX_PROFILE': '" + pykx_config_profile + "' in file '" + config_path + "'") # noqa E501
+				~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~
+		TypeError: can only concatenate str (not "WindowsPath") to str
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		Unable to locate specified 'PYKX_PROFILE': 'default' in file 'C:\Users\user\.pykx-config'
+		```
+
+- Previously loading pykx.q during q startup using `QINIT` or `QHOME/q.q` resulted in a segfault or a corruption.
+- Removal of several deprecated configuration variables which previously noted to be deprecated at the next major release. See [here](../upgrades/2030.md#deprecations) for more information.
+- Attempts to convert `#!python kx.List` objects with non-conforming types previously resulted in an ambiguous error, updated error message indicates the root cause.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> kx.q('(.z.p;4)').pa()
+		...
+		pyarrow.lib.ArrowNotImplementedError: Expected np.datetime64 but got: int64
+		>>>
+		>>> kx.q('(4;.z.p)').pa()
+		...
+		pyarrow.lib.ArrowInvalid: Cannot mix NumPy dtypes int64 and datetime64
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> kx.q('(.z.p;4)').pa()
+		...
+		QError: Unable to convert pykx.List with non conforming types to PyArrow,
+		        failed with error: Expected np.datetime64 but got: int64
+		>>>
+		>>> kx.q('(4;.z.p)').pa()
+		...
+		QError: Unable to convert pykx.List with non conforming types to PyArrow,
+		        failed with error: Cannot mix NumPy dtypes int64 and datetime64
+		```
+
+- The function `#!python kx.util.debug_environment` now returns the applied configuration values at startup instead of customised values, this ensures that configuration set in `.pykx-config` file will be used and limits chances of future default changes being missed in debugging.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> kx.util.debug_environment()
+		..
+		**** PyKX Environment Variables ****
+		PYKX_IGNORE_QHOME: 
+		PYKX_KEEP_LOCAL_TIMES: 
+		PYKX_ALLOCATOR: 
+		PYKX_GC: 
+		PYKX_LOAD_PYARROW_UNSAFE: 
+		PYKX_MAX_ERROR_LENGTH: 
+		PYKX_NOQCE: 
+		PYKX_Q_LIB_LOCATION: 
+		PYKX_RELEASE_GIL: 
+		PYKX_Q_LOCK: 
+		PYKX_DEFAULT_CONVERSION: 
+		..
+		```
+
+        === "Behavior post change"
+
+		```python
+		>>> kx.util.debug_environment()
+		..
+		**** PyKX Configuration Variables ****
+		PYKX_IGNORE_QHOME: False
+		PYKX_KEEP_LOCAL_TIMES: False
+		PYKX_ALLOCATOR: False
+		PYKX_GC: False
+		PYKX_LOAD_PYARROW_UNSAFE: False
+		PYKX_MAX_ERROR_LENGTH: 256
+		PYKX_NOQCE: False
+		PYKX_RELEASE_GIL: False
+		PYKX_Q_LIB_LOCATION: /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pykx/lib
+		PYKX_Q_LOCK: False
+		PYKX_SKIP_UNDERQ: False
+		PYKX_Q_EXECUTABLE: /usr/local/anaconda3/envs/qenv/q/m64/q
+                PYKX_THREADING: False
+		PYKX_4_1_ENABLED: False
+		PYKX_QDEBUG: False
+		PYKX_DEBUG_INSIGHTS_LIBRARIES: False
+		..
+		```
+
+- Use of the `#!python has_nulls` property on keyed tables failed to appropriately check for the presence of null values checking for nulls column names rather than null values within the table content. This has been rectified.
+- Operations on `#!python kx.GroupbyTable` objects which have been indexed previously would raise an error indicating invalid key access, this has now been resolved
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> tab = kx.Table(data={
+		...     'sym': kx.random.random(100, ['a', 'b', 'c']),
+		...     'size': kx.random.random(100, 100),
+		...     'price': kx.random.random(100, 10.0)})
+		>>> tab.groupby('sym')['price'].max()
+		KeyError: "['['sym', 'price']'] is not an index"
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> tab = kx.Table(data={
+		...     'sym': kx.random.random(100, ['a', 'b', 'c']),
+		...     'size': kx.random.random(100, 100),
+		...     'price': kx.random.random(100, 10.0)})
+		>>> tab.groupby('sym')['price'].max()
+		pykx.KeyedTable(pykx.q('
+		sym| price   
+		---| --------
+		a  | 9.830794
+		b  | 9.761246
+		c  | 9.592286
+		'))
+		```
+
+- Support has now been added for conversion of `timedelta64[us]` to `#!python kx.Timespan` type objects
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pandas as pd
+		>>> import numpy as np
+		>>> import pykx as kx
+		>>> df = pd.DataFrame({
+		...     'time': np.array([1,2,3], dtype='timedelta64[us]'),
+		...     'sym': ['msft', 'ibm', 'ge'],
+		...     'qty': [100, 200, 150]})
+		>>> kx.toq(df)
+		TypeError: ktype cannot be inferred from Numpy dtype timedelta64[us]
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pandas as pd
+		>>> import numpy as np
+		>>> import pykx as kx
+		>>> df = pd.DataFrame({
+		...     'time': np.array([1,2,3], dtype='timedelta64[us]'),
+		...     'sym': ['msft', 'ibm', 'ge'],
+		...     'qty': [100, 200, 150]})
+		>>> kx.toq(df)
+		pykx.Table(pykx.q('
+		time                 sym  qty
+		-----------------------------
+		0D00:00:00.000001000 msft 100
+		0D00:00:00.000002000 ibm  200
+		0D00:00:00.000003000 ge   150
+		'))
+		```
+- Previously loading pykx.q during q startup using `q.q` results in a segfault or a corruption.
+
+	=== "Behavior prior to change"
+
+		```bash
+		$ echo "\l pykx.q" > $QHOME/q.q
+
+		$ q
+		<frozen importlib._bootstrap>:241: PyKXWarning: Failed to initialize PyKX successfully with the following error: Captured output from initialization attempt:
+			double free or corruption (out)
+
+		License location used:
+		/usr/pykx/kc.lic
+		```
+
+	=== "Behavior post change"
+
+		```bash
+		$ echo "\l pykx.q" > $QHOME/q.q
+
+		$ q
+		q)
+		```
+
+- Addition of keyword argument to `#!python kx.toq` functionality to allow Python strings to be returned as `#!python pykx.CharVector` objects rather than `#!python pykx.SymbolAtom` objects.
+
+	```python
+	>>> import pykx as kx
+	>>> kx.toq('str')
+	pykx.SymbolAtom(pykx.q('`str'))
+	>>> kx.toq('str', strings_as_char=True)
+	pykx.CharVector(pykx.q('"str"'))
+	>>>
+	>>> kx.toq({'a': {'b': 'test'}, 'b': 'test1'})
+	pykx.Dictionary(pykx.q('
+	a| (,`b)!,`test
+	b| `test1
+	'))
+	>>> kx.toq({'a': {'b': 'test'}, 'b': 'test1'}, strings_as_char=True)
+	pykx.Dictionary(pykx.q('
+	a| (,`b)!,"test"
+	b| "test1"
+	'))
+	```
+
+- Previously remote function calls required user defined functions to supply at least one argument, attempts to generate a zero-argument function would result in a `type` error being raised.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> session = kx.remote.session(port=5050)
+		>>> @kx.remote.function(session)
+		... def zero_arg_function():
+		...     return 10
+		>>> zero_arg_function()
+		pykx.exceptions.QError: type
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		>>> session = kx.remote.session(port=5050)
+		>>> @kx.remote.function(session)
+		>>> @function(remote_session)
+		... def zero_arg_function():
+		...     return 10
+		>>> zero_arg_function()
+		pykx.LongAtom(pykx.q('10'))
+		```
+
+- Previously `append` on two `#!python pykx.List` objects was not correctly inserting the new contents.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> a = kx.toq(['a',1])
+		>>> a.append(['b',2])
+		>>> a
+		pykx.List(pykx.q('
+		`a
+		1
+		`b
+		2
+		'))
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> a = kx.toq(['a',1])
+		>>> a.append(['b',2])
+		>>> a
+		pykx.List(pykx.q('
+		`a
+		1
+		(`b;2)
+		'))
+		```
+
+- Previously users could not convert `<class 'pykx.wrappers.PandasUUIDArray'>` using `#!python pykx.toq`. It now returns a `<class 'pykx.wrappers.GUIDVector'>`.
+
+	=== "Behavior prior to change"
+
+		```python
+		>> t = kx.q('([] g:2?0Ng)')
+		>>> kx.toq(t['g'].pd(raw=True))
+		Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "pykx/toq.pyx", line 2539, in pykx.toq.ToqModule.__call__
+		File "pykx/toq.pyx", line 242, in pykx.toq._default_converter
+		TypeError: Cannot convert <class 'pykx.wrappers.PandasUUIDArray'> '<PandasUUIDArray>
+		[(-1120411.5051955811-2.2494901007079993e+40j), (1.0810316408884467e+40+2.3725570805246122e+135j)]
+		Length: 2, dtype: pykx.uuid' to K object
+		```
+
+	=== "Behavior post change"
+
+		```Python
+		>>> t = kx.q('([] g:2?0Ng)')
+		>>> kx.toq(t['g'].pd(raw=True))
+		pykx.GUIDVector(pykx.q('8c6b8b64-6815-6084-0a3e-178401251b68 5ae7962d-49f2-404d-5aec-f7c8abbae288'))
+		>>> type(kx.toq(t['g'].pd(raw=True)))
+		<class 'pykx.wrappers.GUIDVector'>
+		```
+
+- Attempts to load a database using the `#!python kx.DB` module previously would raise an `nyi` error if the path to the database contained a space
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> db = kx.DB(path='/tmp/test directory/mydb')
+		..
+		QError: Failed to load Database with error: nyi
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		>>> db = kx.DB(path='/tmp/test directory/mydb')
+		>>> db.tables
+		['trade']		
+		```
+
+- Improved handling of invalid methods for Splayed and Partitioned Tables.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> tab.head()
+		Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "/home/andymc/work/KXI-47027/KXI-47027/lib/python3.10/site-packages/pykx/pandas_api/__init__.py", line 57, in return_val
+			res = func(*args, **kwargs)
+		File "/home/andymc/work/KXI-47027/KXI-47027/lib/python3.10/site-packages/pykx/pandas_api/pandas_indexing.py", line 345, in head
+			return q(f'{{{n}#x}}', self)
+		File "/home/andymc/work/KXI-47027/KXI-47027/lib/python3.10/site-packages/pykx/embedded_q.py", line 249, in __call__
+			return factory(result, False)
+		File "pykx/_wrappers.pyx", line 493, in pykx._wrappers._factory
+		File "pykx/_wrappers.pyx", line 486, in pykx._wrappers.factory
+		pykx.exceptions.QError: par
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> tab.head()
+		AttributeError: Operation 'head' not supported for PartitionedTable type
+		```
+
+- Resolved issue in `_repr_html_` on table objects which was not displaying the final row when table count equaled console height.
+
+	=== "Behavior prior to change"
+
+		![Before](./images/KXI-52686_before.png)
+
+	=== "Behavior post change"
+
+		![After](./images/KXI-52686_after.png)
+
+- When using Jupyter Notebooks if a table to be presented in HTML format contains invalid columns resulting in a return of `#!python True` when `#!python kx.util.detect_bad_columns` is called a warning will be raised to a user highlighting the invalid columns and the printed `#!python table.__repr__` will be presented.
+- Updates to various error messages to provide more descriptive explanations, see [here](../upgrades/2030.md) for more information on changes you may need to consider.
+- Resolved `No Such file or directory` error for `libe.so` when attempting to initialize unlicensed mode with `PYKX_4_1_ENABLED=True`.
+- Resolved `WARN: Failed to load KX Insights Core library` when using PyKX with `PYKX_4_1_ENABLED=True`.
+- Removal of various deprecated keywords used in table operations:
+	- `#!python modify` keyword for `#!python select`, `#!python exec`, `#!python update` and `#!python delete` operations on `#!python pykx.Table` and `#!python pykx.KeyedTable`. This has been permanently changed to use `#!python inplace`.
+	- `#!python replace_self` keyword when attempting to overwrite a `#!python pykx.Table` or `#!python KeyedTable` using insert/upsert functionality. This has been permanently changed to use `#!python inplace`.
+
+- Binary updates
+	- Linux ARM `e.o` library updated to 2023.11.22. Fixes the following issues:
+		- Support for SSL3 for remote unlicensed querying
+		- PyKX will no longer overwrite Numpy subnormal definition
+	- Windows `e.dll` and `e.lib` libraries updated to 2024.08.21. Underlying libraries now compiled using `MSVC 2017`. This removed the dependency on `msvcr100.dll` for PyKX on Windows.
+	- Updates to Windows, Linux and Mac binaries `q.[so|dll]` for kdb+ 4.0 to 2024.10.25 and for kdb+ 4.1 to 2024.10.16. Fixes the following issue:
+		- Function defined by `vk` available for use.
+
+- Changed the logic of `#!python list(KeyedTable)` and the `#!python pykx.KeyedTable` iterator to return the values of that table as a list of lists instead of the `keys` as a list of tuple objects.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> tk=kx.q('([a:1 2 3] b:5 6 7;c:8 9 10)')
+		>>> [print(x) for x in tk]
+		(pykx.LongAtom(pykx.q('1')),)
+		(pykx.LongAtom(pykx.q('2')),)
+		(pykx.LongAtom(pykx.q('3')),)
+
+		>>> list(tk)
+		[(pykx.LongAtom(pykx.q('1')),), (pykx.LongAtom(pykx.q('2')),), (pykx.LongAtom(pykx.q('3')),)]
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> tk=kx.q('([a:1 2 3] b:5 6 7;c:8 9 10)')
+		>>> [print(x) for x in tk]
+		[pykx.LongAtom(pykx.q('5')), pykx.LongAtom(pykx.q('8'))]
+		[pykx.LongAtom(pykx.q('6')), pykx.LongAtom(pykx.q('9'))]
+		[pykx.LongAtom(pykx.q('7')), pykx.LongAtom(pykx.q('10'))]
+
+		>>> list(tk)
+		[[pykx.LongAtom(pykx.q('5')), pykx.LongAtom(pykx.q('8'))], [pykx.LongAtom(pykx.q('6')), pykx.LongAtom(pykx.q('9'))], [pykx.LongAtom(pykx.q('7')), pykx.LongAtom(pykx.q('10'))]]
+		```
+
+- Changed return of `pykx.KeyedTable.keys()` from a list of tuples to a `pykx.Table` to be consistent with `pykx.KeyedTable.values()` and unkeyed `pykx.Table`.
+  
+	=== "Behavior prior to change"
+
+		```python
+		>>> tk=kx.q('([a:1 2 3] b:5 6 7;c:8 9 10)')
+		>>> tk.keys()
+		[(pykx.LongAtom(pykx.q('1')),), (pykx.LongAtom(pykx.q('2')),), (pykx.LongAtom(pykx.q('3')),)]
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> tk=kx.q('([a:1 2 3] b:5 6 7;c:8 9 10)')
+		>>> tk.keys())
+		pykx.Table(pykx.q('
+		a
+		-
+		1
+		2
+		3
+		'))
+		```
+
+- PyKX conversions during `.py()`/`.np()`/`.pd()`/`.pa()` now convert null values to Python values rather than leaving as PyKX objects. The changes are outlined in full on the [nulls and infinities](../user-guide/fundamentals/nulls_and_infinities.md) page.
+
+    === "Behavior prior to change"
+
+        ```python
+        >>> kx.q('1 2 0N').py()
+        [1, 2, pykx.LongAtom(pykx.q('0N'))]
+        ```
+
+    === "Behavior post change"
+
+        ```python
+        >>> kx.q('1 2 0N').py()
+        [1, 2, <NA>]
+        ```
+
+- Infinity values are no longer blocked from converting for `ShortAtom`/`IntAtom`/`LongAtom` datatypes. The changes are outlined in full on the [nulls and infinities](../user-guide/fundamentals/nulls_and_infinities.md) page.
+
+    === "Behavior prior to change"
+
+        ```python
+        >>> kx.q('0W').np()
+        Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+        File "/home/user/.pyenv/versions/3.11.5/lib/python3.11/site-packages/pykx/wrappers.py", line 1279, in np
+            return self._np_null_or_inf(np.int64(_wrappers.k_j(self)), raw)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        File "/home/user/.pyenv/versions/3.11.5/lib/python3.11/site-packages/pykx/wrappers.py", line 1245, in _np_null_or_inf
+            raise PyKXException('Numpy does not support infinite atomic integral values')
+        pykx.exceptions.PyKXException: Numpy does not support infinite atomic integral values
+        ```
+
+    === "Behavior post change"
+
+        ```python
+        >>> kx.q('0W').np()
+        9223372036854775807
+        ```
+
+- Fix Pandas Timedelta atom conversions for Pandas<2.0
+
+    === "Behavior prior to change"
+
+        ```python
+        >>> kx.toq(pd.Timedelta('0 days 16:36:29.214000'))
+        Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+        File "pykx/toq.pyx", line 2692, in pykx.toq.ToqModule.__call__
+        File "pykx/toq.pyx", line 270, in pykx.toq._default_converter
+        TypeError: Cannot convert <class 'pandas._libs.tslibs.timedeltas.Timedelta'> 'Timedelta('0 days 16:36:29.214000')' to K object. See pykx.register to register custom conversions.
+        ```
+
+    === "Behavior post change"
+
+        ```python
+        >>> kx.toq(pd.Timedelta('0 days 16:36:29.214000'))
+        pykx.TimespanAtom(pykx.q('0D16:36:29.214000000'))
+        ```
+
+- Changed logic of `pykx.KeyedTable.get()` and `pykx.Table.get()` function to return a vector in cases where a single column table would previously have been returned.
+- When attempting to get a column not present in the table, calling `pykx.KeyedTable.get()` or `pykx.Table.get()` raises an error if `default` is not set by the user instead of returning `None`.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> tab=kx.q('1!([] x: til 3; y: 3 - til 3; z: 3?`a`b`c)')
+		>>> tab2.get('y')
+		pykx.Table(pykx.q('
+		y
+		-
+		3
+		2
+		1
+		'))
+
+		>>> tab.get('r')
+		>>>
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> tab=kx.q('1!([] x: til 3; y: 3 - til 3; z: 3?`a`b`c)')
+		>>> tab2.get('y')
+		pykx.LongVector(pykx.q('3 2 1'))
+
+		>>> tab.get('r')
+		Traceback (most recent call last):
+			File "<stdin>", line 1, in <module>
+			File "/home/andymc/work/KXI-50017/KXI-50017/lib/python3.10/site-packages/pykx/pandas_api/__init__.py", line 57, in return_val
+				res = func(*args, **kwargs)
+			File "/home/andymc/work/KXI-50017/KXI-50017/lib/python3.10/site-packages/pykx/pandas_api/pandas_indexing.py", line 366, in get
+				return _get(self, key, default)
+			File "/home/andymc/work/KXI-50017/KXI-50017/lib/python3.10/site-packages/pykx/pandas_api/pandas_indexing.py", line 41, in _get
+				raise QError(f'Attempted to retrieve inaccessible column: {key}')
+		pykx.exceptions.QError: Attempted to retrieve inaccessible column: r
+		```
+
+- `select_dtypes` will now return `pykx.Identity(pykx.q('::'))` if all columns are excluded, or if no columns are included.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> tab = kx.q('([] a:1 2 3j;b:4 5 6i)')
+
+		>>> tab.dtypes
+		pykx.Table(pykx.q('
+		columns datatypes     type         
+		-----------------------------------
+		a       "kx.LongAtom" "kx.LongAtom"
+		b       "kx.IntAtom"  "kx.IntAtom" 
+		'))
+
+		>>> tab.select_dtypes(include=['SymbolAtom'])
+		pykx.Table(pykx.q('
+		a b
+		---
+		1 4
+		2 5
+		3 6
+		'))
+
+		>>> tab.select_dtypes(exclude=['kx.LongAtom', 'kx.IntAtom'])
+		pykx.Table(pykx.q('
+		a b
+		---
+		1 4
+		2 5
+		3 6
+		'))
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> tab = kx.q('([] a:1 2 3j;b:4 5 6i)')
+
+		>>> tab.dtypes
+		pykx.Table(pykx.q('
+		columns datatypes     type         
+		-----------------------------------
+		a       "kx.LongAtom" "kx.LongAtom"
+		b       "kx.IntAtom"  "kx.IntAtom" 
+		'))
+
+		>>> tab.select_dtypes(include=['SymbolAtom'])
+		pykx.Identity(pykx.q('::'))
+
+		>>> tab.select_dtypes(exclude=['kx.LongAtom', 'kx.IntAtom'])
+		pykx.Identity(pykx.q('::'))
+		```
+
+- `select_dtypes` now functions on `KeyTable` objects. Always returning key columns, performing column filtering on value columns.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> dfk = kx.q('([c1:`a`b`c]; c2:1 2 3h; c3:1 2 3j; c4:1 2 3i)')
+		>>> dfk.select_dtypes(include=[kx.ShortAtom])
+		Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "/home/user/.pyenv/versions/3.11.5/lib/python3.11/site-packages/pykx/pandas_api/__init__.py", line 57, in return_val
+		res = func(*args, **kwargs)
+		      ^^^^^^^^^^^^^^^^^^^^^
+		File "/home/user/.pyenv/versions/3.11.5/lib/python3.11/site-packages/pykx/pandas_api/pandas_conversions.py", line 337, in select_dtypes
+		table_out = q('''{[qtab;inc] tCols:cols qtab;
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		File "/home/user/.pyenv/versions/3.11.5/lib/python3.11/site-packages/pykx/embedded_q.py", line 251, in __call__
+		return factory(result, False)
+		    ^^^^^^^^^^^^^^^^^^^^^^
+		File "pykx/_wrappers.pyx", line 493, in pykx._wrappers._factory
+		File "pykx/_wrappers.pyx", line 486, in pykx._wrappers.factory
+		pykx.exceptions.QError: nyi
+		```
+                        
+
+	=== "Behavior post change"
+
+		```python
+		>>> dfk = kx.q('([c1:`a`b`c]; c2:1 2 3h; c3:1 2 3j; c4:1 2 3i)')
+		>>> dfk.select_dtypes(include=[kx.ShortAtom])
+		pykx.KeyedTable(pykx.q('
+		c1| c2
+		--| --
+		a | 1
+		b | 2
+		c | 3
+		'))
+		```
+
+- Addition of support for configuration/environment variable `PYKX_SUPPRESS_WARNINGS` which allows users to suppress the raising of warnings by PyKX to highlight users need to be careful of the outputs/behavior of the results/features. For example:
+
+	=== "Behavior before change"
+
+		```python
+		>>> import pykx as kx
+		>>> import numpy as np
+		>>> np.max(kx.q.til(10))
+		/usr/python/site-packages/pykx/wrappers.py:2246: UserWarning: Attempting to call numpy..
+		  warn('Warning: Attempting to call numpy __array_function__ on a '
+		9
+		```	
+
+	=== "Behavior post change"
+
+		```python
+		>>> import os
+		>>> os.environ['PYKX_SUPPRESS_WARNINGS'] = 'True'
+		>>> import pykx as kx
+		>>> import numpy as np
+		>>> np.max(kx.q.til(10))
+		9
+		```
+
+- If a `QARGS` configuration value has been supplied on the startup of PyKX which has no effect when running in Python PyKX will now print a warning to users. For example:
+
+	```python
+	$ export QARGS='-p 5050 -t 1000'
+	$ python
+	>>> import pykx as kx
+	/usr/python/site-packages/pykx/config.py: RuntimeWarning: '-p' argument unsupported in QARGS..
+	/usr/python/site-packages/pykx/config.py: RuntimeWarning: '-t' argument unsupported in QARGS..
+	```
+
+- PyKX Pandas dependency for Python 3.8 has been clamped to `<2.0` due to support being dropped for it by Pandas after 2.0.3.
+
+### Upgrade considerations
+
+- PyKX 3.0.0 is a major version update which includes changes requiring review before upgrading from 2.5.*. A page details these changes in full [here](../upgrades/2030.md)
+
+## PyKX 2.5.4
+
+#### Release Date
+
+2024-10-22
+
+!!! Note
+
+        PyKX 2.5.4 is currently not available for Mac x86/ARM for all Python versions. Updated builds will be provided once available.
+
+### Fixes and Improvements
+
+- Resolved context interface failing to load files on Windows.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> kx.q.context
+		Traceback (most recent call last):
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\__init__.py", line 162, in __getattr__
+			self.__getattribute__('_register')(name=key)
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\__init__.py", line 248, in _register
+			self._call(
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\embedded_q.py", line 246, in __call__
+			return factory(result, False, name=query.__str__())
+				^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		File "pykx\\_wrappers.pyx", line 521, in pykx._wrappers._factory
+		File "pykx\\_wrappers.pyx", line 514, in pykx._wrappers.factory
+		pykx.exceptions.QError: "C:\lib"
+
+		The above exception was the direct cause of the following exception:
+
+		Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\__init__.py", line 166, in __getattr__
+			raise attribute_error from inner_error
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\__init__.py", line 159, in __getattr__
+			return ctx.__getattr__(key)
+				^^^^^^^^^^^^^^^^^^^^
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\ctx.py", line 153, in __getattr__
+			raise AttributeError(
+		AttributeError: 'pykx.ctx.QContext' object has no attribute 'context'
+		QError: '.context
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> kx.q.context
+		<pykx.ctx.QContext of .context with [success]>
+		```
+
+### Version Support Changes
+
+- Version 2.5.4 marks the removal of support for releases to PyPi/Anaconda of Python 3.7 supported versions of PyKX
+
 
 ## PyKX 2.5.2
 
@@ -18,7 +1139,7 @@
 
 - Converting PyKX generic lists using the keyword parameter `raw=True` would previously return incorrect results, the values received being the memory address of the individual elements of the list, this has now been resolved
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> a = kx.q('(1; 3.4f; `asad; "asd")')
@@ -26,7 +1147,7 @@
 		array([3012581664,      30547, 3012579792,      30547], dtype=uint64)
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> a = kx.q('(1; 3.4f; `asad; "asd")')
@@ -34,9 +1155,9 @@
 		array([1, 3.4, b'asad', b'asd'], dtype=object)
 		```
 
-- Converting PyKX generic lists using the keyword parameter `raw=True` when explictly required previously would error indicating that the keyword argument was not supplied. This has been resolved with the parameter now appropriately passed to all items
+- Converting PyKX generic lists using the keyword parameter `raw=True` when explicitly required previously would error indicating that the keyword argument was not supplied. This has been resolved with the parameter now appropriately passed to all items
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		The errors below are truncated for readability
 
@@ -49,7 +1170,7 @@
 		TypeError: The q datetime type is deprecated, and can only be accessed ..
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> kx.q("(1;2;3;`a;2024.01.01T12:00:00)").py(raw=True)
@@ -89,7 +1210,7 @@
 
 - Fix to issue where use of `kx.SymbolAtom` with `__getitem__` method on `kx.Table` objects would return a table rather then vector/list. The return now mirrors the expected return which matches `str` type inputs
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import pykx as kx
@@ -106,7 +1227,7 @@
 		'))
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import pykx as kx
@@ -118,7 +1239,7 @@
 		```
 
 - Reworked `Table.std()` method to better handle edge cases relating to mixed columns and nulls. Now matching Pandas results. This addresses issues raised [here](https://github.com/KxSystems/pykx/issues/28).
-- Fix to issue where loading PyKX on Windows from 2.5.0 could result in a users working directory being changed to `site-packages/pykx`.
+-  Fix to issue where loading PyKX on Windows from 2.5.0 could result in a users working directory being changed to `site-packages/pykx`.
 
 ## PyKX 2.5.1
 
@@ -128,20 +1249,84 @@
 
 ### Additions
 
+- Addition of methods to `pykx.Table` and `pykx.KeyedTable` objects for the application of `sql`, `select`, `exec`, `delete` and `update` queries
+
+	=== "SQL"
+
+		```python
+		>>> tab = kx.Table(data = {'x': [1, 2, 3], 'x1': ['a', 'b', 'a']})
+		>>> tab.sql("select * from $1 where x1='a'")
+		>>> tab.sql("select * from $1 where x1=$2 and x=$3", 'a', 1)
+		```
+
+	=== "select"
+
+		```python
+		>>> qtab = kx.Table(data = {
+		...     'col1': kx.random.random(100, ['a', 'b', 'c']),
+		...     'col2': kx.random.random(100, 1.0),
+		...     'col3': kx.random.random(100, False),
+		...     'col4': kx.random.random(100, 10.0)})
+		>>> qtab.select(where='col2<0.5')
+		>>> qtab.select(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'})
+		>>> qtab.select(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'},
+		...             by={'col1': 'col1'},
+                ...             where='col3=0b')
+		```
+
+	=== "exec"
+
+		```python
+		>>> qtab = kx.Table(data = {
+		...     'col1': kx.random.random(100, ['a', 'b', 'c']),
+		...     'col2': kx.random.random(100, 1.0),
+		...     'col3': kx.random.random(100, False),
+		...     'col4': kx.random.random(100, 10.0)})
+		>>> qtab.exec('col3')
+		>>> qtab.exec({'symcol': 'col1', 'maxcol4': 'max col4'}, where=['col1=`a', 'col2<0.3'])
+		>>> qtab.exec(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'},
+                ...           by={'col1': 'col1'},
+                ...           where='col3=0b')
+		```
+
+	=== "delete"
+
+		```python
+		>>> qtab = kx.Table(data = {
+		...     'name': ['tom', 'dick', 'harry'],
+		...     'age': [28, 29, 35],
+		...     'hair': ['fair', 'dark', 'fair'],
+		...     'eye': ['green', 'brown', 'gray']})
+		>>> qtab.delete(['age', 'eye'])
+		>>> qtab.delete(where=['hair=`fair', 'age=28'])
+		>>> qtab.delete('age', modify=True)
+		```
+
+	=== "update"
+
+		```python
+		>>> qtab = kx.Table(data={
+		...         'name': ['tom', 'dick', 'harry'],
+		...         'age': [28, 29, 35],
+		...         'hair': ['fair', 'dark', 'fair'],
+		...         'eye': ['green', 'brown', 'gray']})
+		>>> qtab.update({'eye': '`blue`brown`green'})
+		>>> qtab.update({'eye': ['blue']}, where='hair=`fair')
+
 - [Pandas API](../user-guide/advanced/Pandas_API.ipynb) additions: `isnull`, `isna`, `notnull`, `notna`, `idxmax`, `idxmin`, `kurt`, `sem`.
 - Addition of `filter_type`, `filter_columns`, and `custom` parameters to `QReader.csv()` to add options for CSV type guessing.
-	
+
 	```python
 	>>> import pykx as kx
 	>>> reader = kx.QReader(kx.q)
 	>>> reader.csv("myFile0.csv", filter_type = "like", filter_columns="*name", custom={"SYMMAXGR":15})
 	pykx.Table(pykx.q('
-	firstname  lastname   
+	firstname  lastname
 	----------------------
-	"Frieda"   "Bollay"   
-	"Katuscha" "Paton"    
-	"Devina"   "Reinke"   
-	"Maurene"  "Bow"      
+	"Frieda"   "Bollay"
+	"Katuscha" "Paton"
+	"Devina"   "Reinke"
+	"Maurene"  "Bow"
 	"Iseabal"  "Bashemeth"
 	..
 	'))
@@ -150,9 +1335,9 @@
 ### Fixes and Improvements
 
 - Fix to regression in PyKX 2.5.0 where PyKX initialisation on Windows would result in a segmentation fault when using an `k4.lic` license type.
-- Previously user could not make direct use of `kx.SymbolicFunction` type objects against a remote process, this has been rectified
+- Previously users could not make direct use of `kx.SymbolicFunction` type objects against a remote process, this has been rectified
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import pykx as kx
@@ -166,7 +1351,7 @@
 		pykx.exceptions.QError: .my.func
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import pykx as kx
@@ -181,7 +1366,7 @@
 
 - Previously use of the context interface for q primitive functions in licensed mode via IPC would partially run the function on the client rather than server, thus limiting usage for named entities on the server.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import pykx as kx
@@ -192,7 +1377,7 @@
 		pykx.exceptions.QError: tab
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import pykx as kx
@@ -209,7 +1394,7 @@
 
 - With the release of PyKX 2.5.0 and support of PyKX usage in paths containing spaces the context interface functionality could fail to load a requested context over IPC if PyKX was not loaded on the server.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import pykx as kx
@@ -218,7 +1403,7 @@
 		... Error Message ...
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import pykx as kx
@@ -315,7 +1500,7 @@
 		```python
 		>>> import pykx as kx
 		We have been unable to update your license for PyKX using the following information:
-		  Environment variable: KDB_K4LICENSE_B64 
+		  Environment variable: KDB_K4LICENSE_B64
 		  License location: /user/path/to/license/k4.lic
 		Reason: License content matches supplied Environment variable
 
@@ -330,7 +1515,7 @@
 		Would you like to renew your license? [Y/n]:
 		```
 
-- Intialization workflow for PyKX using form based install process now allows users to install Commercial "k4.lic" licenses using this mechanism. The updated workflow provides the following outputs
+- Initialization workflow for PyKX using form based install process now allows users to install Commercial "k4.lic" licenses using this mechanism. The updated workflow provides the following outputs
 
 	=== "License initialization"
 
@@ -347,7 +1532,7 @@
 		Enter your choice here [1/2]: 2
 
 		To apply for your PyKX license, contact your KX sales representative or sales@kx.com.
-        Alternately apply through https://kx.com/book-demo.  
+        Alternately apply through https://kx.com/book-demo.
 		Would you like to open this page? [Y/n]: n
 
 		Select the method you wish to use to activate your license:
@@ -370,7 +1555,7 @@
 		PyKX unlicensed mode enabled. To set this as your default behavior please set the following environment variable PYKX_UNLICENSED='true'
 
 		For more information on PyKX modes of operation, please visit https://code.kx.com/pykx/user-guide/advanced/modes.html.
-		To apply for a PyKX license please visit 
+		To apply for a PyKX license please visit
 
 		   Personal License:   https://kx.com/kdb-insights-personal-edition-license-download
 		   Commercial License: Contact your KX sales representative or sales@kx.com or apply on https://kx.com/book-demo
@@ -382,11 +1567,11 @@
 	>>> tab = kx.q('([] a:2 2 3; b:4 2 6; c:(1b;0b;1b); d:(`a;`b;`c); e:(1;2;`a))')
 	>>> tab.replace(2, "test")
 	pykx.Table(pykx.q('
-	a     b     c d e    
+	a     b     c d e
 	---------------------
-	`test 4     1 a 1    
+	`test 4     1 a 1
 	`test `test 0 b `test
-	3     6     1 c `a   
+	3     6     1 c `a
 	'))
  	```
 
@@ -396,7 +1581,7 @@
 
 - When importing PyKX from a source file path containing a space initialisation would fail with an `nyi` error message, this has now been resolved
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import pykx as kx
@@ -408,7 +1593,7 @@
 		pykx.exceptions.QError: nyi
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import pykx as kx
@@ -421,7 +1606,7 @@
 - `kx.util.debug_environment()` now uses `PyKXReimport` when running the `q` subprocess and captures `stderr` in case of failure.
 - When using debug mode, retrieval of unknown context's would incorrectly present a backtrace to a user, for example:
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import os
@@ -445,7 +1630,7 @@
 		1        2019.12.01D00:25:53.000000000 2019.12.01D00:26:04.000000000 1       ..
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import os
@@ -462,7 +1647,7 @@
 
 - When using debug mode, PyKX could run into issues where attempts to compare single character atoms would result in an error. This has now been fixed.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import os
@@ -490,7 +1675,7 @@
 		pykx.exceptions.QError: =
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import os
@@ -499,9 +1684,9 @@
 		>>> kx.q('"z"') == b'z'
 		pykx.BooleanAtom(pykx.q('1b'))
 		```
-- Update to system functions `tables` and `functions` to allow listing of tables and functions within dictionaries. Previously attempts to list entities within dictionaries would attempt to retrieve items in a namespace. The below example shows this behaviour for tables.
+- Update to system functions `tables` and `functions` to allow listing of tables and functions within dictionaries. Previously attempts to list entities within dictionaries would attempt to retrieve items in a namespace. The below example shows this behavior for tables.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import pykx as kx
@@ -513,7 +1698,7 @@
 		pykx.SymbolVector(pykx.q(',`table'))
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import pykx as kx
@@ -528,14 +1713,14 @@
 - Resolved issue in `PyKXReimport` which caused it to set empty environment variables to `None` rather than leaving them empty.
 - The `_PyKX_base_types` attribute assigned to dataframes during `.pd()` conversion included `'>` in the contents. This has been removed:
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> kx.q('([] a:1 2)').pd().attrs['_PyKX_base_types']
 		{'a': "LongVector'>"}
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> kx.q('([] a:1 2)').pd().attrs['_PyKX_base_types']
@@ -544,7 +1729,7 @@
 
 - IPC queries can now pass PyKX Functions like objects as the query parameter.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> import pykx as kx
@@ -560,7 +1745,7 @@
 		ValueError: Cannot send Python function over IPC
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> import pykx as kx
@@ -575,7 +1760,7 @@
 
 - When failing to initialise PyKX with an expired or invalid license PyKX will now point a user to the license location:
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		Your PyKX license has now expired.
@@ -586,7 +1771,7 @@
 		Would you like to renew your license? [Y/n]:
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		Your PyKX license has now expired.
@@ -601,14 +1786,14 @@
 		```
 - Disabled raw conversions for `kx.List` types as the resulting converted object would be unusable, for example:
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> kx.q('(1j; 2f; 3i; 4e; 5h)').np(raw=True)
 		array([418404288, 1, 418403936, 1, 418404000], dtype=np.uintp)
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> kx.q('(1j; 2f; 3i; 4e; 5h)').np(raw=True)
@@ -617,7 +1802,7 @@
 
  - `handle_nulls` now operates on all of `datetime64[ns|us|ms|s]` and ensures that the contents of the original dataframe are not modified:
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
         >>> ns = np.array(['', '2020-09-08T07:06:05.123456789'], dtype='datetime64[ns]')
@@ -633,9 +1818,9 @@
         >>> kx.toq(df, handle_nulls=True)
         <stdin>:1: RuntimeWarning: WARN: Type information of column: s is not known falling back to DayVector type
         pykx.Table(pykx.q('
-        ns                            us                            ms                            s         
+        ns                            us                            ms                            s
         ----------------------------------------------------------------------------------------------------
-                                    1970.01.01D00:00:00.000000000 1970.01.01D00:00:00.000000000           
+                                    1970.01.01D00:00:00.000000000 1970.01.01D00:00:00.000000000
         2020.09.08D07:06:05.123456789 2020.09.08D07:06:05.123456000 2020.09.08D07:06:05.123000000 2020.09.08
         '))
         >>> df
@@ -644,7 +1829,7 @@
         1 1990-09-09 07:06:05.123456789 2020-09-08 07:06:05.123456 2020-09-08 07:06:05.123 2020-09-08 07:06:05
         ```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
         ```python
         >>> ns = np.array(['', '2020-09-08T07:06:05.123456789'], dtype='datetime64[ns]')
@@ -659,9 +1844,9 @@
         1 2020-09-08 07:06:05.123456789 2020-09-08 07:06:05.123456 2020-09-08 07:06:05.123 2020-09-08 07:06:05
         >>> kx.toq(df, handle_nulls=True)
         pykx.Table(pykx.q('
-        ns                            us                            ms                            s                            
+        ns                            us                            ms                            s
         -----------------------------------------------------------------------------------------------------------------------
-                                                                                                                            
+
         2020.09.08D07:06:05.123456789 2020.09.08D07:06:05.123456000 2020.09.08D07:06:05.123000000 2020.09.08D07:06:05.000000000
         '))
         >>> df
@@ -672,7 +1857,7 @@
 
  - Fix for error when calling `.pd(raw=True)` on `EnumVector`:
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> kx.q('`s?`a`b`c').pd(raw=True)
@@ -684,7 +1869,7 @@
 		TypeError: super() argument 1 must be a type, not EnumVector
         ```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
         ```python
 		>>> import pykx as kx
@@ -699,31 +1884,31 @@
 
  - Since 2.1.0 when using Pandas >= 2.0 dataframe columns of type `datetime64[s]` converted to `DateVector` under `toq`. Now correctly converts to `TimestampVector`. See [conversion condsideratons](../user-guide/fundamentals/conversion_considerations.md#temporal-types) for further details.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> kx.toq(pd.DataFrame(data= {'a':np.array(['2020-09-08T07:06:05'], dtype='datetime64[s]')}))
 		<stdin>:1: RuntimeWarning: WARN: Type information of column: a is not known falling back to DayVector type
 		pykx.Table(pykx.q('
-		a         
+		a
 		----------
 		2020.09.08
 		'))
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> kx.toq(pd.DataFrame(data= {'a':np.array(['2020-09-08T07:06:05'], dtype='datetime64[s]')}))
 		pykx.Table(pykx.q('
-		a                            
+		a
 		-----------------------------
 		2020.09.08D07:06:05.000000000
 		'))
-		#Licensed users can pass `ktype` specifying column types if they wish to override the default behaviour
+		#Licensed users can pass `ktype` specifying column types if they wish to override the default behavior
 		>>> kx.toq(pd.DataFrame(data= {'a':np.array(['2020-09-08T07:06:05'], dtype='datetime64[s]')}), ktype={'a':kx.DateVector})
 		pykx.Table(pykx.q('
-		a         
+		a
 		----------
 		2020.09.08
 		'))
@@ -734,7 +1919,7 @@
 
 ### Beta Features
 
-- Addition of [streamlit](https://streamlit.io/) connection class `pykx.streamlit.Connection` to allow querying of q processes when building a streamlit application. For an example of this functionality and an introduction to it's usage see [here](../beta-features/streamlit.md).
+- Addition of [streamlit](https://streamlit.io/) connection class `pykx.streamlit.Connection` to allow querying of q processes when building a streamlit application. For an example of this functionality and an introduction to it's usage see [here](../user-guide/advanced/streamlit.md).
 
 ## PyKX 2.4.2
 
@@ -754,7 +1939,7 @@
 
 ### Fixes and Improvements
 
-- Previously calls to `qsql.select`, `qsql.exec`, `qsql.update` and `qsql.delete` would require multiple calls to parse the content of `where`, `colums` and `by` clauses. These have now been removed with all parsing now completed within the functional query when called via IPC or local to the Python process.
+- Previously calls to `qsql.select`, `qsql.exec`, `qsql.update` and `qsql.delete` would require multiple calls to parse the content of `where`, `columns` and `by` clauses. These have now been removed with all parsing now completed within the functional query when called via IPC or local to the Python process.
 - Linux x86 and Mac x86/ARM unlicensed mode `e.o` library updated to 2023.11.22. Fixes subnormals issue:
 
 	=== "Behavior prior to change"
@@ -1326,7 +2511,7 @@
 	- Attribute setting and removal.
 	- Addition of missing tables from partitions within a database.
 
-- Added `PYKX_THREADING` environment variable that allows [multithreaded programs](../beta-features/threading.md) to modify state when calling into python on secondary threads. Note: This behaviour is only supported on Linux / MacOS.
+- Added `PYKX_THREADING` environment variable that allows [multithreaded programs](../user-guide/advanced/threading.md) to modify state when calling into python on secondary threads. Note: This behavior is only supported on Linux / MacOS.
 
     !!! Note
 
@@ -1385,7 +2570,7 @@
 - `pykx.q.qsql.select` and `pykx.q.qsql.exec` statements no longer use `get` calls for table retrieval unnecessarily when operating locally or via IPC.
 - Null integral values in table keys will no longer convert the underlying vectors to floats when converting from a `pykx.KeyedTable` to `pandas.DataFrame`
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> kx.q('`col1 xkey ([] col1: (1j; 2j; 0Nj); col2:(1j; 2j; 0Nj); col3:`a`b`c)').pd()
@@ -1396,7 +2581,7 @@
 		 0.0     --    c
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> kx.q('`col1 xkey ([] col1: (1j; 2j; 0Nj); col2:(1j; 2j; 0Nj); col3:`a`b`c)').pd()
@@ -1409,7 +2594,7 @@
 
 	!!! Warning
 
-		For multi-keyed PyKX tables converted to Pandas the appropriate round-trip behaviour is supported however due to limitations in Pandas displaying of these as masked arrays is not supported as below
+		For multi-keyed PyKX tables converted to Pandas the appropriate round-trip behavior is supported however due to limitations in Pandas displaying of these as masked arrays is not supported as below
 
 		```python
 		>>> kx.q('`col1`col2 xkey ([] col1: (1j; 2j; 0Nj); col2:(1j; 2j; 0Nj); col3:`a`b`c)').pd()
@@ -1424,7 +2609,7 @@
 - Addition of deprecation warning for environmental configuration option `PYKX_NO_SIGINT` which is to be replaced by `PYKX_NO_SIGNAL`. This is used when users require no signal handling logic overwrites and now covers `SIGTERM`, `SIGINT`, `SIGABRT` signals amongst others.
 - Use of `pykx.q.system.variables` no longer prepends leading `.` to supplied string allowing users to get the variables associated with dictionary like namespaces.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> kx.q('.test.a:1;.test.b:2')
@@ -1435,7 +2620,7 @@
 		pykx.SymbolVector(pykx.q('`s#`a`b'))
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> kx.q('.test.a:1;.test.b:2')
@@ -1632,7 +2817,7 @@
 	pykx.IntAtom(pykx.q('-0Wi'))
 	```
 
-- Users can now use the environment variables `PYKX_UNLICENSED="true"` or `PYKX_LICENSED="true"` set this as part of configuration within their `.pykx-config` file to allow `unlicensed` or `licensed` mode to be the default behaviour on initialisation for example:
+- Users can now use the environment variables `PYKX_UNLICENSED="true"` or `PYKX_LICENSED="true"` set this as part of configuration within their `.pykx-config` file to allow `unlicensed` or `licensed` mode to be the default behavior on initialisation for example:
 
 	```python
 	>>> import os
@@ -1873,7 +3058,7 @@
 
 ### Fixes and Improvements
 
-- Fix to regression in PyKX 2.1.0 where execution of `from pykx import *` would result in the following behaviour
+- Fix to regression in PyKX 2.1.0 where execution of `from pykx import *` would result in the following behavior
 
 	```
 	>>> from pykx import *
@@ -2216,7 +3401,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 - Fixed an issue causing a crash when closing `QConnection` instances on Windows.
 - Updated q 4.0 libraries to 2023.08.11. Note: Mac ARM release remains on 2022.09.30.
-- Fix [Jupyter Magic](../getting-started/q_magic_command.ipynb) in local mode.
+- Fix [Jupyter Magic](../examples/jupyter-integration.ipynb) in local mode.
 - Fix error when binding with [FFI](https://github.com/KxSystems/ffi) in `QINIT`.
 - Fix issue calling `peach` with `PYKX_RELEASE_GIL` set to true when calling a Python function.
 
@@ -2570,7 +3755,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Updated to stable classifier (`Development Status :: 5 - Production/Stable`) in project metadata. Despite this update being done in version 1.0.1, version 1.0.0 is still the first stable release of PyKX.
 - PyKX now provides source distributions (`sdist`). It can be downloaded from PyPI using `pip download --no-binary=:all: --no-deps pykx`. As noted in [the installation docs](../getting-started/installing.md#supported-environments), installations built from the source will only receive support on a best-effort basis.
 - Fixed Pandas NaT conversion to q types. Now `pykx.toq(pandas.NaT, ktype=ktype)` produces a null temporal atom for any given `ktype` (e.g. `pykx.TimeAtom`).
-- Added [a doc page for limitations of embedded q](../user-guide/advanced/limitations.md).
+- Added [a doc page for limitations of embedded q](../help/issues.md).
 - Added a test to ensure large vectors are correctly handled (5 GiB).
 - Always use synchronous queries internally, i.e. fix `QConnection(sync=False)`.
 - Disabled the context interface over IPC. This is a temporary measure that will be reversed once q function objects are updated to run in the environment they were defined in by default.

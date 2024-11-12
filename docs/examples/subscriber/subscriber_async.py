@@ -16,7 +16,7 @@ async def main_loop(q):
     while True:
         result = await q.poll_recv_async()
         if assert_result(result):
-            print(f'Recieved new table row from q: {result}')
+            print(f'Received new table row from q: {result}')
             table = kx.q.upsert(table, result)
             print(table)
             result = None

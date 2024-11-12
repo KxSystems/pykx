@@ -8,7 +8,7 @@ import re
 import sys
 
 from . import beta_features
-from .util import num_available_cores
+from .util import add_to_config, num_available_cores
 from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _check_beta, _get_config_value, pykx_lib_dir, ignore_qhome, lic_path
 
 
@@ -45,7 +45,6 @@ def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
         *normalized_args,
         *(x.encode() for i, x in enumerate(user_args) if i not in skip_indexes)
     )
-
 
 cdef int _qinit(int (*qinit)(int, char**, char*, char*, char*), qhome_str: str, qlic_str: str, ignore_qhome: bool, args: List[str]) except *:
     normalized_args = _normalize_qargs(args)
@@ -216,34 +215,57 @@ def _link_qhome():
             return
     # Avoid recursion, but allow for the effective merger via symlinks of the directories under the
     # lib dir that come with PyKX.
-    for subdir in subdirs:
-        # Remove old symlinks:
-        with os.scandir(pykx_lib_dir/subdir) as dir_iter:
-            for dir_entry in dir_iter:
-                if dir_entry.is_symlink():
-                    os.unlink(dir_entry)
-        # Add new symlinks:
-        try:
-            with os.scandir(qhome/subdir) as dir_iter:
+    if not ignore_qhome:
+        for subdir in subdirs:
+            # Remove old symlinks:
+            with os.scandir(pykx_lib_dir/subdir) as dir_iter:
                 for dir_entry in dir_iter:
-                    try:
-                        os.symlink(
-                            dir_entry,
-                            pykx_lib_dir/subdir/dir_entry.name,
-                            target_is_directory=dir_entry.is_dir()
-                        )
-                    except FileExistsError:
-                        pass # Skip files/dirs that would overwrite those that come with PyKX.
-                    except OSError as ex:  #nocov
-                        # Making this a warning instead of an error is particularly important for
-                        # Windows, which essentially only lets admins create symlinks.
-                        warn('Unable to connect user QHOME to PyKX QHOME via symlinks\n' # nocov
-                             f'{ex}',     # nocov
-                             PyKXWarning) # nocov
-                        return            # nocov
-        except FileNotFoundError:
-            pass # Skip subdirectories of $QHOME that don't exist.
+                    if dir_entry.is_symlink():
+                        os.unlink(dir_entry)
+            # Add new symlinks:
+            try:
+                with os.scandir(qhome/subdir) as dir_iter:
+                    for dir_entry in dir_iter:
+                        try:
+                            os.symlink(
+                                dir_entry,
+                                pykx_lib_dir/subdir/dir_entry.name,
+                                target_is_directory=dir_entry.is_dir()
+                            )
+                        except FileExistsError:
+                            pass # Skip files/dirs that would overwrite those that come with PyKX.
+                        except OSError as ex:  #nocov
+                            # Making this a warning instead of an error is particularly important for
+                            # Windows, which essentially only lets admins create symlinks.
+                            warn('Unable to connect user QHOME to PyKX QHOME via symlinks.\n' # nocov
+                                 'To permanently disable attempts to create symlinks you can\n' # nocov
+                                 '\t1. Set the environment variable "PYKX_IGNORE_QHOME" = True.\n' # nocov
+                                 '\t2. Update the file ".pykx.config" using kx.util.add_to_config({\'PYKX_IGNORE_QHOME\': True})\n' # nocov
+                                 f'Error: {ex}\n',     # nocov
+                                 PyKXWarning) # nocov
+                            return            # nocov
+            except FileNotFoundError:
+                pass # Skip subdirectories of $QHOME that don't exist.
     update_marker.touch()
+
+def check_subprocess_init(lib_path, qhome, qlic):
+    qinit_check = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c', 'import pykx'),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        env={
+            **os.environ,
+            'PYKX_QINIT_CHECK': ';'.join((
+                str(lib_path),
+                qhome,
+                str(qlic),
+                # Use the env var directly because `config.qargs` has already split the args.
+                os.environ.get('QARGS', ''),
+                )),
+            }
+        )
+    return qinit_check
 
 cdef void (*init_syms)(char* x)
 
@@ -262,36 +284,15 @@ if not pykx_threading:
             _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
             licensed = False
         else:
-            if platform.system() == 'Windows': # nocov
-                from ctypes.util import find_library # nocov
-                if find_library("msvcr100.dll") is None: # nocov
-                    msvcrMSG = "Needed dependency msvcr100.dll missing. See: https://code.kx.com/pykx/getting-started/installing.html" # nocov
-                    if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed'): # nocov
-                        raise PyKXException(msvcrMSG)  # nocov
-                    else: # nocov
-                        warn(msvcrMSG, PyKXWarning) # nocov
             _core_q_lib_path = find_core_lib('q')
             licensed = True
+            _qinit_unsuccessful = False
             if not _is_enabled('PYKX_UNSAFE_LOAD', '--unsafeload'):
-                _qinit_check_proc = subprocess.run(
-                    (str(Path(sys.executable).as_posix()), '-c', 'import pykx'),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    env={
-                        **os.environ,
-                        'PYKX_QINIT_CHECK': ';'.join((
-                            str(_core_q_lib_path),
-                            final_qhome,
-                            str(qlic),
-                            # Use the env var directly because `config.qargs` has already split the args.
-                            os.environ.get('QARGS', ''),
-                        )),
-                    }
-                )
+                _qinit_check_proc = check_subprocess_init(_core_q_lib_path, final_qhome, qlic)
                 _qinit_output = '    ' + '    '.join(_qinit_check_proc.stdout.strip().splitlines(True))
                 _license_message = False
-                if _qinit_check_proc.returncode: # Fallback to unlicensed mode
+                _qinit_unsuccessful = _qinit_check_proc.returncode
+                if _qinit_unsuccessful: # Fallback to unlicensed mode
                     if _qinit_output != '    ':
                         _capout_msg = f'Captured output from initialization attempt:\n{_qinit_output}'
                         _lic_location = f'License location used:\n{lic_path}'
@@ -332,6 +333,14 @@ if not pykx_threading:
                     _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
                     licensed = False
             if licensed: # Start in licensed mode
+                if _qinit_unsuccessful and (not _is_enabled('PYKX_UNSAFE_LOAD', '--unsafeload')):
+                    _qinit_check_proc = check_subprocess_init(_core_q_lib_path, final_qhome, qlic)
+                    _qinit_output = '    ' + '    '.join(_qinit_check_proc.stdout.strip().splitlines(True))
+                    licensed = False
+                    if _qinit_check_proc.returncode: # Fallback to unlicensed mode
+                        _qinit_args = {'qhome': final_qhome, 'qlic': qlic, 'ignore_qhome': ignore_qhome, 'qargs': list(qargs)}
+                        raise PyKXException(f'Non-zero qinit following license install with configuration: {_qinit_args}\n'
+                                            f'failed with output: {_qinit_output}')
                 if 'QHOME' in os.environ and not ignore_qhome:
                     # Only link the user's QHOME to PyKX's QHOME if the user actually set $QHOME.
                     # Note that `pykx.qhome` has a default value of `./q`, as that is the behavior
@@ -363,7 +372,6 @@ else:
     init_syms = <void (*)(char* x)>dlsym(_q_handle, 'sym_init')
     init_syms(_libq_path)
     qinit = <int (*)(int, char**, char*, char*, char*)>dlsym(_q_handle, 'q_init')
-
     qinit_return_code = _qinit(qinit, final_qhome, str(qlic), ignore_qhome, list(qargs))
     if qinit_return_code:    # nocov
         dlclose(_q_handle)   # nocov

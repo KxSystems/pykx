@@ -1,25 +1,41 @@
-# Indexing PyKX Objects
+---
+title: IndexPyKX objects
+description: How to index PyKX object
+date: July 2024
+author: KX Systems, Inc.,
+tags: PyKX, q, PyKX objects, index
+---
 
-## An introduction to indexing within PyKX
+# Index PyKX Objects
 
-Indexing in q works differently than you may be used to, and that behavior largely carries over into PyKX for indexing K objects. For more information about how indexing in q works (and by extension, how indexing K objects in PyKX work), refer to the following sections of the q tutorial book [Q For Mortals](https://code.kx.com/q4m3/):
+_This page provides details on how indexing works within PyKX._
 
-- [Indexing](https://code.kx.com/q4m3/3_Lists/#34-indexing)
-- [Iterated Indexing and Indexing at Depth](https://code.kx.com/q4m3/3_Lists/#38-iterated-indexing-and-indexing-at-depth)
-- [Indexing with Lists](https://code.kx.com/q4m3/3_Lists/#39-indexing-with-lists)
-- [Elided Indices](https://code.kx.com/q4m3/3_Lists/#310-elided-indices)
+Indexing in q works differently than you may be used to, and that behavior largely carries over into PyKX for indexing K objects. 
 
-Indexes used on K objects in PyKX are converted to equivalent K objects in q using the [toq module](../../api/pykx-q-data/toq.md), just like any other Python to q conversion. To guarantee that the index used against a K object is what you intend it to be, you may perform the conversion of the index yourself before applying it. When K objects are used as the index for another K object, the index object is applied to the [`pykx.Collection`][pykx.Collection] object as they would be in q; i.e. as described in Q For Mortals.
+!!! info "Resources"
+    
+	For more information about how indexing in q works (and by extension, how indexing K objects in PyKX work), refer to the following sections of the q tutorial book [Q For Mortals](https://code.kx.com/q4m3/):
 
-The following provides some examples of applying indexing to various q objects:
+	- [Indexing](https://code.kx.com/q4m3/3_Lists/#34-indexing)
+	- [Iterated indexing and indexing at depth](https://code.kx.com/q4m3/3_Lists/#38-iterated-indexing-and-indexing-at-depth)
+	- [Indexing with lists](https://code.kx.com/q4m3/3_Lists/#39-indexing-with-lists)
+	- [Elided indices](https://code.kx.com/q4m3/3_Lists/#310-elided-indices)
 
-## Basic Vectors Indexing
+Indexes used on K objects in PyKX are converted to equivalent K objects in q using the [toq module](../../api/pykx-q-data/toq.md), just like any other Python to q conversion. To guarantee that the index used against a K object is what you intend it to be, you may perform the conversion of the index yourself before applying it. When K objects are used as the index for another K object, the index object is applied to the [`#!python pykx.Collection`][pykx.Collection] object as it would be in q, for example as described in Q For Mortals.
 
-Indexing in PyKX spans elements `0` to element `N-1` where `N` is the length of the object being indexed. 
+Examples of applying indexing to various q objects include:
 
-### Single element indexing
+- a. Basic vectors indexing: Single element indexing and Slicing 
+- b. Assigning and adding values to vectors/lists
+- c. Indexing non-vector objects
 
-Single element indexing works similarly to any other standard Python sequence. Similar to Numpy PyKX supports negative indices to allow retrieval of indexes at the end of an array. For example:
+## a. Basic Vectors Indexing
+
+Indexing in PyKX spans elements `#!python 0` to element `#!python N-1` where `#!python N` is the length of the object being indexed. 
+
+### a.1 Single element indexing
+
+Single element indexing works like any other standard Python sequence. Similar to Numpy, PyKX supports negative indices to allow retrieval of indexes at the end of an array. For example:
 
 ```python
 >>> x = kx.q.til(10)
@@ -34,7 +50,7 @@ pykx.CharAtom(pykx.q('"a"'))
 pykx.CharAtom(pykx.q('"f"')) 
 ```
 
-Similar to Numpy indexing an array out of bounds will result in an `IndexError` being raised.
+Similar to Numpy, indexing an array out of bounds results in an `#!python IndexError` being raised.
 
 ```python
 >>> x = kx.q.til(5)
@@ -48,7 +64,7 @@ Traceback (most recent call last):
 IndexError: index out of range
 ```
 
-N Dimensional list vectors can also be manipulated using single element indexing as follows
+N-dimensional list vectors can also be manipulated using single element indexing as follows:
 
 ```python
 >>> x = kx.random.random([4, 4], 1.0)
@@ -63,9 +79,9 @@ pykx.List(pykx.q('
 pykx.FloatAtom(pykx.q('0.6919531'))
 ```
 
-### Slicing
+### a.2 Slicing
 
-Slicing vectors in PyKX is more simplistic than the functionality provided by Numpy. Vectors of N dimensions are indexed using `obj[start:stop:step]` semantics. This slice syntax operates where `start` is the starting index, `stop` is the stopping index and `step` is the number of steps between the elements where `step` is non zero
+Slicing vectors in PyKX is simpler than the functionality provided by Numpy. You can index vectors of N dimensions by using `#!python obj[start:stop:step]` semantics. This slice syntax operates where `#!python start` is the starting index, `#!python stop` is the stopping index and `#!python step` is the number of steps between the elements where `#!python step` is non zero:
 
 ```python
 >>> x = kx.q.til(10)
@@ -92,7 +108,7 @@ pykx.CharVector(pykx.q('"defg"'))
 pykx.CharVector(pykx.q('"ace"'))
 ```
 
-Negative slicing works in a similar way and can be used for `list`, `vector` and `table` objects too.
+Negative slicing works in a similar way. You can use it for `#!python list`, `#!python vector` and `#!python table` objects, too.
 
 ```python
 >>> list = kx.q('("a"; 2; 3.3; `four)')
@@ -121,7 +137,7 @@ a b c
 '))
 ```
 
-## Assigning and Adding Values to Vectors/Lists
+## b. Assigning and adding values to vectors/lists
 
 Vector assignment in PyKX operates similarly to that provided by Numpy and operations supported on basic Python lists. As with the previous sections this functionality supports both individual element assignment and slice assignment as follows:
 
@@ -161,7 +177,7 @@ pykx.LongVector(pykx.q('0 0 0 0 0 5 6 7 8 10'))
         '))
 	```
 
-In addition to positional assignment users can make use of the `append` and `extend` methods for `pykx.*Vector` and `pykx.List` objects. When appending objects to a list this can be achieved for single item assignments, while extend will look to add multiple elements to a Vector or List object. The following tabbed section shows the use of append and extend operations including failing cases.
+In addition to positional assignment, you can use the `#!python append` and `#!python extend` methods for `#!python pykx.*Vector` and `#!python pykx.List` objects. When adding objects to a list, use `#!python append` for single item assignments. In contrast, use `#!python extend` to add multiple elements to a `#!python list` or `#!python vector` object. The following tabbed section demonstrates the use of `#!python append` and `#!python extend` operations, including examples of failing cases.
 
 === "pykx.*Vector"
 
@@ -222,9 +238,9 @@ In addition to positional assignment users can make use of the `append` and `ext
 	'))
 	```
 
-## Indexing Non Vector Objects
+## c. Indexing non-vector objects
 
-In addition to being able to index and slice PyKX vector and list objects it is also possible to apply index and slicing semantics on PyKX Table objects. Application of slice/index semantics on tabular objects will return table like objects
+In addition to being able to index and slice PyKX `#!python vector` and `#!python list` objects, it's also possible to apply index and slicing semantics on PyKX Table objects. Application of slice/index semantics on tabular objects returns table-like objects:
 
 ```python
 >>> import pandas as pd

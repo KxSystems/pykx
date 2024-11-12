@@ -167,6 +167,7 @@ static PyObject* k_to_py_cast(K x, K typenum, K israw) {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     if (x->t == 112) {
+        PyGILState_Release(gstate);
         return get_py_ptr(x);
     }
 
@@ -197,6 +198,7 @@ static PyObject* k_to_py_list(K x) {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     if (x->t == 112) {
+        PyGILState_Release(gstate);
         return get_py_ptr(x);
     }
 
@@ -281,93 +283,6 @@ void construct_args_kwargs(PyObject* params, PyObject** args, PyObject** kwargs,
     tmp = *args;
     *args = PyList_AsTuple(*args);
     Py_XDECREF(tmp);
-}
-
-
-EXPORT K k_pyfunc(K k_guid_string, K k_args) {
-
-    if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
-    PyGILState_STATE gstate;
-    gstate = PyGILState_Ensure();
-    K k = (K)0; // the K object which will be returned
-
-    PyObject* py_k_args[8]; // args to the Python callable as `pykx.K` objects
-    // use `pykx.wrappers.factory` to convert each of the K objects to Python objects
-    for (int i = 0; i < k_args->n - 1; ++i) {
-        py_k_args[i] = PyObject_CallFunction(factory, "(Li)", (uintptr_t)kK(k_args)[i+1], 1);
-        if ((k = k_py_error())) {
-            PyGILState_Release(gstate);
-            return k;
-        }
-    }
-
-    // get the uuid for the python function
-    PyObject* guid_string = PyUnicode_FromStringAndSize((const char*)k_guid_string->G0, k_guid_string->n);
-    if ((k = k_py_error())) {
-        PyGILState_Release(gstate);
-        return k;
-    }
-    PyObject* guid = PyObject_CallFunctionObjArgs(UUID, guid_string, NULL);
-    if ((k = k_py_error())) {
-        PyGILState_Release(gstate);
-        return k;
-    }
-
-    // get the python function
-    PyObject* converted_callables = PyDict_GetItemString(toq_module, "converted_callables");
-    PyObject* pyfunc_tuple = PyDict_GetItemWithError(converted_callables, guid);
-    if (!pyfunc_tuple) PyErr_SetObject(PyExc_KeyError, guid);
-    if ((k = k_py_error())) {
-        PyGILState_Release(gstate);
-        return k;
-    }
-    Py_XDECREF(guid);
-    PyObject* pyfunc = PyTuple_GET_ITEM(pyfunc_tuple, 0);
-    PyObject* params = PyTuple_GET_ITEM(pyfunc_tuple, 1);
-    if ((k = k_py_error())) {
-        PyGILState_Release(gstate);
-        return k;
-    }
-    Py_INCREF(pyfunc);
-    Py_INCREF(params);
-
-    // construct the args and kwargs for the pyfunc
-    PyObject* args; // positional arguments for Python callables
-    PyObject* kwargs; // keyword arguments for Python callables
-    construct_args_kwargs(params, &args, &kwargs, k_args->n, py_k_args);
-    Py_XDECREF(params);
-    if ((k = k_py_error())) {
-        Py_XDECREF(args);
-        Py_XDECREF(kwargs);
-        Py_XDECREF(pyfunc);
-        PyGILState_Release(gstate);
-        return k;
-    }
-
-    // call the python function
-    PyObject* py_ret = PyObject_Call(pyfunc, args, kwargs);
-    Py_XDECREF(args);
-    Py_XDECREF(kwargs);
-    Py_XDECREF(pyfunc);
-    if ((k = k_py_error())) {
-        PyGILState_Release(gstate);
-        return k;
-    }
-
-    // Convert the returned value to q
-    PyObject* py_k_ret = PyObject_CallFunctionObjArgs(toq, py_ret, NULL);
-    Py_XDECREF(py_ret);
-    if ((k = k_py_error())) {
-        PyGILState_Release(gstate);
-        return k;
-    }
-    PyObject* py_addr = PyObject_GetAttrString(py_k_ret, "_addr");
-    k = (K)PyLong_AsLongLong(py_addr);
-    Py_XDECREF(py_addr);
-
-    PyGILState_Release(gstate);
-    return k;
 }
 
 
@@ -518,7 +433,7 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
 }
 
 
-EXPORT K foreign_to_q(K f) {
+EXPORT K foreign_to_q(K f, K b) {
     if (pykx_threading)
         return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
     if (f->t != 112)
@@ -535,7 +450,10 @@ EXPORT K foreign_to_q(K f) {
     PyTuple_SetItem(toq_args, 0, pyobj);
     PyTuple_SetItem(toq_args, 1, Py_BuildValue(""));
 
-    PyObject* qpy_val = PyObject_CallObject(toq, toq_args);
+    PyObject* _kwargs = PyDict_New();
+    PyDict_SetItemString(_kwargs, "strings_as_char", PyBool_FromLong((long)b->g));
+
+    PyObject* qpy_val = PyObject_Call(toq, toq_args, _kwargs);
     if ((k = k_py_error())) {
         PyGILState_Release(gstate);
         return k;
@@ -544,6 +462,7 @@ EXPORT K foreign_to_q(K f) {
     PyObject* k_addr = PyObject_GetAttrString(qpy_val, "_addr");
     if ((k = k_py_error())) {
         Py_XDECREF(toq_args);
+        Py_XDECREF(_kwargs);
         Py_XDECREF(k_addr);
         Py_XDECREF(qpy_val);
         PyGILState_Release(gstate);
@@ -553,6 +472,7 @@ EXPORT K foreign_to_q(K f) {
     K res = (K)(uintptr_t)_addr;
     r1_ptr(res);
     Py_XDECREF(toq_args);
+    Py_XDECREF(_kwargs);
     Py_XDECREF(qpy_val);
     Py_XDECREF(k_addr);
 
@@ -627,6 +547,7 @@ EXPORT K get_attr(K f, K attr) {
         return k;
     }
     K res = create_foreign(pres);
+    Py_XDECREF(_attr);
     PyGILState_Release(gstate);
     return res;
 }
@@ -653,6 +574,7 @@ EXPORT K get_global(K attr) {
         return k;
     }
     K res = create_foreign(pres);
+    Py_XDECREF(_attr);
     PyGILState_Release(gstate);
     return res;
 }

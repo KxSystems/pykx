@@ -60,21 +60,25 @@ def _is_set(envvar):
 
 
 pykx_config_locs = [Path('.'), pykx_config_location, Path.home()]
+pykx_config_locs = [path / '.pykx-config' for path in pykx_config_locs]
+pykx_config_locs = [os.path.abspath(path) for path in pykx_config_locs if os.path.isfile(path)]
+pykx_config_locs = list(set(pykx_config_locs))
+
 for path in pykx_config_locs:
-    config_path = path / '.pykx-config'
-    if os.path.isfile(config_path):
-        _pykx_config_content = toml.load(config_path)
-        try:
-            _pykx_profile_content = _pykx_config_content[pykx_config_profile]
-            break
-        except KeyError:
-            print("Unable to locate specified 'PYKX_PROFILE': '" + pykx_config_profile + "' in file '" + config_path + "'") # noqa E501
+    _pykx_config_content = toml.load(path)
+    try:
+        _pykx_profile_content = _pykx_config_content[pykx_config_profile]
+        break
+    except KeyError:
+        print("Unable to locate specified 'PYKX_PROFILE': '" + pykx_config_profile + "' in file '" + str(path) + "'") # noqa E501
 
 
 pykx_dir = Path(__file__).parent.resolve(strict=True)
 os.environ['PYKX_DIR'] = str(pykx_dir)
-os.environ['PYKX_EXECUTABLE'] = sys.executable
-pykx_libs_dir = Path(pykx_dir/'lib'/'4-1-libs') if _is_enabled('PYKX_4_1_ENABLED') else Path(pykx_dir/'lib') # noqa
+pykx_executable = sys.executable
+os.environ['PYKX_EXECUTABLE'] = pykx_executable
+pykx_4_1 = _is_enabled('PYKX_4_1_ENABLED')
+pykx_libs_dir = Path(pykx_dir/'lib'/'4-1-libs') if pykx_4_1 else Path(pykx_dir/'lib') # noqa
 pykx_lib_dir = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_libs_dir))
 pykx_platlib_dir = pykx_lib_dir/q_lib_dir_name
 lib_prefix = '' if system == 'Windows' else 'lib'
@@ -84,16 +88,22 @@ lib_ext = {
     'Windows': 'dll',
 }[system]
 
-try:
-    qhome = Path(_get_config_value('QHOME', pykx_lib_dir)).resolve(strict=True)
-except FileNotFoundError: # nocov
-    # If QHOME and its fallback weren't set/valid, then q/Python must be
-    # running in the same directory as q.k (and presumably other stuff one
-    # would expect to find in QHOME).
-    qhome = Path().resolve(strict=True)
+
+def _get_qhome():
+    try:
+        qhome = Path(_get_config_value('QHOME', pykx_lib_dir)).resolve(strict=True)
+    except FileNotFoundError: # nocov
+        # If QHOME and its fallback weren't set/valid, then q/Python must be
+        # running in the same directory as q.k (and presumably other stuff one
+        # would expect to find in QHOME).
+        qhome = Path().resolve(strict=True)
+    return qhome
+
+
+qhome = _get_qhome()
 
 # License search
-_qlic = os.getenv('QLIC', '')
+_qlic = _get_config_value('QLIC', '')
 _pwd = os.getcwd()
 license_located = False
 lic_path = ''
@@ -117,10 +127,29 @@ for loc in (_pwd, _qlic, qhome):
 if not license_located:
     qlic = Path(qhome)
 
-qargs = tuple(shlex.split(_get_config_value('QARGS', '')))
+under_q = _is_enabled('PYKX_UNDER_Q')
+suppress_warnings = _is_enabled('PYKX_SUPPRESS_WARNINGS')
+
+_unsupported_qargs = {
+    '-p': 'PyKX running without a main loop, setting a port in this way is not supported',
+    '-t': 'PyKX running without a main loop, setting timers in this way has no effect'
+}
 
 
-def _license_install_B64(license, license_type):
+def _check_qargs():
+    qargs = shlex.split(_get_config_value('QARGS', ''))
+    if (not under_q) and (not suppress_warnings):
+        for i in list(_unsupported_qargs.keys()):
+            if i in qargs:
+                warn(f"'{i}' argument unsupported in QARGS configuration: {_unsupported_qargs[i]}",
+                     RuntimeWarning)
+    return tuple(qargs)
+
+
+qargs = _check_qargs()
+
+
+def _license_install_B64(license, license_type): # pragma: no cover
     try:
         lic = base64.b64decode(license)
     except base64.binascii.Error:
@@ -132,7 +161,7 @@ def _license_install_B64(license, license_type):
     return True
 
 
-def _license_check(lic_type, lic_encoding, lic_variable):
+def _license_check(lic_type, lic_encoding, lic_variable): # pragma: no cover
     license_content = None
     lic_name = lic_type + '.lic'
     lic_file = qlic / lic_name
@@ -150,6 +179,32 @@ def _license_check(lic_type, lic_encoding, lic_variable):
         return False
     else:
         return _license_install_B64(lic_encoding, lic_name)
+
+
+def _unlicensed_config(unlicensed_message):
+    choice = input('\nWould you like us to remember this choice? [Y/n]: ')
+    if choice in ('y', 'Y', ''):
+        fpath = Path(os.path.expanduser('~')) / '.pykx-config'
+        try:
+            os.access(fpath, os.W_OK)
+        except FileNotFoundError:
+            pass
+        except PermissionError:
+            raise PermissionError(f"You do not have sufficient permissions to write to: {fpath}")
+        if os.path.exists(fpath):
+            with open(fpath, 'r') as file:
+                data = toml.load(file)
+        else:
+            data = {'default': {}}
+        data['default']['PYKX_UNLICENSED'] = 'True'
+        with open(fpath, 'w') as file:
+            toml.dump(data, file)
+            print(f"\nConfiguration updated at: {fpath}.\n"
+                  "Unlicensed mode now set as default behavior.")
+    else:
+        print(unlicensed_message)
+    os.environ['PYKX_UNLICENSED']='true'
+
 
 def _license_install(intro=None, return_value=False, license_check=False, license_error=None): # noqa: 
 
@@ -176,90 +231,99 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
                 print(install_message)
             return True
 
-    modes_url = "https://code.kx.com/pykx/user-guide/advanced/modes.html"
     personal_url = "https://kx.com/kdb-insights-personal-edition-license-download"
     commercial_url = "https://kx.com/book-demo"
     unlicensed_message = '\nPyKX unlicensed mode enabled. To set this as your default behavior '\
-                         "set the following environment variable PYKX_UNLICENSED='true'"\
-                         '\n\nFor more information on PyKX modes of operation, visit '\
-                         f'{modes_url}.\nTo apply for a PyKX license visit '\
-                         f'\n\n   Personal License:   {personal_url}'\
-                         '\n   Commercial License: Contact your KX sales representative '\
-                         f'or sales@kx.com or apply on {commercial_url}'
+                         "set the following environment variable PYKX_UNLICENSED='true'"
     first_user = '\nThank you for installing PyKX!\n\n'\
                  'We have been unable to locate your license for PyKX. '\
                  'Running PyKX in unlicensed mode has reduced functionality.\n'\
-                 'Would you like to continue with license installation? [Y/n]: '
+                 'Would you like to install a license? [Y/n]: '
+    root = 'C:\\path\\to\\' if platform.system() == 'Windows' else '~/path/to/'
     continue_license = input(first_user if intro is None else intro)
     if continue_license in ('n', 'N'):
-        os.environ['PYKX_UNLICENSED']='true'
-        print(unlicensed_message)
+        _unlicensed_config(unlicensed_message)
         if return_value:
             return False
 
     elif continue_license in ('y', 'Y', ''):
-        commercial = input('\nIs the intended use of this software for:'
-                           '\n    [1] Personal use (Default)'
-                           '\n    [2] Commercial use'
-                           '\nEnter your choice here [1/2]: ').strip().lower()
-        if commercial not in ('1', '2', ''):
-            raise Exception('User provided option was not one of [1/2]')
+        existing_license = input('\nDo you have access to an existing license for PyKX '
+                                 'that you would like to use? [N/y]: ')
+        if existing_license in ('N', 'n', ''):
+            commercial = input('\nIs the intended use of this software for:'
+                               '\n    [1] Personal use (Default)'
+                               '\n    [2] Commercial use'
+                               '\nEnter your choice here [1/2]: ').strip().lower()
+            if commercial not in ('1', '2', ''):
+                raise Exception('User provided option was not one of [1/2]')
 
-        personal = commercial in ('1', '')
+            personal = commercial in ('1', '')
 
-        lic_url = personal_url if personal else commercial_url
-        lic_type = 'kc.lic' if personal else 'k4.lic'
+            lic_url = personal_url if personal else commercial_url
+            lic_type = 'kc.lic' if personal else 'k4.lic'
 
-        if personal:
-            redirect = input(f'\nTo apply for your PyKX license, navigate to {lic_url}.\n'
-                             'Shortly after you submit your application, you will receive a '
-                             'welcome email containing your license information.\n'
-                             'Would you like to open this page? [Y/n]: ')
+            if personal:
+                redirect = input(f'\nTo apply for your PyKX license, navigate to {lic_url}.\n'
+                                 'Shortly after you submit your application, you will receive a '
+                                 'welcome email containing your license information.\n'
+                                 'Would you like to open this page? [Y/n]: ')
+            else:
+                redirect = input('\nTo apply for your PyKX license, contact your '
+                                 'KX sales representative or sales@kx.com.\n'
+                                 f'Alternately apply through {lic_url}.\n'
+                                 'Would you like to open this page? [Y/n]: ')
+
+            if redirect.lower() in ('y', ''):
+                try:
+                    webbrowser.open(lic_url)
+                    time.sleep(2)
+                except BaseException:
+                    raise Exception('Unable to open web browser')
+
+            install_type = input('\nPlease select the method you wish to use to activate your'
+                                 'license:\n  [1] Download the license file provided in your '
+                                 'welcome email and input the file path (Default)'
+                                 '\n  [2] Input the activation key (base64 encoded string) '
+                                 'provided in your welcome email'
+                                 '\n  [3] Proceed with unlicensed mode'
+                                 '\nEnter your choice here [1/2/3]: ').strip().lower()
+
+            if install_type not in ('1', '2', '3', ''):
+                raise Exception('User provided option was not one of [1/2/3]')
+
+            if install_type in ('1', ''):
+                license = input('\nProvide the download location of your license '
+                                f'(for example, {root}{lic_type}) : ').strip()
+                download_location = os.path.expanduser(Path(license))
+
+                if not os.path.exists(download_location):
+                    err_msg = f'Download location provided {download_location} does not exist.'
+                    raise Exception(err_msg)
+
+                shutil.copy(download_location, qlic)
+                print(f'\nPyKX license successfully installed to: {qlic / lic_type}\n')
+            elif install_type == '2':
+
+                license = input('\nProvide your activation key (base64 encoded string) '
+                                'provided with your welcome email : ').strip()
+
+                _license_install_B64(license, lic_type)
+
+                print('\nPyKX license successfully installed to: {qlic / lic_type}\n') # noqa: E501
+            elif install_type == '3':
+                _unlicensed_config(unlicensed_message)
+                if return_value:
+                    return False
         else:
-            redirect = input('\nTo apply for your PyKX license, contact your '
-                             'KX sales representative or sales@kx.com.\n'
-                             f'Alternately apply through {lic_url}.\n'
-                             'Would you like to open this page? [Y/n]: ')
-
-        if redirect.lower() in ('y', ''):
-            try:
-                webbrowser.open(lic_url)
-                time.sleep(2)
-            except BaseException:
-                raise Exception('Unable to open web browser')
-
-        install_type = input('\nPlease select the method you wish to use to activate your license:'
-                             '\n  [1] Download the license file provided in your welcome email and '
-                             'input the file path (Default)'
-                             '\n  [2] Input the activation key (base64 encoded string) provided in '
-                             'your welcome email'
-                             '\n  [3] Proceed with unlicensed mode'
-                             '\nEnter your choice here [1/2/3]: ').strip().lower()
-
-        if install_type not in ('1', '2', '3', ''):
-            raise Exception('User provided option was not one of [1/2/3]')
-
-        if install_type in ('1', ''):
-            license = input('\nProvide the download location of your license '
-                            f'(for example, ~/path/to/{lic_type}) : ').strip()
+            license = input('\nProvide the location of your license '
+                            f'(for example, {root}<license>) : ').strip()
             download_location = os.path.expanduser(Path(license))
 
             if not os.path.exists(download_location):
                 raise Exception(f'Download location provided {download_location} does not exist.')
 
             shutil.copy(download_location, qlic)
-            print('\nPyKX license successfully installed. Restart Python for this to take effect.\n') # noqa: E501
-        elif install_type == '2':
-
-            license = input('\nProvide your activation key (base64 encoded string) '
-                            'provided with your welcome email : ').strip()
-
-            _license_install_B64(license, lic_type)
-
-            print('\nPyKX license successfully installed. Restart Python for this to take effect.\n') # noqa: E501
-        elif install_type == '3':
-            if return_value:
-                return False
+            print('\nPyKX license successfully installed to: {qlic / lic_type}\n') # noqa: E501
     else:
         raise Exception('Invalid input provided please try again')
     if return_value:
@@ -275,25 +339,25 @@ elif not license_located:
 
 licensed = False
 
-under_q = _is_enabled('PYKX_UNDER_Q')
 qlib_location = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_libs_dir))
 pykx_threading = _is_enabled('PYKX_THREADING')
+
+_executable = 'q'
 if platform.system() == 'Windows' and pykx_threading:
-    pykx_threading = False
-    warn('PYKX_THREADING is only supported on Linux / MacOS, it has been disabled.')
-no_sigint = _is_enabled('PYKX_NO_SIGINT', deprecated=True)
+    _executable += '.exe'
+    if pykx_threading:
+        pykx_threading = False
+        warn('PYKX_THREADING is only supported on Linux / MacOS, it has been disabled.')
+
+q_executable = _get_config_value('PYKX_Q_EXECUTABLE', shutil.which(_executable))
 no_pykx_signal = _is_enabled('PYKX_NO_SIGNAL')
 
-if _is_enabled('PYKX_ENABLE_PANDAS_API', '--pandas-api'):
-    warn('Usage of PYKX_ENABLE_PANDAS_API configuration variable was removed in '
-         'PyKX 2.0. Pandas API is permanently enabled. See: '
-         'https://code.kx.com/pykx/changelog.html#pykx-200')
-
-ignore_qhome = _is_enabled('IGNORE_QHOME', '--ignore-qhome', True) or _is_enabled('PYKX_IGNORE_QHOME') # noqa E501
-keep_local_times = _is_enabled('KEEP_LOCAL_TIMES', '--keep-local-times', True) or _is_enabled('PYKX_KEEP_LOCAL_TIMES') # noqa E501
+ignore_qhome = _is_enabled('PYKX_IGNORE_QHOME', '--ignore-qhome')
+keep_local_times = _is_enabled('PYKX_KEEP_LOCAL_TIMES')
 max_error_length = int(_get_config_value('PYKX_MAX_ERROR_LENGTH', 256))
 
-if _is_enabled('PYKX_ALLOCATOR', '--pykxalloc'):
+allocator = _is_enabled('PYKX_ALLOCATOR', '--pykxalloc')
+if allocator:
     if sys.version_info[1] <= 7:
         raise PyKXWarning('A python version of at least 3.8 is required to use the PyKX allocators') # noqa nocov
         k_allocator = False  # nocov
@@ -305,13 +369,16 @@ else:
 k_gc = _is_enabled('PYKX_GC', '--pykxgc')
 release_gil = _is_enabled('PYKX_RELEASE_GIL', '--release-gil')
 use_q_lock = _get_config_value('PYKX_Q_LOCK', False)
-skip_under_q = _is_enabled('SKIP_UNDERQ', '--skip-under-q') or _is_enabled('PYKX_SKIP_UNDERQ')
+skip_under_q = _is_enabled('PYKX_SKIP_UNDERQ', '--skip-under-q')
 no_qce = _is_enabled('PYKX_NOQCE', '--no-qce')
 beta_features = _is_enabled('PYKX_BETA_FEATURES', '--beta')
 load_pyarrow_unsafe = _is_enabled('PYKX_LOAD_PYARROW_UNSAFE', '--load-pyarrow-unsafe')
 pykx_qdebug = _is_enabled('PYKX_QDEBUG', '--q-debug')
+pykx_debug_insights = _is_enabled('PYKX_DEBUG_INSIGHTS_LIBRARIES')
 
 pandas_2 = pd.__version__.split('.')[0] == '2'
+
+jupyterq = _is_enabled('PYKX_JUPYTERQ')
 
 
 def find_core_lib(name: str) -> Path:
@@ -333,6 +400,10 @@ def _set_licensed(licensed_):
 def _set_keep_local_times(keep_local_times_):
     global keep_local_times
     keep_local_times = keep_local_times_
+
+
+def _get_qexecutable():
+    return _get_config_value('PYKX_Q_EXECUTABLE', shutil.which(_executable))
 
 
 def _check_beta(feature_name, *, status=beta_features):

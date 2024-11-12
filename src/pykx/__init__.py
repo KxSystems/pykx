@@ -41,7 +41,7 @@ from typing import Any, List, Optional, Union
 from warnings import warn
 from weakref import proxy
 
-from .config import k_allocator, licensed, no_pykx_signal, no_sigint, pykx_platlib_dir, under_q
+from .config import k_allocator, licensed, no_pykx_signal, pykx_platlib_dir, under_q
 from . import util
 
 if platform.system() == 'Windows': # nocov
@@ -81,7 +81,7 @@ class Q(metaclass=ABCMeta):
     """
     reserved_words = {
         'abs', 'acos', 'aj', 'aj0', 'ajf', 'ajf0', 'all', 'and', 'any', 'asc',
-        'asin', 'asin', 'asof', 'atan', 'attr', 'avg', 'avgs', 'bin',
+        'asin', 'asof', 'atan', 'attr', 'avg', 'avgs', 'bin',
         'binr', 'ceiling', 'cols', 'cor', 'cos', 'count', 'cov', 'cross',
         'csv', 'cut', 'delete', 'deltas', 'desc', 'dev', 'differ', 'distinct',
         'div', 'do', 'dsave', 'each', 'ej', 'ema', 'enlist', 'eval',
@@ -98,9 +98,20 @@ class Q(metaclass=ABCMeta):
         'sqrt', 'ss', 'ssr', 'string', 'sublist', 'sum', 'sums', 'sv', 'svar',
         'system', 'tables', 'tan', 'til', 'trim', 'type', 'uj', 'ujf', 'ungroup',
         'union', 'update', 'upper', 'value', 'var', 'view', 'views',
-        'vs', 'wavg', 'wavg', 'where', 'while', 'within', 'wj', 'wj1',
+        'vs', 'wavg', 'where', 'while', 'within', 'wj', 'wj1',
         'wsum', 'xasc', 'xbar', 'xcol', 'xcols', 'xdesc', 'xexp', 'xgroup', 'xkey', 'xlog',
         'xprev', 'xrank'
+    }
+
+    operators = {
+        'drop': '_',
+        'coalesce': '^', 'fill': '^',
+        'take': '#', 'set_attribute': '#',
+        'join': ',',
+        'find': '?', 'enum_extend': '?', 'roll': '?', 'deal': '?',
+        'dict': '!', 'enkey': '!', 'unkey': '!', 'enumeration': '!',
+        'enumerate': '$', 'pad': '$', 'cast': '$', 'tok': '$',
+        'compose': '\''
     }
 
     def __init__(self):
@@ -137,7 +148,10 @@ class Q(metaclass=ABCMeta):
         if key == "__objclass__":
             raise AttributeError
         # Elevate the q context to the global context, as is done in q normally
-        ctx = self.__getattribute__('ctx')
+        try:
+            ctx = self.__getattribute__('ctx')
+        except BaseException:
+            raise exceptions.QError('Cannot load requested context object in unlicensed mode')
         if key in self.__getattribute__('_q_ctx_keys'):
             # if-statement used instead of try-block for performance
             return ctx.q.__getattr__(key)
@@ -198,15 +212,18 @@ class Q(metaclass=ABCMeta):
                   name: Optional[str] = None,
                   path: Optional[Union[Path, str]] = None,
     ) -> str:
-        """Obtain the definitions from a q/k script.
+        """Switch to a named q context (read [Q for Mortals
+        Chapter 12](https://code.kx.com/q4m3/12_Workspace_Organization/#122-contexts))
+        and load variable definitions into that context from a q/k script. Once the script is
+        loaded this function switches back to the previous q context.
 
         Parameters:
-            name: Name of the context to be loaded. If `path` is not provided, [a file whose name
-                matches will be searched for](#script-search-logic), and loaded if found. If `path`
-                is provided, `name` will be used as the name of the context that the script at
-                `path` is executed in.
-            path: Path to the script to load. If `name` is not provided, it will default to the
-                filename sans extension.
+            name: Name to assign the context being loaded. If no argument is provided the
+                assigned name of the context is set to the name of the file without filetype
+                extension.
+            path: Path to the script to load. If no argument is provided this function
+                [searches for a file matching the given name](#script-search-logic),
+                loading it if found.
 
         Returns:
             The attribute name for the newly loaded module.
@@ -228,13 +245,14 @@ class Q(metaclass=ABCMeta):
             name = path.stem
         prev_ctx = self._call('string system"d"', wait=True)
         try:
-            self._call(
-                f'{"" if name[0] == "." else "."}{name}:(enlist`)!enlist(::);'
-                f'system "d {"" if name[0] == "." else "."}{name}";'
-                '$[@[{get x;1b};`.pykx.util.loadfile;{0b}];'
-                f' .pykx.util.loadfile["{path.parent}";"{path.name}"];'
-                f' system"l {path}"];',
-                wait=True,
+            self._call('''{[name;folder;file]
+                            name set (enlist`)!enlist(::);
+                            system "d ",string name;
+                            $[@[{get x;1b};`.pykx.util.loadfile;{0b}];
+                              .pykx.util.loadfile[folder;file];
+                              system"l ",$[.z.o like "w*";"\\\\";"/"] sv ((),folder;(),file)]}
+                       ''', "" if name[0] == "." else "."+name, str(path.parent).encode(),
+                       path.name.encode(), wait=True,
             )
             return name[1:] if name[0] == '.' else name
         finally:
@@ -244,10 +262,10 @@ class Q(metaclass=ABCMeta):
     def paths(self):
         """List of locations for the context interface to find q scripts in.
 
-        Defaults to the current working directory and `$QHOME`.
+        Defaults to the current working directory and `#!bash $QHOME`.
 
-        If you change directories, the current working directory stored in this list will
-        automatically reflect that change.
+        If you change directories, the current working directory stored in this list
+        automatically reflects that change.
         """
         return object.__getattribute__(self, '_paths')
 
@@ -281,6 +299,7 @@ from . import wrappers
 from . import schema
 from . import streamlit
 from . import random
+from . import help
 
 from ._wrappers import _init as _wrappers_init
 _wrappers_init(wrappers)
@@ -289,11 +308,15 @@ from .embedded_q import EmbeddedQ, EmbeddedQFuture, q
 from ._version import version as __version__
 from .exceptions import *
 
+from .util import _init as _util_init
+_util_init(q)
+
 from ._ipc import _init as _ipc_init
 _ipc_init(q)
 
 from .compress_encrypt import Compress, CompressionAlgorithm, Encrypt
 from .db import DB
+from .tick import TICK
 from .ipc import AsyncQConnection, QConnection, QFuture, RawQConnection, SecureQConnection, SyncQConnection # noqa
 from .config import qargs, qhome, qlic
 from .wrappers import *
@@ -316,11 +339,18 @@ _random_init(q)
 from .db import _init as _db_init
 _db_init(q)
 
+from .tick import _init as _tick_init
+_tick_init(q)
+
 from .remote import _init as _remote_init
 _remote_init(q)
 
 from .compress_encrypt import _init as _compress_init
 _compress_init(q)
+
+from .help import _init as _help_init
+_help_init(q)
+qhelp = help.qhelp
 
 if k_allocator:
     from . import _numpy as _pykx_numpy_cext
@@ -339,22 +369,32 @@ if sys.version_info[1] < 8:
     )
 
 
-def install_into_QHOME(overwrite_embedpy=False, to_local_folder=False) -> None:
+def install_into_QHOME(overwrite_embedpy=False,
+                       to_local_folder=False,
+                       cloud_libraries=False) -> None:
     """Copies the embedded Python functionality of PyKX into `$QHOME`.
 
         Parameters:
             overwrite_embedpy: If embedPy had previously been installed replace it otherwise
-                save functionality as pykx.q
-            to_local_folder: Copy the files to your local folder rather than QHOME
+                save functionality as pykx.q.
+            to_local_folder: Copy the files to your local folder rather than `#!bash QHOME`.
+            cloud_libraries: Copy cloud libraries to `#!bash QHOME`.
 
         Returns:
             None
     """
     dest = Path('.') if to_local_folder else qhome
     p = Path(dest)/'p.k'
+    c_files = ['kurl.q_', 'kurl.sidecar.q_', 'objstor.q_', 'qlog.q_', 'rest.q_', 'bq.q_', 's.k_']
+
     if not p.exists() or overwrite_embedpy:
         shutil.copy(Path(__file__).parent/'p.k', p)
-    shutil.copy(Path(__file__).parent/'pykx.q', dest/'p.q' if overwrite_embedpy else dest)
+    if overwrite_embedpy:
+        shutil.copy(Path(__file__).parent/'p.k', Path(dest)/'p.q')
+    if cloud_libraries:
+        for i in c_files:
+            shutil.copy(Path(__file__).parent/'lib'/i, Path(dest)/i)
+    shutil.copy(Path(__file__).parent/'pykx.q', dest)
     shutil.copy(Path(__file__).parent/'pykx_init.q_', dest)
     if platform.system() == 'Windows':
         if dest == qhome:
@@ -428,6 +468,9 @@ try:
     ipython = get_ipython()  # noqa
     # Load the PyKX extension for Jupyter Notebook.
     ipython.extension_manager.load_extension('pykx.nbextension')
+
+    if config.jupyterq:
+        util.jupyter_qfirst_enable()
 except NameError:
     # Not running under IPython/Jupyter...
     pass
@@ -454,6 +497,7 @@ __all__ = sorted([
     'qhome',
     'QReader',
     'random',
+    'remote',
     'QWriter',
     'qlic',
     'serialize',
@@ -473,11 +517,13 @@ __all__ = sorted([
     'q',
     'shutdown_thread',
     'PyKXReimport',
+    'help',
+    'qhelp',
     *exceptions.__all__,
     *wrappers.__all__,
 ])
 
-if (not no_sigint) or (not no_pykx_signal):
+if not no_pykx_signal:
     for k, v in _signal_dict.items():
         try:
             signal.signal(eval(k), v)

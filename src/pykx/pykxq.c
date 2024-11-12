@@ -115,7 +115,6 @@ EXPORT K k_init_python(K x, K y, K z) {
         Py_InitializeEx(0);
         if(PyEval_ThreadsInitialized()&&!PyGILState_Check())
             PyEval_RestoreThread(PyGILState_GetThisThreadState());
-        PyEval_InitThreads();
     }
     M = PyModule_GetDict(PyImport_AddModule("__main__"));
     n = ktn(KS,0);
@@ -197,6 +196,7 @@ static P k_to_py_cast(K x, K typenum, K israw) {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     if (x->t == 112) {
+        PyGILState_Release(gstate);
         return get_py_ptr(x);
     }
 
@@ -225,6 +225,7 @@ static P k_to_py_list(K x) {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     if (x->t == 112) {
+        PyGILState_Release(gstate);
         return get_py_ptr(x);
     }
 
@@ -400,7 +401,7 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
 }
 
 
-EXPORT K foreign_to_q(K f) {
+EXPORT K foreign_to_q(K f, K b) {
     if (f->t != 112)
         return raise_k_error("Expected foreign object for call to .pykx.toq");
     if (!check_py_foreign(f))
@@ -415,7 +416,10 @@ EXPORT K foreign_to_q(K f) {
     PyTuple_SetItem(toq_args, 0, pyobj);
     PyTuple_SetItem(toq_args, 1, Py_BuildValue(""));
 
-    P qpy_val = PyObject_CallObject(toq, toq_args);
+    P _kwargs = PyDict_New();
+    PyDict_SetItemString(_kwargs, "strings_as_char", PyBool_FromLong((long)b->g));
+
+    P qpy_val = PyObject_Call(toq, toq_args, _kwargs);
     if ((k = k_py_error())) {
         PyGILState_Release(gstate);
         return k;
@@ -424,6 +428,7 @@ EXPORT K foreign_to_q(K f) {
     P k_addr = PyObject_GetAttrString(qpy_val, "_addr");
     if ((k = k_py_error())) {
         Py_XDECREF(toq_args);
+        Py_XDECREF(_kwargs);
         Py_XDECREF(k_addr);
         Py_XDECREF(qpy_val);
         PyGILState_Release(gstate);
@@ -433,6 +438,7 @@ EXPORT K foreign_to_q(K f) {
     K res = (K)(uintptr_t)_addr;
     r1(res);
     Py_XDECREF(toq_args);
+    Py_XDECREF(_kwargs);
     Py_XDECREF(qpy_val);
     Py_XDECREF(k_addr);
 
@@ -502,6 +508,7 @@ EXPORT K get_attr(K f, K attr) {
     P p = get_py_ptr(f);
     P _attr = Py_BuildValue("s", attr->s);
     K res = create_foreign(PyObject_GetAttr(p, _attr));
+    Py_XDECREF(_attr);
     if ((k = k_py_error())) {
         PyGILState_Release(gstate);
         return k;
@@ -524,6 +531,7 @@ EXPORT K get_global(K attr) {
     }
     P _attr = Py_BuildValue("s", attr->s);
     K res = create_foreign(PyObject_GetAttr(p, _attr));
+    Py_XDECREF(_attr);
     if ((k = k_py_error())) {
         PyGILState_Release(gstate);
         return k;

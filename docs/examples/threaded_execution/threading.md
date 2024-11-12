@@ -1,22 +1,25 @@
+---
+title: Multithreaded Execution Example
+description: Example of PyKX Calling into q from multiple threads
+date: July 2024
+author: KX Systems, Inc.,
+tags: PyKX, q, threading, python, asyncio, multithreaded
+---
+
 # PyKX Calling into q from multiple threads
 
-The purpose of this example is to provide a quickstart for setting up a python process using `PyKX`
-to call into `EmbeddedQ` from multiple threads.
+_This example provides a quick start for setting up a Python process using `#!python PyKX` to call into `#!python EmbeddedQ` from multiple threads._
 
-To follow along with this example please feel free to download this
-<a href="./archive.zip" download>zip archive</a> that contains a copy of the python scripts and this
-writeup.
+To follow along, feel free to download this <a href="./archive.zip" download>zip archive</a> that contains a copy of the python scripts and this writeup.
 
 ## Quickstart
 
-This example creates a python process that creates multiple tasks/threads that subscribe to a `q`
-process over IPC and upon receiving a new row upsert it to a local table. There are 2 scripts
-included: `asyncio_threading.py` and `threads.py`, the first uses asyncio tasks running on
-seperate threads and the second example uses the python `threading` library directly to spawn
-threads.
+This example creates a Python process that spawns multiple tasks or threads to subscribe to a `#!python q` process over IPC. Upon receiving a new row, it upserts the row to a local table. There are two scripts included: 
 
+- `#!python asyncio_threading.py`, which uses asyncio tasks running on separate threads.
+- `#!python threads.py`, which uses the Python threading library to spawn threads directly.
 
-### Running the example
+### Run the example
 
 ```bash
 $ python asyncio_threading.py
@@ -26,8 +29,7 @@ $ python threads.py
 
 ### Outcome
 
-The inital table will be printed upon starting the program, once all the threads/tasks have
-upserted all of the rows they have received to the table the final table will be printed.
+This command prints the initial table at startup. Once all the threads or tasks have upserted their received rows to the table, it prints the final table:
 
 ```
 $ python asyncio_threading.py
@@ -70,12 +72,12 @@ a  b
 ..
 ```
 
-### Important Note on usage
+### Important note on usage
 
-Since using `PYKX_THREADING` creates a background thread to run the calls into `q`, the
+Since using `#!python PYKX_THREADING` creates a background thread to run the calls into `#!python q`, the
 background thread must be shutdown when finished. The easiest way to ensure this is done is by using
-a `try` - `finally` block around the entrypoint to your script. This will ensure that even in the
-event of an error the background thread will still be shutdown correctly so python can exit.
+a `#!python try` - `#!python finally` block around the entrypoint to your script. This ensures that even in the
+event of an error, the background thread shuts down correctly so Python can exit.
 
 ```
 import os

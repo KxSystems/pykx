@@ -68,6 +68,21 @@ feature .pykx wrapped objects
         expect only keyword arguments to be usable
             .qu.compare[6; onlykwargs[`z pykw 2; `y pykw 2; `x pykw 2]`];
 
+        expect error if multiple dictionaries passed
+            @[{onlykwargs . x;0b};
+              (10;pykwargs `a`b!1 2;pykwargs `c`d!2 3);
+              {x like "Expected only one key word dictionary*"}]
+
+        expect error if duplicate keys supplied
+            @[{onlykwargs . x; 0b};
+                (10;pykwargs `a`b`a!1 2 3);
+                {x like "Expected only unique key names*"}]
+
+        expect error if non symbol keys used in keyword dictionary
+            @[{onlykwargs . x; 0b};
+                (10;pykwargs 1 2 3!1 2 3);
+                {x like "Expected Symbol Atom for*"}]
+
     should support get attribute functionality
         expect getattr can return functions
             .qu.compare[10; .pykx.eval["pykx.LongVector(range(10))"][`:__len__][::]`];

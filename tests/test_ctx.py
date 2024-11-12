@@ -1,8 +1,11 @@
 from contextlib import contextmanager
 import os
 from pathlib import Path
+from platform import system
 import re
+import shutil
 from tempfile import gettempdir
+import uuid
 
 # Do not import pykx here - use the `kx` fixture instead!
 import pytest
@@ -55,6 +58,10 @@ def test_register_without_args(q):
         q._register()
 
 
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Temporary file testing flaky, requires rework'
+)
 def test_register_by_path(q, q_script_with_k_script_present, kx):
     q_script = q_script_with_k_script_present
     q_script.rename(q_script.parent/'nameA.q')
@@ -69,6 +76,10 @@ def test_register_by_path(q, q_script_with_k_script_present, kx):
     assert isinstance(q.nameA, kx.ctx.QContext)
 
 
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Temporary file testing flaky, requires rework'
+)
 def test_local_register_by_name_q(q, q_script_with_k_script_present):
     tmp_dir = q_script_with_k_script_present.resolve().parent
     with cd(str(tmp_dir)):
@@ -76,22 +87,43 @@ def test_local_register_by_name_q(q, q_script_with_k_script_present):
         assert q.script.q
 
 
-def test_find_namespace_in_q_file(q, tmp_path):
-    with pytest.raises(AttributeError):
-        q.testnamespace
-    with cd(tmp_path):
-        with open('testnamespace.q', 'w') as f:
-            f.write('.testnamespace.true:1b\n')
-        assert q.testnamespace.true
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Temporary file testing flaky, requires rework'
+)
+def test_find_namespace_in_q_file(q):
+    cwd = Path(os.getcwd())
+    tmpdir = cwd / str(uuid.uuid4().hex)[:7]
+    os.makedirs(tmpdir)
+    try:
+        with pytest.raises(AttributeError):
+            q.testnamespace
+        with cd(tmpdir):
+            with open('testnamespace.q', 'w') as f:
+                f.write('.testnamespace.true:1b\n')
+            assert q.testnamespace.true
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def test_reserved_in_ctx(q, tmp_path):
-    with pytest.raises(AttributeError):
-        q.testnamespace
-    with cd(tmp_path):
-        with open('name.q', 'w') as f:
-            f.write('.name.test.update:{x+1}\n')
-        assert q.name.test.update(1) == 2
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Temporary file testing flaky, requires rework'
+)
+def test_reserved_in_ctx(q):
+    cwd = Path(os.getcwd())
+    tmpdir = cwd / str(uuid.uuid4().hex)[:7]
+    os.makedirs(tmpdir)
+
+    try:
+        with pytest.raises(AttributeError):
+            q.testnamespace
+        with cd(tmpdir):
+            with open('name.q', 'w') as f:
+                f.write('.name.test.update:{x+1}\n')
+            assert q.name.test.update(1) == 2
+    finally:
+        shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def test_python_keyword_as_q_fn(q):
@@ -275,3 +307,22 @@ def test_ctx_no_overwrite_qerror(q_port, kx):
         with kx.QConnection(port=q_port, username='a', password='aaaa') as q:
             q('type')
         assert 'Access Denied' in str(err.value)
+
+
+@pytest.mark.unlicensed
+def test_operator_retrieval(kx):
+    if kx.licensed:
+        for i in kx.q.operators.keys():
+            op = getattr(kx.q, i)
+            assert isinstance(op, (kx.Operator, kx.Iterator))
+            assert isinstance(op.__doc__, str)
+            assert i in op.__doc__
+    else:
+        for i in kx.q.operators.keys():
+            with pytest.raises(kx.QError) as err:
+                getattr(kx.q, i)
+            assert 'Cannot load requested' in str(err.value)
+
+
+def test_context_loadfile(kx):
+    assert isinstance(kx.q.csvutil, kx.ctx.QContext)
