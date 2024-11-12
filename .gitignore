@@ -70,6 +70,14 @@ __pycache__/
 **/4-1-libs/*.k_
 **/4-1-libs/*.k
 !**/4-1-libs/q.k
+**/4-1-libs/**/libe.so
+**/4-1-libs/**/e.*
+
+#ToDo revert in KXI-44621
+src/pykx/lib/4-1-libs/l64/kxreaper
+src/pykx/lib/4-1-libs/l64/libkurl.so
+src/pykx/lib/4-1-libs/l64/libobjstor.so
+src/pykx/lib/4-1-libs/l64/pg
 
 # Distribution / packaging
 .Python
@@ -219,9 +227,13 @@ custom_theme/partials/header.html
 .nvimrc
 Session.vim
 
+# Editor temp files
+*~
+
 # Coverage Reports
 .coverage*
 .scannerwork*
+*report.xml
 report.xml
 coverage.xml
 .pymon

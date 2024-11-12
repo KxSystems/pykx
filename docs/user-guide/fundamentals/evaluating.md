@@ -1,36 +1,40 @@
-# Evaluating q code with PyKX
+---
+title: Use PyKX objects
+description: How to use PyKX objects and evaluate q code with PyKX
+date: July 2024
+author: KX Systems, Inc.,
+tags: PyKX, q, PyKX objects, 
+---
 
-There are a number of ways to manipulate PyKX objects and evaluate q code in PyKX, for example:
+# Use PyKX objects and evaluate q code with PyKX
 
-1. By calling `pykx.q` directly, e.g. `pykx.q('10 {x,sum -2#x}/ 0 1')`
-2. By dropping into the [interactive console][pykx.QConsole]
-3. By making use of keyword functions provided by `q`, e.g. `pykx.q.til(10)`
-4. Over [IPC][pykx.QConnection]
+_This page provides details on how to use PyKX objects and how to evaluate q code with PyKX._
 
-The first three methods evaluate the code locally within the Python process, and are not available without a q license. The final method evaluates the code in a separate q process, and can be used with or without a q license provided the server to which your PyKX instance is connected is appropriately licensed.
+!!! tip "Tip: For the best experience, we recommend reading [PyKX objects and attributes](..//../learn/objects.md) and [Create and convert PyKX objects](creating.md) first." 
+
+There are four ways to manipulate PyKX objects and evaluate q code in PyKX:
+
+- a. By calling `#!python pykx.q` directly, for example, `#!python pykx.q('10 {x,sum -2#x}/ 0 1')`
+- b. By dropping into the [interactive console][pykx.QConsole]
+- c. By using `#!python q` keyword functions, for example, `#!python pykx.q.til(10)`
+- d. Over [IPC][pykx.QConnection]
+
+The first three methods evaluate the code locally within the Python process and require a q license. The final method evaluates the code in a separate q process and can be used with or without a q license, provided the server your PyKX instance is connected to is appropriately licensed.
 
 !!! Warning
 
-    Functions pulled in over IPC are executed locally in PyKX, see the [IPC documentation](../../api/ipc.md)
-    for more information on how to ensure `q` code is executed on the server and not locally.
+    Functions pulled in over IPC are executed locally in PyKX. Go to the [IPC documentation](../../api/ipc.md)
+    for more information on how to ensure the `q` code is executed on the server and not locally.
 
-## PyKX Objects
+## a. Call q using `#!python pykx.q`
 
-Calling a q instance or a connection to a q instance will return what is commonly referred to as a *PyKX object*. A PyKX object is an instance of the [`pykx.K`][pykx.K] class, or one of its subclasses. These classes are documented on the [PyKX wrappers API doc](../../api/pykx-q-data/wrappers.md) page.
-
-PyKX objects are wrappers around objects in q's memory space within the Python process that PyKX (and your program that uses PyKX) runs in. These wrappers are cheap to make as they do not require copying any data out of q's memory space.
-
-These PyKX objects support a variety of Python features (e.g. iteration, slicing, calling, etc.), and so oftentimes converting them to other types (e.g. a [`pykx.Vector`][pykx.Vector] to a `numpy.ndarray`) is unnecessary.
-
-## Calling q using `pykx.q`
-
-For users familiar with writing kdb+/q code use of the method `pykx.q` (or more commonly in this documentation `kx.q`) allows the evaluation of q code to take place providing the return of the function as a `PyKX` object. This method is variadic in nature and its usage comes in two forms:
+For users familiar with kdb+/q code, the `#!python pykx.q` (or `#!python kx.q`) method allows the evaluation of q code to take place providing the return of the function as a `#!python PyKX` object. This method is variadic, meaning it can accept a variable number of arguments. You can use in two different ways:”
 
 1. Direct evaluation of single lines of code
-2. The application of functions taking multiple arguments
+2. Application of functions that take multiple arguments
 
 
-### Direct evaluation of single lines of code
+### a.1 Direct evaluation of single lines of code
 
 ```python
 >>> import pykx as kx
@@ -42,9 +46,9 @@ pykx.Identity(pykx.q('::'))
 pykx.FloatVector(pykx.q('0.06165008 0.285799 0.6684724 0.9133033 0.1485357'))
 ```
 
-### Application of functions taking multiple arguments
+### a.2 Application of functions taking multiple arguments
 
-As noted above the `pykx.q` functionality is variadic in nature, in the case that the first argument is a function the N following arguments will be treated as arguments to that function. Of particular note is that these arguments can be Python or PyKX objects, all objects passed to a q function will be converted to a PyKX object using the method `pykx.toq` for example:
+If the first argument of `#!python pykx.q` is a function, the `#!python N` following arguments are treated as arguments to that function. Arguments can be Python or PyKX objects. All objects passed to a q function are converted to a PyKX object using the method `#!python pykx.toq`. For example:
 
 ```python
 >>> import pykx as kx
@@ -70,7 +74,7 @@ x          x1
 
 	The application of arguments to functions within PyKX is limited to a maximum of 8 arguments. This limitation is imposed by the evaluation of q code.
 
-Users wishing to debug failed evaluation of q code can do so either through usage of a `debug` keyword or by globally setting the environment variable `PYKX_QDEBUG`.
+Users wishing to debug failed evaluation of q code can do so, either by globally setting the environment variable `#!python PYKX_QDEBUG` or through a `#!python debug` keyword:
 
 === "Global Setting"
 
@@ -118,9 +122,9 @@ Users wishing to debug failed evaluation of q code can do so either through usag
 	pykx.exceptions.QError: type
 	```
 
-## Using the q console within PyKX
+## b. Use the q console within PyKX
 
-For users more comfortable prototyping q code within a q terminal it is possible within a Python terminal to run an emulation of a q session directly in Python through use of the `kx.q.console` method.
+For users more comfortable prototyping q code within a q terminal, it's possible within a Python terminal to run an emulation of a q session directly in Python through the `#!python kx.q.console` method:
 
 ```python
 >>> import pykx as kx
@@ -133,9 +137,9 @@ q)\\
 
 !!! Note
 
-    This is not a fully featured q terminal, it has the same core [limitations](../advanced/limitations.md) that PyKX has when it comes to the running of timers and subscriptions.
+    This is not a fully-featured q terminal. It shares the same core [limitations](../../help/issues.md) as PyKX, particularly regarding the running of timers and subscriptions.
 
-## Using q keywords
+## c. Use q keywords
 
 Consider the following q function that checks if a given number is prime:
 
@@ -143,7 +147,7 @@ Consider the following q function that checks if a given number is prime:
 {$[x in 2 3;1;x<2;0;{min x mod 2_til 1+floor sqrt x}x]}
 ```
 
-We can evaluate it through `q` to obtain a [`pykx.Lambda`](../../api/pykx-q-data/wrappers.md) object. This object can then be called as a Python function:
+You can evaluate it through `#!python q` to obtain a [`#!python pykx.Lambda`](../../api/pykx-q-data/wrappers.md) object. You can then call this object as a Python function:
 
 ```python
 import pykx as kx
@@ -154,16 +158,16 @@ assert is_prime(127)
 assert not is_prime(128)
 ```
 
-Arguments to the function are converted to [`pykx.K`][pykx.K] objects via the [`pykx.toq`][pykx.toq] module, and so the arguments can be anything supported by that module, i.e. any Python type `X` for which a `pykx.toq.from_X` function exists (barring some caveats - see the [`pykx.toq`][pykx.toq] documentation).
+To convert arguments to the function to [`#!python pykx.K`][pykx.K] objects, use the [`#!python pykx.toq`][pykx.toq] module. The arguments can be anything supported by that module, for example, any Python type `#!python X` for which a `#!python ykx.toq.from_X` function exists (barring some caveats mentioned in the [`#!python pykx.toq`][pykx.toq] documentation).
 
-For instance, we can apply the `each` adverb to `is_prime` and then provide it a range of numbers to check like so:
+For instance, you can apply the `#!python each` adverb to `#!python is_prime` and then provide it a range of numbers to check:
 
 ```python
 >>> is_prime.each(range(10))
 pykx.LongVector(q('0 0 1 1 0 1 0 1 0 0'))
 ```
 
-Then we could pass that into [`pykx.q.where`](../../api/pykx-execution/q.md#where)
+Then you could pass that into [`pykx.q.where`](../../api/pykx-execution/q.md#where):
 
 ```python
 >>> kx.q.where(is_prime.each(range(10)))

@@ -14,7 +14,7 @@ class serialize:
         Parameters:
             obj: The object to serialize.
             mode: The [capability level](https://code.kx.com/q/basics/ipc/#handshake)
-                to use for serialization, defaluts to the maximum value of 6.
+                to use for serialization, defaults to the maximum value of 6.
             wait: The message type to use, defaults to 0.
 
         Note: The available message types to use are 0, 1, and 2.
@@ -34,7 +34,7 @@ class serialize:
 
         Serializing a `K` object and copying the serialized data.
 
-        ```
+        ```python
         >>> k_obj = kx.q('til 10')
         >>> ser = kx.serialize(k_obj)
         # The 0-copy memoryview of the data can be accessed through the `data` property
@@ -48,7 +48,7 @@ class serialize:
 
         You can also directly index into the serialized object.
 
-        ```
+        ```python
         >>> k_obj = kx.q('til 10')
         >>> ser = kx.serialize(k_obj)
         >>> ser[0]
@@ -77,7 +77,7 @@ class serialize:
 
         Serializing a `K` object and then copying the serialized data to a new variable.
 
-        ```
+        ```python
         >>> k_obj = kx.q('til 10')
         >>> ser = kx.serialize(k_obj)
         >>> k_obj_copy = ser.copy()
@@ -92,7 +92,7 @@ def deserialize(data: Union[bytes, serialize, memoryview]):
     """Helper method to deserialize `K` objects from bytes.
 
     Parameters:
-        obj: The object to deserialize.
+        data: The object to deserialize.
 
     Examples:
 
@@ -107,7 +107,7 @@ def deserialize(data: Union[bytes, serialize, memoryview]):
 
     You can also directly deserialize a bytes object.
 
-    ```
+    ```python
     >>> k_obj = kx.q('til 10')
     >>> ser = kx.serialize(k_obj).copy()
     >>> ser

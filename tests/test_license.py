@@ -34,7 +34,7 @@ def test_fallback_to_unlicensed_mode_error(tmp_path):
 )
 def test_unlicensed_signup(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
-    inputs = iter(['N'])
+    inputs = iter(['N', 'N'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
     import pykx as kx
     assert 1 == kx.toq(1).py()
@@ -75,7 +75,7 @@ def test_invalid_commercial_input(tmp_path, monkeypatch):
 )
 def test_licensed_signup_no_file(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
-    inputs = iter(['Y', '1', 'n', '1', '/test/test.blah'])
+    inputs = iter(['Y', 'n', '1', 'n', '1', '/test/test.blah'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
     try:
         import pykx as kx # noqa: F401
@@ -89,7 +89,7 @@ def test_licensed_signup_no_file(tmp_path, monkeypatch):
 )
 def test_licensed_signup_invalid_b64(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
-    inputs = iter(['Y', '1', 'n', '2', 'data:image/png;test'])
+    inputs = iter(['Y', 'n', '1', 'n', '2', 'data:image/png;test'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
     try:
         import pykx as kx # noqa: F401
@@ -107,7 +107,7 @@ def test_licensed_success_file(monkeypatch):
     qhome_path = os.environ['QHOME']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    inputs = iter(['Y', '1', 'n', '1', qhome_path + '/kc.lic'])
+    inputs = iter(['Y', 'n', '1', 'n', '1', qhome_path + '/kc.lic'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
 
     import pykx as kx
@@ -125,7 +125,23 @@ def test_licensed_success_b64(monkeypatch):
     os.unsetenv('QHOME')
     with open(qhome_path + '/kc.lic', 'rb') as f:
         license_content = base64.encodebytes(f.read())
-    inputs = iter(['Y', '1', 'n', '2', str(license_content)])
+    inputs = iter(['Y', 'n', '1', 'n', '2', str(license_content)])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+
+    import pykx as kx
+    assert kx.licensed
+    assert [0, 1, 2, 3, 4] == kx.q.til(5).py()
+
+
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_licensed_available(monkeypatch):
+    qhome_path = os.environ['QHOME']
+    os.unsetenv('QLIC')
+    os.unsetenv('QHOME')
+    inputs = iter(['Y', 'Y', qhome_path + '/kc.lic'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
 
     import pykx as kx

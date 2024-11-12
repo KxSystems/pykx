@@ -1,0 +1,256 @@
+/*
+	Title: PyKX extra CSS for code.kx.com in MkDocs
+ */
+
+/* countermand MkDocs insertion of href attribute after link anchor
+--------------------------------------------- */
+@media print {
+    a[href]:after {
+      content: none !important;
+    }
+  }
+  
+  [data-md-color-scheme="kx-light"] {
+    --md-primary-fg-color:             hsla(210, 33%, 9%, 1);
+    --md-typeset-a-color:              hsla(217, 100%, 40%, 1);
+    --md-typeset-a-color--dark:        hsla(217, 100%, 40%, 1);
+    --md-typeset-img-bg:               transparent;
+    --md-typeset-mark-color:           rgba(295,195,0,.3); /*KX Yellow: #FFC300*/
+  }
+  
+  [data-md-color-scheme="slate"] {
+    --md-primary-fg-color:             hsla(210, 33%, 9%, 1);
+    --md-typeset-a-color:              #FFC300;
+    --md-typeset-a-color--dark:        hsla(217, 100%, 40%, 1);
+    --md-typeset-img-bg:               #f4edda;
+    --md-typeset-mark-color:           rgba(295,195,0,.3); /*KX Yellow: #FFC300*/
+  }
+  .md-typeset a:hover {
+    color: var(--md-typeset-a-color);
+  }
+  /* admonition use kx blue colors */ 
+  .md-typeset .note>.admonition-title, 
+  .md-typeset .note>summary {
+    background-color: rgba(82,148,254,.1);
+    border-color: #5294fe;
+  }
+  
+  .md-typeset .admonition.note, .md-typeset details.note {
+    border-color: #5294fe;
+  }
+  
+  .md-typeset .admonition.home-page, 
+  .md-typeset details.home-page {
+    border-width: 0;
+    border-left-width: 0.2rem;
+    border-color: var(--md-code-fg-color)
+  }
+  
+  .md-typeset .home-page > .admonition-title, 
+  .md-typeset .home-page > summary {
+    background-color:rgb(125 125 125 / 10%);
+    border-color: var(--md-accent-fg-color--transparent);
+  }
+
+  .md-typeset .home-page > .admonition-title::before,
+  .md-typeset .home-page > summary::before {
+    background-color: var(--md-code-fg-color);
+	mask-image:var(--md-admonition-icon--abstract);
+  }
+  
+  /* TEXT HIGHLIGHTING - KX Yellow: #FFC300 */
+  ::selection {
+      background: var(--md-typeset-mark-color); /* WebKit/Blink Browsers */
+  }
+  ::-moz-selection {
+      background: var(--md-typeset-mark-color); /* Gecko Browsers */
+  }
+  
+  
+  /* type
+  --------------------------------------------- */
+  /*
+  Content hosted on code.kx.com will be displayed in Euclid.
+  Content hosted elsewhere will not, unless the font is installed on the user's machine.
+  The Segoe UI secondary font will be used only if installed on the user's machine:
+  Microsoft permits neither hosting at code.kx.com nor distribution. 
+  The most probable outcome for a site hosted off code.kx.com is display with the user's installed fonts.
+  */
+  @font-face {
+    font-family: 'EuclidSquare';
+    src: local('Euclid Square'),
+         url('https://code.kx.com/fonts/EuclidSquare-Regular-WebS.woff2') format('woff2'),
+         url('https://code.kx.com/fonts/EuclidSquare-Regular-WebS.woff')  format('woff');
+    font-weight: normal;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'EuclidSquare';
+    src: local('Euclid Square'),
+         url('https://code.kx.com/fonts/EuclidSquare-RegularItalic-WebS.woff2') format('woff2'),
+         url('https://code.kx.com/fonts/EuclidSquare-RegularItalic-WebS.woff')  format('woff');
+    font-weight: normal;
+    font-style: italic;
+  }
+  @font-face {
+    font-family: 'EuclidSquare';
+    src: local('Euclid Square'),
+         url('https://code.kx.com/fonts/EuclidSquare-Bold-WebS.woff2') format('woff2'),
+         url('https://code.kx.com/fonts/EuclidSquare-Bold-WebS.woff')  format('woff');
+    font-weight: bold;
+    font-style: normal;
+  }
+  
+  body, input, 
+  article h1, article h2, article h3, 
+  .wp-author, #wp-brand, .publications, .admonition-title,
+  article details>summary {
+    font-family: 'EuclidSquare', 'Segoe UI', -apple-system, Cantarell, Helvetica, Arial, sans-serif;
+  }
+  
+  .md-typeset code,
+  .md-typeset pre {
+    font-family: 'Consolas', SFMono-Regular, Menlo, 'Droid Sans Mono', monospace;
+  }
+  
+  .md-typeset a>code {
+      padding: 0 .15em;
+  }
+  
+  /* stop floated blocks intruding into headings */
+  .md-typeset h2 {
+    clear: both;
+  }
+  
+  /* undo font-size:85% code */
+  .md-typeset code{
+    font-size: 1em;
+    background-color: var(--md-code-bg-color);
+    color: var(--md-code-fg-color);
+  }
+
+
+  .md-typeset .admonition pre {
+       font-size: 1em;
+  }
+  
+  .nowrap {
+      white-space: nowrap;
+  }
+  
+  .nobullets ul {
+    list-style: none;
+  }
+  
+  /* RHS TOC TITLE & NAV TREE TITLE - Euclid Square Bold UPPERCASE 9/12pt */
+  .md-nav--lifted>.md-nav__list>.md-nav__item--active>.md-nav__link,
+  .md-nav__title {
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    opacity: 0.5;
+    padding-bottom: .8em;
+    text-transform: uppercase;
+  }
+  
+  /* tweak Prism.js styles 
+  --------------------------------------------- */
+  .md-typeset pre[class*="language-"] {
+    background-color: var(--md-code-bg-color);
+    color: var(--md-code-fg-color);
+      font-size: .8em;
+  }
+  .md-typeset pre code {
+    line-height: 1.6em;
+  }
+  
+  .md-typeset pre[class*="language-syntax"] {
+    /*border: 1px solid rgba(0,0,0,0.2);*/
+    box-shadow: 2px 2px rgba(0,0,0,.1);
+    font-size: 1em;
+    font-weight:  bold;
+    padding: 0.5em 1em;
+  }
+  
+  .md-typeset pre[class*="language-q"],
+  .md-typeset pre[class*="language-txt"] {
+    background-color: var(--md-code-bg-color);
+    color: var(--md-code-fg-color);
+  }
+  
+  /* less padding on code blocks */
+  .md-typeset pre > code {
+      padding: 0;
+  }
+  
+  /* match Prism code blocks */
+  /*.md-typeset code {
+      background-color: #fdf6e3;
+  }
+  */.md-typeset .admonition code {
+      background-color: var(--md-code-bg-color);
+  }
+  
+  .md-typeset .admonition pre[class*="language-"] {
+      padding: 0;
+  }
+  /* inline code elements */
+  .md-content code {
+      background-color: var(--md-code-bg-color);
+      color:var(--md-code-fg-color);
+      box-shadow: none;
+  }
+  
+  /* Fixed-font block elements
+  ---------------------------------------------------------------------------- */
+  div.typewriter p {
+    background-color: var(--md-code-bg-color);
+    color: var(--md-code-fg-color); /* = Prism */
+    font-family: 'Consolas', SFMono-Regular, Menlo, 'Droid Sans Mono', monospace;
+    font-size: 80%;
+    font-weight: 500;
+    /*font-variant-ligatures: none;*/
+    font-feature-settings: "liga" 0;
+    margin: 0;
+    padding: 1em;
+    white-space: pre-wrap;
+  }
+  div.typewriter a {
+    background-color: var(--md-code-bg-color);
+    color: var(--md-typeset-a-color);
+  }
+  div.typewriter strong {
+    font-weight: 800;
+  }
+  
+  .md-typeset table:not([class]) th {
+    /*font-style: italic;*/
+    font-weight: normal;
+    opacity: .4;
+  }
+  
+  /* background of transparent images in Dark Mode */
+  .md-typeset p:not(.small-face) img[src$=".png"] {
+    background-color: var(--md-typeset-img-bg);
+    border-radius: 5px;
+    padding: 1em;
+  }
+  
+  /* Small faces */
+  .md-typeset p.small-face {
+    float: left;
+    margin: 0 1em 0 0;
+  }
+  .md-typeset .small-face img {
+    border-radius: 35px;
+    width: 70px;
+  }
+  
+  mark {
+    padding: 0 .2em;
+  }
+  
+   /* No background in code block within admonition */
+  .md-typeset .admonition pre {
+    background-color: transparent;
+    margin-top: 0;
+  }

@@ -1,25 +1,5 @@
-"""PyKX q IPC interface.
-
-The IPC communication module provided here works differently than may be expected for users
-familiar with the KX IPC interfaces provided for Java and C#. Unlike these interfaces it does not
-directly convert the encoded data received over the q IPC protocol to an analogous type in Python,
-but rather stores the object within q memory space as a `pykx.K` object for deferred conversion.
-
-This has major benefits with regards to the flexibility of the interface. In particular, the
-[`pykx.K`][pykx.K] conversion methods (i.e. `py`, `np`, `pd`, and `pa`), use the same logic as they
-do when converting `pykx.K` objects that were created by an embedded q instance.
-
-The IPC interface works when running with or without a q license. Refer to
-[the modes of operation documentation](../user-guide/advanced/modes.md) for more details.
-
-The IPC Interface is split between two classes `pykx.AsyncQConnection` and `pykx.SyncQConnection`.
-Both of which extend the base `QConnection` class, instantiating a `QConnection` directly remains
-possible for backward compatibility but will now return an instance of `pykx.SyncQConnection`. There
-is also the `pykx.RawQConnection` class that is a superset of the `pykx.AsyncQConnection` class that
-has extra functionality around manually polling the send an receive message queues.
-
-For more examples of usage of the IPC interface you can look at the
-[`interface overview`](../getting-started/PyKX%20Introduction%20Notebook.ipynb#ipc-communication).
+"""
+_This page documents the API functions for using q IPC within PyKX._
 """
 
 from enum import Enum
@@ -32,7 +12,6 @@ import socket
 from threading import Lock as threading_lock
 from time import monotonic_ns, sleep
 from typing import Any, Callable, Optional, Union
-from warnings import warn
 from weakref import finalize, WeakMethod
 import sys
 
@@ -41,7 +20,7 @@ from .config import max_error_length, pykx_lib_dir, pykx_qdebug, system
 from .core import licensed
 from .exceptions import FutureCancelled, NoResults, PyKXException, QError, UninitializedConnection
 from .util import get_default_args, normalize_to_bytes, normalize_to_str
-from .wrappers import CharVector, Composition, Foreign, Function, K, List, SymbolAtom, SymbolicFunction # noqa : E501
+from .wrappers import CharVector, Composition, Foreign, Function, K, List, SymbolAtom, SymbolicFunction, Table # noqa : E501
 from . import _wrappers
 from . import _ipc
 
@@ -64,9 +43,17 @@ def _init(_q):
     global q
     q = _q
 
+def reconnection_function(reconnection_delay):
+    return reconnection_delay * 2
 
 class MessageType(Enum):
-    """The message types available to q."""
+    """
+    The message types available to q.
+
+      - 0 = async message
+      - 1 = sync message
+      - 2 = response message
+    """
     async_msg = 0
     sync_msg = 1
     resp_msg = 2
@@ -74,13 +61,15 @@ class MessageType(Enum):
 
 class QFuture(asyncio.Future):
     """
-    A Future object to be returned by calls to q from an instance of `pykx.AsyncQConnection`.
+    A Future object to be returned by calls to q from an instance of
+    [pykx.AsyncQConnection][pykx.AsyncQConnection].
 
     This object can be awaited to receive the resulting value.
 
     Examples:
 
-    Awaiting an instance of this class to receive the return value of an `AsyncQConnection` call.
+    Await an instance of this class to receive the return value of an
+    `#!python AsyncQConnection` call.
 
     ```python
     async with pykx.AsyncQConnection('localhost', 5001) as q:
@@ -103,10 +92,10 @@ class QFuture(asyncio.Future):
         super().__init__()
 
     def __await__(self) -> Any:
-        """Await the result of the `QFuture`.
+        """Await the result of the `#!python QFuture`.
 
         Returns:
-            The result of the `QFuture`.
+            The result of the `#!python QFuture`.
 
         Raises:
             FutureCancelled: This QFuture instance has been cancelled and cannot be awaited.
@@ -132,7 +121,8 @@ class QFuture(asyncio.Future):
                         self.q_connection._cancel_all_futures()
                         print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
                         loops = self.q_connection._connection_info['reconnection_attempts']
-                        reconnection_delay = 0.5
+                        reconnection_delay = self.q_connection._connection_info['reconnection_delay']
+                        reconnection_function = self.q_connection._connection_info['reconnection_function']
                         while True:
                             try:
                                 self.q_connection._create_connection_to_server()
@@ -152,8 +142,12 @@ class QFuture(asyncio.Future):
                                     'seconds.',
                                     file=sys.stderr
                                 )
+                                if not isinstance(reconnection_delay, (int, float)):
+                                    raise TypeError(
+                                        'reconnection_delay must be either int/float'
+                                    )
                                 sleep(reconnection_delay)
-                                reconnection_delay *= 2
+                                reconnection_delay = reconnection_function(reconnection_delay)
                                 continue
                             print('Connection successfully reestablished.', file=sys.stderr)
                             break
@@ -187,7 +181,8 @@ class QFuture(asyncio.Future):
                         self.q_connection._cancel_all_futures()
                         print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
                         loops = self.q_connection._connection_info['reconnection_attempts']
-                        reconnection_delay = 0.5
+                        reconnection_delay = self.q_connection._connection_info['reconnection_delay']
+                        reconnection_function = self.q_connection._connection_info['reconnection_function']
                         while True:
                             try:
                                 self.q_connection._create_connection_to_server()
@@ -207,8 +202,12 @@ class QFuture(asyncio.Future):
                                     'seconds.',
                                     file=sys.stderr
                                 )
+                                if not isinstance(reconnection_delay, (int, float)):
+                                    raise TypeError(
+                                        'reconnection_delay must be either int/float'
+                                    )
                                 sleep(reconnection_delay)
-                                reconnection_delay *= 2
+                                reconnection_delay = reconnection_function(reconnection_delay)
                                 continue
                             print('Connection successfully reestablished.', file=sys.stderr)
                             break
@@ -231,7 +230,8 @@ class QFuture(asyncio.Future):
                 # TODO: Clear call stack futures
                 print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
                 loops = self._connection_info['reconnection_attempts']
-                reconnection_delay = 0.5
+                reconnection_delay = self.q_connection._connection_info['reconnection_delay']
+                reconnection_function = self.q_connection._connection_info['reconnection_function']
                 while True:
                     try:
                         self._create_connection_to_server()
@@ -250,8 +250,12 @@ class QFuture(asyncio.Future):
                             f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
                             file=sys.stderr
                         )
+                        if not isinstance(reconnection_delay, (int, float)):
+                            raise TypeError(
+                                'reconnection_delay must be either int/float'
+                            )
                         sleep(reconnection_delay)
-                        reconnection_delay *= 2
+                        reconnection_delay = reconnection_function(reconnection_delay)
                         continue
                     print('Connection successfully reestablished.', file=sys.stderr)
                     break
@@ -260,13 +264,13 @@ class QFuture(asyncio.Future):
         return self.result()
 
     def set_result(self, val: Any) -> None:
-        """Set the result of the `QFuture` and mark it as done.
+        """Set the result of the `#!python QFuture` and mark it as done.
 
-        If there are functions in the callback list they will be called using this `QFuture`
-        instance as the only parameter after the result is set.
+        The result is set first, then any functions in the callback list will execute
+        with this `#!python Qfuture` as the only parameter input.
 
         Parameters:
-            val: The value to set as the result of the `QFuture`.
+            val: The value to set as the result of the `#!python QFuture`.
         """
         self._result = val
         for _ in self._callbacks:
@@ -275,22 +279,23 @@ class QFuture(asyncio.Future):
         self._done = True
 
     def set_exception(self, err: Exception) -> None:
-        """Set the exception of the `QFuture` and mark it as done.
+        """Set the exception of the `#!python QFuture` and mark it as done.
 
         Parameters:
-            err: The exception to set as the exception of the `QFuture`.
+            err: The exception to set as the exception of the `#!python QFuture`.
         """
         self._done = True
         self._exception = err
 
     def result(self) -> Any:
-        """Get the result of the `QFuture`.
+        """Get the result of the `#!python QFuture`.
 
         Returns:
-            The result of the `QFuture`.
+            The result of the `#!python QFuture`.
 
         Raises:
-            FutureCancelled: This QFuture instance has been cancelled and cannot be awaited.
+            FutureCancelled: This `#!python QFuture` instance has been cancelled and
+                cannot be awaited.
             NoResults: The result is not ready.
         """
         if self._exception is not None:
@@ -322,31 +327,32 @@ class QFuture(asyncio.Future):
     def done(self) -> bool:
         """
         Returns:
-            `True` if the `QFuture` is done or if it has been cancelled.
+            `#!python True` if the `#!python QFuture` is done or if it has been cancelled.
         """
         return self._done or self._cancelled
 
     def cancelled(self) -> bool:
         """
         Returns:
-            `True` if the `QFuture` has been cancelled.
+            `#!python True` if the `#!python QFuture` has been cancelled.
         """
         return self._cancelled
 
     def cancel(self, msg: str = '') -> None:
-        """Cancel the `QFuture`.
+        """Cancel the `#!python QFuture`.
 
         Parameters:
-            msg: An optional message to append to the end of the `pykx.FutureCancelled` exception.
+            msg: An optional message to append to the end of the
+                `#!python pykx.FutureCancelled` exception.
         """
         self._cancelled = True
         self._cancelled_message = msg
 
     def exception(self) -> None:
-        """Get the exception of the `QFuture`.
+        """Get the exception of the `#!python QFuture`.
 
         Returns:
-            The excpetion of the `QFuture` object.
+            The excpetion of the `#!python QFuture` object.
         """
         if self._cancelled:
             return FutureCancelled(self._cancelled_message)
@@ -355,14 +361,17 @@ class QFuture(asyncio.Future):
         return self._exception
 
     def add_done_callback(self, callback: Callable):
-        """Add a callback function to be ran when the `QFuture` is done.
-
-        Note: The callback should expect one parameter that is the current instance of this class.
-            The functions are called when the result of the future is set and therefore can use the
-            result and modify it.
+        """Add a callback function to the list of callback functions which will be executed after
+           the `#!python QFuture` result is set.
 
         Parameters:
-            callback: The callback function to be called when the result is set.
+            callback: A callback function to append to the list of callback functions which will be
+                executed after the `#!python QFuture` result is set.
+
+        Note: The callback parameter must accept one parameter.
+            When it is executed the callback function will be passed the current instance of this
+            class. The callback function is executed after the result of the future is set,
+            allowing the use and modification of the result itself.
         """
         self._callbacks.append(callback)
 
@@ -426,52 +435,61 @@ class QConnection(Q):
                  wait: bool = True,
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
                  no_ctx: bool = False,
-                 reconnection_attempts: int = -1
+                 reconnection_attempts: int = -1,
+                 reconnection_delay: float = 0.5,
+                 reconnection_function: callable = reconnection_function
     ):
         """Interface with a q process using the q IPC protocol.
 
-        Note: Creating an instance of this class returns an instance of `pykx.SyncQConnection`.
-            Directly instantiating an instance of `pykx.SyncQConnection` is recommended, but
-            this behavior will remain for backwards compatibility.
+        Users are recommended to instantiate an object of
+        [pykx.SyncQConnection][pykx.SyncQConnection] instead of using this class
+        directly.
 
         Parameters:
-            host: The host name to which a connection is to be established.
-            port: The port to which a connection is to be established.
+            host: The hostname to connect to.
+            port: The port to connect to.
             username: Username for q connection authorization.
             password: Password for q connection authorization.
-            timeout: Timeout for blocking socket operations in seconds. If set to `0`, the socket
-                will be non-blocking.
-            large_messages: Whether support for messages >2GB should be enabled.
-            tls: Whether TLS should be used.
-            unix: Whether a Unix domain socket should be used instead of TCP. If set to `True`, the
-                host parameter is ignored. Does not work on Windows.
+            timeout: Timeout for blocking socket operations in seconds. If set to 0,
+                the socket will be non-blocking.
+            large_messages: Flag to enable support for messages >2GB.
+            tls: Flag to enable tls.
+            unix: Flag to enable Unix domain socket instead of TCP socket. If set to
+                `#!python True`, the `#!python host` parameter is ignored. Does not work on Windows.
             wait: Whether the q server should send a response to the query (which this connection
-                will wait to receive). Can be overridden on a per-call basis. If `True`, Python will
-                wait for the q server to execute the query, and respond with the results. If
-                `False`, the q server will respond immediately to every query with generic null
-                (`::`), then execute them at some point in the future.
-            no_ctx: This parameter determines whether or not the context interface will be disabled.
-                disabling the context interface will stop extra q queries being sent but will
-                disable the extra features around the context interface.
-            reconnection_attempts: This parameter specifies how many attempts will be made to
-                reconnect to the server if the connection is lost. The query will be resent if the
-                reconnection is successful. The default is -1 which will not attempt to reconnect, 0
-                will continuosly attempt to reconnect to the server with no stop and an exponential
-                backoff between successive attempts. Any positive integer will specify the maximum
-                number of tries to reconnect before throwing an error if a connection can not be
-                made.
+                will wait to receive). Can be overridden on a per-call basis. If `#!python True`,
+                Python will wait for the q server to execute the query, and respond with the
+                results. If `#!python False`, the q server will respond immediately to every query
+                with generic null(`#!q ::`), then execute them at some point in the future.
+            no_ctx: Flag to disable the context interface. Disabling the context interface will not
+                stop extra q queries being sent, but will disable the extra features around the
+                context interface.
+            reconnection_attempts: The number of attempts to reconnect to the q server when there is
+                a disconnect. A negative value will disable reconnect attempts.
+                A value of 0 indicates no limit on reconnect attempts, with each attempt applying
+                `#!python reconnection_function`. Positive integers specify the maximum number of
+                attempts to reconnect. Hitting the maximum without a reconnect will throw an error.
+            reconnection_function: A function to execute on each attempt to reconnect. This function
+                must take one parameter that must be a `#!python float` type. When this function is
+                executed it will be passed the `#!python reconnection_delay` parameter. The default
+                implementation is a function which modifies `#!python reconnection_delay` to
+                increase its value exponentially (delay*2).
+            reconnection_delay: A `#!python float` for the initial delay between reconnect attempts
+                (in seconds). This is passed to the provided `#!python reconnection_function` that
+                is executed on reconnect attempt.
 
-        Note: The `username` and `password` parameters are not required.
-            The `username` and `password` parameters are only required if the q server requires
-            authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
-            information.
+        Note: The `#!python username` and `#!python password` parameters are not required.
+            The `#!python username` and `#!python password` parameters are only required if the
+            q server requires authorization. Refer to
+            [ssl documentation](https://code.kx.com/q/kb/ssl/) for more information.
 
-        Note: The `timeout` argument may not always be enforced when making successive queries.
-            When making successive queries if one query times out the next query will wait until a
-            response has been received from the previous query before starting the timer for its own
-            timeout. This can be avoided by using a separate `QConnection` instance for each query.
+        Note: The `#!python timeout` argument may not always be enforced.
+            When making successive queries if one query times out the next query will wait until
+            a response has been received from the previous query before starting the timer for its
+            own timeout. This can be avoided by using a separate `#!python QConnection` instance
+            for each query.
 
-        Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
+        Note: When querying KX Insights the `#!python no_ctx=True` keyword argument must be used.
 
         Raises:
             PyKXException: Using both tls and unix is not possible with a QConnection.
@@ -523,7 +541,9 @@ class QConnection(Q):
               no_ctx: bool = False,
               as_server: bool = False,
               conn_gc_time: float = 0.0,
-              reconnection_attempts: int = -1
+              reconnection_attempts: int = -1,
+              reconnection_delay: float = 0.5,
+              reconnection_function: callable = reconnection_function
     ):
         credentials = f'{normalize_to_str(username, "Username")}:' \
                       f'{normalize_to_str(password, "Password")}'
@@ -543,6 +563,8 @@ class QConnection(Q):
             'as_server': as_server,
             'conn_gc_time': conn_gc_time,
             'reconnection_attempts': reconnection_attempts,
+            'reconnection_delay': reconnection_delay,
+            'reconnection_function': reconnection_function
         })
         if system == 'Windows' and unix: # nocov
             raise TypeError('Unix domain sockets cannot be used on Windows')
@@ -557,15 +579,20 @@ class QConnection(Q):
             object.__setattr__(self, '_handle', server_sock.fileno())
             object.__setattr__(self, '_finalizer', lambda: server_sock.close())
         else:
-            object.__setattr__(self,
-                               '_handle',
-                               _ipc.init_handle(host,
-                                                port,
-                                                credentials,
-                                                unix,
-                                                tls,
-                                                timeout,
-                                                large_messages))
+            try:
+               handle = _ipc.init_handle(host,
+                                         port,
+                                         credentials,
+                                         unix,
+                                         tls,
+                                         timeout,
+                                         large_messages)
+            except BaseException as e:
+                if isinstance(e, QError):
+                    if 'access' == str(e):
+                        raise QError('access: Failed to connect to server with invalid username/password')
+                raise e
+            object.__setattr__(self, '_handle', handle)
             if licensed:
                 object.__setattr__(
                     self,
@@ -726,8 +753,8 @@ class QConnection(Q):
                 # can be sent elsewhere, we just need to wait a moment until more data can be
                 # sent to the sockets buffer
                 pass
-            except BaseException:  # nocov
-                raise RuntimeError("Failed to send query on IPC socket")
+            except BaseException as e:  # nocov
+                raise RuntimeError(f"Failed to send query on IPC socket: '{e}'")
         if isinstance(self, SyncQConnection) or isinstance(self, RawQConnection):
             return
         if wait:
@@ -862,6 +889,45 @@ class QConnection(Q):
             q_future = self._call_stack.pop(0)
             q_future.set_result(deserialize(memoryview(buff).obj))
 
+    def upd(self, table: str, data:Union[list, Table]) -> None:
+        """
+        Execute `#!q .u.upd` on a remote q process. This function assumes the definition of
+            `#!q .u.upd` on the remote q process takes the same count and data type of arguments
+            as the default implementation (q keyword `#!q insert`). The `#!python data` argument
+            will be converted to a list if it is a PyKX `#!python Table`.
+
+        Parameters:
+            table: The name of the global variable on the q process to update.
+            data: The contents of the update.
+
+        Returns:
+            On successful execution this function will return None
+
+        Example:
+
+        Successfully execute `#!q .u.upd` on connected process
+
+        ```python
+        >>> import pykx as kx
+        >>> with kx.SyncQConnection(port=5050) as q:
+        ...     q.upd('trade', [kx.TimespanAtom('now') 'AAPL', 1.0])
+        >>> trades = kx.Table(data = {
+        ...     'time': kx.TimespanAtom('now'),
+        ...     'sym': kx.random.random(N, ['AAPL', 'MSFT', 'GOOG']),
+        ...     'price': kx.random.random(N, 10.0)})
+        >>> with kx.SyncQConnection(port=5050) as q:
+        ...     q.upd('trade', trades)
+        ```
+        """
+        if isinstance(data, Table):
+            data = data._values
+        try:
+            self(b'.u.upd', table, data)
+        except QError as err:
+            if '.u.upd' in str(err):
+                raise QError("Update function '.u.upd' not defined on connected process")
+            raise err
+
     def file_execute(
         self,
         file_path: str,
@@ -932,6 +998,8 @@ class SyncQConnection(QConnection):
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
                  no_ctx: bool = False,
                  reconnection_attempts: int = -1,
+                 reconnection_delay: float = 0.5,
+                 reconnection_function: callable = reconnection_function
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -943,40 +1011,48 @@ class SyncQConnection(QConnection):
             port: The port to which a connection is to be established.
             username: Username for q connection authorization.
             password: Password for q connection authorization.
-            timeout: Timeout for blocking socket operations in seconds. If set to `0`, the socket
+            timeout: Timeout for blocking socket operations in seconds. If set to 0, the socket
                 will be non-blocking.
             large_messages: Whether support for messages >2GB should be enabled.
             tls: Whether TLS should be used.
-            unix: Whether a Unix domain socket should be used instead of TCP. If set to `True`, the
-                host parameter is ignored. Does not work on Windows.
+            unix: Whether a Unix domain socket should be used instead of TCP. If set to
+                `#!python True`, the host parameter is ignored. Does not work on Windows.
             wait: Whether the q server should send a response to the query (which this connection
-                will wait to receive). Can be overridden on a per-call basis. If `True`, Python will
-                wait for the q server to execute the query, and respond with the results. If
-                `False`, the q server will respond immediately to every query with generic null
-                (`::`), then execute them at some point in the future.
+                will wait to receive). Can be overridden on a per-call basis. If `#!python True`,
+                Python will wait for the q server to execute the query, and respond with
+                the results. If `#!python False`, the q server will respond immediately to every
+                query with generic null(`#!q ::`), then execute them at some point in the future.
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
             reconnection_attempts: This parameter specifies how many attempts will be made to
                 reconnect to the server if the connection is lost. The query will be resent if the
-                reconnection is successful. The default is -1 which will not attempt to reconnect, 0
-                will continuosly attempt to reconnect to the server with no stop and an exponential
-                backoff between successive attempts. Any positive integer will specify the maximum
-                number of tries to reconnect before throwing an error if a connection can not be
-                made.
+                reconnection is successful. The default is -1 which will not attempt to
+                reconnect, 0 will continuously attempt to reconnect to the server using the backoff
+                `#!python reconnection_function`. Any positive integer will specify the maximum
+                number of tries to reconnect before throwing an error if a connection can not
+                be made.
+            reconnection_delay: This parameter outlines the initial delay between reconnection
+                attempts, by default this is set to 0.5 seconds and is passed to the function
+                defined by the `#!python reconnection_function` parameter which takes this delay as
+                it's only parameter.
+            reconnection_function: This parameter defines the function which is used to modify the
+                `#!python reconnection_delay` on successive attempts to reconnect to the server. By
+                default this is an exponential backoff where the `#!python reconnection_delay` is
+                multiplied by two on each invocation.
 
-        Note: The `username` and `password` parameters are not required.
-            The `username` and `password` parameters are only required if the q server requires
-            authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
-            information.
+        Note: The `#!python username` and `#!python password` parameters are not required.
+            The `#!python username` and `#!python password` parameters are only required if the
+            q server requires authorization. Refer to
+            [ssl documentation](https://code.kx.com/q/kb/ssl/) for more information.
 
-        Note: The `timeout` argument may not always be enforced when making successive queries.
-            When making successive queries if one query times out the next query will wait until a
-            response has been received from the previous query before starting the timer for its own
-            timeout. This can be avoided by using a separate `SyncQConnection` instance for each
-            query.
+        Note: The `#!python timeout` argument may not always be enforced when making successive
+            queries. When making successive queries if one query times out the next query will
+            wait until a response has been received from the previous query before starting the
+            timer for its own timeout. This can be avoided by using a separate
+            `#!python SyncQConnection` instance for each query.
 
-        Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
+        Note: When querying KX Insights the `#!python no_ctx=True` keyword argument must be used.
 
         Raises:
             PyKXException: Using both tls and unix is not possible with a QConnection.
@@ -1029,6 +1105,8 @@ class SyncQConnection(QConnection):
                    lock=lock,
                    no_ctx=no_ctx,
                    reconnection_attempts=reconnection_attempts,
+                   reconnection_delay=reconnection_delay,
+                   reconnection_function=reconnection_function
         )
         super().__init__()
 
@@ -1043,14 +1121,16 @@ class SyncQConnection(QConnection):
 
         Parameters:
             query: A q expression to be evaluated.
-            *args: Arguments to the q query. Each argument will be converted into a `pykx.K` object.
-                Up to 8 arguments can be provided, as that is the maximum supported by q.
-            wait: Whether the q server should execute the query before responding. If `True`,
-                Python will wait for the q server to execute the query, and respond with the
-                results. If `False`, the q server will respond immediately to the query with
-                generic null (`::`), then execute them at some point in the future. Defaults to
-                whatever the `wait` keyword argument was for the `SyncQConnection` instance (i.e.
-                this keyword argument overrides the instance-level default).
+            *args: Arguments to the q query. Each argument will be converted into a
+                `#!python pykx.K` object. Up to 8 arguments can be provided, as that is the
+                maximum supported by q.
+            wait: Whether the q server should execute the query before responding.
+                If `#!python True`, Python will wait for the q server to execute the query, and
+                respond with the results.
+                If `#!python False`, the q server will respond immediately to the query with
+                generic null (`#!q ::`), then execute them at some point in the future. Defaults to
+                whatever the `#!python wait` keyword argument was for the `#!python SyncQConnection`
+                instance (i.e. this keyword argument overrides the instance-level default).
 
 
         Raises:
@@ -1138,7 +1218,8 @@ class SyncQConnection(QConnection):
             if self._connection_info['reconnection_attempts'] != -1:
                 print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
                 loops = self._connection_info['reconnection_attempts']
-                reconnection_delay = 0.5
+                reconnection_delay = self._connection_info['reconnection_delay']
+                reconnection_function = self._connection_info['reconnection_function']
                 while True:
                     try:
                         self._create_connection_to_server()
@@ -1157,8 +1238,12 @@ class SyncQConnection(QConnection):
                             f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
                             file=sys.stderr
                         )
+                        if not isinstance(reconnection_delay, (int, float)):
+                            raise TypeError(
+                                'reconnection_delay must be either int/float'
+                            )
                         sleep(reconnection_delay)
-                        reconnection_delay *= 2
+                        reconnection_delay = reconnection_function(reconnection_delay)
                         continue
                     print('Connection successfully reestablished.', file=sys.stderr)
                     return self._call(query, *args, wait=wait, debug=debug)
@@ -1226,6 +1311,8 @@ class AsyncQConnection(QConnection):
                  event_loop: Optional[asyncio.AbstractEventLoop] = None,
                  no_ctx: bool = False,
                  reconnection_attempts: int = -1,
+                 reconnection_delay: float = 0.5,
+                 reconnection_function: callable = reconnection_function
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -1237,48 +1324,58 @@ class AsyncQConnection(QConnection):
             port: The port to which a connection is to be established.
             username: Username for q connection authorization.
             password: Password for q connection authorization.
-            timeout: Timeout for blocking socket operations in seconds. If set to `0`, the socket
+            timeout: Timeout for blocking socket operations in seconds. If set to 0, the socket
                 will be non-blocking.
             large_messages: Whether support for messages >2GB should be enabled.
             tls: Whether TLS should be used.
-            unix: Whether a Unix domain socket should be used instead of TCP. If set to `True`, the
-                host parameter is ignored. Does not work on Windows.
+            unix: Whether a Unix domain socket should be used instead of TCP. If set to
+                `#!python True`, the host parameter is ignored. Does not work on Windows.
             wait: Whether the q server should send a response to the query (which this connection
-                will wait to receive). Can be overridden on a per-call basis. If `True`, Python will
-                wait for the q server to execute the query, and respond with the results. If
-                `False`, the q server will respond immediately to every query with generic null
-                (`::`), then execute them at some point in the future.
-            event_loop: If running an event loop that supports the `create_task()` method then
-                you can provide the event loop here and the returned future object will be an
-                instance of the loops future type. This will allow the current event loop to manage
-                awaiting `QFuture` objects as well as any other async tasks that may be running.
+                will wait to receive). Can be overridden on a per-call basis. If `#!python True`,
+                Python will wait for the q server to execute the query, and respond with
+                the results. If `#!python False`, the q server will respond immediately to every
+                query with generic null (`::`), then execute them at some point in the future.
+            event_loop: If running an event loop that supports the `#!python create_task()`
+                method then you can provide the event loop here and the returned future object will
+                be an instance of the loops future type. This will allow the current event loop
+                to manage awaiting `#!python QFuture` objects as well as any other async tasks that
+                may be running.
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
             reconnection_attempts: This parameter specifies how many attempts will be made to
-                reconnect to the server if the connection is lost. The query will not be resent if
-                the reconnection is successful. The default is -1 which will not attempt to
-                reconnect, 0 will continuosly attempt to reconnect to the server with no stop and an
-                exponential backoff between successive attempts. Any positive integer will specify
-                the maximum number of tries to reconnect before throwing an error if a connection
-                can not be made.
+                reconnect to the server if the connection is lost. The query will be resent if the
+                reconnection is successful. The default is -1 which will not attempt to reconnect, 0
+                will continuously attempt to reconnect to the server using the backoff
+                `#!python reconnection_function`. Any positive integer will specify the maximum
+                number of tries to reconnect before throwing an error if a connection
+                cannot be made.
+            reconnection_delay: This parameter outlines the initial delay between reconnection
+                attempts, by default this is set to 0.5 seconds and is passed to the function
+                defined by the `#!python reconnection_function` parameter which takes this delay
+                as it's only parameter.
+            reconnection_function: This parameter defines the function which is used to modify the 
+                `#!python reconnection_delay` on successive attempts to reconnect to the server. By 
+                default this is an exponential backoff where the `#!python reconnection_delay` is
+                multiplied by two on each invocation
 
-        Note: The `username` and `password` parameters are not required.
-            The `username` and `password` parameters are only required if the q server requires
-            authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
-            information.
+        Note: The `#!python username` and `#!python password` parameters are not required.
+            The `#!python username` and `#!python password` parameters are only required if
+            the q server requires authorization. Refer to
+            [ssl documentation](https://code.kx.com/q/kb/ssl/) for more information.
 
-        Note: The `timeout` argument may not always be enforced when making successive queries.
-            When making successive queries if one query times out the next query will wait until a
-            response has been received from the previous query before starting the timer for its own
-            timeout. This can be avoided by using a separate `QConnection` instance for each query.
+        Note: The `#!python timeout` argument may not always be enforced when making
+            successive queries. When making successive queries if one query times out the next query
+            will wait until a response has been received from the previous query before starting the
+            timer for its own timeout. This can be avoided by using a separate
+            `#!python QConnection` instance for each query.
 
-        Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
+        Note: When querying KX Insights the `#!python no_ctx=True` keyword argument must be used.
 
         Warning: AsyncQConnections will not resend queries that have not completed on reconnection.
-            When using the `reconnection_attempts` key word argument any queries that were not
-            complete before the connection was lost will have to be manually sent again after the
-            automatic reconnection.
+            When using the `#!python reconnection_attempts` key word argument any queries that were
+            not complete before the connection was lost will have to be manually sent again after
+            the automatic reconnection.
 
         Raises:
             PyKXException: Using both tls and unix is not possible with a QConnection.
@@ -1349,6 +1446,8 @@ class AsyncQConnection(QConnection):
             'loop': event_loop,
             'no_ctx': no_ctx,
             'reconnection_attempts':reconnection_attempts,
+            'reconnection_delay': reconnection_delay,
+            'reconnection_function': reconnection_function,
         })
         object.__setattr__(self, '_initialized', False)
 
@@ -1367,6 +1466,8 @@ class AsyncQConnection(QConnection):
                           event_loop: Optional[asyncio.AbstractEventLoop] = None,
                           no_ctx: bool = False,
                           reconnection_attempts: int = -1,
+                          reconnection_delay: float = 0.5,
+                          reconnection_function: callable = reconnection_function,
     ):
         object.__setattr__(self, '_call_stack', [])
         self._init(host,
@@ -1382,6 +1483,8 @@ class AsyncQConnection(QConnection):
                    lock=lock,
                    no_ctx=no_ctx,
                    reconnection_attempts=reconnection_attempts,
+                   reconnection_delay=reconnection_delay,
+                   reconnection_function=reconnection_function,
         )
         object.__setattr__(self, '_loop', event_loop)
         con_info = object.__getattribute__(self, '_connection_info')
@@ -1407,6 +1510,8 @@ class AsyncQConnection(QConnection):
                 event_loop=self._stored_args['loop'],
                 no_ctx=self._stored_args['no_ctx'],
                 reconnection_attempts=self._stored_args['reconnection_attempts'],
+                reconnection_delay=self._stored_args['reconnection_delay'],
+                reconnection_function=self._stored_args['reconnection_function'],
             )
         return self
 
@@ -1428,17 +1533,20 @@ class AsyncQConnection(QConnection):
 
         Parameters:
             query: A q expression to be evaluated.
-            *args: Arguments to the q query. Each argument will be converted into a `pykx.K` object.
-                Up to 8 arguments can be provided, as that is the maximum supported by q.
-            wait: Whether the q server should execute the query before responding. If `True`,
-                Python will wait for the q server to execute the query, and respond with the
-                results. If `False`, the q server will respond immediately to the query with
-                generic null (`::`), then execute them at some point in the future. Defaults to
-                whatever the `wait` keyword argument was for the `ASyncQConnection` instance (i.e.
-                this keyword argument overrides the instance-level default).
+            *args: Arguments to the q query. Each argument will be converted into a
+                `#!python pykx.K` object. Up to 8 arguments can be provided, as that is
+                the maximum supported by q.
+            wait: Whether the q server should execute the query before responding.
+                If `#!python True`, Python will wait for the q server to execute the query,
+                and respond with the results. If `#!python False`, the q server will respond
+                immediately to the query with generic null (`#!q ::`), then execute them at some
+                point in the future. Defaults to whatever the `#!python wait` keyword argument
+                was for the `ASyncQConnection` instance (i.e. this keyword argument overrides the
+                instance-level default).
             reuse: Whether the AsyncQConnection instance should be reused for subsequent queries,
                 if using q queries that respond in a deferred/asynchronous manner this should be set
-                to `False` so the query can be made in a dedicated `AsyncQConnection` instance.
+                to `#!python False` so the query can be made in a dedicated
+                `#!python AsyncQConnection` instance.
 
         Returns:
             A QFuture object that can be awaited on to get the result of the query.
@@ -1531,7 +1639,8 @@ class AsyncQConnection(QConnection):
                     self._cancel_all_futures()
                     print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
                     loops = self._connection_info['reconnection_attempts']
-                    reconnection_delay = 0.5
+                    reconnection_delay = self._connection_info['reconnection_delay']
+                    reconnection_function = self._connection_info['reconnection_function']
                     while True:
                         try:
                             self._create_connection_to_server()
@@ -1550,8 +1659,12 @@ class AsyncQConnection(QConnection):
                                 f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
                                 file=sys.stderr
                             )
+                            if not isinstance(reconnection_delay, (int, float)):
+                                raise TypeError(
+                                    'reconnection_delay must be either int/float'
+                                )
                             sleep(reconnection_delay)
-                            reconnection_delay *= 2
+                            reconnection_delay = reconnection_function(reconnection_delay)
                             continue
                         print('Connection successfully reestablished.', file=sys.stderr)
                         break
@@ -1579,7 +1692,8 @@ class AsyncQConnection(QConnection):
                 self._cancel_all_futures()
                 print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
                 loops = self._connection_info['reconnection_attempts']
-                reconnection_delay = 0.5
+                reconnection_delay = self._connection_info['reconnection_delay']
+                reconnection_function = self._connection_info['reconnection_function']
                 while True:
                     try:
                         self._create_connection_to_server()
@@ -1598,8 +1712,12 @@ class AsyncQConnection(QConnection):
                             f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
                             file=sys.stderr
                         )
+                        if not isinstance(reconnection_delay, (int, float)):
+                            raise TypeError(
+                                'reconnection_delay must be either int/float'
+                            )
                         sleep(reconnection_delay)
-                        reconnection_delay *= 2
+                        reconnection_delay = reconnection_function(reconnection_delay)
                         continue
                     print('Connection successfully reestablished.', file=sys.stderr)
                     break
@@ -1787,49 +1905,51 @@ class RawQConnection(QConnection):
             port: The port to which a connection is to be established.
             username: Username for q connection authorization.
             password: Password for q connection authorization.
-            timeout: Timeout for blocking socket operations in seconds. If set to `0`, the socket
+            timeout: Timeout for blocking socket operations in seconds. If set to 0, the socket
                 will be non-blocking.
             large_messages: Whether support for messages >2GB should be enabled.
             tls: Whether TLS should be used.
-            unix: Whether a Unix domain socket should be used instead of TCP. If set to `True`, the
-                host parameter is ignored. Does not work on Windows.
+            unix: Whether a Unix domain socket should be used instead of TCP. If set to
+                `#!python True`, the host parameter is ignored. Does not work on Windows.
             wait: Whether the q server should send a response to the query (which this connection
-                will wait to receive). Can be overridden on a per-call basis. If `True`, Python will
-                wait for the q server to execute the query, and respond with the results. If
-                `False`, the q server will respond immediately to every query with generic null
-                (`::`), then execute them at some point in the future.
-            event_loop: If running an event loop that supports the `create_task()` method then
-                you can provide the event loop here and the returned future object will be an
+                will wait to receive). Can be overridden on a per-call basis. If `#!python True`,
+                Python will wait for the q server to execute the query, and respond with the
+                results. If `#!python False`, the q server will respond immediately to every query
+                with generic null (`#!q ::`), then execute them at some point in the future.
+            event_loop: If running an event loop that supports the `#!python create_task()` method
+                then you can provide the event loop here and the returned future object will be an
                 instance of the loops future type. This will allow the current event loop to manage
-                awaiting `QFuture` objects as well as any other async tasks that may be running.
+                awaiting `#!python QFuture` objects as well as any other async tasks that may be
+                running.
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
-            as_server: If this parameter is set to True the QConnection will act as a `q` server,
+            as_server: If this parameter is set to True the QConnection will act as a q server,
                 that other processes can connect to, and will not create a connection. this
                 functionality is licensed only.
             conn_gc_time: When running as a server this will determine the number of seconds between
                 going through the list of opened connections and closing any that the clients have
-                closed. If not set the default of `0.0` will cause any old connections to never be
-                closed unless `self.clean_open_connections()` is manually called.
+                closed. If not set the default of 0.0 will cause any old connections to never be
+                closed unless `#!python self.clean_open_connections()` is manually called.
 
-        Note: The `username` and `password` parameters are not required.
-            The `username` and `password` parameters are only required if the q server requires
-            authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
-            information.
+        Note: The `#!python username` and `#!python password` parameters are not required.
+            The `#!python username` and `#!python password` parameters are only required if the q
+            server requires authorization. Refer to
+            [ssl documentation](https://code.kx.com/q/kb/ssl/) for more information.
 
-        Note: The `timeout` argument may not always be enforced when making successive queries.
-            When making successive queries if one query times out the next query will wait until a
-            response has been received from the previous query before starting the timer for its own
-            timeout. This can be avoided by using a separate `QConnection` instance for each query.
+        Note: The `#!python timeout` argument may not always be enforced when making successive
+            queries. When making successive queries if one query times out the next query will wait
+            until a response has been received from the previous query before starting the timer for
+            its own timeout. This can be avoided by using a separate `#!python QConnection` instance
+            for each query.
 
-        Note: The overhead of calling `clean_open_connections` is large.
-            When running as a server you should ensure that `clean_open_connections` is called
-            fairly infrequently as the overhead of clearing all the dead connections can be quite
-            large. It is recommended to have a large delay on successive clears or manage it
+        Note: The overhead of calling `#!python clean_open_connections` is large.
+            When running as a server you should ensure that `#!python clean_open_connections` is
+            called fairly infrequently as the overhead of clearing all the dead connections can be
+            quite large. It is recommended to have a large delay on successive clears or manage it
             manually.
 
-        Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
+        Note: When querying KX Insights the `#!python no_ctx=True` keyword argument must be used.
 
         Raises:
             PyKXException: Using both tls and unix is not possible with a QConnection.
@@ -1947,17 +2067,16 @@ class RawQConnection(QConnection):
 
         Parameters:
             query: A q expression to be evaluated.
-            *args: Arguments to the q query. Each argument will be converted into a `pykx.K` object.
-                Up to 8 arguments can be provided, as that is the maximum supported by q.
-            wait: Whether the q server should execute the query before responding. If `True`,
-                Python will wait for the q server to execute the query, and respond with the
-                results. If `False`, the q server will respond immediately to the query with
-                generic null (`::`), then execute them at some point in the future. Defaults to
-                whatever the `wait` keyword argument was for the `ASyncQConnection` instance (i.e.
-                this keyword argument overrides the instance-level default).
-            reuse: Whether the AsyncQConnection instance should be reused for subsequent queries,
-                if using q queries that respond in a deferred/asynchronous manner this should be set
-                to `False` so the query can be made in a dedicated `AsyncQConnection` instance.
+            *args: Arguments to the q query. Each argument will be converted into a
+                `#!python pykx.K` object. Up to 8 arguments can be provided, as that is the maximum
+                supported by q.
+            wait: Whether the q server should execute the query before responding. If
+                `#!python True`, Python will wait for the q server to execute the query, and respond
+                with the results. If `#!python False`, the q server will respond immediately to the
+                query with generic null (`#!q ::`), then execute them at some point in the future.
+                Defaults to whatever the `#!python wait` keyword argument was for the
+                `#!python ASyncQConnection` instance (i.e. this keyword argument overrides the
+                instance-level default).
 
         Returns:
             A QFuture object that can be awaited on to get the result of the query.
@@ -1972,7 +2091,7 @@ class RawQConnection(QConnection):
 
         Note: Queries are not sent until a response has been awaited or the send queue is polled.
 
-        Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
+        Note: When querying KX Insights the `#!python no_ctx=True` keyword argument must be used.
 
         Examples:
 
@@ -2119,8 +2238,8 @@ class RawQConnection(QConnection):
                     # can be sent elsewhere, we just need to wait a moment until more data can be
                     # sent to the sockets buffer
                     pass
-                except BaseException:  # nocov
-                    raise RuntimeError("Failed to send query on IPC socket")
+                except BaseException as e:  # nocov
+                    raise RuntimeError(f"Failed to send query on IPC socket: '{e}'")
         except BaseException:  # nocov
             pass
 
@@ -2416,6 +2535,8 @@ class SecureQConnection(QConnection):
                  lock: Optional[Union[threading_lock, multiprocessing_lock]] = None,
                  no_ctx: bool = False,
                  reconnection_attempts: int = -1,
+                 reconnection_delay: float = 0.5,
+                 reconnection_function: callable = reconnection_function,
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -2428,40 +2549,47 @@ class SecureQConnection(QConnection):
             port: The port to which a connection is to be established.
             username: Username for q connection authorization.
             password: Password for q connection authorization.
-            timeout: Timeout for blocking socket operations in seconds. If set to `0`, the socket
+            timeout: Timeout for blocking socket operations in seconds. If set to 0, the socket
                 will be non-blocking.
             large_messages: Whether support for messages >2GB should be enabled.
             tls: Whether TLS should be used.
-            unix: Whether a Unix domain socket should be used instead of TCP. If set to `True`, the
-                host parameter is ignored. Does not work on Windows.
+            unix: Whether a Unix domain socket should be used instead of TCP. If set to
+                `#!python True`, the host parameter is ignored. Does not work on Windows.
             wait: Whether the q server should send a response to the query (which this connection
-                will wait to receive). Can be overridden on a per-call basis. If `True`, Python will
-                wait for the q server to execute the query, and respond with the results. If
-                `False`, the q server will respond immediately to every query with generic null
-                (`::`), then execute them at some point in the future.
+                will wait to receive). Can be overridden on a per-call basis. If `#!python True`,
+                Python will wait for the q server to execute the query, and respond with the
+                results. If `#!python False`, the q server will respond immediately to every query
+                with generic null (`#!q ::`), then execute them at some point in the future.
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
             reconnection_attempts: This parameter specifies how many attempts will be made to
                 reconnect to the server if the connection is lost. The query will be resent if the
                 reconnection is successful. The default is -1 which will not attempt to reconnect, 0
-                will continuosly attempt to reconnect to the server with no stop and an exponential
-                backoff between successive attempts. Any positive integer will specify the maximum
-                number of tries to reconnect before throwing an error if a connection can not be
-                made.
+                will continuously attempt to reconnect to the server using the backoff
+                `#!python reconnection_function`. Any positive integer will specify the maximum
+                number of tries to reconnect before throwing an error if a connection can not be made.
+            reconnection_delay: This parameter outlines the initial delay between reconnection
+                attempts, by default this is set to 0.5 seconds and is passed to the function
+                defined by the `#!python reconnection_function` parameter which takes this delay
+                as it's only parameter
+            reconnection_function: This parameter defines the function which is used to modify the
+                `#!python reconnection_delay` on successive attempts to reconnect to the server. By
+                default this is an exponential backoff where the `#!python reconnection_delay` is
+                multiplied by two on each invocation
 
-        Note: The `username` and `password` parameters are not required.
-            The `username` and `password` parameters are only required if the q server requires
-            authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
-            information.
+        Note: The `#!python username` and `#!python password` parameters are not required.
+            The `#!python username` and `#!python password` parameters are only required if
+            the q server requires authorization. Refer to
+            [ssl documentation](https://code.kx.com/q/kb/ssl/) for more information.
 
-        Note: The `timeout` argument may not always be enforced when making successive queries.
-            When making successive queries if one query times out the next query will wait until a
-            response has been received from the previous query before starting the timer for its own
-            timeout. This can be avoided by using a separate `SecureQConnection` instance for each
-            query.
+        Note: The `#!python timeout` argument may not always be enforced when making successive
+            queries. When making successive queries if one query times out the next query will wait
+            until a response has been received from the previous query before starting the timer for
+            its own timeout. This can be avoided by using a separate `#!python SecureQConnection`
+            instance for each query.
 
-        Note: When querying `KX Insights` the `no_ctx=True` keyword argument must be used.
+        Note: When querying KX Insights the `#!python no_ctx=True` keyword argument must be used.
 
         Raises:
             PyKXException: Using both tls and unix is not possible with a QConnection.
@@ -2488,6 +2616,8 @@ class SecureQConnection(QConnection):
                    lock=lock,
                    no_ctx=no_ctx,
                    reconnection_attempts=reconnection_attempts,
+                   reconnection_delay=reconnection_delay,
+                   reconnection_function=reconnection_function,
         )
         super().__init__()
 
@@ -2514,15 +2644,16 @@ class SecureQConnection(QConnection):
 
         Parameters:
             query: A q expression to be evaluated.
-            *args: Arguments to the q query. Each argument will be converted into a `pykx.K` object.
-                Up to 8 arguments can be provided, as that is the maximum supported by q.
-            wait: Whether the q server should execute the query before responding. If `True`,
-                Python will wait for the q server to execute the query, and respond with the
-                results. If `False`, the q server will respond immediately to the query with
-                generic null (`::`), then execute them at some point in the future. Defaults to
-                whatever the `wait` keyword argument was for the `SecureQConnection` instance (i.e.
-                this keyword argument overrides the instance-level default).
-
+            *args: Arguments to the q query. Each argument will be converted into a
+                `#!python pykx.K` object. Up to 8 arguments can be provided, as that is the maximum
+                supported by q.
+            wait: Whether the q server should execute the query before responding. If
+                `#!python True`, Python will wait for the q server to execute the query, and
+                respond with the results. If `#!python False`, the q server will respond immediately
+                to the query with generic null (`#!q ::`), then execute them at some point in the
+                future. Defaults to whatever the `wait` keyword argument was for the
+                `#!python SecureQConnection` instance (i.e. this keyword argument overrides the
+                instance-level default).
 
         Raises:
             RuntimeError: A closed IPC connection was used.
@@ -2609,10 +2740,8 @@ class SecureQConnection(QConnection):
         if not (issubclass(tquery, K) or isinstance(query, (str, bytes))):
             raise ValueError('Cannot send object of passed type over IPC: '  + str(tquery))
         if not issubclass(tquery, Function):
-            if isinstance(query, CharVector):
-                query = bytes(query)
-            else:
-                query = normalize_to_bytes(query, 'Query')
+            if isinstance(query, str):
+                query = query.encode()
         if len(args) > 8:
             raise TypeError('Too many parameters - q queries cannot have more than 8 parameters')
         prev_types = [type(x) for x in args]
@@ -2645,7 +2774,8 @@ class SecureQConnection(QConnection):
             if self._connection_info['reconnection_attempts'] != -1:
                 print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
                 loops = self._connection_info['reconnection_attempts']
-                reconnection_delay = 0.5
+                reconnection_delay = self._connection_info['reconnection_delay']
+                reconnection_function = self._connection_info['reconnection_function']
                 while True:
                     try:
                         self._create_connection_to_server()
@@ -2658,7 +2788,7 @@ class SecureQConnection(QConnection):
                         if loops == 0:
                             print(
                                 'WARNING: Could not reconnect to server within '
-                                f'{self.q_connection._connection_info["reconnection_attempts"]} attempts.',
+                                f'{self._connection_info["reconnection_attempts"]} attempts.',
                                 file=sys.stderr
                             )
                             raise err
@@ -2666,8 +2796,12 @@ class SecureQConnection(QConnection):
                             f'Failed to reconnect, trying again in {reconnection_delay} seconds.',
                             file=sys.stderr
                         )
+                        if not isinstance(reconnection_delay, (int, float)):
+                            raise TypeError(
+                                'reconnection_delay must be either int/float'
+                            )
                         sleep(reconnection_delay)
-                        reconnection_delay *= 2
+                        reconnection_delay = reconnection_function(reconnection_delay)
                         continue
                     print('Connection successfully reestablished.', file=sys.stderr)
                     return self._call(query, *args, wait=wait, debug=debug)

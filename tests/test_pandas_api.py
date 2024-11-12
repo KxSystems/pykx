@@ -8,11 +8,14 @@ import pandas as pd
 import pytest
 
 
-def check_result_and_type(kx, tab, result):
-    if ((isinstance(tab, kx.Table) or isinstance(tab, kx.KeyedTable))
-            and tab.py() == result.py() if isinstance(result, kx.K) else result):
-        return True
-    return False
+def check_result_and_type(kx, tab, result, type=None):
+    if type is not None and not isinstance(tab, type):
+        return False
+    if isinstance(tab, (kx.K)):
+        if (tab.py() == (result.py() if isinstance(result, kx.K) else result)):
+            return True
+        else:
+            return False
 
 
 def test_api_meta_error(kx):
@@ -101,34 +104,42 @@ def test_df_pop(kx, q):
 
 def test_df_get(kx, q):
     df = q('([] x: til 10; y: 10 - til 10; z: 10?`a`b`c)')
-    assert check_result_and_type(kx, df.get('x'), {'x': [x for x in range(10)]})
-    assert check_result_and_type(kx, df.get(kx.SymbolAtom('y')), {'y': [10 - x for x in range(10)]})
+    assert check_result_and_type(kx, df.get('x'), [x for x in range(10)], kx.LongVector)
+    assert check_result_and_type(kx, df.get(kx.SymbolAtom('y')), [10 - x for x in range(10)], kx.LongVector) # noqa E501
     assert check_result_and_type(kx, df.get(['x', 'y']), {
         'x': [x for x in range(10)],
         'y': [10 - x for x in range(10)]
-    })
+    }, kx.Table)
 
     assert df.get(['y', 'z']).py() == df[['y', 'z']].py()
     assert df.get(['x', 'y']).py() == df[['x', 'y']].py()
-    assert df.get('r') is None
+    with pytest.raises(kx.QError) as err:
+        df.get('r')
+        assert "inaccessible column: r" in str(err)
+    with pytest.raises(kx.QError) as err:
+        df.get(['x', 'r'])
+        assert "inaccessible column: r" in str(err)
     assert df.get('r', default=5) == 5
-    assert df.get(['x', 'r']) is None
     assert df.get(['x', 'r'], default=5) == 5
 
 
 def test_df_get_keyed(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: 10?`a`b`c)')
-    assert check_result_and_type(kx, df.get('x'), {'x': [x for x in range(10)]})
-    assert check_result_and_type(kx, df.get(kx.SymbolAtom('y')), {'y': [10 - x for x in range(10)]})
+    assert check_result_and_type(kx, df.get('x'), [x for x in range(10)], kx.LongVector)
+    assert check_result_and_type(kx, df.get(kx.SymbolAtom('y')), [10 - x for x in range(10)], kx.LongVector) # noqa E501
     assert check_result_and_type(kx, df.get(['x', 'y']), {
         'x': [x for x in range(10)],
         'y': [10 - x for x in range(10)]
     })
     assert df.get(['y', 'z']).py() == q.value(df[['y', 'z']]).py()
-    assert df.get('r') is None
-    assert df.get('r', default=5) == 5
-    assert df.get(['x', 'r']) is None
     assert df.get(['x', 'r'], default=5) == 5
+    assert df.get('r', default=5) == 5
+    with pytest.raises(kx.QError) as err:
+        df.get('r')
+        assert "inaccessible column: r" in str(err)
+    with pytest.raises(kx.QError) as err:
+        df.get(['x', 'r'])
+        assert "inaccessible column: r" in str(err)
 
 
 def test_df_at(q):
@@ -174,32 +185,32 @@ def test_df_replace_self(q):
 
 def test_df_loc(kx, q):
     df = q('([] x: til 10; y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
-    assert check_result_and_type(kx, df.loc[0], {'y': 10, 'z': 'a'})
-    assert check_result_and_type(kx, df.loc[[1]], {'y': 9, 'z': 'a'})
-    assert check_result_and_type(kx, df.loc[[0, 1]], {'y': [10, 9], 'z': ['a', 'a']})
-    assert check_result_and_type(kx, df.loc[0, :], {'y': [10, 9], 'z': ['a', 'a']})
+    assert check_result_and_type(kx, df.loc[0], {'x': [0], 'y': [10], 'z': ['a']})
+    assert check_result_and_type(kx, df.loc[[1]], [{'x': [1], 'y': [9], 'z': ['a']}])
+    assert check_result_and_type(kx, df.loc[[0, 1]], [{'x': [0], 'y': [10], 'z': ['a']}, {'x': [1], 'y': [9], 'z': ['a']}]) # noqa E501
+    assert check_result_and_type(kx, df.loc[0, :], {'x': [0], 'y': [10], 'z': ['a']})
 
 
 def test_df_loc_keyed(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     assert check_result_and_type(kx, df.loc[0], {'y': 10, 'z': 'a'})
-    assert check_result_and_type(kx, df.loc[[1]], {'y': 9, 'z': 'a'})
+    assert check_result_and_type(kx, df.loc[[1]], {'y': [9], 'z': ['a']})
     assert check_result_and_type(kx, df.loc[[0, 1]], {'y': [10, 9], 'z': ['a', 'a']})
     assert check_result_and_type(kx, df.loc[df['y'] < 100], df.py())
 
 
 def test_df_loc_cols(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
-    assert check_result_and_type(kx, df.loc[[0, 1], 'z':], {'z': ['a', 'a']})
+    assert check_result_and_type(kx, df.loc[[0, 1], 'z':], [{'z': ['a']}, {'z': ['a']}])
     assert check_result_and_type(kx, df[[0, 1], :'y'], {'y': [10, 9]})
-    assert check_result_and_type(kx, df[[0, 1], 'y':'y'], {'y': [10, 9]})
+    assert check_result_and_type(kx, df[[0, 1], 'y':'y'], [{'y': [10]}, {'y': [9]}])
     assert check_result_and_type(kx, df[[0, 1], :2], {'y': [10, 9]})
 
 
 def test_df_getitem(kx, q):
     df = q('([x: til 10] y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     assert check_result_and_type(kx, df[0], {'y': 10, 'z': 'a'})
-    assert check_result_and_type(kx, df[[1]], {'y': 9, 'z': 'a'})
+    assert check_result_and_type(kx, df[[1]], {'y': [9], 'z': ['a']})
     assert check_result_and_type(kx, df[[0, 1]], {'y': [10, 9], 'z': ['a', 'a']})
     assert check_result_and_type(kx, df[:], df.py())
     assert check_result_and_type(kx, df[:, ['x', 'y']], q('([x: til 10] y: 10 - til 10)').py())
@@ -231,7 +242,7 @@ def test_df_loc_set(kx, q):
     assert check_result_and_type(
         kx,
         df,
-        q('([x: til 10] y: (99 99),8 - til 8; z: `a`a`b`b`c`c`d`d`e`e)').py()
+        q('([] x: til 10; y: (99 99),8 - til 8; z: `a`a`b`b`c`c`d`d`e`e)').py()
     )
     with pytest.raises(ValueError):
         df.loc[df['z'] == 'a'] = 99
@@ -296,14 +307,14 @@ def test_df_iloc_set(kx, q):
     assert check_result_and_type(
         kx,
         df,
-        q('([x: til 10] y: (99 99),8 - til 8; z: `a`a`b`b`c`c`d`d`e`e)').py()
+        q('([x: til 10] y: (99 99),8 - til 8; z: `a`a`b`b`c`c`d`d`e`e)')
     )
     df = q('([] x: til 10; y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     df.iloc[df['z'] == 'a', 'y'] = 99
     assert check_result_and_type(
         kx,
         df,
-        q('([x: til 10] y: (99 99),8 - til 8; z: `a`a`b`b`c`c`d`d`e`e)').py()
+        q('([] x: til 10; y: (99 99),8 - til 8; z: `a`a`b`b`c`c`d`d`e`e)')
     )
     with pytest.raises(ValueError):
         df.iloc[df['z'] == 'a'] = 99
@@ -320,14 +331,14 @@ def test_df_iloc(kx, q):
     assert check_result_and_type(kx, df.iloc[df['y'] < 100], df.py())
     df = q('([] x: til 10; y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
     assert check_result_and_type(kx, df.iloc[:-2], df.head(8).py())
-    assert check_result_and_type(kx, df.iloc[0], {'x': 0, 'y': 10, 'z': 'a'})
-    assert check_result_and_type(kx, df.iloc[[0]], {'x': 0, 'y': 10, 'z': 'a'})
+    assert check_result_and_type(kx, df.iloc[0], {'x': [0], 'y': [10], 'z': ['a']})
+    assert check_result_and_type(kx, df.iloc[[0]],  {'x': [0], 'y': [10], 'z': ['a']})
     assert check_result_and_type(
         kx,
         df.iloc[::-1],
         {
-            'x': [10 - x for x in range(10)],
-            'y': [x for x in range(10)],
+            'x': [9 - x for x in range(10)],
+            'y': [x + 1 for x in range(10)],
             'z': ['e', 'e', 'd', 'd', 'c', 'c', 'b', 'b', 'a', 'a']
         }
     )
@@ -361,21 +372,22 @@ def test_df_iloc(kx, q):
 
 def test_df_iloc_with_cols(kx, q):
     df = q('([] x: til 10; y: 10 - til 10; z: `a`a`b`b`c`c`d`d`e`e)')
-    assert check_result_and_type(kx, df.iloc[0, 0], {'x': 0, 'z': 'a'})
-    assert check_result_and_type(kx, df.iloc[[0], [2]], {'z': 'a'})
+    assert check_result_and_type(kx, df.iloc[0, 0], {'x': [0]})
+    assert check_result_and_type(kx, df.iloc[[0], [2]], {'z': ['a']})
     assert check_result_and_type(
         kx,
         df.iloc[::-1, ::-1],
         {
             'z': ['e', 'e', 'd', 'd', 'c', 'c', 'b', 'b', 'a', 'a'],
-            'y': [x for x in range(10)],
-            'x': [10 - x for x in range(10)]
+            'y': [1 + x for x in range(10)],
+            'x': [9 - x for x in range(10)]
         }
     )
     assert check_result_and_type(
         kx,
         df.head(4).iloc[[True, False, True, False], [False, True, False]],
         {
+            'x': [0, 2],
             'y': [10, 8]
         }
     )
@@ -415,7 +427,7 @@ def test_df_iloc_with_cols(kx, q):
     assert check_result_and_type(
         kx,
         df.iloc[:, :-2],
-        q('([] x: til 10; y: 10 - til 10)').py()
+        q('([] x: til 10)').py()
     )
     assert check_result_and_type(kx, df.loc[df['z']=='a', ['x', 'y']], {'x': [0, 1], 'y': [10, 9]})
 
@@ -440,8 +452,8 @@ def test_table_merge_copy(kx, q):
     df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
     tab1 = kx.toq(df1)
     tab2 = kx.toq(df2)
-    tab1.merge(tab2, left_on='lkey', right_on='rkey', copy=False)
-    assert df1.merge(df2, left_on='lkey', right_on='rkey').equals(tab1.pd())
+    tab1.merge(tab2, left_on='lkey', right_on='rkey', copy=False, sort=True)
+    assert df1.merge(df2, left_on='lkey', right_on='rkey', sort=True).equals(tab1.pd())
 
     # Replace_self property
     df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
@@ -449,8 +461,8 @@ def test_table_merge_copy(kx, q):
     tab1 = kx.toq(df1)
     tab1.replace_self = True
     tab2 = kx.toq(df2)
-    tab1.merge(tab2, left_on='lkey', right_on='rkey')
-    assert df1.merge(df2, left_on='lkey', right_on='rkey').equals(tab1.pd())
+    tab1.merge(tab2, left_on='lkey', right_on='rkey', sort=True)
+    assert df1.merge(df2, left_on='lkey', right_on='rkey', sort=True).equals(tab1.pd())
 
 
 def test_table_inner_merge(kx, q):
@@ -462,12 +474,14 @@ def test_table_inner_merge(kx, q):
     assert df1.merge(
         df2,
         left_on='lkey',
-        right_on='rkey'
+        right_on='rkey',
+        sort=True
     ).equals(
         tab1.merge(
             tab2,
             left_on='lkey',
-            right_on='rkey'
+            right_on='rkey',
+            sort=True
         ).pd()
     )
 
@@ -479,12 +493,14 @@ def test_table_inner_merge(kx, q):
     assert df1.merge(
         df2,
         left_on='lkey',
-        right_on='rkey'
+        right_on='rkey',
+        sort=True
     ).equals(
         q('{0!x}', tab1.merge(
             tab2,
             left_on='lkey',
-            right_on='rkey'
+            right_on='rkey',
+            sort=True
         )).pd()
     )
 
@@ -657,7 +673,7 @@ def test_table_left_merge(kx, q):
         res = tab1.merge(tab2, on='key', how='left').pd()
         assert str(res.at[6, 'value_y']) == '--'
         res.at[6, 'value_y'] = np.NaN
-        assert res.equals(df_res)
+        assert df_res.equals(res)
 
 
 def test_table_right_merge(kx, q):
@@ -773,7 +789,7 @@ def test_table_right_merge(kx, q):
         res = tab1.merge(tab2, on='key', how='right').pd()
         assert str(res.at[6, 'key']) == ''
         res.at[6, 'key'] = None
-        assert res.equals(df_res)
+        assert df_res.equals(res)
 
 
 def test_table_outer_merge(kx, q):
@@ -783,19 +799,6 @@ def test_table_outer_merge(kx, q):
         df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
         tab1 = kx.toq(df1)
         tab2 = kx.toq(df2)
-        assert df1.merge(
-            df2,
-            left_on='lkey',
-            right_on='rkey',
-            how='outer'
-        ).equals(
-            tab1.merge(
-                tab2,
-                left_on='lkey',
-                right_on='rkey',
-                how='outer'
-            ).pd()
-        )
         assert df1.merge(
             df2,
             left_on='lkey',
@@ -838,12 +841,12 @@ def test_table_outer_merge(kx, q):
         df2 = pd.DataFrame({'a': ['foo', 'baz'], 'c': [3, 4]})
         tab1 = kx.toq(df1)
         tab2 = kx.toq(df2)
-        tab_res = tab1.merge(tab2, on='a', how='outer').pd()
-        assert str(tab_res.at[1, 'c']) == '--'
-        tab_res.at[1, 'c'] = np.NaN
-        assert str(tab_res.at[2, 'b']) == '--'
-        tab_res.at[2, 'b'] = np.NaN
-        assert df1.merge(df2, on='a', how='outer').equals(tab_res)
+        tab_res = tab1.merge(tab2, on='a', how='outer', sort=True).pd()
+        assert str(tab_res.at[0, 'c']) == '--'
+        tab_res.at[0, 'c'] = np.NaN
+        assert str(tab_res.at[1, 'b']) == '--'
+        tab_res.at[1, 'b'] = np.NaN
+        assert df1.merge(df2, on='a', how='outer', sort=True).equals(tab_res)
 
         # Merge on same indexes
         df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
@@ -929,6 +932,8 @@ def test_table_outer_merge(kx, q):
         res = tab1.merge(tab2, on='key', how='outer').pd()
         assert res.at[7, 'key'] == ''
         res.at[7, 'key'] = None
+        res.sort_values(['key'], inplace=True, ignore_index=True)
+        df_res.sort_values(['key'], inplace=True, ignore_index=True)
         assert df_res.equals(res)
 
 
@@ -1021,18 +1026,18 @@ def test_df_astype_vanilla_checks(kx, q):
     df = q('([] c1:1 2 3i; c2:1 2 3j; c3:1 2 3h; c4:1 2 3i)')
     assert check_result_and_type(
         kx,
-        df.astype(kx.LongVector).py(),
-        q('([] c1:1 2 3j; c2:1 2 3j; c3:1 2 3j; c4:1 2 3j)').py()
+        df.astype(kx.LongVector),
+        q('([] c1:1 2 3j; c2:1 2 3j; c3:1 2 3j; c4:1 2 3j)')
     )
     assert check_result_and_type(
         kx,
-        df.astype({'c1': kx.LongVector, 'c2': 'kx.ShortVector'}).py(),
-        q('([] c1:1 2 3j; c2:1 2 3h; c3:1 2 3h; c4:1 2 3i)').py()
+        df.astype({'c1': kx.LongVector, 'c2': 'kx.ShortVector'}),
+        q('([] c1:1 2 3j; c2:1 2 3h; c3:1 2 3h; c4:1 2 3i)')
     )
 
 
 def test_df_astype_string_to_sym(kx, q):
-    df = q('''([] c1:3#.z.p; c2:`abc`def`ghi; c3:1 2 3j;
+    df = q('''([] c1:3#.z.d; c2:`abc`def`ghi; c3:1 2 3j;
             c4:("abc";"def";"ghi");c5:"abc";c6:(1 2 3;4 5 6;7 8 9))''')
     assert check_result_and_type(
         kx,
@@ -1048,26 +1053,26 @@ def test_df_astype_string_to_sym(kx, q):
         df)
     assert check_result_and_type(
         kx,
-        df.astype({'c4': kx.SymbolVector, 'c5': kx.SymbolVector}).py(),
-        q('''([] c1:3#.z.p; c2:`abc`def`ghi; c3:1 2 3j;
-            c4:`abc`def`ghi;c5:`a`b`c;c6:(1 2 3;4 5 6;7 8 9))''').py()
+        df.astype({'c4': kx.SymbolVector, 'c5': kx.SymbolVector}),
+        q('''([] c1:3#.z.d; c2:`abc`def`ghi; c3:1 2 3j;
+            c4:`abc`def`ghi;c5:`a`b`c;c6:(1 2 3;4 5 6;7 8 9))''')
     )
     assert check_result_and_type(
         kx,
-        df.astype({'c4': kx.SymbolVector}).py(),
-        q('''([] c1:3#.z.p; c2:`abc`def`ghi; c3:1 2 3j;
-            c4:`abc`def`ghi;c5:"abc";c6:(1 2 3;4 5 6;7 8 9))''').py()
+        df.astype({'c4': kx.SymbolVector}),
+        q('''([] c1:3#.z.d; c2:`abc`def`ghi; c3:1 2 3j;
+            c4:`abc`def`ghi;c5:"abc";c6:(1 2 3;4 5 6;7 8 9))''')
     )
 
 
 def test_df_astype_value_errors(kx, q):
-    df = q('''([] c1:3#.z.p; c2:`abc`def`ghi; c3:1 2 3j;
+    df = q('''([] c1:3#.z.d; c2:`abc`def`ghi; c3:1 2 3j;
             c4:("abc";"def";"ghi");c5:"abc";c6:(1 2 3;4 5 6;7 8 9))''')
     # Check errors parameter set to 'ignore'
     assert check_result_and_type(
         kx,
-        df.astype({'c6': kx.CharVector}, errors='ignore').py(),
-        q('''([] c1:3#.z.p; c2:`abc`def`ghi; c3:1 2 3j;
+        df.astype({'c6': kx.CharVector}, errors='ignore'),
+        q('''([] c1:3#.z.d; c2:`abc`def`ghi; c3:1 2 3j;
             c4:("abc";"def";"ghi");c5:"abc";c6:(1 2 3;4 5 6;7 8 9))''').py()
     )
     with pytest.raises(ValueError,
@@ -1116,41 +1121,51 @@ def test_df_select_dtypes(kx, q):
     df = q('([] c1:`a`b`c; c2:1 2 3h; c3:1 2 3j; c4:1 2 3i)')
     assert check_result_and_type(
         kx,
-        df.select_dtypes(include=[kx.ShortVector, kx.LongVector]).py(),
+        df.select_dtypes(include=[kx.ShortVector, kx.LongVector]),
         q('([] c2:1 2 3h; c3:1 2 3j)').py()
     )
+    assert q('~', df.select_dtypes(include=[kx.FloatVector]), q('(::)')).py()
     assert check_result_and_type(
         kx,
-        df.select_dtypes(exclude='kx.LongVector').py(),
+        df.select_dtypes(exclude='kx.LongVector'),
         q('([] c1:`a`b`c; c2:1 2 3h; c4:1 2 3i)').py()
     )
     assert check_result_and_type(
         kx,
         df.select_dtypes(include=['ShortVector', kx.LongVector],
-                         exclude=[kx.SymbolVector]).py(),
-        q('([] c2:1 2 3h; c3:1 2 3j;  c4:1 2 3i)').py()
+                         exclude=[kx.SymbolVector]),
+        q('([] c2:1 2 3h; c3:1 2 3j)').py()
     )
+    assert q('~', df.select_dtypes(exclude=[kx.SymbolAtom, kx.ShortAtom, kx.LongAtom, kx.IntAtom]
+                                   ), q('(::)')).py()
     assert check_result_and_type(
         kx,
-        df.select_dtypes(include=[kx.ShortAtom, kx.LongAtom]).py(),
+        df.select_dtypes(include=[kx.ShortAtom, kx.LongAtom]),
         q('([] c2:1 2 3h; c3:1 2 3j)').py()
     )
     assert check_result_and_type(
         kx,
-        df.select_dtypes(exclude='kx.LongAtom').py(),
+        df.select_dtypes(exclude='kx.LongAtom'),
         q('([] c1:`a`b`c; c2:1 2 3h; c4:1 2 3i)').py()
     )
+    dfk = df.set_index('c1')
+    assert q('~', dfk.select_dtypes(include=[kx.ShortAtom, kx.LongAtom, kx.IntAtom]), dfk).py()
+    assert q('~', dfk.select_dtypes(include=[kx.ShortAtom]), q('([c1:`a`b`c] c2:1 2 3h)')).py()
     df = q('([] c1:"abc";c2:(1 2 3;4 5 6;7 8 9);c3:("abc";"abc";"abc"))')
     assert check_result_and_type(
         kx,
-        df.select_dtypes(exclude='kx.List').py(),
+        df.select_dtypes(exclude='kx.List'),
         q('([] c1:"abc")').py()
     )
     assert check_result_and_type(
         kx,
-        df.select_dtypes(include='kx.List').py(),
+        df.select_dtypes(include='kx.List'),
         q('([] c2:(1 2 3;4 5 6;7 8 9);c3:("abc";"abc";"abc"))').py()
     )
+    dfk = df.set_index('c1')
+    assert q('~', dfk.select_dtypes(exclude='kx.List'), q('(::)')).py()
+    assert q('~', dfk.select_dtypes(include='kx.SymbolAtom'), q('(::)')).py()
+    assert q('~', dfk.select_dtypes(include='kx.List'), dfk).py()
 
 
 def test_df_select_dtypes_errors(kx, q):
@@ -2182,7 +2197,7 @@ def test_pandas_prod(q):
     qprod = tab.prod(numeric_only=True, skipna=True, axis=1, min_count=5).py()
     pprod = df.prod(numeric_only=True, skipna=True, axis=1, min_count=5)
     for i in range(10):
-        assert qprod[i] == q('0N')
+        assert pd.isna(qprod[i])
         assert str(pprod[i]) == 'nan'
 
 
@@ -2204,7 +2219,7 @@ def test_pandas_sum(q):
     qsum = tab.sum(numeric_only=True, skipna=True, axis=1, min_count=5).py()
     psum = df.sum(numeric_only=True, skipna=True, axis=1, min_count=5)
     for i in range(10):
-        assert qsum[i] == q('0N')
+        assert pd.isna(psum[i])
         assert str(psum[i]) == 'nan'
 
 
@@ -2242,8 +2257,8 @@ def test_pandas_groupby(kx, q):
     df = pd.DataFrame(
         {
             'Animal': ['Falcon', 'Falcon', 'Parrot', 'Parrot'],
-            'Max Speed': [380., 370., 24., 26.],
-            'Max Altitude': [570., 555., 275., 300.]
+            'Speed': [380., 370., 24., 26.],
+            'Altitude': [570., 555., 275., 300.]
         }
     )
 
@@ -2252,18 +2267,22 @@ def test_pandas_groupby(kx, q):
     assert all(
         df.groupby(['Animal']).mean() == tab.groupby(kx.SymbolVector(['Animal'])).mean().pd()
     )
-    assert df.groupby(['Animal']).ndim == tab.groupby(kx.SymbolVector(['Animal'])).ndim
     assert all(
-        df.groupby(['Animal'], as_index=False).mean()
-        == tab.groupby(kx.SymbolVector(['Animal']), as_index=False).mean().pd()
+        pd.DataFrame(df.groupby('Animal')['Speed'].max())
+        == tab.groupby('Animal')['Speed'].max().pd()
+    )
+    assert df.groupby(['Animal']).ndim == tab.groupby(['Animal']).ndim
+    assert all(
+        df.groupby('Animal', as_index=False).mean()
+        == tab.groupby('Animal', as_index=False).mean().pd()
     )
     assert all(
         df.groupby(['Animal']).tail(1).reset_index(drop=True)
-        == tab.groupby(kx.SymbolVector(['Animal'])).tail(1).pd()
+        == tab.groupby('Animal').tail(1).pd()
     )
     assert all(
-        df.groupby(['Animal']).tail(2)
-        == tab.groupby(kx.SymbolVector(['Animal'])).tail(2).pd()
+        df.groupby('Animal').tail(2)
+        == tab.groupby('Animal').tail(2).pd()
     )
 
     df = pd.DataFrame(

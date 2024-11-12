@@ -82,7 +82,8 @@ class PyArrowUnavailable(PyKXException):
 
 
 class QError(PyKXException):
-    """Exception type for q errors.
+    """
+    Exception type for q errors.
 
     Refer to https://code.kx.com/q/basics/errors/ for clarification about error messages.
     """

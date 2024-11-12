@@ -9,8 +9,7 @@ without having to manually manage any of these internal environment variables.
 """
 import os
 
-
-original_qhome = str(os.getenv('QHOME'))
+from .config import pykx_executable, qhome
 
 
 class PyKXReimport:
@@ -33,9 +32,6 @@ class PyKXReimport:
     def __init__(self):
         self.envlist = ('PYKX_DEFAULT_CONVERSION',
                         'PYKX_UNDER_Q',
-                        'SKIP_UNDERQ',
-                        'PYKX_SKIP_UNDERQ',
-                        'UNDER_PYTHON',
                         'PYKX_UNDER_PYTHON',
                         'PYKX_Q_LOADED_MARKER',
                         'PYKX_LOADED_UNDER_Q',
@@ -58,7 +54,8 @@ class PyKXReimport:
             os.unsetenv(x)
             if y is not None:
                 del os.environ[x]
-        os.environ['QHOME'] = original_qhome
+        os.environ['QHOME'] = str(qhome)
+        os.environ['PYKX_EXECUTABLE'] = pykx_executable
 
     def restore(self):
         """Restore all the required environment variables.

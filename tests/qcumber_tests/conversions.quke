@@ -39,6 +39,7 @@ feature conversions
 feature default conversions
     before each
         t::.pykx.eval["lambda x: bytes(str(type(x)), 'utf-8')"][<];
+        v::.pykx.eval["lambda x: x"][<];
     after each
         .pykx.setdefault["default"];
     should support default default
@@ -50,10 +51,23 @@ feature default conversions
             .qu.compare["<class 'pandas.core.frame.DataFrame'>"; t ([]a:2 3; b:4 5)];
         expect default for keyed table
             .qu.compare["<class 'pandas.core.frame.DataFrame'>"; t ([a:2 3] b:4 5)];
+        expect default conversion of lists to return appropriate non null representation
+            data:(`test;::;0D20:23:25.800000000);
+            lst:.pykx.eval["lambda x:x";<]data;
+            lst~data
     should support python default
         expect python default
             .pykx.setdefault["python"];
             .qu.compare["<class 'list'>"; t til 10];
+    should support raw default
+        expect return of raw representation of values
+            .pykx.setdefault["raw"];
+            data:"p"$100;
+            all (
+                 -12h = type data;
+                 100  = v data;
+                 "<class 'int'>" ~ t data
+                )
     should support numpy default
         expect numpy default
             .pykx.setdefault["numpy"];

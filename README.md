@@ -93,12 +93,14 @@ KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX 
 
 PyKX depends on the following third-party Python packages:
 
-- `pandas>=1.2, < 2.2.0`
+- `pandas>=1.2, < 2.0; python_version=='3.8'`
+- `pandas>=1.2, < 2.2.0; python_version>'3.8'`
 - `numpy~=1.22, <2.0; python_version<'3.11'`
 - `numpy~=1.23, <2.0; python_version=='3.11'`
 - `numpy~=1.26, <2.0; python_version=='3.12'`
 - `pytz>=2022.1`
 - `toml~=0.10.2`
+- `dill>=0.2.0`
 
 They are installed automatically by `pip` when PyKX is installed.
 
@@ -106,20 +108,16 @@ PyKX also has an optional Python dependency of `pyarrow>=3.0.0`, which can be in
 
 When using PyKX with KX Dashboards users will be required to install `ast2json~=0.3` this can be installed using the `dashboards` extra, e.g. `pip install pykx[dashboards]`
 
-When using PyKX Beta features users will be required to install `dill>=0.2.0` this can be installed using the `beta` extra, e.g. `pip install pykx[beta]`
+When using PyKX Streaming users may require the ability to stop processes initialized in a now unavailable process to facilitate this PyKX can make use of `psutil` this can be installed using the `streaming` extra, e.g. `pip install pykx[streaming]`
 
 When using Streamlit users will be required to install `streamlit~=1.28` this can be installed using the `streamlit` extra, e.g. `pip install pykx[streamlit]`
 
-**Warning:** Trying to use the `pa` conversion methods of `pykx.K` objects or the `pykx.toq.from_arrow` method when PyArrow is not installed (or could not be imported without error) will raise a `pykx.PyArrowUnavailable` exception. `pyarrow` is supported Python 3.8-3.10 but remains in Beta for Python 3.11.
+**Warning:** Trying to use the `pa` conversion methods of `pykx.K` objects or the `pykx.toq.from_arrow` method when PyArrow is not installed (or could not be imported without error) will raise a `pykx.PyArrowUnavailable` exception.
 
 #### Optional Non-Python Dependencies
 
 - `libssl` for TLS on [IPC connections](docs/api/ipc.md).
 - `libpthread` on Linux/MacOS when using the `PYKX_THREADING` environment variable.
-
-#### Windows Dependencies
-
-To run q or PyKX on Windows, `msvcr100.dll` must be installed. It is included in the [Microsoft Visual C++ 2010 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=26999).
 
 ## Building from source
 
@@ -144,7 +142,6 @@ Windows:
 * [Python](https://www.python.org/downloads/windows/)
 * [Build Tools for Visual Studio](https://visualstudio.microsoft.com/downloads/?q=build+tools).
 * [dlfcn-win32](https://github.com/dlfcn-win32/dlfcn-win32). Can be installed using [Vcpkg](https://github.com/microsoft/vcpkg).
-* `msvcr100.dll`. Available in [Microsoft Visual C++ 2010 Redistributable](https://www.microsoft.com/en-ca/download/details.aspx?id=26999).
 
 To install the above dependencies, you can run the `w64_install.ps1` script as an administrator:
 
@@ -198,7 +195,7 @@ export QHOME=/location/of/your/q #q needs QHOME available
 python -m pytest -vvv -n 0 --no-cov --junitxml=report.xml
 ```
 
-## PyKX License access and enablement
+## PyKX Licenses
 
 This work is dual licensed under [Apache 2.0](https://code.kx.com/pykx/license.html#apache-2-license) and the [Software License for q.so](https://code.kx.com/pykx/license.html#qso-license) and users are required to abide by the terms of both licenses in their entirety.
 

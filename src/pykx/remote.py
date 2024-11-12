@@ -1,19 +1,9 @@
 """
-Functionality for the generation and management of remote Python function
-execution.
-
-!!! Warning
-
-        This functionality is provided in it's present form as a BETA
-        Feature and is subject to change. To enable this functionality
-        for testing please following configuration instructions
-        [here](../user-guide/configuration.md) setting `PYKX_BETA_FEATURES='true'`
+_This page documents the API for generation and management of remote Python function execution._
 """
 import inspect
 from typing import Union
 
-from . import beta_features
-from .config import _check_beta
 from .ipc import SyncQConnection
 
 
@@ -29,8 +19,6 @@ __all__ = [
     'function'
 ]
 
-beta_features.append('Remote Functions')
-
 
 def _init(_q):
     global q
@@ -41,97 +29,71 @@ def __dir__():
     return __all__
 
 
-class session():
-    """
-    A session refers to a connection to a remote kdb+/q process against which
-    users are defining/registering Python Functions which will return results
-    to a Python session.
-    """
-    def __init__(self):
-        _check_beta('Remote Functions')
-        if not import_success:
-            raise ImportError("Failed to load Python package: 'dill',"
-                              " please install dependency using 'pip install pykx[beta]'")
-        self.valid = False
-        self._libraries = []
-        self._session = None
-
-    def add_library(self, *args):
+class session:
+    def __init__(self,
+                 host: Union[str, bytes] = 'localhost',
+                 port: int = None,
+                 libraries: dict = None,
+                 *,
+                 username: Union[str, bytes] = '',
+                 password: Union[str, bytes] = '',
+                 timeout: float = 0.0,
+                 large_messages: bool = True,
+                 tls: bool = False,
+                 reconnection_attempts: int = -1
+    ) -> None:
         """
-        Add a list of Python libraries which will be imported prior to definition
-        of a remote Python function, this allows users for example to import numpy
-        and use it as a defined library within a remote function.
+        Initialise a session object, opening a connection to the specified remote q process. Users
+        can specify the Python libraries to load into the remote process. Once the connection is
+        successful, pykx will be loaded if it is not, then the requested libraries will be imported.
 
         Parameters:
-            *args: A list of strings denoting the packages which are to be imported
-                for use by a remote function.
-
-        Returns:
-            Returns a `None` type object on successful invocation.
-
-        Example:
-
-        ```python
-        >>> from pykx.remote import session
-        >>> remote_session = session()
-        >>> remote_session.add_library('numpy', 'pandas')
-        ```
-        """
-        if self._session is None:
-            raise Exception("Unable to add packages in the absence of a session")
-        for i in args:
-            if not isinstance(i, str):
-                raise Exception(f'Supplied library argument {i} is not a str like object, '
-                                f'supplied object is of type: {type(i)}')
-            self._libraries.append(i)
-
-    def create(self,
-               host: Union[str, bytes] = 'localhost',
-               port: int = None,
-               *,
-               username: Union[str, bytes] = '',
-               password: Union[str, bytes] = '',
-               timeout: float = 0.0,
-               large_messages: bool = True,
-               tls: bool = False):
-        """
-        Populate a session for use when generating a function for remote execution. This
-        session will be backed by a SyncQConnection instance, note that only one session
-        can be associated with a given instance of a `session` class.
-
-        Parameters:
-            host: The host name to which a connection is to be established.
-            port: The port to which a connection is to be established.
+            host: The host name running the remote process.
+            port: The port of the remote process.
+            libraries: A dictionary mapping the desired name of the imported Python library to
+                its library which is being imported
             username: Username for q connection authorization.
             password: Password for q connection authorization.
-            timeout: Timeout for blocking socket operations in seconds. If set to `0`, the socket
-                will be non-blocking.
-            large_messages: Whether support for messages >2GB should be enabled.
-            tls: Whether TLS should be used.
+            timeout: Number of seconds to set the timeout for blocking socket operations. Input 0
+                to set the socket to non-blocking.
+            large_messages: Boolean flag to enable/disable messages >2GB in size.
+            tls: Boolean flag to enable/disable TLS.
+            reconnection_attempts: The number of attempts to reconnect to the q server when there is
+                a disconnect. Input a negative value to disable reconnect attempts. A value of 0
+                indicates no limit on reconnect attempts, with each attempt applying an exponential
+                backoff on the time between successive attempts. Input a positive number to
+                specify the maximum number of reconnect attempts. Hitting the maximum without a
+                successful reconnect will throw an error.
 
-        Returns:
-            Returns a `None` type object on successful connection creation
+        Examples:
 
-        Example:
-
-        - Connect to a q session on localhost at port 5050
+        - Generate a session connecting to a process running locally
 
             ```python
-            >>> from pykx.remote import session
-            >>> remote_session = session()
-            >>> remote_session.create(port = 5050)
+            >>> import pykx as kx
+            >>> remote_session = kx.remote.session(port=5050)
             ```
 
-        - Connect to a user-password protected q session at a defined port
+        - Generate a session connecting to a remote q process, providing required Python libraries,
+          a username and password
 
             ```python
-            >>> from pykx.remote import session
-            >>> remote_session = session()
-            >>> remote_session.create_session(port=5001, username='username', password='password')
+            >>> import pykx as kx
+            >>> remote_session = kx.remote.session(
+            ...     port = 5050,
+            ...     username = 'user',
+            ...     password = 'pass',
+            ...     libraries = {'kx': 'pykx', 'np': 'numpy'})
             ```
         """
-        if self._session is not None:
-            raise Exception("Active session in progress")
+        if not import_success:
+            raise ImportError("Failed to load Python package: 'dill',"
+                              " please install dependency using 'pip install pykx[remote]'")
+        if not (isinstance(libraries, dict) or libraries is None):
+            raise TypeError("libraries must be supplied as a dictionary or None")
+
+        self.valid = False
+        self._libraries = libraries
         self._session = SyncQConnection(host, port,
                                         username=username,
                                         password=password,
@@ -139,101 +101,136 @@ class session():
                                         large_messages=large_messages,
                                         tls=tls,
                                         no_ctx=True)
+        pykx_loaded = self._session('`pykx in key `')
+        if not pykx_loaded:
+            print("PyKX not loaded on remote server, attempting to load PyKX")
+            self._session('@[system"l ",;"pykx.q";{\'"Failed to load PyKX with error: ",x}]')
+            self.valid = True
+        if self._libraries is not None:
+            self.libraries(self._libraries)
 
-    def clear(self):
+    def libraries(self, libs: dict = None) -> None:
         """
-        Reset/clear the session and libraries associated with a defined session information
+        Send a list of libraries to the remote process and load them into that process.
+
+        Parameters:
+            libs: A dictionary mapping the desired name of the imported Python library to
+                its library which is being imported
+
+        Returns:
+            `#!python None` if successful.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> remote_session = kx.remote.session(port=5050)
+        >>> remote_session.libraries({'np': 'numpy', 'pd': 'pandas', 'kx': 'pykx'})
+        ```
+        """
+        if not isinstance(libs, dict):
+            raise TypeError("libs must be provided as a dictionary")
+        for key, value in libs.items():
+            self._session('''
+                {[alias;library]
+                  alias:string alias;
+                  library:string library;
+                  @[.pykx.pyexec;
+                    "import ",library," as ",alias;
+                    {'"Failed to load library '",x,
+                      "' with alias '",y,"' with error: ",z}[library;alias]
+                    ]}
+                ''', key, value)
+
+    def close(self) -> None:
+        """
+        Close the connection.
 
         Example:
 
         ```python
         >>> from pykx.remote import session
-        >>> remote_session = session()
-        >>> remote_session.create(port = 5050)
-        >>> remote_session.add_library('numpy')
-        >>> {'session': session._session, 'libraries': session._libraries}
-        {'session': pykx.QConnection(port=5001), 'libraries': ['numpy']}
-        >>> remote_session.clear()
-        >>> {'session': session._session, 'libraries': session._libraries}
-        {'session': None, 'libraries': []}
+        >>> remote_session = session(port=5050)
+        >>> remote_session.close()
         ```
         """
-        self._session = None
-        self._libraries = []
+        if self._session is not None:
+            self._session.close()
 
 
-def function(remote_session, *args):
+def function(remote_session: session, *args) -> None:
     """
     This decorator allows users to tag functions which will be executed
-    on a remote server defined by a `kx.remote.session` instance.
+    on a remote server defined by a `#!python kx.remote.session` instance.
 
     Parameters:
-        remote_session: Valid `kx.remote.session` object used to interact with external q process
-        *args: When invoked the decorated function will be passed supplied arguments
+        remote_session: Valid `#!python kx.remote.session` object used to interact with external
+        q process
+        *args: Arguments that will be passed to the decorated function when it is invoked
 
     Returns:
-        When invoked the decorated function will return the result as a PyKX object to the
-        calling process
+        A PyKX converted type of the result returned from the execution of the decorated function
+        on the remote process
 
     Examples:
 
     - Call a basic decorated function on a remote process
 
         ```python
-        >>> from pykx.remote import session, function
-        >>> remote_session = session()
-        >>> session.create(port = 5050)
-        >>> @function(session)
+        >>> import pykx as kx
+        >>> session = kx.remote.session(port=5050)
+        >>> @kx.remote.function(session)
         ... def func(x):
         ...    return x+1
         >>> func(1)
         pykx.LongAtom(pykx.q('2'))
         ```
 
-    - Apply a function making use of a named library
+    - Initialize a remote session object with a named library then decorate a function which uses
+      that session to call functions from that library
 
         ```python
-        >>> from pykx.remote import session, function
-        >>> remote_session = session()
-        >>> session.create(port = 5050)
-        >>> session.add_library('numpy')
-        >>> @function(session)
+        >>> import pykx as kx
+        >>> session = kx.remote.session(port=5050, libraries={'np': 'numpy'})
+        >>> @kx.remote.function(session)
         ... def func(start, stop, count):
         ...     return numpy.linspace(start, stop, count)
         >>> func(0, 10, 5)
         pykx.FloatVector(pykx.q('0 2.5 5 7.5 10'))
         ```
+
+    - Initialize a remote session object. Once created have that session import a new library.
+
+        ```python
+        >>> import pykx as kx
+        >>> session = kx.remote.session(port=5050)
+        >>> session.libraries({'kx': 'pykx'})
+        >>> @kx.remote.function(session)
+        ... def func(start, stop):
+        ...     return start + kx.q.til(stop)
+        >>> func(10, 5)
+        pykx.LongVector(pykx.q('10 11 12 13 14'))
+        ```
     """
     def inner_decorator(func):
         def pykx_func(*args, _function=func):
-            _check_beta('Remote Functions')
             if not isinstance(remote_session, session):
                 raise Exception("Supplied remote_session instance must "
                                 "be a kx.remote.session object")
-            if remote_session._session is None:
-                raise Exception("User session must be generated using "
-                                "the 'create_session' function")
-            if not remote_session.valid:
-                pykx_loaded = remote_session._session('`pykx in key `')
-                if not pykx_loaded:
-                    print("PyKX not loaded on remote server, attempting to load PyKX")
-                    remote_session._session("@[system\"l \",;\"pykx.q\";"
-                                            "{'\"Failed to load PyKX with error: \",x}]")
-                remote_session.valid = True
-            if remote_session._libraries is not None:
-                for i in remote_session._libraries:
-                    remote_session._session('{x:string x;'
-                                            '  @[.pykx.pyexec;'
-                                            '"import ",x;{\'"Failed to load package: ",'
-                                            'x," with: ",y}[x]]}',
-                                            i)
             try:
                 src = dill.source.getsource(_function)
             except BaseException:
                 src = inspect.getsource(_function)
-            return remote_session._session('{.pykx.pyexec "\n" sv 1_"\n" vs x; .pykx.get[y;<] . z}',
+            return remote_session._session('''
+                                           {[code;func_name;args;lenargs]
+                                             .pykx.pyexec trim "\n" sv 1_"\n" vs code;
+                                             func:.pykx.get[func_name;<];
+                                             $[lenargs;func . args;func[]]
+                                             }
+                                           ''',
                                            bytes(src, 'UTF-8'),
                                            _function.__name__,
-                                           list(args))
+                                           list(args),
+                                           len(args))
         return pykx_func
     return inner_decorator

@@ -1,17 +1,29 @@
-# Text representation in PyKX 
+---
+title: Convert text in PyKX 
+description: How to convert text in PyKX
+date: July 2024
+author: KX Systems, Inc.,
+tags: PyKX, text, 
+---
 
-Within PyKX text can be represented in a number of ways that you will encounter when using the library. The following are the basic building blocks for text within PyKX, a deeper dive into the underlying text representation can be found [here](https://code.kx.com/q4m3/2_Basic_Data_Types_Atoms/#24-text-data):
+# Convert text in PyKX
 
-| Type                | Description                                                                                      | Example Generation           |
+_This page provides details on how to represent, handle, and convert text in PyKX._
+
+In PyKX, text can be represented in various ways. Here are the basic building blocks for handling text within the library:
+
+| **Type**            | **Description**                                                                                  | **Example Generation**   |
 |---------------------|--------------------------------------------------------------------------------------------------|------------------------------|
 | `pykx.SymbolAtom`   | A symbol atom in PyKX is an irreducible atomic entity storing an arbitrary number of characters. | ```pykx.q('`test')```        |
 | `pykx.SymbolVector` | A symbol vector is a collected list of symbol atoms.                                             | ```pykx.q('`test`vector')``` |
 | `pykx.CharAtom`     | A char atom holds a single ASCII or 8-but unicode character stored as 1 byte.                    | `pykx.q('"a"')`              |
-| `pykx.CharVector`   | A char vector is a collected list of char vectors                                                | `pykx.q('"test"')`           |
+| `pykx.CharVector`   | A char vector is a collected list of char vectors.                                               | `pykx.q('"test"')`           |
 
-## Converting text to/from PyKX
+!!! info "Head to our [Text data](https://code.kx.com/q4m3/2_Basic_Data_Types_Atoms/#24-text-data) section for a deeper dive into the underlying text representation."
 
-Pythonic text data can be converted to PyKX objects directly through use of the `pykx.SymbolAtom` and `pykx.CharVector` functions as shown below
+## Convert text to/from PyKX
+
+To convert Pythonic text data to PyKX objects, use the `#!python pykx.SymbolAtom` and `#!python pykx.CharVector` functions as shown below:
 
 ```python
 >>> import pykx as kx
@@ -22,9 +34,9 @@ pykx.SymbolAtom(pykx.q('`test string'))
 pykx.CharVector(pykx.q('"test string"'))
 ```
 
-Alternatively you can make use of the automatic conversion function `pykx.toq` which will take an incoming Python type and convert it to its analagous PyKX type. The following table shows the mapping which is used
+Alternatively, you use the automatic conversion function `#!python pykx.toq` which takes an incoming Python type and converts it to its analagous PyKX type. The following table shows the mapping between the two types:
 
-| Python Type | PyKX Type                         |
+| **Python Type**| **PyKX Type**                  |
 |-------------|-----------------------------------|
 | `str`       | `pykx.SymbolAtom`                 |
 | `byte`      | `pykx.CharAtom`/`pykx.CharVector` |
@@ -39,7 +51,7 @@ pykx.CharVector(pykx.q('"bytes"'))
 pykx.CharAtom(pykx.q('"a"'))
 ```
 
-When using the `pykx.toq` function it is possible to specify the target type for your data as shown below, this can be useful when selectively converting data
+When using the `#!python pykx.toq` function, you can specify the target type for your data as shown below. This can be useful when selectively converting data:
 
 ```python
 >>> import pykx as kx
@@ -49,7 +61,7 @@ pykx.CharVector(pykx.q('"string"'))
 pykx.SymbolAtom(pykx.q('`bytes'))
 ```
 
-An important note on the above when using PyKX functions is that the `pykx.toq` conversion will be used by default when passing Python data to these functions, for example:
+The `#!python pykx.toq` conversion is used by default when passing Python data to PyKXfunctions, for example:
 
 ```python
 >>> import pykx as kx
@@ -62,11 +74,14 @@ pykx.List(pykx.q('
 
 ## Differences between `Symbol` and `Char` data objects
 
-While there may appear to be limited differences between `Symbol` and `Char` representations of objects, the choice of underlying representation can have an impact on the performance and memory profile of many applications of PyKX. This section will describe a number of these differences and their impact in various scenarios.
+While there may appear to be limited differences between `#!python Symbol` and `#!python Char` representations of objects, the choice of underlying representation can have an impact on the performance and memory profile of many applications of PyKX. This section will describe a number of these differences and their impact in various scenarios.
+
+Although `#!python Symbol` and `#!python Char`representations of objects might seem similar, the choice between them can significantly affect the performance and memory usage of many PyKX applications. This section exploreS the impact of these differences in various scenarios.
+
 
 ### Text access and mutability
 
-The individual characters which comprise a `pykx.SymbolAtom` object are not directly accessible by a user, this limitation does not exist for `pykx.CharVector` objects. For example it is possible to retrieve slices of a `pykx.CharVector`
+The individual characters which comprise a `#!python pykx.SymbolAtom` object are not directly accessible by a user; this limitation does not exist for `#!python pykx.CharVector` objects. For example, it's possible to retrieve slices of a `#!python pykx.CharVector`:
 
 ```python
 >>> import pykx as kx
@@ -84,7 +99,7 @@ Traceback (most recent call last):
 TypeError: 'SymbolAtom' object is not subscriptable
 ```
 
-Similarly `pykx.CharVector` type objects are mutable while `pykx.SymbolAtom` type objects are not
+Similarly `#!python pykx.CharVector` type objects are mutable while `#!python pykx.SymbolAtom` type objects are not:
 
 ```python
 >>> import pykx as kx
@@ -95,7 +110,7 @@ pykx.CharVector(pykx.q('"rest"'))
 
 ### Memory considerations
 
-An important point of note when dealing with Symbol type objects is that these are never deallocated once generated, this can be seen through growth of the `syms` key of `kx.q.Q.w` as follows
+When dealing with Symbol type objects, note that they are never deallocated once generated. You can notice this through growth of the `#!python syms` key of `#!python kx.q.Q.w` as follows:
 
 ```python
 >>> kx.q.Q.w()['syms']

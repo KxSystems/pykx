@@ -54,9 +54,12 @@ dependencies = [
     "numpy~=1.22, <2.0; python_version=='3.10'",
     "numpy~=1.23, <2.0; python_version=='3.11'",
     "numpy~=1.26, <2.0; python_version=='3.12'",
-    "pandas>=1.2, < 2.2.0",
+    "pandas>=1.2, < 2.0; python_version=='3.8'",
+    "pandas>=1.2, <= 2.2.3; python_version>'3.8'",
     "pytz>=2022.1",
     "toml~=0.10.2",
+    "dill>=0.2.0",
+    "requests>=2.25.0"
 ]
 
 
@@ -79,6 +82,9 @@ doc = [
     "mkdocstrings[python]==0.18.0",
     "pygments~=2.12",
     "pymdown-extensions>=9.3",
+    "matplotlib",
+    "seaborn",
+    "kaleido",
 ]
 debug = [
     "find-libpython~=0.2",
@@ -95,11 +101,11 @@ lint = [
 pyarrow = [
     "pyarrow>=3.0.0",
 ]
+streaming = [
+    "psutil>=5.0.0"
+]
 dashboards = [
     "ast2json~=0.3",
-]
-beta = [
-    "dill>=0.2.0",
 ]
 streamlit = [
     "streamlit~=1.28; python_version>'3.7'"
@@ -117,7 +123,12 @@ test = [
     "pytest-xdist==2.5.0",
     "pytest-order==1.1.0",
     "psutil==5.9.5",
-    "pytest-timeout>=2.0.0"
+    "pytest-timeout>=2.0.0",
+    "IPython",
+]
+help = [
+    "beautifulsoup4==4.10.0",
+    "markdown2==2.5.0",
 ]
 
 
@@ -216,7 +227,7 @@ ignore = [
     "E999", # syntax error (Cython syntax is not valid Python syntax)
     "I100", # import statements are in the wrong order
     "I202", # additional newline in a group of imports (We use three 3: built-in, third-party, local)
-    "W503", # depracated warning - goes against PEP8
+    "W503", # deprecated warning - goes against PEP8
     "W605", # Invalid escape character in comments causing issue with q examples
 ]
 

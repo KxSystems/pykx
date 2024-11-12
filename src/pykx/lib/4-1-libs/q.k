@@ -92,7 +92,7 @@ fu:{[f;x]$[0h>@x;f x;f[u](u:?x)?x]}         /uniques
 fc:{$[1<n:(#y)&."\\s";,/x':(n;0N)#y;x y]} /parallel on cut
 A:"c"$65+!26;a:"c"$97+!26;n:"0123456789";nA:n,A;an:a,A,"_",n;b6:A,a,n,"+/";Aa:@["c"$!256;a;:;A]
 unm:{$[x~?x;x;@[x;j;:;(`$($x),'$i)j:&0<i:@[,/i;i;:;(!#:)'i:.=x]]]}
-id:{$[0h>@x;`${$[(*x)in n,"_ ";"a",x;x]}x@&(x:$x)in an;ft[{s[i]:`$($s i:&((s:id'!x:+x) in`i,res,!`.q)),'"1";+({unm[x]}/s)!. x}]x]}
+id:{$[0h>@x;`${$[(*x)in n,"_ ";"a",x;x]}x@&(x:$x)in an;ft[{$[98h=@x;+.z.s[+x];[s[i]:`$($s i:&((s:id'!x) in`i,res,!`.q)),'"1";({unm[x]}/s)!. x]]}]x]}
 j10:64/:b6?;x10:b6@0x40\: /base64 J from char10
 j12:36/:nA?;x12:nA@0x24\: /base36 J from char12(cusip)
 btoa:-32!;sha1:-33!;prf0:+`name`file`line`col`text`pos!*-37!
@@ -117,23 +117,26 @@ IN:{$[99h<@x;x in y;0]};qa:{$[qb x;0;IN[*x;a0];1;|/qa'1_x]};qb:{(2>#x)|(@x)&~11=
 / CAN EXIT HERE FOR SMALL Q
 / pt(tables) pf(date/month/year/int) pd(dirs) pv(values) pn(count)   pt::0#pf::`
 vt:(,`)!,()!();
-bv:{g:$[(::)~x;max;min];x:.Q.d;d:{`/:'x,'d@&(d:!x)like"[0-9]*"}'P:$[`par.txt in!x;jp[x]'`$0:`/:x,`par.txt;,x];
- t:?,/!:'.Q.vt:{(&#:'x)(=,/. x)}'{({("DMJJ"`date`month`year`int?.Q.pf)$$last@x:`\:x}'x)!!:'x}'d;
- d:{`/:'x[(. y)[;0]],'(`$$(. y)[;1]),'!y}[P]@{i:y@&:x=y x:@[x;&x~\:();:;*0#`. pf];(i;x i)}[;g]'+:t#/:g''.Q.vt:t#/:.Q.vt;.Q.vt:P!.q.except[. .Q.pf]''.Q.vt;
- .Q.vp:t!{(+(,.Q.pf)!,0#. .Q.pf),'+(-2!'.+x)#'+|0#x:?[x;();0b;()]}'d;.Q.pt,:{.[x;();:;+.q.except[!+.Q.vp x;.Q.pf]!x];x}'.q.except[t;.Q.pt];}
+bvfp:{g:$[(::)~x;max;min];x:.Q.d;d:{$[y~pv;`/:'x,'d@&(d:!x)in`$$y;u@&{11h=@!x}'u:`/:'x,'`$$y]}[;y@:&y in pv]'P:$[`par.txt in!x;jp[x]'`$0:`/:x,`par.txt;,x];if[.Q.vt~(,`)!,()!();.Q.vt:P!(#P)#.:.Q.vt];
+ t:?,/!:'vt:{(&#:'x)(=,/. x)}'{({("DMJJ"`date`month`year`int?pf)$$last@`\:x}'x)!!:':x}'d;
+ if[#nt:(exc:.q.except)[t;!vp];d:{`/:'x[(. y)[;0]],'(`$$(. y)[;1]),'!y}[P]@{i:y@&:x=y x:@[x;&x~\:();:;*0#pv];(i;x i)}[;g]'+:nt#/:g''nt#/:vt;.Q.vp,:nt!{(+(,pf)!,0#pv),'+(-2!'.+x)#'+|0#x:?[x;();0b;()]}':d;.Q.vt:.Q.vt,\:nt!(#nt)#,exc[?pv;y]];.Q.vt:(.Q.vt,''P!exc[y]''vt)exc''vt:(nt,!vp)#/:vt;{.[x;();:;+.q.except[!+vp x;pf]!x]}'exc[!vp;pt];pt::.q.asc@!vp;vpv::?pv;}
+bvi:{$[(`vpv in !.Q);bvfp[x;?.q.except[pv;vpv]];bv x]}
+bv:{vt::(,`)!,()!();vp::(0#`)!();vpv::0#pv;bvfp[x;pv]}
 
-pt:pm:();MAP:{{$[0>@a:.+0!. x;.q.set[x]@.`$-1_$a;]}'a@&~(a:."\\a")in pt;pm::();if[#pt;pm::pt!{(`u#pd,'pv)!p2[(x;();0b;())]/':+(pd;pv)}':pt]}
-dd:{`/:x,`$$y};d0:{dd[*|pd;*|pv]};p1:{$[#pm;pm[x](y;z);z in vt[y;x];vp x;+(!+. x)!`/:dd[y;z],x]};p2:{0!(?).@[x;0;p1[;y;z]]}
+sp:{$[0>."\\s";x'y;x':y]}
+pt:pm:();MAP:{{$[0>@a:.+0!. x;.q.set[x]@.`$-1_$a;]}'a@&~(a:."\\a")in pt;pm::();if[#pt;pm::pt!sp[{(`u#pd,'pv)!sp[p2[(x;();0b;())]/;+(pd;pv)]}]pt]}
+dd:{`/:x,`$$y};d0:{dd[*|pd;*|pv]};p1:{$[#pm;+((,pf)!,z),+pm[x](y;z);z in vt[y;x];vp x;+(!+. x)!`/:dd[y;z],x]};p2:{0!(?).@[x;0;p1[;y;z]]}
 
-p:{$[~#D;p2[x;d]':y;(,/p2[x]'/':P[i](;)'y)@<,/y@:i:&0<#:'y:D{x@&x in y}\:y]}
-view:{pd::PD x:$[(::)~x;x;$[#x:&PV in x;x;'"invalid partition filter"]];u~:?u::..[pf;();:;pv::PV x];.[;();:;]'[pt;{+(x . y,`.d)!y}[x]':pt::!x:d0[]];pn::pt!(#pt)#()}
+p:{$[~#D;sp[p2[x;d]]y;(,/sp[p2[x]'/]P[i](;)'y)@<,/y@:i:&0<#:'y:D{x@&x in y}\:y]}
+view:{pd::PD x:$[(::)~x;x;$[#x:&PV in x;x;'"invalid partition filter"]];u~:?u::..[pf;();:;pv::PV x];.[;();:;]'[pt;sp[{+(x . y,`.d)!y}[x]]pt::!x:d0[]];pn::pt!(#pt)#()}
 
-jp:{$[$["w"~*$.z.o;u[$[(_u:$y)like"[a-z]:*";2;0]]in"\\/";("/"=*$y)|objp y];-1!y;`/:x,y]};rp:-500!
-L:{D::();f:{!:'?{-1!`$("/"/:3#"/"\:x),"/_"}'u&objp'u:1_'$x;x};f@,d::$[z;rp y;y];if[x~,`par.txt;if[~#x:,/D::{x@&~(x:!x)like"*$"}'P::f@jp[d]'`$0:`/:d,*x;'empty]];if[^*PV::x@:<x:(t:"DMJJ"i:10 7 4?#$*x)$$x;'`part];
+jp:{$[$["w"~*$.z.o;u[$[(_u:$y)like"[a-z]:*";2;0]]in"\\/";("/"=*$y)|objp y];-1!y;`/:x,y]};rp:-500!;fobj:{!:'?{-1!`$("/"/:3#"/"\:x),"/_"}'u&objp'u:1_'$x;x}
+L1:{[x;y;z;i;p]D::`$'$D;fobj@,d::$[z;rp y;y];$[x~,`par.txt;if[~#x:,/D::$[i;{?:'D,'{x@&{11h=@!x}'`/:'y,'x:`$$x}[x]'y}[p];{x@&~(x:!x)like"*$"}']@P::fobj@jp[d]'`$0:`/:d,*x;'empty];i;x:`$$?PV,p@&{11h=@!x}'jp[d]'`$$p];if[^*PV::x@:<x:(t:"DMJJ"i:10 7 4?#$*x)$$x;'`part];
  PD::$[#D::t$'$D;,/{P@&x in'D}'?PV;(#PV)#d];pf::`date`month`year`int i;view[];if[(0>."\\p")|."\\_";cn'.:'pt];}
+L:{D::();L1[x;y;z;0;()]};li:{L1[$[D~();::;,`par.txt];d;0;1;x,()]}
 /L:{P::,`:.;D::,x;pf::`date;pt::!P[0]@**D;T::P!P{z!{x!(y . ,[;`]z,)'x}[x;y]'z}[pt]'D}
 
-cn:{$[#n:pn x:.+x;n;pn[x]:(#p1 .)':+(x;pd;pv)]};pcnt:{+/cn x};dt:{cn[y]@&pv in x}
+cn:{$[#n:pn x:.+x;n;pn[x]:sp[#p1 .;+(x;pd;pv)]]};pcnt:{+/cn x};dt:{cn[y]@&pv in x}
 ind:{,/i[j]{fp[pf;p]p1[x;pd y;p:pv y]z}[.+x]'(j:&~=':i)_y-n i:(n:+\0,cn x)bin y}
 fp:{+((,*x)!,(#z)#$[-7h=@y;y;(*|x)$y]),+z}
 foo:{[t;c;b;a;v;d]if[v;g:*|`\:b f:*!b;b:1_b];,/$[v|~#a;d fp[$[v;f,g;pf]]';::]p[(.+t;c;b;a)]d}

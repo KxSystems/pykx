@@ -1,17 +1,40 @@
 from contextlib import contextmanager
 from functools import wraps
 import inspect
+import io
 import os
+from pathlib import Path
 import platform
+import signal
+import shutil
+import subprocess
+import sys
+import time
 from typing import Any, Callable, Dict, Union
+from zipfile import ZipFile
+from warnings import warn
 
 import pandas as pd
 from pandas.core.internals import BlockManager, make_block
+import requests
+import toml
 
-from .config import qargs, qhome, qlic
+from .config import (
+    _executable, _get_qexecutable, _get_qhome, allocator, beta_features, ignore_qhome,
+    jupyterq, k_gc, keep_local_times, licensed, load_pyarrow_unsafe, max_error_length,
+    no_pykx_signal, no_qce, pykx_4_1, pykx_config_location, pykx_config_profile,
+    pykx_debug_insights, pykx_dir, pykx_lib_dir, pykx_qdebug, pykx_threading, q_executable, qargs,
+    qhome, qlic, release_gil, skip_under_q, suppress_warnings, use_q_lock)
 from ._version import version as __version__
 from .exceptions import PyKXException
 from .reimporter import PyKXReimport
+
+
+try:
+    import psutil
+    _psutil_available = True
+except ImportError:
+    _psutil_available = False
 
 
 __all__ = [
@@ -27,9 +50,18 @@ __all__ = [
     'normalize_to_bytes',
     'normalize_to_str',
     'once',
+    'detect_bad_columns',
     'slice_to_range',
     'subclasses',
+    'jupyter_qfirst_enable',
+    'jupyter_qfirst_disable',
+    'kill_q_process'
 ]
+
+
+def _init(_q):
+    global q
+    q = _q
 
 
 def __dir__():
@@ -281,53 +313,44 @@ def debug_environment(detailed: bool = False, return_info: bool = False) -> Unio
     pykx.qhome: /usr/local/anaconda3/envs/qenv/q
     pykx.qlic: /usr/local/anaconda3/envs/qenv/q
     pykx.licensed: True
-    pykx.__version__: 2.4.3
+    pykx.__version__: 2.5.3.dev646+gfe6232c7.d20241002
     pykx.file: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py
 
     **** Python information ****
-    sys.version: 3.8.3 (default, Jul  2 2020, 11:26:31)
-    [Clang 10.0.0 ]
-    pandas: 2.0.3
-    numpy: 1.24.4
-    pytz: 2023.3.post1
+    sys.version: 3.12.3 (v3.12.3:f6650f9ad7, Apr  9 2024, 08:18:48)
+    pandas: 1.5.3
+    numpy: 1.26.2
+    pytz: 2024.1
     which python: /usr/local/bin/python
     which python3: /Library/Frameworks/Python.framework/Versions/3.12/bin/python3
-    find_libpython: /usr/local/anaconda3/lib/libpython3.8.dylib
+    find_libpython: /Library/Frameworks/Python.framework/Versions/3.12/Python
 
     **** Platform information ****
-    platform.platform: macOS-10.16-x86_64-i386-64bit
+    platform.platform: macOS-13.0.1-x86_64-i386-64bit
 
-    **** PyKX Environment Variables ****
-    PYKX_IGNORE_QHOME:
-    PYKX_KEEP_LOCAL_TIMES:
-    PYKX_ALLOCATOR:
-    PYKX_GC:
-    PYKX_LOAD_PYARROW_UNSAFE:
-    PYKX_MAX_ERROR_LENGTH:
-    PYKX_NOQCE:
-    PYKX_Q_LIB_LOCATION:
-    PYKX_RELEASE_GIL:
-    PYKX_Q_LOCK:
+    **** PyKX Configuration Variables ****
+    PYKX_IGNORE_QHOME: False
+    PYKX_KEEP_LOCAL_TIMES: False
+    PYKX_ALLOCATOR: False
+    PYKX_GC: False
+    PYKX_LOAD_PYARROW_UNSAFE: False
+    PYKX_MAX_ERROR_LENGTH: 256
+    PYKX_NOQCE: False
+    PYKX_RELEASE_GIL: False
+    PYKX_Q_LIB_LOCATION: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib
+    PYKX_Q_LOCK: False
+    PYKX_SKIP_UNDERQ: False
+    PYKX_Q_EXECUTABLE: /usr/local/anaconda3/envs/qenv/q/m64/q
+    PYKX_THREADING: False
+    PYKX_4_1_ENABLED: False
+    PYKX_QDEBUG: False
+    PYKX_DEBUG_INSIGHTS_LIBRARIES: False
     PYKX_DEFAULT_CONVERSION:
-    PYKX_SKIP_UNDERQ:
-    PYKX_UNSET_GLOBALS:
-    PYKX_DEBUG_INSIGHTS_LIBRARIES:
-    PYKX_EXECUTABLE: /usr/local/anaconda3/bin/python
+    PYKX_EXECUTABLE: /Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12
     PYKX_PYTHON_LIB_PATH:
     PYKX_PYTHON_BASE_PATH:
     PYKX_PYTHON_HOME_PATH:
-    PYKX_DIR: /usr/local/anaconda3/lib/python3.8/site-packages/pykx
-    PYKX_QDEBUG:
-    PYKX_THREADING:
-    PYKX_4_1_ENABLED:
-
-    **** PyKX Deprecated Environment Variables ****
-    SKIP_UNDERQ:
-    UNSET_PYKX_GLOBALS:
-    KEEP_LOCAL_TIMES:
-    IGNORE_QHOME:
-    UNDER_PYTHON:
-    PYKX_NO_SIGINT:
+    PYKX_DIR: /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pykx
 
     **** q Environment Variables ****
     QARGS:
@@ -342,15 +365,8 @@ def debug_environment(detailed: bool = False, return_info: bool = False) -> Unio
     pykx.qlic lics: ['k4.lic']
 
     **** q information ****
-    which q: /usr/local/anaconda3/envs/qenv/q/q
-    q info:
-    (`m64;4f;2020.05.04)
-    "insights.lib.embedq insights.lib.pykx..
+    which q: None
     ```
-
-
-
-
     """
     debug_info = ""
     debug_info += pykx_information()
@@ -371,7 +387,6 @@ def pykx_information():
     pykx_info += f"pykx.qhome: {qhome}\n"
     pykx_info += f"pykx.qlic: {qlic}\n"
 
-    from .config import licensed
     pykx_info += f"pykx.licensed: {licensed}\n"
     pykx_info += f"pykx.__version__: {__version__}\n"
     pykx_info += f"pykx.file: {__file__}\n"
@@ -381,7 +396,6 @@ def pykx_information():
 def python_information():
     py_info = '\n**** Python information ****\n'
     try:
-        import sys
         py_info += f"sys.version: {sys.version}\n"
 
         import importlib.metadata
@@ -409,25 +423,33 @@ def platform_information():
 
 
 def env_information():
-    env_info = '\n**** PyKX Environment Variables ****\n'
+    env_info = '\n**** PyKX Configuration Variables ****\n'
 
-    envs = ['PYKX_IGNORE_QHOME', 'PYKX_KEEP_LOCAL_TIMES', 'PYKX_ALLOCATOR',
-            'PYKX_GC', 'PYKX_LOAD_PYARROW_UNSAFE', 'PYKX_MAX_ERROR_LENGTH',
-            'PYKX_NOQCE', 'PYKX_Q_LIB_LOCATION', 'PYKX_RELEASE_GIL', 'PYKX_Q_LOCK',
-            'PYKX_DEFAULT_CONVERSION', 'PYKX_SKIP_UNDERQ', 'PYKX_UNSET_GLOBALS',
-            'PYKX_DEBUG_INSIGHTS_LIBRARIES', 'PYKX_EXECUTABLE', 'PYKX_PYTHON_LIB_PATH',
-            'PYKX_PYTHON_BASE_PATH', 'PYKX_PYTHON_HOME_PATH', 'PYKX_DIR', 'PYKX_QDEBUG',
-            'PYKX_THREADING', 'PYKX_4_1_ENABLED'
-            ]
+    global_config = {'PYKX_IGNORE_QHOME': ignore_qhome, 'PYKX_KEEP_LOCAL_TIMES': keep_local_times,
+                     'PYKX_ALLOCATOR': allocator, 'PYKX_GC': k_gc,
+                     'PYKX_LOAD_PYARROW_UNSAFE': load_pyarrow_unsafe,
+                     'PYKX_MAX_ERROR_LENGTH': max_error_length, 'PYKX_NOQCE': no_qce,
+                     'PYKX_RELEASE_GIL': release_gil, 'PYKX_Q_LIB_LOCATION': pykx_lib_dir,
+                     'PYKX_Q_LOCK': use_q_lock, 'PYKX_SKIP_UNDERQ': skip_under_q,
+                     'PYKX_Q_EXECUTABLE': q_executable, 'PYKX_THREADING': pykx_threading,
+                     'PYKX_4_1_ENABLED': pykx_4_1, 'PYKX_QDEBUG': pykx_qdebug,
+                     'PYKX_DEBUG_INSIGHTS_LIBRARIES': pykx_debug_insights,
+                     'PYKX_CONFIGURATION_LOCATION': pykx_config_location,
+                     'PYKX_NO_SIGNAL': no_pykx_signal,
+                     'PYKX_CONFIG_PROFILE': pykx_config_profile,
+                     'PYKX_BETA_FEATURES': beta_features, 'PYKX_JUPYTERQ': jupyterq,
+                     'PYKX_SUPPRESS_WARNINGS': suppress_warnings}
 
-    for x in envs:
-        env_info += f"{x}: {os.getenv(x, '')}\n"
+    env_only = ['PYKX_DEFAULT_CONVERSION',
+                'PYKX_EXECUTABLE', 'PYKX_PYTHON_LIB_PATH',
+                'PYKX_PYTHON_BASE_PATH', 'PYKX_PYTHON_HOME_PATH', 'PYKX_DIR',
+                'PYKX_USE_FIND_LIBPYTHON'
+                ]
 
-    env_info += '\n**** PyKX Deprecated Environment Variables ****\n'
-    deps = ['SKIP_UNDERQ', 'UNSET_PYKX_GLOBALS', 'KEEP_LOCAL_TIMES', 'IGNORE_QHOME',
-            'UNDER_PYTHON', 'PYKX_NO_SIGINT']
+    for k, v in global_config.items():
+        env_info += f"{k}: {v}\n"
 
-    for x in deps:
+    for x in env_only:
         env_info += f"{x}: {os.getenv(x, '')}\n"
 
     env_info += '\n**** q Environment Variables ****\n'
@@ -483,3 +505,248 @@ def q_information():
     except Exception as e:
         q_info += f"Failed to gather q information: {e}"
     return q_info
+
+
+def _run_all_cell_with_magics(lines):
+    if "%%python" == lines[0].strip():
+        return lines[1:]
+    elif "%%q" in lines[0].strip():
+        return lines
+    else:
+        return (["%%q \n"]+lines)
+
+
+def jupyter_qfirst_enable():
+    qfirst_modify("q")
+
+
+def jupyter_qfirst_disable():
+    qfirst_modify("python")
+
+
+def qfirst_modify(state):
+    try:
+        ipython = get_ipython()
+        if _run_all_cell_with_magics in ipython.input_transformers_cleanup and state == "python":
+            ipython.input_transformers_cleanup.remove(_run_all_cell_with_magics)
+            print("""PyKX now running in 'python' mode (default). All cells by default will be run as python code. 
+Include '%%q' at the beginning of each cell to run as q code. """) # noqa 
+        elif _run_all_cell_with_magics not in ipython.input_transformers_cleanup and state == "q":
+            ipython.input_transformers_cleanup.append(_run_all_cell_with_magics)
+            print("""PyKX now running in 'jupyter_qfirst' mode. All cells by default will be run as q code. 
+Include '%%python' at the beginning of each cell to run as python code. """) # noqa 
+        else:
+            print(f"PyKX already running in '{state}' mode")
+    except NameError:
+        print("Not running under IPython/Jupyter")
+
+
+def add_to_config(config, folder='~'):
+    """
+    Add configuration options to the file '.pykx-config' in a specified folder
+
+    Parameters:
+        config: A dictionary mapping the configuration options to their associated value
+        folder: The folder where the users '.pykx-config' file is to be updated
+
+    Examples:
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.util.add_to_config({'PYKX_GC': 'True', 'PYKX_BETA_FEATURES': 'True'})
+    Configuration updated at: /usr/local/.pykx-config.
+    Profile updated: default.
+    Successfully added:
+        - PYKX_GC = True
+        - PYKX_BETA_FEATURES = True
+    ```
+    """
+    if not isinstance(config, dict):
+        raise TypeError(f'Supplied config must be of type dict, supplied type: {type(config)}')
+    fpath = str(Path(os.path.expanduser(folder)) / '.pykx-config')
+    try:
+        os.access(fpath, os.W_OK)
+    except FileNotFoundError:
+        pass
+    except PermissionError:
+        raise PermissionError(f"You do not have sufficient permissions to write to: {fpath}")
+    print_config = f"\nConfiguration updated at: {fpath}.\nProfile updated: "\
+                   f"{pykx_config_profile}.\nSuccessfully added:\n"
+    if os.path.exists(fpath):
+        with open(fpath, 'r') as file:
+            data = toml.load(file)
+    else:
+        data = {pykx_config_profile: {}}
+    for k, v in config.items():
+        data[pykx_config_profile][k] = v
+        print_config += f'\t- {k} = {v}\n'
+        os.environ[k] = v
+    with open(fpath, 'w') as file:
+        toml.dump(data, file)
+        print(print_config)
+
+
+_user_os = {'Linux': 'l64', 'Darwin': 'm64', 'Windows': 'w64'}
+
+_user_arch = {'x86_64': '', 'aarch64': 'arm'}
+
+_kdb_url = 'https://portal.dl.kx.com/assets/raw/kdb+/4.0'
+
+
+def install_q(location: str = '~/q',
+              overwrite_config: bool = False,
+              prompted: bool = False,
+              date: str = '2024.07.08'):
+    """
+    Install q to a specified location.
+
+    Parameters:
+        location: The location to which q will be installed
+        overwrite_config: Should a configuration file in your HOME directory be overwritten?
+        prompted: Should a user be prompted for input requesting configuration overwrite
+            this is used specifically when other functions would be installing q
+        date: The dated version of kdb+ 4.0 which is to be installed
+    """
+    global qhome
+    my_os = _user_os[platform.uname()[0]]
+    if my_os == 'l64':
+        my_os += _user_arch[platform.uname()[4]]
+    location = Path(os.path.expanduser(location))
+    url = f'{_kdb_url}/{date}/{my_os}.zip'
+    r = requests.get(url)
+    if not r.status_code == 200:
+        raise RuntimeError(f'Request for download of q unsuccessful with code: {r.status_code}')
+    zf = ZipFile(io.BytesIO(r.content), 'r')
+    zf.extractall(location)
+    try:
+        executable = 'q.exe' if my_os == 'w64' else 'q'
+        executable_loc = location/my_os/executable
+        os.chmod(executable_loc, 0o777)
+    except BaseException:
+        raise RuntimeError(f"Unable to set execute permissions on file: {executable_loc}")
+    shutil.copy(pykx_dir/'pykx.q', location/'pykx.q')
+    shutil.copy(pykx_dir/'lib/s.k_', location/'s.k_')
+
+    add_to_config({
+        'PYKX_Q_EXECUTABLE': str(executable_loc),
+        'QHOME': str(location)})
+    print('Please restart your process to use this executable.')
+
+
+def start_q_subprocess(port: int,
+                       load_file: str = '',
+                       init_args: list = None,
+                       process_logs: bool = True,
+                       return_server: bool = True,
+                       prompt: bool = True):
+    """
+    Initialize a q subprocess using a supplied path to an executable on a specified port
+
+    Parameters:
+        port: The port on which the q process will be started.
+        init_args: A list denoting any arguments to be passed when starting
+            the q process.
+        process_logs: Should stdout/stderr be printed to in the parent process
+        prompt: Should a user be prompted for input relating to how/where install of q
+            should be completed if not originally available.
+
+    Returns:
+        The subprocess object which was generated on initialisation
+    """
+    q_executable = _get_qexecutable()
+    if q_executable is None:
+        my_os = _user_os[platform.uname()[0]]
+        if my_os == 'l64':
+            my_os += _user_arch[platform.uname()[4]]
+        qhome = _get_qhome()
+        loc = qhome / my_os / _executable
+        if loc.is_file():
+            q_executable = str(loc)
+        else:
+            raise RuntimeError(
+                'Unable to locate an appropriate q executable\n'
+                'Please install q using the function "kx.util.install_q" or following the '
+                'instructions at:\nhttps://code.kx.com/pykx/getting-started/installing.html'
+            )
+    with PyKXReimport():
+        qinit = [q_executable, load_file, '-p', f'{port}']
+        if init_args is not None:
+            if not isinstance(init_args, list):
+                raise TypeError('Supplied additional startup arguments must be a list')
+            if not all(isinstance(s, str) for s in init_args):
+                raise TypeError('All supplied arguments to init_args must be str type objects')
+            qinit.extend(init_args)
+        server = subprocess.Popen(
+            qinit,
+            stdin=subprocess.PIPE,
+            stdout=None if process_logs else subprocess.DEVNULL,
+            stderr=None)
+        time.sleep(2)
+    return server
+
+
+def kill_q_process(port: int) -> bool:
+    """
+    Kill a q process running on a specified port, this allows users to
+    to kill sub-processes running q in the case access to the port has been
+    lost due to parent process
+
+    Parameters:
+        port: The port which is to be killed
+
+    Returns:
+        Kill a process and return None
+    """
+    if not _psutil_available:
+        raise ImportError(
+            'psutil library not available, install psutil with pip/conda as follows :\n'
+            '    pip -> pip install psutil\n'
+            '    conda -> conda install conda-forge::psutil'
+        )
+    processes = [proc for proc in psutil.process_iter() if proc.name()
+                 == 'q']
+    for p in processes:
+        for c in p.connections():
+            if c.status == 'LISTEN' and c.laddr.port == port:
+                try:
+                    os.kill(p.pid, signal.SIGKILL)
+                    return True
+                except BaseException:
+                    return False
+    return False
+
+
+def detect_bad_columns(table, return_cols: bool = False):
+    """
+    Validate that the columns of a table conform to expected naming conventions for kdb+
+    and do not contain duplicates.
+
+    Parameters:
+        table: The `pykx.Table`, `pykx.KeyedTable`, `pykx.SplayedTable` or
+            `pykx.PartitionedTable` object which is to be checked
+        return_cols: Should the invalid columns from the table be returned
+
+    Returns:
+        Raises a warning indicating the issue with the column(s) and returns `True` or `False`
+        if the columns are invalid (`True`) or not (`False`).
+    """
+    cols = []
+    bad_cols = q('.pykx.util.html.detectbadcols', table).py()
+    hasDups, hasInvalid = [len(x) for x in bad_cols.values()]
+    if hasDups or hasInvalid:
+        warn_string = '\nDuplicate columns or columns with reserved characters detected:'
+        if hasDups:
+            warn_string += f'\n\tDuplicate columns: {bad_cols["dup"]}'
+        if hasInvalid:
+            warn_string += f'\n\tInvalid columns: {bad_cols["invalid"]}'
+        warn_string += '\nSee https://code.kx.com/pykx/help/troubleshooting.html to learn more about updating your table' # noqa
+        warn(warn_string, RuntimeWarning)
+        if return_cols:
+            for i in bad_cols.values():
+                cols.extend(i)
+            return cols
+        else:
+            return True
+    if return_cols:
+        return cols
+    return False

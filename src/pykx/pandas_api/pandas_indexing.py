@@ -10,40 +10,38 @@ def _init(_q):
     q = _q
 
 
-def _get(tab, key, default, cols_check=True):
+def _get(tab, key, default=None, cols_check=True):
     idxs = None
     _init_tab = None
-    single_col = False
-    if isinstance(key, SymbolAtom) or isinstance(key, str):
-        single_col = True
+    single_col = isinstance(key, (SymbolAtom, str))
+
     if 'Keyed' in str(type(tab)):
         keys, idxs = key
         _init_tab = tab
-        tab = q('{value x}', tab)
+        tab = q('value', tab)
         if 0 in idxs:
             keys = keys[1:]
         key = keys
-    if cols_check:
-        if q('{not all x in cols y}', key, tab):
-            colstr = str(q('{((),x) except cols y}', key, tab).py())
-            raise QError(f'Attempted to retrieve inaccessible columns: {colstr}')
-    if isinstance(key, list) or isinstance(key, SymbolVector):
-        if not all([x in tab._keys for x in key]):
+
+    if cols_check and q('{not all x in cols y}', key, tab) and default is None:
+        colstr = str(q('{((),x) except cols y}', key, tab).py())
+        raise QError(f'Attempted to retrieve inaccessible columns: {colstr}')
+
+    if isinstance(key, (list, SymbolVector)):
+        if not all(x in tab._keys for x in key):
             return default
         tab = q('{?[x; (); 0b; y!y]}', tab, SymbolVector(key))
         if idxs is not None and 0 in idxs:
             tab = q('{(key x)!(y)}', _init_tab, tab)
         return tab
+
     if isinstance(key, SymbolAtom):
         key = key.py()
-    if single_col:
-        warnings.warn("\n\tSingle column retrieval using 'get' method will return a vector/list "
-                      "object in release 3.0+\n\t"
-                      "To access the vector/list directly use table['column_name']",
-                      FutureWarning)
-    if key in q('{key flip 0#x}', tab).py():
-        tab = q(f'{{([] {key}: x[y])}}', tab, key)
-        return tab
+
+    if key in q('cols', tab).py():
+        return (q('{[t;k](0!t)k}', tab, key) if single_col
+                else q('{((),y)#0!x}', tab, key))
+
     return default
 
 
@@ -220,12 +218,10 @@ def _loc(tab, loc): # noqa
                 keys = [keys]
             if type(loc) is str or isinstance(loc, SymbolAtom):
                 if loc in keys:
+                    raise KeyError(f"['{loc}'] is the index of a keyed column")
+                if loc not in q.cols(tab).py():
                     raise KeyError(f"['{loc}'] is not an index")
-                return q(
-                    f'{{[x; y] (key x)!(flip (enlist `{loc})!(enlist y))}}',
-                    tab,
-                    q('{0!x}', tab)[loc]
-                )
+                return q('{[x; y] key[x]!?[x;();0b;{x!x} enlist y]}', tab, loc)
             if any([x in keys for x in loc]):
                 raise KeyError(f"['{loc}'] is not an index")
             return q(
@@ -364,7 +360,7 @@ class PandasIndexing:
     @api_return
     def get(self, key, default=None):
         """Get items from table based on key, if key is not found default is returned."""
-        return _get(self, key, default, cols_check=False)
+        return _get(self, key, default)
 
     @property
     def at(self):

@@ -1,29 +1,20 @@
-"""Functionality for the interaction with and management of databases.
-
-!!! Warning
-
-        This functionality is provided in it's present form as a BETA
-        Feature and is subject to change. To enable this functionality
-        for testing please following configuration instructions
-        [here](../user-guide/configuration.md) setting `PYKX_BETA_FEATURES='true'`
+"""
+_This page documents the API for managing kdb+ databases using PyKX._
 """
 
 from .exceptions import QError
 from . import wrappers as k
-from . import beta_features
-from .config import _check_beta
+from .config import pykx_4_1
 from .compress_encrypt import Compress, Encrypt
 
 import os
 from pathlib import Path
-from typing import Union
+from typing import Any, Optional, Union
 from warnings import warn
 
 __all__ = [
     'DB',
 ]
-
-beta_features.append('Database Management')
 
 
 def _init(_q):
@@ -83,61 +74,131 @@ class _TABLES:
 
 
 class DB(_TABLES):
-    """Singleton class used for the management of kdb+ Databases"""
     _instance = None
     _init_tabs = None
+    _dir_cache = None
+    _change_dir = True
+    _load_script = True
     path = None
     tables = None
     table = _TABLES
     loaded = False
 
-    def __new__(cls, *, path=None):
+    def __new__(cls,
+                *,
+                path: Optional[Union[str, Path]] = None,
+                change_dir: Optional[bool] = True,
+                load_scripts: Optional[bool] = True
+    ) -> None:
+        if cls._dir_cache is None:
+            cls._dir_cache = dir(cls)
         if cls._instance is None:
             cls._instance = super(DB, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, *, path=None):
-        _check_beta('Database Management')
+    def __init__(self,
+                 *,
+                 path: Optional[Union[str, Path]] = None,
+                 change_dir: Optional[bool] = True,
+                 load_scripts: Optional[bool] = True
+    ) -> None:
+        """
+        Initialize a database class used within your process. This is a singleton class from
+            which all interactions with your database will be made. On load if supplied
+            with a 'path' this functionality will attempt to load the database at this location.
+            If no database exists at this location the path supplied will be used when a new
+            database is created.
+
+        Parameters:
+            path: The location at which your database is/will be located.
+            change_dir: Should the working directory be changed to the location of the
+                loaded database, for q 4.0 this is the only supported behavior, please
+                set `PYKX_4_1_ENABLED` to allow use if this functionality.
+            load_scripts: Should any q scripts find in the database directory be loaded,
+                for q 4.0 this is the only supported behavior, please set
+                `PYKX_4_1_ENABLED` to allow use if this functionality.
+
+        Returns:
+            A database class which can be used to interact with a partitioned database.
+
+        Examples:
+
+        Load a partitioned database at initialization
+
+        ```python
+        >>> import pykx as kx
+        >>> db = kx.DB(path = '/tmp/db')
+        >>> db.tables
+        ['quote', 'trade']
+        ```
+
+        Define the path to be used for a database which does not initially exist
+
+        ```python
+        >>> import pykx as kx
+        >>> db = kx.DB(path = 'db')
+        >>> db.tables
+        >>> db.path
+        PosixPath('/usr/projects/pykx/db')
+        ```
+        """
+        self._change_dir = change_dir
+        self._load_scripts = load_scripts
+        if not pykx_4_1:
+            if not change_dir:
+                raise QError("'change_dir' behavior only supported with PYKX_4_1_ENABLED")
+            if not load_scripts:
+                raise QError("'load_scripts' behavior only supported with PYKX_4_1_ENABLED")
         if path is not None:
             try:
-                self.load(path)
+                self.load(path, change_dir=self._change_dir, load_scripts=self._load_scripts)
             except BaseException:
                 self.path = Path(os.path.abspath(path))
         pass
 
-    def create(self, table, table_name, partition, *, # noqa: C901
-               by_field=None, sym_enum=None, log=True,
-               compress=None, encrypt=None):
+    def create(self,
+               table: k.Table,
+               table_name: str,
+               partition: Union[int, str, k.DateAtom],
+               *, # noqa: C901
+               by_field: Optional[str] = None,
+               sym_enum: Optional[str] = None,
+               log: Optional[bool] = True,
+               compress: Optional[Compress] = None,
+               encrypt: Optional[Encrypt] = None,
+               change_dir: Optional[bool] = True,
+               load_scripts: Optional[bool] = True
+    ) -> None:
         """
         Create an on-disk partitioned table within a kdb+ database from a supplied
-            `pykx.Table` object. Once generated this table will be accessible
-            as an attribute of the `DB` class or a sub attribute of `DB.table`.
+            `#!python pykx.Table` object. Once generated this table will be accessible
+            as an attribute of the `#!python DB` class or a sub attribute of `#!python DB.table`.
 
         Parameters:
-            table: The `pykx.Table` object which is to be persisted to disk
+            table: The `#!python pykx.Table` object which is to be persisted to disk
             table_name: The name with which the table will be persisted and accessible
-                once loaded and available as a `pykx.PartitionedTable`
+                once loaded and available as a `#!python pykx.PartitionedTable`
             partition: The name of the column which is to be used to partition the data if
-                supplied as a `str` or if supplied as non string object this will be used as
-                the partition to which all data is persisted
+                supplied as a `#!python str` or if supplied as non string object this is
+                used as the partition to which all data is persisted.
             by_field: A field of the table to be used as a by column, this column will be
                 the second column in the table (the first being the virtual column determined
                 by the partitioning column)
             sym_enum: The name of the symbol enumeration table to be associated with the table
-            log: Print information about status of partitioned datab
-            compress: `pykx.Compress` initialized class denoting the
-                compression settings to be used when persisting a partition/partitions
-            encrypt: `pykx.Encrypt` initialized class denoting the encryption setting to be used
-                when persisting a partition/partitions
+            log: Print information about status while persisting the partitioned database
+            compress: `#!python pykx.Compress` initialized class denoting the compression settings
+                to be used when persisting a partition/partitions
+            encrypt: `#!python pykx.Encrypt` initialized class denoting the encryption setting
+                to be used when persisting a partition/partitions
 
 
         Returns:
-            A `None` object on successful invocation, the database class will be
+            A `#!python None` object on successful invocation, the database class is
                 updated to contain attributes associated with the available created table
 
         Examples:
 
-        Generate a partitioned table from a table containing multiple partitions
+        Generate a partitioned database from a table containing multiple partitions.
 
         ```python
         >>> import pykx as kx
@@ -165,8 +226,7 @@ class DB(_TABLES):
         '))
         ```
 
-        Add a table as a partition to an on-disk database, in the example below we are adding
-            a partition to the table generated above
+        Add a table as a partition to an on-disk database.
 
         ```python
         >>> import pykx as kx
@@ -193,8 +253,8 @@ class DB(_TABLES):
         '))
         ```
 
-        Add a table as a partition to an on-disk database, in the example below we are
-            additionally applying gzip compression to the persisted table
+        Add a table as a partition to an on-disk database and apply gzip
+            compression to the persisted table
 
         ```python
         >>> import pykx as kx
@@ -263,23 +323,41 @@ class DB(_TABLES):
             raise QError(err)
         q('{![`.;();0b;enlist x]}', table_name)
         q.z.zd = compression_cache
-        self.load(self.path, overwrite=True)
+        if change_dir is None:
+            change_dir = self._change_dir
+        if load_scripts is None:
+            load_scripts = self._load_scripts
+        self.load(self.path, overwrite=True, change_dir=change_dir, load_scripts=load_scripts)
         return None
 
-    def load(self, path: Union[Path, str], *, overwrite=False, encrypt=None):
+    def load(self,
+             path: Union[Path, str],
+             *,
+             change_dir: Optional[bool] = True,
+             load_scripts: Optional[bool] = True,
+             overwrite: Optional[bool] = False,
+             encrypt: Optional[Encrypt] = None
+    ) -> None:
         """
-        Load the tables associated with a kdb+ Database, once loaded a table
-            is accessible as an attribute of the `DB` class or a sub attribute
-            of `DB.table`. Note that can alternatively be called when providing a path
+        Load the tables associated with a kdb+ database. Once loaded, a table
+            is accessible as an attribute of the `#!python DB` class or a sub-attribute
+            of `#!python DB.table`. Note this can alternatively be called when providing a path
             on initialisation of the DB class.
 
         Parameters:
             path: The file system path at which your database is located
+            change_dir: Should the working directory be changed to the location of the
+                loaded database, for q 4.0 this is the only supported behavior, please
+                set `PYKX_4_1_ENABLED` to allow use if this functionality.
+            load_scripts: Should any q scripts find in the database directory be loaded,
+                for q 4.0 this is the only supported behavior, please set
+                `PYKX_4_1_ENABLED` to allow use if this functionality.
             overwrite: Should loading of the database overwrite any currently
                 loaded databases
+            encrypt: The encryption key object to be loaded prior to database load
 
         Returns:
-            A `None` object on successful invocation, the database class will be
+            A `#!python None` object on successful invocation, the database class is
                 updated to contain attributes associated with available tables
 
         Examples:
@@ -365,19 +443,35 @@ class DB(_TABLES):
                 raise ValueError('Supplied encrypt object not an instance of pykx.Encrypt')
             if not encrypt.loaded:
                 encrypt.load_key()
-        q('''
-          {[dbpath]
-            @[system"l ",;
-              1_string dbpath;
-              {'"Failed to load Database with error: ",x}
-              ]
-            }
-          ''', load_path)
+        if pykx_4_1:
+            q('''
+              {[path;cd;ld]
+                .[.Q.lo;
+                  (`$1_string path;cd;ld);
+                  {'"Failed to load Database with error: ",x}
+                  ]
+                }
+              ''', load_path, change_dir, load_scripts)
+        else:
+            if not change_dir:
+                raise QError("'change_dir' behavior only supported with PYKX_4_1_ENABLED")
+            if not load_scripts:
+                raise QError("'load_scripts' behavior only supported with PYKX_4_1_ENABLED")
+            db_path = load_path.parent
+            db_name = os.path.basename(load_path)
+            q('''
+              {[dbpath;dbname]
+                .[.pykx.util.loadfile;
+                  (1_string dbpath;string dbname);
+                  {'"Failed to load Database with error: ",x}
+                  ]
+                }
+              ''', db_path, db_name)
         self.path = load_path
         self.loaded = True
         self.tables = q.Q.pt.py()
         for i in self.tables:
-            if hasattr(self, i):
+            if i in self._dir_cache:
                 warn(f'A database table "{i}" would overwrite one of the pykx.DB() methods, please access your table via the table attribute') # noqa: E501
             else:
                 setattr(self, i, q[i])
@@ -386,19 +480,26 @@ class DB(_TABLES):
 
     def _reload(self):
         _check_loading(self, None, None)
-        return self.load(self.path, overwrite=True)
+        return self.load(self.path,
+                         overwrite=True,
+                         change_dir=self._change_dir,
+                         load_scripts=self._load_scripts)
 
-    def rename_column(self, table, original_name, new_name):
+    def rename_column(self,
+                      table: str,
+                      original_name: str,
+                      new_name: str
+    ) -> None:
         """
         Rename a column within a loaded kdb+ Database
 
         Parameters:
-            table: The name of the table within which a column is to be renamed
+            table: The name of the table containing the column to be renamed
             original_name: Name of the column which is to be renamed
-            new_name: Column name which will be used as the new column name
+            new_name: Updated column name
 
         Returns:
-            A `None` object on successful invocation, the database class will be
+            A `#!python None` object on successful invocation, the database class is```
                 updated and column rename actioned.
 
         Examples:
@@ -414,17 +515,8 @@ class DB(_TABLES):
         >>> db.list_columns('testTable')
         ['month', 'sym', 'time', 'price', 'size']
         >>> db.rename_column('testTable', 'sym', 'symbol')
-        >>> db.testTable
-        pykx.PartitionedTable(pykx.q('
-        month   symbol  time         price    size
-        ---------------------------------------
-        2020.01 FDP     00:00:00.004 90.94738 12
-        2020.01 FDP     00:00:00.005 33.81127 15
-        2020.01 FDP     00:00:00.027 88.89853 16
-        2020.01 FDP     00:00:00.035 78.33244 9
-        2020.01 JPM     00:00:00.055 68.65177 1
-        ..
-        '))
+        >>> db.list_columns('testTable')
+        ['month', 'symbol', 'time', 'price', 'size']
         ```
         """
         _check_loading(self, table, 'Column rename')
@@ -433,16 +525,16 @@ class DB(_TABLES):
         self._reload()
         return None
 
-    def delete_column(self, table, column):
+    def delete_column(self, table: str, column: str) -> None:
         """
-        Delete the column of a loaded kdb+ Database
+        Delete a column from a loaded kdb+ Database.
 
         Parameters:
-            table: The name of the table within which a column is to be deleted
-            column: Column which is to be deleted from the database
+            table: The name of the table containing the column to be deleted
+            column: Name of the column which is to be deleted from the table
 
         Returns:
-            A `None` object on successful invocation, the database class will be
+            A `#!python None` object on successful invocation, the database class is
                 updated and specified column deleted
 
         Examples:
@@ -458,17 +550,8 @@ class DB(_TABLES):
         >>> db.list_columns('testTable')
         ['month', 'sym', 'time', 'price', 'size']
         >>> db.delete_column('testTable', 'size')
-        >>> db.testTable
-        pykx.PartitionedTable(pykx.q('
-        month   symbol  time         price
-        -------------------------------------
-        2020.01 FDP     00:00:00.004 90.94738
-        2020.01 FDP     00:00:00.005 33.81127
-        2020.01 FDP     00:00:00.027 88.89853
-        2020.01 FDP     00:00:00.035 78.33244
-        2020.01 JPM     00:00:00.055 68.65177
-        ..
-        '))
+        >>> db.list_columns('testTable')
+        ['month', 'sym', 'time', 'price']
         ```
         """
         _check_loading(self, table, 'Column deletion')
@@ -477,7 +560,7 @@ class DB(_TABLES):
         self._reload()
         return None
 
-    def rename_table(self, original_name, new_name):
+    def rename_table(self, original_name: str, new_name: str) -> None:
         """
         Rename a table within a loaded kdb+ Database
 
@@ -486,7 +569,7 @@ class DB(_TABLES):
             new_name: Updated table name
 
         Returns:
-            A `None` object on successful invocation, the database class will be
+            A `#!python None` object on successful invocation, the database class is
                 updated, original table name deleted from q memory and new table
                 accessible
 
@@ -512,15 +595,15 @@ class DB(_TABLES):
         self._reload()
         return None
 
-    def list_columns(self, table):
+    def list_columns(self, table: str) -> None:
         """
         List the columns of a table within a loaded kdb+ Database
 
         Parameters:
-            table: The name of the table whose columns are listed
+            table: The name of the table whose columns are to be listed
 
         Returns:
-            A list of strings defining the columns of a table
+            A list of strings defining the columns of the table
 
         Examples:
 
@@ -539,7 +622,11 @@ class DB(_TABLES):
         _check_loading(self, table, 'Column listing')
         return q.dbmaint.listcols(self.path, table).py()
 
-    def add_column(self, table, column_name, default_value):
+    def add_column(self,
+                   table: str,
+                   column_name: str,
+                   default_value: Any
+    ) -> None:
         """
         Add a column to a table within a loaded kdb+ Database
 
@@ -554,7 +641,8 @@ class DB(_TABLES):
 
         Examples:
 
-        Add a column to a table within a partitioned database
+        Add a column to a table within a partitioned database where all items are
+            an integer null
 
         ```python
         >>> import pykx as kx
@@ -574,7 +662,7 @@ class DB(_TABLES):
         self._reload()
         return(None)
 
-    def find_column(self, table, column_name):
+    def find_column(self, table: str, column_name: str) -> None:
         """
         Functionality for finding a column across partitions within a loaded kdb+ Database
 
@@ -583,9 +671,9 @@ class DB(_TABLES):
             column_name: The name of the column to be found within a table
 
         Returns:
-            A `None` object on successful invocation printing search status per partition,
-            if a column does not exist in a specified partition an error will be raised
-            and the logs will indicate which columns did not have the specified column.
+            A `#!python None` object on successful invocation printing search status per partition.
+            If a column does not exist in a specified partition, an error is raised
+            and the logs indicate which columns did not contain the specified column.
 
         Examples:
 
@@ -625,7 +713,7 @@ class DB(_TABLES):
         _check_loading(self, table, 'Finding columns')
         return q.dbmaint.findcol(self.path, table, column_name).py()
 
-    def reorder_columns(self, table, new_order):
+    def reorder_columns(self, table: str, new_order: list) -> None:
         """
         Reorder the columns of a persisted kdb+ database
 
@@ -634,7 +722,7 @@ class DB(_TABLES):
             new_order: The ordering of the columns following update
 
         Returns:
-            A `None` object on successfully updating the columns of the database
+            A `#!python None` object on successfully updating the columns of the database
 
         Examples:
 
@@ -662,7 +750,7 @@ class DB(_TABLES):
         q.dbmaint.reordercols(self.path, table, new_order)
         return None
 
-    def set_column_attribute(self, table, column_name, new_attribute):
+    def set_column_attribute(self, table: str, column_name: str, new_attribute: str) -> None:
         """
         Set an attribute associated with a column for an on-disk database
 
@@ -670,10 +758,11 @@ class DB(_TABLES):
             table: The name of the table within which an attribute will be set
             column_name: Name of the column to which the attribute will be applied
             new_attribute: The attribute which is to be applied, this can be one of
-                'sorted'/'u', 'partitioned'/'p', 'unique'/'u' or 'grouped'/'g'.
+                `#!python 'sorted'`/`#!python 's'`, `#!python 'partitioned'`/`#!python 'p'`,
+                `#!python 'unique'`/`#!python 'u'` or `#!python 'grouped'`/`#!python 'g'`.
 
         Returns:
-            A `None` object on successfully setting the attribute for a column
+            A `#!python None` object on successfully setting the attribute for a column
 
         Examples:
 
@@ -720,7 +809,7 @@ class DB(_TABLES):
         q.dbmaint.setattrcol(self.path, table, column_name, new_attribute)
         return None
 
-    def set_column_type(self, table, column_name, new_type):
+    def set_column_type(self, table: str, column_name: str, new_type: k.K) -> None:
         """
         Convert/set the type of a column to a specified type
 
@@ -730,7 +819,7 @@ class DB(_TABLES):
             new_type: PyKX type to which a column is to be converted
 
         Returns:
-            A `None` object on successfully updating the type of the column
+            A `#!python None` object on successfully updating the type of the column
 
         Examples:
 
@@ -777,7 +866,7 @@ class DB(_TABLES):
         self._reload()
         return None
 
-    def clear_column_attribute(self, table, column_name):
+    def clear_column_attribute(self, table: str, column_name: str) -> None:
         """
         Clear an attribute associated with a column of an on-disk database
 
@@ -786,7 +875,7 @@ class DB(_TABLES):
             column_name: Name of the column from which an attribute will be removed
 
         Returns:
-            A `None` object on successful removal of the attribute of a column
+            A `#!python None` object on successful removal of the attribute of a column
 
         Examples:
 
@@ -824,7 +913,7 @@ class DB(_TABLES):
         q.dbmaint.clearattrcol(self.path, table, column_name)
         return None
 
-    def copy_column(self, table, original_column, new_column):
+    def copy_column(self, table: str, original_column: str, new_column: str) -> None:
         """
         Create a copy of a column within a table
 
@@ -834,7 +923,7 @@ class DB(_TABLES):
             new_column: Name of the copied column
 
         Returns:
-            A `None` object on successful column copy, reloading the
+            A `#!python None` object on successful column copy, reloading the
             database following column copy
 
         Examples:
@@ -857,18 +946,18 @@ class DB(_TABLES):
         self._reload()
         return None
 
-    def apply_function(self, table, column_name, function):
+    def apply_function(self, table: str, column_name: str, function: callable) -> None:
         """
         Apply a function per partition on a column of a persisted kdb+ database
 
         Parameters:
             table: Name of the table
             column_name: Name of the column on which the function is to be applied
-            function: Callable function to be applied on a column vector per column
+            function: Callable function to be applied on a column vector per partition
 
         Returns:
-            A `None` object on successful application of a function to the column
-            and the reloading of the database
+            A `#!python None` object on successful application of a function to the column
+            and reloading of the database
 
         Examples:
 
@@ -942,14 +1031,14 @@ class DB(_TABLES):
         self._reload()
         return None
 
-    def fill_database(self):
+    def fill_database(self) -> None:
         """
         Fill missing tables from partitions within a database using the
             most recent partition as a template, this will report the
             partitions but not the tables which are being filled.
 
         Returns:
-            A `None` object on successful filling of missing tables in
+            A `#!python None` object on successful filling of missing tables in
                 partitioned database
 
         Examples:
@@ -979,25 +1068,25 @@ class DB(_TABLES):
         self._reload()
         return None
 
-    def partition_count(self, *, subview=None):
+    def partition_count(self, *, subview: Optional[list] = None) -> k.Dictionary:
         """
         Count the number of rows per partition for the presently loaded database.
-            Use of the parameter `subview` can allow users to count only the rows
-            in specifies partitions.
+            Use of the parameter `#!python subview` can allow users to count only the rows
+            in specified partitions.
 
         Parameters:
             subview: An optional list of partitions from which to retrieve the per partition
                 count
 
         Returns:
-            A `pykx.Dictionary` object showing the count of data in each table within
+            A `#!python pykx.Dictionary` object showing the count of data in each table within
                 the presently loaded partioned database.
 
         !!! Warning
 
-                Using this function will result in any specified `subview` of the data being reset,
-                if you require the use of a subview for queries please reset using the database
-                `subview` command.
+                Using this function results in any specified `#!python subview` of the data
+                being reset, if you require the use of a subview for queries please set using
+                the database `#!python subview` command.
 
         Examples:
 
@@ -1041,18 +1130,18 @@ class DB(_TABLES):
         q.Q.view()
         return res
 
-    def subview(self, view=None):
+    def subview(self, view: list = None) -> None:
         """
         Specify the subview to be used when querying a partitioned table
 
         Parameters:
             view: A list of partition values which will serve as a filter
                 for all queries against any partitioned table within the
-                database. If view is supplied as `None` this will reset
+                database. If view is supplied as `#!python None` this resets
                 the query view to all partitions
 
         Returns:
-            A `None` object on successful setting of the view state
+            A `#!python None` object on successful setting of the view state
 
         Examples:
 
@@ -1095,24 +1184,23 @@ class DB(_TABLES):
             q.Q.view(view)
         return None
 
-    def enumerate(self, table, *, sym_file=None):
+    def enumerate(self, table: str, *, sym_file: Optional[str] = None) -> k.Table:
         """
         Perform an enumeration on a user specified table against the
             current sym files associated with the database
 
         Parameters:
-            path: The folder location to which your table will be persisted
-            table: The `pykx.Table` object which is to be persisted to disk
+            table: The `#!python pykx.Table` object which is to be persisted to disk
                 and which is to undergo enumeration
             sym_file: The name of the sym file contained in the folder specified by
-                the `path` parameter against which enumeration will be completed
+                the `#!python path` parameter against which enumeration will be completed
 
         Returns:
             The supplied table with enumeration applied
 
         Examples:
 
-        Enumerate the symbol columns of a table without specifying the `sym` file
+        Enumerate the symbol columns of a table without specifying the `#!python sym_file`
 
         ```python
         >>> import pykx as kx
@@ -1128,7 +1216,7 @@ class DB(_TABLES):
         pykx.EnumVector(pykx.q('`sym$`a`b`a`c`b..'))
         ```
 
-        Enumerate the symbol columns of a table specifying the `sym` file used
+        Enumerate the symbol columns of a table specifying the `#!python sym_file`
 
         ```python
         >>> import pykx as kx

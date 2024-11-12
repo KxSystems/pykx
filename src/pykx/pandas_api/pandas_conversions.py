@@ -334,18 +334,26 @@ class PandasConversions:
 
         # Run if include is not None
         if include is not None:
-            table_out = q('''{[qtab;inc] tCols:cols qtab;
+            table_out = q('''{[qtab;inc]
+                            tCols:cols $[99h~type qtab;value qtab;qtab];
                             inc:abs 5h$inc;
-                            bList:value (type each flip 0#qtab) in inc;
+                            bList:value (type each flip 0#$[99h~type qtab;value qtab;qtab]) in inc;
+                            if[not any bList;:(::)];
                             colList:tCols where bList;
-                            ?[qtab; (); 0b; colList!colList]}''',
+                            res:?[qtab; (); 0b; colList!colList];
+                            $[99h~type qtab;(key qtab)!res;res]
+                          }''',
                         self, include_type_nums)  # noqa
         else:
-            table_out = q('''{[qtab;exc] tCols:cols qtab;
+            table_out = q('''{[qtab;exc]
+                            tCols:cols $[99h~type qtab;value qtab;qtab];
                             exc:abs 5h$exc;
-                            bList:value (type each flip 0#qtab) in exc;
+                            bList:value (type each flip 0#$[99h~type qtab;value qtab;qtab]) in exc;
+                            if[all bList;:(::)];
                             colList:tCols where not bList;
-                            ?[qtab; (); 0b; colList!colList] }''',
+                            res:?[qtab; (); 0b; colList!colList];
+                            $[99h~type qtab;(key qtab)!res;res]
+                          }''',
                         self, exclude_type_nums)  # noqa
 
         return table_out

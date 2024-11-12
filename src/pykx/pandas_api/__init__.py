@@ -73,6 +73,7 @@ from .pandas_merge import _init as _merge_init, GTable_init, PandasGroupBy, Pand
 from .pandas_set_index import _init as _set_index_init, PandasSetIndex
 from .pandas_reset_index import _init as _reset_index_init, PandasResetIndex
 from .pandas_apply import _init as _apply_init, PandasApply
+from .pandas_map import _init as _map_init, PandasMap
 from .pandas_sorting import _init as _sorting_init, PandasSorting
 from .pandas_replace import _init as _replace_init, PandasReplace
 
@@ -86,6 +87,7 @@ def _init(_q):
     _merge_init(q)
     _set_index_init(q)
     _apply_init(q)
+    _map_init(q)
     _sorting_init(q)
     _reset_index_init(q)
     _replace_init(q)
@@ -93,7 +95,7 @@ def _init(_q):
 
 class PandasAPI(PandasApply, PandasMeta, PandasIndexing, PandasReindexing,
                 PandasConversions, PandasMerge, PandasSetIndex, PandasGroupBy,
-                PandasSorting, PandasReplace, PandasResetIndex):
+                PandasSorting, PandasReplace, PandasResetIndex, PandasMap):
     """PandasAPI mixin class"""
     replace_self = False
     prev_locs = {}

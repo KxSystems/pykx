@@ -6,6 +6,113 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 3.0.0
+
+#### Release Date
+
+2024-11-12
+
+### Additions
+
+- Added `cloud_libraries` kwarg to `install_into_QHOME` allowing installation of the kdb Insights cloud libraries to QHOME.
+- Addition of support for new environment variable `PYKX_USE_FIND_LIBPYTHON` which will use the Python package [`find_libpython`](https://pypi.org/project/find-libpython/) to specify the location from which `libpython.[so|dll]` will be taken.
+
+### Fixes and Improvements
+
+- Addition of function `.pykx.toq0` to support conversion of Python strings to q strings rather than q symbols as is the default behaviour
+
+	```q
+	q)pystr:.pykx.eval["\"test\""]
+	q).pykx.toq0[pystr]
+	`test
+	q).pykx.toq0[pystr;1b]
+	"test"
+	```
+
+- Fix for `install_into_QHOME` with `overwrite_embedpy=True`. Previously loading PyKX through use of `p)` would fail.
+
+	=== "Behaviour prior to change"
+
+		```q
+		q)p)print(1+1)
+		'pykx.q. OS reports: No such file or directory
+		  [3]  /home/user/q/p.k:1: \l pykx.q
+		```
+
+	=== "Behaviour post change"
+
+		```q
+		q)p)print(1+1)
+		2
+		```
+
+- Fix to minor memory leak when accessing attributes or retrieving global variables from Python objects. The following operations would lead to this behaviour
+
+	```q
+	q)np:.pykx.import[`numpy]
+	q)np`:array # Accessing an attribute caused a leak
+	q).pykx.console[]
+	>>> variable = 100
+	>>> quit()
+	q).pykx.get`variable # Accessing a global in this way caused a leak
+	```
+
+- When loading on Linux loading of `qlog` no longer loads the logging functionality into the `.pykx` namespace and instead loads it to the `.com_kx_log` namespace as expected under default conditions.
+
+	=== "Behaviour prior to change"
+
+		```q
+		q)@[{get x;1b};`.pykx.configure;0b]
+		1b
+		q)@[{get x;1b};`.com_kx_log.configure;0b]
+		0b
+		```
+
+	=== "Behaviour post change"
+
+		```q
+		q)@[{get x;1b};`.pykx.configure;0b]
+		0b
+		q)@[{get x;1b};`.com_kx_log.configure;0b]
+		1b
+		```
+
+## PyKX 2.5.4
+
+#### Release Date
+
+2024-10-22
+
+### Fixes and Improvements
+
+- `.pykx.util.loadfile` now loads a file using it's full path unless it contains a space. This is to avoid issues loading scripts which are sensitive to their working directory.
+
+## PyKX 2.5.3
+
+#### Release Date
+
+2024-08-20
+
+### Fixes and Improvements
+
+- Previously PyKX conversions of generic lists (type 0h) would convert this data to it's `raw` representation rather than it's `python` representation as documented. This had the effect of restricting the usability of some types within PyKX under q in non-trivial use-cases. With the `2.5.2` changes to more accurately represent `raw` data at depth this became more obvious as an issue.
+
+	=== "Behaviour prior to change"
+
+		```q
+		q).pykx.version[]
+		"2.5.2"
+		q).pykx.print .pykx.eval["lambda x:x"](`test;::;first 1?0p)
+		[b'test', None, 49577290277400616]
+		```
+
+	=== "Behaviour post change"
+
+		```q
+		q).pykx.print .pykx.eval["lambda x:x"]
+		['test', None, datetime.datetime(2002, 1, 25, 11, 16, 58, 871372)]
+		```
+
 ## PyKX 2.5.0
 
 #### Release Date

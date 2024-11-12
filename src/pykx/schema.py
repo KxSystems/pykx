@@ -1,10 +1,6 @@
 """
-Functionality to support the creation and manipulation of schemas.
-
-Generated schemas can be used in combination with both
- [`insert`](https://code.kx.com/pykx/api/pykx-q-data/wrappers.html#pykx.wrappers.Table.insert) and
- [`upsert`](https://code.kx.com/pykx/api/pykx-q-data/wrappers.html#pykx.wrappers.Table.upsert)
- functionality to create populated table and keyed table objects.
+_This page documents the API for generating table schemas that are compatible with both
+    [upsert](https://code.kx.com/q/ref/upsert/) and [insert](https://code.kx.com/q/ref/insert/)._
 """
 
 from typing import Dict, List, Optional, Union
@@ -53,24 +49,21 @@ def builder(schema: Dict,
             *,
             key: Optional[Union[str, List[str]]] = None
 ) -> k.K:
-    """Generate an empty schema for a keyed or unkeyed table.
+    """Generate an empty schema for a keyed or unkeyed q table.
 
     Parameters:
         schema: The definition of the schema to be created mapping a 'str'
-            to a `pykx.*` type object which is one of the types defined in
-            `pykx.schema._ktype_to_conversion`.
-        key: A `str`-like object or list of `str` objects denoting the columns
-            within the table defined by `schema` to be treated as primary keys,
-            see [here](https://code.kx.com/q4m3/8_Tables/#841-keyed-table) for
-            more information about q keyed tables.
+            to a `#!python pykx.*` type object. Each `#!python pykx.*` value must be one of the
+            types defined in `#!python pykx.schema._ktype_to_conversion`.
+        key: The column name(s) in `#!python schema` to be treated as primary keys.
 
     Returns:
-        A `pykx.Table` or `pykx.KeyedTable` matching the provided schema with
+        A `#!python pykx.Table` or `#!python pykx.KeyedTable` matching the provided schema with
             zero rows.
 
     Examples:
 
-    Create a simple `pykx.Table` with four columns of different types
+    Create a simple `#!python pykx.Table` with four columns of different types
 
     ```python
     >>> import pykx as kx
@@ -96,7 +89,7 @@ def builder(schema: Dict,
     '))
     ```
 
-    Create a `pykx.KeyedTable` with a single primary key.
+    Create a `#!python pykx.KeyedTable` with a single primary key.
 
     ```python
     >>> import pykx as kx
@@ -121,7 +114,7 @@ def builder(schema: Dict,
     '))
     ```
 
-    Create a `pykx.KeyedTable` with multiple primary keys.
+    Create a `#!python pykx.KeyedTable` with multiple primary keys.
 
     ```python
     >>> import pykx as kx

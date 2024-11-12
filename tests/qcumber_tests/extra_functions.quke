@@ -23,6 +23,7 @@ feature .pykx.unwrap
     should unwrap wrapped foreigns
         expect a foreign to be contained
             .qu.compare[112h; type .pykx.unwrap .pykx.eval"1"];
+        
     should pass on unwrapped foreigns
         expect a foreign to be contained
             .qu.compare[112h; type .pykx.unwrap[.pykx.eval["1"]`.]];
@@ -38,6 +39,14 @@ feature .pykx.toq
             .qu.compare[-7h; type .pykx.toq .pykx.eval["1"]];
         expect a short atom
             .qu.compare[-5h; type .pykx.toq .pykx.eval["pykx.ShortAtom(1)"]];
+    should round trip if the item is not a foreign/wrapper
+        expect round trips to be handled gracefully for existing q data
+            all(
+                val~.pykx.toq val:til 10;
+                val~.pykx.toq val:100?0Ng;
+                val~.pykx.toq val:([]10?1f;10?1f);
+                val~.pykx.toq val:`a`b`c!1 2 3
+               )
 
 feature .pykx.py2q
     should return native q types from unwrapped foreign
@@ -50,6 +59,14 @@ feature .pykx.py2q
             .qu.compare[-7h; type .pykx.py2q .pykx.eval["1"]];
         expect a short atom
             .qu.compare[-5h; type .pykx.py2q .pykx.eval["pykx.ShortAtom(1)"]];
+    should round trip if the item is not a foreign/wrapper
+        expect round trips to be handled gracefully for existing q data
+            all(
+                val~.pykx.py2q val:til 10;
+                val~.pykx.py2q val:100?0Ng;
+                val~.pykx.py2q val:([]10?1f;10?1f);
+                val~.pykx.py2q val:`a`b`c!1 2 3
+               )
 
 feature .pykx.version
     should return an appropriate type when executed
@@ -61,3 +78,12 @@ feature .pykx.debug
         expect a general list with PyKX information as the first element
             ret:.pykx.debugInfo[];
             all(0h~type ret;ret[0]like"*PyKX information*")
+
+feature .pykx.print
+    should call print appropriately on python type objects
+        expect null to be returned in each case
+            all(
+                (::)~.pykx.print .pykx.import[`numpy];
+                (::)~.pykx.print til 10;
+                (::)~.pykx.print .pykx.import[`numpy;`:array][til 10]
+               )

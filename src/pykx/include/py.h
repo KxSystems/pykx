@@ -73,7 +73,6 @@ typedef struct{
  X(int,PyGILState_Ensure,())\
  X(void,PyGILState_Release,(int))\
  X(int,PyGILState_Check,())\
- X(void,PyEval_InitThreads,())\
  X(int,PyEval_ThreadsInitialized,())\
  X(void*,PyGILState_GetThisThreadState,())\
  X(void*,PyEval_SaveThread,())\
@@ -134,6 +133,7 @@ typedef struct{
  X(P,Py_BuildValue,(char*,...))\
  X(P,PyTuple_New,(L))\
  X(P,PyList_New,(L))\
+ X(int, PyList_SetItem, (P,size_t,P))\
  X(P,PyDict_New,())\
  X(size_t,PySequence_Size,(P))\
  X(P,PySequence_GetItem,(P, size_t))\

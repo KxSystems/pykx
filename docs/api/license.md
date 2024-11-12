@@ -1,6 +1,13 @@
+---
+title: License management
+description: Utilities for the management of PyKX licenses
+author: KX Systems
+date: September 2024
+tags: license
+---
 # License management
 
-The functionality presented here provides users with utilities allowing for the management of PyKX licenses and their lifecycle
+_This page documents utility functions that allow users to manage their PyKX licenses._
 
 ::: pykx.license
     rendering:

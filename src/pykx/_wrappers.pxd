@@ -12,4 +12,4 @@ cdef extern from 'numpy/arrayobject.h':
 cpdef deserialize(x)
 
 
-cdef factory(uintptr_t addr, bint incref, bint err_preamble=*)
+cdef factory(uintptr_t addr, bint incref, str name=*, bint err_preamble=*)

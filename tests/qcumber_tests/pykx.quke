@@ -90,3 +90,44 @@ feature Typed wraps are wraps and can be unwrapped
             .pykx.util.isf .pykx.unwrap .pykx.eval["lambda x: x";<]
         expect 1b
             .pykx.util.isf .pykx.unwrap .pykx.eval["lambda x: x";>]
+
+feature toq0 conversions to support char returns
+    before
+        str::.pykx.eval["\"qstring\""];
+        list::.pykx.eval["[\"qstring0\", \"qstring1\"]"];
+        dict::.pykx.eval["{\"a\":{\"b\":\"qstring0\"}, \"b\":\"qstring1\"}"];
+ 
+    should show returns by default with toq0 are symbols
+        expect 1b
+            .qu.compare[`qstring;.pykx.toq0 str]
+        expect 1b
+            .qu.compare[`qstring0;first .pykx.toq0[list]]
+        expect 1b
+            .qu.compare[`qstring0;.pykx.toq0[dict] . `a`b]
+
+    should show returns by default with toq0 are strings
+        expect 1b
+            .qu.compare["qstring";.pykx.toq0[str;1b]]
+        expect 1b
+            .qu.compare["qstring0";first .pykx.toq0[list;1b]]
+        expect 1b
+            .qu.compare["qstring0";.pykx.toq0[dict;1b] . `a`b]
+
+    should error if incorrect values provided to toq0
+        expect error if passed incorrect second argument
+            .[.pykx.toq0;(`test;`no);{x like "Supplied 2nd argument*"}]
+        expect error if too many arguments passed
+            .[.pykx.toq0;(`test;1b;1b);{x like "toq takes a maximum*"}]
+
+feature Qlog functions to not be defined in pykx namespace
+    should not have functions polluting the .pykx namespace
+        expect namespace to not have function names provided by qlog in .i namespace
+            @[{get x;0b};`.pykx.i.endpoint;1b]
+        expect namespace to not have functions in root provided by qlog
+            @[{get x;0b};`.pykx.setCorrelator;1b]
+        
+    should have logging namespace populated when running on linux
+        expect logging to be defined if running on linux in root namespace
+            $[.z.o~`l64;@[{get x;1b};`.com_kx_log.setCorrelator;0b];1b]
+        expect logging functionality to have loaded in the .i namespace
+            $[.z.o~`l64;@[{get x;1b};`.com_kx_log.i.endpoint;0b];1b]

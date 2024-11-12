@@ -1,11 +1,8 @@
-import warnings
+from warnings import warn
 
-from . import beta_features
-from .config import _check_beta, pykx_threading, system
+from .config import pykx_threading, suppress_warnings, system
 from .exceptions import QError
 from .ipc import SyncQConnection
-
-beta_features.append('Streamlit Integration')
 
 
 # This class is required to ensure that in the absence
@@ -37,40 +34,37 @@ def _check_streamlit():
 
 class PyKXConnection(BaseConnection[SyncQConnection]):
     """
-    A connection to q/kdb+ processes from streamlit. Initialize using:
+    A connection to a q server from Streamlit. Initialise using:
 
     ```python
     st.connection("<name>", type = pykx.streamlit.PyKXConnection, *args)
     ```
 
-    PyKX Connection supports the application of queries using Syncronous IPC
-    connections to q/kdb+ processes or Python processes running PyKX as a
-    server.
-
-    This is supported through the ``query()`` method, this method allows
-    users to run `sql`, `qsql` or `q` queries against these processes returning
-    PyKX data.
-
     !!! Warning
-            Streamlit integration is not presently supported for Windows as for
-            full utilization it requires use of `PYKX_THREADING` functionality
+            Streamlit integration is not supported for Windows.
+            Full utilization requires `#!bash PYKX_THREADING` which is not supported on windows.
 
     Parameters:
-        host: The host name to which a connection is to be established.
-        port: The port to which a connection is to be established.
-        username: Username for q connection authorization.
-        password: Password for q connection authorization.
-        timeout: Timeout for blocking socket operations in seconds. If set to `0`, the socket
-            will be non-blocking.
-        large_messages: Whether support for messages >2GB should be enabled.
-        tls: Whether TLS should be used.
-        unix: Whether a Unix domain socket should be used instead of TCP. If set to `True`, the
-            host parameter is ignored. Does not work on Windows.
-        wait: Whether the q server should send a response to the query (which this connection
-            will wait to receive). Can be overridden on a per-call basis. If `True`, Python will
-            wait for the q server to execute the query, and respond with the results. If
-            `False`, the q server will respond immediately to every query with generic null
-            (`::`), then execute them at some point in the future.
+        host: Server host name.
+        port: Server port number.
+        username: Username for q connection.
+        password: Password for q connection.
+        timeout: The number of seconds before a blocking operation times out. A value of 0 creates
+            a non-blocking connection.
+        large_messages: Boolean flag to enable/disable support for messages >2GB.
+        tls: Boolean flag to enable/disable TLS.
+        unix: Boolean flag to enable Unix domain socket connection. Host parameter is ignored if
+            `#!python True`. Does not work on Windows.
+        wait: Boolean to enable/disable waiting for the q server to complete executing the query
+            and return the result. `#!python False` emulates async queries, causing the q server
+            to respond immediately with the generic null `#!q ::` and perform calculations at
+            another time.
+        reconnection_attempts: The number of maximum attempts to reconnect when a connection is
+            lost. A negative number prevents any attempts to reconnect. A value of 0 will cause
+            continuous reconnect attempts until a connection is established. Positive values are
+            the number of times to attempt. Successive reconnect attempts are run at exponentially
+            increasing backoff times. Hitting the maximum number of limits with unsuccessful
+            attempts will throw an error.
 
     Note: The `username` and `password` parameters are not required.
         The `username` and `password` parameters are only required if the q server requires
@@ -85,42 +79,39 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
 
     Examples:
 
-    Connect to a q process at `localhost` on port `5050` as a streamlit connection,
-    querying using q
+    Open a streamlit connection to a locally running q process on port 5050.
 
     ```python
     >>> import streamlit as st
     >>> import pykx as kx
     >>> conn = st.connection('pykx', type=kx.streamlit.PyKXConnection,
     ...                      host = 'localhost', port = 5050)
-    >>> df = conn.query('select from tab').pd()
-    >>> st.dataframe(df)
+    >>>
     ```
     """
     _connection = None
     _connection_kwargs = {}
 
     def _connect(self, **kwargs) -> None:
-        _check_beta('Streamlit Integration')
         _check_streamlit()
         if system == 'Windows':
             raise QError('Streamlit integration currently unsupported for Windows')
-        if not pykx_threading:
-            warnings.warn("Streamlit caching requires execution on secondary threads, "
-                          "to utilize this fully please consider setting PYKX_THREADING "
-                          "= 'True'")
+        if (not pykx_threading) and (not suppress_warnings):
+            warn("Streamlit caching requires execution on secondary threads, "
+                 "to utilize this fully please consider setting PYKX_THREADING "
+                 "= 'True'. To suppress this warning please consider setting "
+                 "PYKX_SUPPRESS_WARNINGS = 'True'")
         self._connection = SyncQConnection(no_ctx=True, **kwargs)
         self._connection_kwargs = kwargs
 
     def reset(self, **kwargs) -> None:
         """
-        Reset an existing Streamlit Connection object, this can be used to manually
-        reconnect to a datasource which was disconnected. This will use the connection
-        details provided at initialisation of the original class.
+        Close and reopen an existing Streamlit connection.
 
         Example:
 
-        Reset a connection if deemed to no longer be valid
+        Open a connection to a locally running process on port 5050 and check if it is a healthy
+        connection. If it is not, reset the connection.
 
         ```python
         >>> import streamlit as st
@@ -132,7 +123,6 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
         >>>
         ```
         """
-        _check_beta('Streamlit Integration')
         _check_streamlit()
         if not isinstance(self._connection, SyncQConnection):
             raise QError('Unable to reset uninitialized connection')
@@ -141,12 +131,10 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
 
     def is_healthy(self) -> bool:
         """
-        Check if an existing streamlit connection is 'healthy' and
-        available for query.
+        Check if an existing streamlit connection is 'healthy' and available for query.
 
         Returns:
-            A boolean indicating if the connection being used is in a
-                'healthy' state
+            A boolean indicating if the connection being used is in a 'healthy' state
 
         Example:
 
@@ -159,31 +147,30 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
         True
         ```
         """
-        _check_beta('Streamlit Integration')
         _check_streamlit()
         if not isinstance(self._connection, SyncQConnection):
             raise QError('Unable to validate uninitialized connection')
         if self._connection.closed:
-            warnings.warn('Connection closed')
+            warn('Connection closed')
             return False
         try:
             self.query('::')
             return True
         except BaseException as err:
-            warnings.warn('Unhealthy connection detected with error: ' + str(err))
+            warn('Unhealthy connection detected with error: ' + str(err))
             return False
 
     def query(self, query: str, *args, format='q', **kwargs):
         """
-        Evaluate a query on the connected q process over IPC.
+        Query the connected q process over IPC.
 
         Parameters:
-            query: A q expression to be evaluated.
-            *args: Arguments to the q query. Each argument will be converted into a `pykx.K`
-                object. Up to 8 arguments can be provided, as that is the maximum
-                supported by q.
-            format: What execution format is to be used, should the function use the `qsql`
-                interface, execute a `sql` query or run `q` code.
+            query: A q expression to be evaluated. This must be valid q, qSQL or SQL in the KX
+                Insights style.
+            *args: Arguments to the query. Each argument will be converted into a `#!python pykx.K`
+                object. Up to 8 arguments can be provided (maximum supported by q functions).
+            format: Description of query format for internal pre-processing before the query is sent
+                to the server. This must be one of 'q', 'qsql' or 'sql'.
 
         Raises:
             RuntimeError: A closed IPC connection was used.
@@ -195,8 +182,7 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
 
         Examples:
 
-        Connect to a q process at `localhost` on port `5050` as a streamlit connection,
-        querying using q
+        Open a connection to a locally running q process on port 5050 and query using 'q' format.
 
         ```python
         >>> import streamlit as st
@@ -207,8 +193,8 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
         >>> st.dataframe(df)
         ```
 
-        Connect to a q process at `localhost` on port `5050` as a streamlit connection,
-        querying using qsql
+        Open a connection to a locally running q process on port 5050 and query using 'qsql'
+        format.
 
         ```python
         >>> import streamlit as st
@@ -219,8 +205,8 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
         >>> st.dataframe(df)
         ```
 
-        Connect to a q process at `localhost` on port `5050` as a streamlit connection,
-        querying using sql
+        Connect to a locally running q process on port 5050 and query using 'sql'
+        format.
 
         ```python
         >>> import streamlit as st
@@ -231,7 +217,6 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
         >>> st.dataframe(df)
         ```
         """
-        _check_beta('Streamlit Integration')
         _check_streamlit()
 
         def _query(query: str, format, args, kwargs):

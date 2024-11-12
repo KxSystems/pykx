@@ -18,7 +18,7 @@ async def main_loop(q):
         await asyncio.sleep(0.5) # allows other async tasks to run along side
         result = q.poll_recv() # this will return None if no message is available to be read
         if assert_result(result):
-            print(f'Recieved new table row from q: {result}')
+            print(f'Received new table row from q: {result}')
             table = kx.q.upsert(table, result)
             print(table)
             result = None

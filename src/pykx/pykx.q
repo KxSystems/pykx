@@ -24,7 +24,7 @@
 // @private
 // @overview
 // For a given function retrieve the location from which the file was loaded
-// 
+//
 // @return {string} the location from which this file is being loaded
 util.getLoadDir:{@[{"/"sv -1_"/"vs ssr[;"\\";"/"](-3#get .z.s)0};`;""]}
 
@@ -46,6 +46,8 @@ util.startup:.Q.opt .z.x
 // @desc Load a file at an associated folder location, this is used
 //     to allow loading of files at folder locations containing spaces
 util.loadfile:{[folder;file]
+  path:$[.z.o like "w*";"\\";"/"] sv ((),folder;(),file);
+  if[not " " in path;:system"l ",path];
   cache:system"cd";
   system"cd ",folder;
   folder:system"cd";
@@ -54,6 +56,7 @@ util.loadfile:{[folder;file]
   $[res[0];'res[1];res[1]]
   }
 
+util.warnCache:{gx:getenv x;$[""~gx;"False";gx]}`PYKX_SUPPRESS_WARNINGS
 // @private
 // @desc Retrieval of PyKX initialization directory on first initialization
 if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
@@ -67,6 +70,15 @@ if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
     pykxDir:ssr[;"\\";"/"]last vs["PYKX_DIR: "]last pykxDir
     ];
   ];
+setenv[`PYKX_SUPPRESS_WARNINGS;util.warnCache]
+
+// @private
+// @desc Allow a user to force PyKX to use the location of libpython
+//       found by the Python library find_libpython
+if[(lower getenv`PYKX_USE_FIND_LIBPYTHON) in ("true";enlist"1");
+    libpython_path:first system util.whichPython," -c\"from find_libpython import find_libpython;print(find_libpython())\"";
+    setenv[`PYKX_PYTHON_LIB_PATH;libpython_path]
+    ];
 
 // @private
 // @desc
@@ -81,11 +93,6 @@ k)c:{'[y;x]}/|:
 // @private
 // @desc Compose using enlist for generation of variadic functions
 k)ce:{'[y;x]}/enlist,|:
-
-// @desc Print a message warning that "UNDER_PYTHON" is deprecated
-if[not ""~getenv`UNDER_PYTHON;
-   -1"WARN: Environment variable 'UNDER_PYTHON' is deprecated, if set locally update to use 'PYKX_UNDER_PYTHON'";
-  ]
 
 // @desc Make use of `pykx.so` logic when running under Python
 if["true"~getenv`PYKX_UNDER_PYTHON;
@@ -136,7 +143,7 @@ util.CFunctions:flip `qname`cname`args!flip (
     (`util.pyForeign ;`k_to_py_foreign;3);
     (`util.isf       ;`k_check_python ;1);
     (`util.pyrun     ;`k_pyrun        ;4);
-    (`util.foreignToq;`foreign_to_q   ;1);
+    (`util.foreignToq;`foreign_to_q   ;2);
     (`util.callFunc  ;`call_func      ;4);
     (`pyimport       ;`import         ;1);
     (`util.setGlobal ;`set_global     ;2);
@@ -256,7 +263,7 @@ util.wf:{[f;x].pykx.util.pykx[f;x]}
 // @private
 // @desc
 // Functionality used for checking if an supplied
-// argument is a Python foreign or wrapped object 
+// argument is a Python foreign or wrapped object
 util.isw:{
   if[not 105h~type x;:0b];
   $[.pykx.util.wf~$[104 105h~t:type each u:get x;
@@ -327,7 +334,7 @@ util.parseArgs:{
 // ```
 //
 // !!! Warning
-// 
+//
 //      This function will be set in the root `.q` namespace
 //
 // **Parameters:**
@@ -341,7 +348,7 @@ util.parseArgs:{
 //
 // type         | description
 // -------------|------------
-// `projection` | A projection which when used with a wrapped callable Python 
+// `projection` | A projection which when used with a wrapped callable Python
 //
 // **Example:**
 //
@@ -412,8 +419,8 @@ util.parseArgs:{
 // ```
 //
 // !!! Warning
-// 
-//      This function will be set in the root `.q` namespace 
+//
+//      This function will be set in the root `.q` namespace
 //
 // **Parameters:**
 //
@@ -513,7 +520,7 @@ topy:{x y}(`..python;;)
 // // Pass a q object to Python with default conversions and return type
 // q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
 // <class 'list'>
-// 
+//
 // // Pass a q object to Python treating the Python object as a Numpy Object
 // q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.tonp til 10
 // <class 'numpy.ndarray'>
@@ -691,7 +698,7 @@ toraw: {x y}(`..raw;;)
 //
 // ```q
 // // Denote that a q object once passed to Python should be managed as a default object
-// // in this case a q list is converted to numpy 
+// // in this case a q list is converted to numpy
 // q).pykx.todefault til 10
 // enlist[`..numpy;;][0 1 2 3 4 5 6 7 8 9]
 //
@@ -703,7 +710,7 @@ toraw: {x y}(`..raw;;)
 // q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault ([]til 10;til 10)
 // <class 'pandas.core.frame.DataFrame'>
 // ```
-todefault:{$[0h=type x;toraw x;$[99h~type x;all 98h=type each(key x;value x);0b]|98h=type x;topd x;tonp x]}
+todefault:{$[0h=type x;topy x;$[99h~type x;all 98h=type each(key x;value x);0b]|98h=type x;topd x;tonp x]}
 
 // @kind function
 // @name .pykx.wrap
@@ -780,7 +787,7 @@ wrap:ce util.wf@
 unwrap:{
   c:last get last get first get last@;
   $[util.isw x;t:type each u:get x;:x];
-  if[(101 105h~t) and (::)~first u;:c u]; 
+  if[(101 105h~t) and (::)~first u;:c u];
   if[(100 105h~t) and .pykx.toq~first u;:c u];
   if[104 105h~t;:(last u)`.];
   x`.}
@@ -883,7 +890,60 @@ setdefault:{
 // q).pykx.toq b
 // 2
 // ```
-py2q:toq:{$[type[x]in 104 105 112h;util.foreignToq unwrap x;x]}
+py2q:toq:{$[type[x]in 104 105 112h;util.foreignToq[unwrap x;0b];x]}
+
+// @kind function
+// @name .pykx.toq0
+// @category api
+// @overview
+// _Convert an (un)wrapped `PyKX` foreign object into an analogous q type._
+//
+// ```q
+// .pykx.toq0[pythonObject;strAsChar]
+// ```
+//
+// **Parameters:**
+//
+// name           | type                   | description |
+// ---------------|------------------------|-------------|
+// `pythonObject` | foreign/composition    | A foreign Python object or composition containing a Python foreign to be converted to q
+// `strAsChar`    | Optional[boolean]      | A boolean indicating if when returned to q a Python `str` should be converted to a q string rather than the default symbol
+//
+// **Return:**
+//
+// type  | description
+// ------|------------
+// `any` | A q object converted from Python
+//
+// ```q
+// // Convert a wrapped PyKX foreign object to q
+// q)show a:.pykx.eval["1+1"]
+// {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
+// q).pykx.toq0 a
+// 2
+//
+// // Convert an unwrapped PyKX foreign object to q
+// q)show b:a`.
+// foreign
+// q).pykx.toq0 b
+// 2
+// ```
+//
+// // Convert a Python string to q symbol or string
+//
+// q).pykx.toq0[.pykx.eval"\"test\""]
+// `test
+//
+// q).pykx.toq0[.pykx.eval"\"test\"";1b]
+// "test"
+toq0:ce {
+  if[2<count x;'"toq takes a maximum of 2 arguments"];
+  $[2=count x;
+    [if[not -1h~type x 1;'"Supplied 2nd argument must be a boolean"];
+     fn:x 0;conv:x 1];
+    [fn:x 0;conv:0b]];
+  $[type[fn]in 104 105 112h;util.foreignToq[unwrap fn;conv];fn]
+  }
 
 // @private
 // @name .pykx.pyfunc
@@ -1047,7 +1107,7 @@ qeval:{toq .pykx.eval x}
 // @category api
 // @overview
 // _Import a Python library and store as a foreign object._
-// 
+//
 // ```q
 // .pykx.pyimport[libName]
 // ```
@@ -1170,10 +1230,6 @@ repr :{$[type[x]in 104 105 112h;util.repr[1b] unwrap x;.Q.s x]}
 // -----|------------
 // `::` | Will print the output to stdout but return null
 //
-// !!! Note
-//
-//         For back compatibility with embedPy this function is also supported in the shorthand form `print` which uses the `.q` namespace. To not overwrite `print` in your q session and allow use only of the longhand form `.pykx.print` set the environment variable `UNSET_PYKX_GLOBALS` to any value.
-//
 // ```q
 // // Use a wrapped foreign object
 // q)a: .pykx.eval"1+1"
@@ -1184,11 +1240,11 @@ repr :{$[type[x]in 104 105 112h;util.repr[1b] unwrap x;.Q.s x]}
 // q)a: .pykx.eval"'hello world'"
 // q).pykx.print a`.
 // hello world
-// 
+//
 // // Use a q object
 // q).pykx.print til 5
 // 0 1 2 3 4
-// 
+//
 // // Print the return of a conversion object
 // q).pykx.print .pykx.topd ([]5?1f;5?0b)
 //           x     x1
@@ -1364,21 +1420,21 @@ version:{pyexec"import pykx as kx";string qeval"kx.__version__"}
 // // Define a Python object to which attributes can be set
 // q).pykx.pyexec"aclass = type('TestClass', (object,), {'x': pykx.LongAtom(3), 'y': pykx.toq('hello')})";
 // q)a:.pykx.get`aclass
-// 
+//
 // // Retrieve an existing attribute to show defined behavior
 // q)a[`:x]`
 // 3
-// 
+//
 // // Retrieve a named attribute that doesn't exist
 // q)a[`:r]`
-// 
+//
 // // Set an attribute 'r' and retrieve the return
 // q).pykx.setattr[a; `r; til 4]
 // q)a[`:r]`
 // 0 1 2 3
 // q).pykx.print a[`:r]
 // [0 1 2 3]
-// 
+//
 // // Set an attribute 'k' to be a Pandas type
 // q).pykx.setattr[a;`k;.pykx.topd ([]2?1f;2?0Ng;2?`2)]
 // q)a[`:k]`
@@ -1390,7 +1446,7 @@ version:{pyexec"import pykx as kx";string qeval"kx.__version__"}
 //           x                                    x1  x2
 // 0  0.493183  0a3e1784-0125-1b68-5ae7-962d49f2404d  mi
 // 1  0.578520  5aecf7c8-abba-e288-5a58-0fb6656b5e69  ig
-// 
+//
 // // Attempt to set an attribute against an object which does not support this behavior
 // q)arr:.pykx.eval"[1, 2, 3]"
 // q).pykx.setattr[arr;`test;5]
@@ -1469,10 +1525,10 @@ getattr;      // Note this function is loaded directly from C
 //
 // **Parameters:**
 //
-// name         | type      | description                                  
+// name         | type      | description
 // -------------|-----------|-------------
 // `pyObject`   | `foreign` | A Python object representing an underlying callable function
-// 
+//
 // **Returns:**
 //
 // type      | description
@@ -1505,7 +1561,7 @@ pycallable:{$[util.isw x;wrap[unwrap[x]](>);util.isf x;wrap[x](>);'"Could not co
 // name         | type      | description
 // -------------|-----------|-------------
 // `pyObject`   | `foreign` | A Python object representing an underlying callable function
-// 
+//
 // **Returns:**
 //
 // type  | description
@@ -1533,6 +1589,11 @@ qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not con
 // .pykx.safeReimport[qFunction]
 // ```
 //
+// For more information on the reimporter module which this functionality calls see
+//     https://code.kx.com/pykx/api/reimporting.html#pykx.reimporter.PyKXReimport
+//
+// 
+//
 // **Parameters:**
 //
 // name         | type       | description
@@ -1547,19 +1608,40 @@ qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not con
 //
 // **Example:**
 //
+// Initializing a Python process which imports PyKX
+//
 // ```q
 // q)\l pykx.q
 // q).pykx.safeReimport[{system"python -c 'import pykx as kx'";til 5}]
 // 0 1 2 3 4
 // ```
+//
+// Initializing a q child process which uses pykx.q
+//
+// ```q
+// q)\cat child.q
+// "\l pykx.q"
+// ".pykx.print \"Hello World\""
+//
+// q)\l pykx.q
+// q)system"q child.q"     // Failing execution
+// q)'2024.08.29T12:29:39.967 util.whichPython
+//   [5]  /usr/local/anaconda3/envs/qenv/q/pykx.q:123: 
+//         (`os             ; util.os);
+//         (`whichPython    ; util.whichPython)
+//                            ^
+//         )
+//   [2]  /usr/projects/pykx/child.q:1: \l pykx.q
+//                                      ^
+// q).pykx.safeReimport {system"q child.q"}
+// "Hello World"                 
+// ```
 safeReimport:{[x]
   pyexec["pykx_internal_reimporter = pykx.PyKXReimport()"];
   envlist:(`PYKX_DEFAULT_CONVERSION;
     `PYKX_UNDER_Q;
-    `SKIP_UNDERQ;
     `PYKX_SKIP_UNDERQ;
     `PYKX_UNDER_PYTHON;
-    `UNDER_PYTHON;
     `PYKX_LOADED_UNDER_Q;
     `PYKX_Q_LOADED_MARKER;
     `PYKX_EXECUTABLE;
@@ -1573,6 +1655,20 @@ safeReimport:{[x]
   setenv'[envlist;envvals];
   $[r 0;';::] r 1
   }
+
+// @kind function
+// @name .pykx.enableJupyter
+// @overview
+// Enable qfirst mode in a Jupyter Notebook.
+
+.pykx.enableJupyter:{.pykx.import[`pykx;`:util.jupyter_qfirst_enable][];}
+
+// @kind function
+// @name .pykx.disableJupyter
+// @overview
+// Disable qfirst mode in a Jupyter Notebook and return to Python first execution.
+
+.pykx.disableJupyter:{.pykx.import[`pykx;`:util.jupyter_qfirst_disable][];}
 
 // @kind function
 // @name .pykx.debugInfo
@@ -1642,7 +1738,7 @@ debugInfo:{
 // >>> kx.q['table'] = kx.q('([]2?1f;2?0Ng;2?`3)'
 // >>> quit()
 // q)table
-// x         x1                                   x2 
+// x         x1                                   x2
 // --------------------------------------------------
 // 0.439081  49f2404d-5aec-f7c8-abba-e2885a580fb6 mil
 // 0.5759051 656b5e69-d445-417e-bfe7-1994ddb87915 igf
@@ -1744,3 +1840,4 @@ loadExtension:{[ext]
 
 // @desc Restore context used at initialization of script
 system"d ",string .pykx.util.prevCtx;
+

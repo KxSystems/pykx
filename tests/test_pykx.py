@@ -116,7 +116,8 @@ def test_QHOME_symlinks():
         'Windows': 'w64',
     }[system()]
     (QHOME/q_lib_dir_name).mkdir(exist_ok=True)
-    fake_q_lib_path = Path(site.getsitepackages()[0])/'pykx'/'lib'/q_lib_dir_name/'fake_q_lib.so'
+    lib = Path('lib')/'4-1-libs' if os.getenv('PYKX_4_1_ENABLED') is not None else Path('lib')
+    fake_q_lib_path = Path(site.getsitepackages()[0])/'pykx'/lib/q_lib_dir_name/'fake_q_lib.so'
     fake_q_lib_path.touch()
     # Convert first argument of `shutil.move` to `str` to work around Python bug bpo-32689
     shutil.move(str(fake_q_lib_path), QHOME/q_lib_dir_name)
@@ -138,7 +139,7 @@ def try_clean(path):
 @disposable_env_only
 @pytest.mark.isolate
 def test_QHOME_symlinks_skip():
-    os.environ['IGNORE_QHOME'] = "1"
+    os.environ['PYKX_IGNORE_QHOME'] = "1"
     # This logic to get QHOME is copied from `pykx.config`, since we can't use `pykx.qhome` until
     # after PyKX has been imported, but that would ruin the test.
     try:
@@ -288,6 +289,10 @@ def test_pykx_star():
     os.getenv('PYKX_THREADING') is not None,
     reason='Not supported with PYKX_THREADING'
 )
+@pytest.mark.skipif(
+    (sys.version_info.major == 3) and (sys.version_info.minor == 8),
+    reason="python3.8 subprocess behavior inconsistent with newest versions"
+)
 def test_pykx_stdout_stderr():
     output = subprocess.run(
         (str(Path(sys.executable).as_posix()), '-c',
@@ -306,10 +311,14 @@ def test_pykx_stdout_stderr():
     os.getenv('PYKX_THREADING') is not None,
     reason='Not supported with PYKX_THREADING'
 )
+@pytest.mark.skipif(
+    (sys.version_info.major == 3) and (sys.version_info.minor == 8),
+    reason="python3.8 subprocess behavior inconsistent with newest versions"
+)
 def test_pykx_stdout_stderr_under_q():
     subprocess.run(
         (str(Path(sys.executable).as_posix()), '-c',
-            'import pykx;pykx.install_into_QHOME()'),
+            'import pykx;pykx.install_into_QHOME(cloud_libraries=True)'),
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -360,6 +369,10 @@ def test_PYKX_Q_LIB_LOCATION():
 
 
 @pytest.mark.unlicensed
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subnormal updates not presently implemented on Windows'
+)
 def test_subnormals(kx):
     import numpy as np
     assert '5e-324' == str(np.finfo(np.float64).smallest_subnormal + 0.)

@@ -30,7 +30,7 @@ lower:{$[$[(~@x)&10h~@*x;&/10h=@:'x;0b];_x;~t&(77h>t)|99h<t:abs@@x;.z.s'x;19h<t;
 upper:{$[$[(~@x)&10h~@*x;&/10h=@:'x;0b];.Q.Aa x;~t&(77h>t)|99h<t:abs@@x;.z.s'x;19h<t;.z.s@. x;~t in 10 11h;'`type;$[11h=t;`$.Q.Aa@$x;.Q.Aa x]]}
 ssr:{,/@[x;1+2*!_.5*#x:(0,/(0,{n:x?"[";$[n=#x;n;n+.z.s$[(#x)=p:x?"]";'"unmatched ]";p]_x:(n+2+"^"=x n+1)_x]}y,"")+/:x ss y)_x;$[100h>@z;:[;z];z]]}
 
-/select insert update delete exec  / fkeys[&keys] should be eponymous, e.g. order.customer.nation   
+/select insert update delete exec  / fkeys[&keys] should be eponymous, e.g. order.customer.nation
 /{keys|cols}`t `f's{xasc|xdesc}`t n!`t xcol(prename) xcols(prearrange)  FT(xcol xasc xdesc)
 view:{$`. .`\:x};tables:{."\\a ",$$[^x;`;x]};views:{."\\b ",$$[^x;`;x]}
 cols:{$[.Q.qp x:.Q.v x;.Q.pf,!+x;98h=@x;!+x;11h=@!x;!x;!+0!x]} /cols:{!.Q.V x}

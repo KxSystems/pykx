@@ -6,21 +6,6 @@ If you need a feature that's not included in this list please let us know by rai
 
 ## Upcoming Changes
 
-- More Pythonic query syntax when querying PyKX Tables. Syntax for this will be similar to the following:
-
-	```python
-	>>> import pykx as kx
-	>>> N = 10000
-	>>> table = kx.Table(data = {
-	...   'x' : kx.random.random(N, ['a', 'b', 'c]),
-	...   'x1': kx.random.random(N, 100.0),
-	...   'x2': kx.random.random(N, 100)
-        ...   })
-	>>> table.select(where = kx.col('x') == 'a')
-	>>> table.select(kx.col('x1').max())
-	>>> table.select(kx.col('x1').wavg('x2'))
-	```
-
 - Addition of support for q primitives as methods off PyKX Vector and Table objects. Syntax for this will be similar to the following:
 
 	```python
@@ -31,14 +16,8 @@ If you need a feature that's not included in this list please let us know by rai
 	>>> vec.abs()
 	```
 
-- Performance improvements for conversions from NumPy arrays to PyKX Vector objects and vice-versa through enhanced use of C++ over Cython.
-- Addition of functionality for the development of streaming workflows using PyKX.
+- Performance improvements for conversions from PyKX Vector objects to Numpy arrays through enhanced use of C++ over Cython.
 - Configurable initialisation logic in the absence of a license. Thus allowing users who have their own workflows for license access to modify the instructions for their users.
-- Promotion of Beta functionality currently available in PyKX to full production support
-	- Database Management
-	- Compression and Encryption
-	- Multi-threaded execution
-	- Remote function execution
 
 ## Future
 

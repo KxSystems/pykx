@@ -1,6 +1,4 @@
-"""Interface to q contexts and scripts which define a namespace.
-
-The context interface provides an easy to way access q contexts (also known as namespaces when at
+"""The context interface provides an easy to way access q contexts (also known as namespaces when at
 the top level). For more information about contexts/namespaces in q please refer to
 [Chapter 12 of Q for Mortals](https://code.kx.com/q4m3/12_Workspace_Organization/).
 """
@@ -37,7 +35,9 @@ def __dir__():
 # still allowing the current directory to be removed from the search path by altering the module
 # paths attribute.
 class CurrentDirectory(type(Path())):
-    """``pathlib.Path`` instance for the current directory regardless of directory changes."""
+    """`#!python pathlib.Path` instance for the current directory regardless
+           of directory changes.
+    """
     def __init__(self):
         super().__init__()
 
@@ -70,12 +70,14 @@ class QContext:
     def __init__(self, q: Q, name: str, parent: QContext, no_ctx=False):
         """Interface to a q context.
 
-        Members of the context be accessed as if the `QContext` object was a dictionary, or by
-        dotting off of the `QContext` object.
+        Members of the context be accessed as if the `#!python QContext` object was a dictionary,
+        or by dotting off of the `#!python QContext` object.
 
+        Parameters:
             q: The q instance in which the context exists.
             name: The name of the context.
-            parent: The parent context as a `QContext`, or `None` in the case of the global context.
+            parent: The parent context as a `#!python QContext`,
+                        or `#!python None` in the case of the global context.
         """
         super().__setattr__('_q', q)
         super().__setattr__('_name', name)
@@ -118,12 +120,20 @@ class QContext:
             return ZContext(proxy(self))
         elif self._fqn in {'', '.q'} and key in self._unsupported_keys_with_msg:
             raise AttributeError(f'{key}: {self._unsupported_keys_with_msg[key]}')
-        if self._fqn in {'', '.q'} and key in self._q.reserved_words:
-            # Reserved words aren't actually part of the `.q` context dict
-            if 'QConnection' in str(self._q._call):
-                return lambda *args: self._q._call(key, *args, wait=True)
-            else:
-                return self._q._call(key, wait=True)
+        if self._fqn in {'', '.q'}:
+            func = None
+            if key in self._q.reserved_words:
+                func = key
+            elif key in list(self._q.operators.keys()):
+                func = self._q.operators[key]
+            if func is not None:
+                # Reserved words aren't actually part of the `.q` context dict
+                if 'QConnection' in str(self._q._call):
+                    return lambda *args: self._q._call(func, *args, wait=True)
+                else:
+                    fn = self._q._call(func, wait=True)
+                    fn._name = key
+                    return fn
         if 'no_ctx=True' in str(self.__dict__['_q']) or self.no_ctx:
             raise PyKXException('Attempted to use context interface after disabling it.')
         fqn_with_key = f'{self._fqn}.{key}'
@@ -191,10 +201,10 @@ class QContext:
 
 
 class ZContext(QContext):
-    """Special interface to handle the .z context.
+    """Special interface to handle the `#!q .z` context.
 
-    The .z context in q is not a normal context; it lacks a dictionary. To access it one must
-    access its attributes directly.
+    The `#!q .z` context in q is not a normal context; it lacks a dictionary. To access it users
+    must access its attributes directly.
     """
     _no_default = ('ac', 'bm', 'exit', 'pc', 'pd', 'ph', 'pi', 'pm',
                    'po', 'pp', 'pq', 'ps', 'pw', 'vs', 'wc', 'wo', 'ws', 'zd')

@@ -1,0 +1,29 @@
+feature .pykx.util.*
+    before
+        sym::`c`d`e;
+    should raise appropriate errors when passed invalid arguments
+        expect arguments to be passed successfully if only one supplied
+            input:(til 10;2;`a`b`c);
+            args:.pykx.util.parseArgs enlist pyarglist input;
+            input~{.pykx.wrap[x]`}@/:args[1]
+        expect error if multiple pyarglist values supplied
+            @[{.pykx.util.parseArgs x; 0b};
+                (pyarglist 1 2 3;pyarglist 1 2 3);
+                {x like "Expected only one arg list*"}]
+
+    should test html code
+        expect usage of html functionality to work with in-memory tables
+            10h~type .pykx.util.html.memsplay[2 2;([]100?1f;100?`a`b`c;y:`sym$100?`c`d`e)]
+        expect usage of html functionality to work with in-memory tables
+            10h~type .pykx.util.html.memsplay[100 100;([]10?1f;10?`a`b`c;y:`sym$10?`c`d`e)]
+        expect rowcols to return an appropriate result if out of bound range
+            output:"\n<p>100 rows \303\227 3 columns</p>";
+            data:([]100?1f;100?`a`b`c;y:`sym$100?`c`d`e);
+            output~.pykx.util.html.rowcols[10 10;data;""]
+        expect no rowcols if in bound range
+            output:"";
+            data:([]100?1f;100?`a`b`c;y:`sym$100?`c`d`e);
+            output~.pykx.util.html.rowcols[200 200;data;""]
+        expect detectbadcols to operate under q
+            tab:flip (`a;`b;`a;`$"a b")!4 4#16?1f;
+            .pykx.util.html.detectbadcols[tab]~`dup`invalid!enlist each(`a;`$"a b")

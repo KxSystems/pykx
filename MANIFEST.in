@@ -27,3 +27,6 @@ prune docs
 prune benchmarks
 prune examples
 prune tests
+
+include docs/api/pykx-execution/q.md
+

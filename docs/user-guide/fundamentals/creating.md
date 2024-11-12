@@ -1,25 +1,39 @@
-# Interacting with PyKX objects
+---
+title: Create and convert PyKX objects
+description: How to generate PyKX objects
+date: July 2024
+author: KX Systems, Inc.,
+tags: PyKX, q, PyKX objects, 
+---
 
-In order to use the power of q and the functionality provided by PyKX a user must at some point interact with a PyKX object. At it's most basic level these items are allocated C representations of q/kdb+ objects within a memory space managed by q. Keeping the data in this format allows it to be used directly for query/analytic execution in q without any translation overhead.
+# Create and convert PyKX objects
 
-There are a number of ways to generate PyKX objects:
+_This page provides details on how to generate and convert PyKX objects._
 
-1. Explicitly converting from a Python object to a PyKX object
-2. By evaluating q code using `kx.q`
-3. By retrieving a named entity from q's memory
-4. Through query of an external q session
+!!! tip "Tip: For the best experience, we recommend reading [PyKX objects and attributes](..//../learn/objects.md) first." 
 
-Getting the data to a PyKX format provides you with the ability to easily interact with these objects using q or the analytic functionality provided by PyKX, however, having data in this format is not suitable for all use-cases. For example, should a function require a Pandas DataFrame as input then a PyKX object must be converted to a Pandas DataFrame. This is supported using methods provided for the majority of PyKX objects, these are covered below.
+To use the power of q and the functionality provided by PyKX, at some point you must interact with PyKX objects. At their most basic level, objects are allocated C representations of q/kdb+ objects within a memory space managed by q. Keeping the data in this format allows it to be used directly for query/analytic execution in q without any translation overhead.
 
-## Generating PyKX objects
+## 1. Create PyKX objects
 
-### Explicitly converting from Pythonic objects to PyKX objects
+There are five ways to create PyKX objects:
 
-The most simplistic method of creating a PyKX object is to convert an analogous Pythonic type to a PyKX object. This is facilitated through the use of the functions `pykx.toq` which allows conversions from Python, Numpy, Pandas and PyArrow types to PyKX objects, open the tabs which are of interest to you to see some examples of these conversions
+- a. [Convert Python objects to PyKX objects](#1a-convert-python-objects-to-pykx-objects)
+- b. [Generate data using PyKX inbuilt functions](#1b-generate-data-using-pykx-inbuilt-functions)
+- c. [Evaluate q code using `#!python kx.q`](#1c-evaluate-q-code-using-python-kxq)
+- d. [Retrieve a named entity from q's memory](#1d-retrieve-a-named-entity-from-qs-memory)
+- e. [Query an external q session](#1e-query-an-external-q-session)
 
-??? Note "Specifying target types"
+### 1.a Convert Python objects to PyKX objects
 
-	When converting Pythonic objects to PyKX types users can make use of the `ktype` named argument. Users converting lists/atomic elements should use [PyKX types](../../api/pykx-q-data/type_conversions.md), if converting Pandas DataFrames or PyArrow Tables users can make use of the `ktype` argument with a dictionary input mapping the column name to the [PyKX type](../../api/pykx-q-data/type_conversions.md).
+The simplest way to create a PyKX object is by converting a similar Python type into a PyKX object. You can do this with the `#!python pykx.toq function`, which supports conversions from Python, NumPy, pandas, and PyArrow types to PyKX objects. Open the tabs that interest you to see conversion examples:
+
+??? Note "Specify target types"
+
+	When converting Pythonic objects to PyKX types, you can use the `ktype` named argument:
+
+	- To convert lists/atomic elements, use [PyKX types](../../api/pykx-q-data/type_conversions.md);
+	- To convert Pandas DataFrames or PyArrow Tables, use the `#!python ktype` argument with a dictionary input mapping the column name to the [PyKX type](../../api/pykx-q-data/type_conversions.md).
 
 === "Python"
 
@@ -156,18 +170,31 @@ The most simplistic method of creating a PyKX object is to convert an analogous 
 	'))
 	```
 
-### Generating data using PyKX inbuilt functions
+By default, when you convert Python strings to PyKX, they are returned as `#!python pykx.SymbolAtom` objects. This ensures a clear distinction between `#!python str` (string) and `#!python byte` objects. However, you might prefer Python strings to be returned as `#!python pykx.CharVector` objects, to achieve memory efficiency or greater flexibility in analytic development. To do this, use the keyword argument `#!python strings_as_char`, which ensures that all `#!python str` objects are converted to `#!python pykx.CharVector` objects.
 
-For users who wish to generate objects directly but who are not familiar with q and want to quickly prototype functionality a number of helper functions can be used.
+```python
+>>> import pykx as kx
+>>> kx.toq('str', strings_as_char=True)
+pykx.CharVector(pykx.q('"str"'))
+>>> kx.toq({'a': {'b': 'test'}, 'b': 'test1'}, strings_as_char=True)
+pykx.Dictionary(pykx.q('
+a| (,`b)!,"test"
+b| "test1"
+'))
+```
 
-Create a vector of random floating point precision values
+### 1.b Generate data using PyKX inbuilt functions
+
+For users who want to generate objects directly but are not familiar with q, and wish to quickly prototype this functionality, several helper functions are available.
+
+Create a vector of random floating point precision values:
 
 ```python
 >>> kx.random.random(3, 10.0)
 pykx.FloatVector(pykx.q('9.030751 7.750292 3.869818'))
 ```
 
-Additionally, users when generating random data can use PyKX null/infinite data to create data across larger data ranges as follows
+Additionally, when generating random data, you can use PyKX null/infinite data to create data across larger data ranges as follows:
 
 ```python
 >>> kx.random.random(2, kx.GUIDAtom.null)
@@ -176,7 +203,7 @@ pykx.GUIDVector(pykx.q('8c6b8b64-6815-6084-0a3e-178401251b68 5ae7962d-49f2-404d-
 pykx.IntVector(pykx.q('986388794 824432196 2022020141i'))
 ```
 
-Create a two-dimensional list of random symbol values
+Create a two-dimensional list of random symbol values:
 
 ```python
 >>> kx.random.random([2, 3], ['a', 'b', 'c'])
@@ -186,7 +213,7 @@ b a b
 '))
 ```
 
-Create a table of tabular data generated using random data
+Create a table of tabular data generated using random data:
 
 ```python
 >>> N = 100000
@@ -206,7 +233,7 @@ AAPL 68.98055 94
 '))
 ```
 
-Additionally for retrieval of current temporal information users can make calls to the `date`, `time` and `timestamp` type objects respectively as follows
+For retrieval of current temporal information, call the `#!python date`, `#!python time`, and `#!python timestamp` type objects as follows:
 
 ```python
 >>> kx.DateAtom('today')
@@ -217,20 +244,20 @@ pykx.TimeAtom(pykx.q('16:22:12.178'))
 pykx.TimestampAtom(pykx.q('2024.01.05T16:22:21.012631000'))
 ```
 
-### Evaluating q code using `kx.q`
+### 1.c Evaluate q code using `#!python kx.q`
 
-For users more familiar with q it is possible to evaluate q code to generate PyKX objects, this can be done as follows
+If you're more familiar with q, generate PyKX objects by evaluating q code: 
 
 ```python
 >>> kx.q('til 10')
 pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
 ```
 
-More information on the usage of `kx.q` can be found by following the documentation guide [here](evaluating.md)
+Documentation guide on [how to use `kx.q`](evaluating.md).
 
-### By retrieving a named entity from q's memory
+### 1.d Retrieve a named entity from q's memory
 
-As noted at the start of this guide PyKX objects exist in a memory space accessed and controlled by interactions with q, as such items which are created in q may not be immediately available as Python objects. For example if a named variable in q has been created as a side effect of a function call or explicitly created by a user it can be retrieved based on this name as follows.
+As PyKX objects exist in a memory space accessed and controlled by interactions with q, the items created in q may not be immediately available as Python objects. For example, if you created a named variable in q as a side effect of a function call or just explicitly created it, you can retrieve it by its name:
 
 ```python
 >>> kx.q('t:([]5?1f;5?1f)')            # Generate a named variable in a single object
@@ -251,15 +278,16 @@ x          x1
 pykx.FloatVector(pykx.q('0.3927524 0.5170911 0.5159796 0.4066642 0.1780839'))
 ```
 
-### Through query of an external q session
+### 1.e Query an external q session
 
-PyKX provides an IPC interface allowing users to query and retrieve data from a q server. Assuming that a user has a q server with no username/password exposed on port 5000 it is possible to run synchronous and asynchronous events against this server as follows:
+PyKX provides an IPC interface allowing users to query and retrieve data from a q server. If you have a q server with no username/password exposed on `#!python port 5000`, it's possible to run synchronous and asynchronous events against this server:
 
 ```python
 >>> conn = kx.QConnection('localhost', 5000)    # Open a connection to the q server
->>> conn('til 10')                               # Execute a command server side
+>>> conn('til 10')                              # Execute a command server side
 pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
->>> conn.qsql.select('tab', where = 'x=`a')      # Query using qsql statement
+>>> conn['tab'] = kx.q('([]100?`a`b;100?1f;100?1f)') # Generate a table on the server
+>>> conn.qsql.select('tab', where = 'x=`a')     # Query using qsql statement
 pykx.Table(pykx.q('
 x x1         x2        
 -----------------------
@@ -287,78 +315,80 @@ a 0.02810674 0.481821
 '))
 ```
 
-## Converting PyKX objects to Pythonic Types
+## 2. Convert PyKX objects to Pythonic types
 
-As mentioned above PyKX objects can be created and interacted with using q functionality, once the data is in a position to be used by Python it may be more appropriate to convert it to a Python, Numpy, Pandas or PyArrow representation. This is facilitated through the use of the following methods:
+Converting data to a PyKX format allows for easy interaction with these objects using q or the analytic functionality provided by PyKX. However, this format may not be suitable for all use cases. For instance, if a function requires a Pandas DataFrame as input, a PyKX object must be converted to a Pandas DataFrame.
 
-| Method   | Description                      |
+Once the data is ready for use in Python, it may be more appropriate to convert it into a representation using Python, NumPy, Pandas, or PyArrow by using the following methods:
+
+| **Method** | **Description**                |
 |----------|----------------------------------|
 | `*.py()` | Convert a PyKX object to Python  |
 | `*.np()` | Convert a PyKX object to Numpy   |
 | `*.pd()` | Convert a PyKX object to Pandas  |
 | `*.pa()` | Convert a PyKX object to PyArrow |
+    
+??? example "Example"
 
-The following provides some examples of this functionality in use:
+	```python
+	import pykx as kx
+	qarr = kx.q('til 5')
+	>>> qarr.py()
+	[0, 1, 2, 3, 4]
+	>>> qarr.np()
+	array([0, 1, 2, 3, 4])
+	>>> qarr.pd()
+	0    0
+	1    1
+	2    2
+	3    3
+	4    4
+	dtype: int64
+	>>> qarr.pa()
+	<pyarrow.lib.Int64Array object at 0x7ffabf2f4fa0>
+	[
+	0,
+	1,
+	2,
+	3,
+	4
+	]
+	>>>
+	>>> qtab = kx.Table(data={
+	...     'x': kx.random.random(5, 1.0),
+	...     'x1': kx.random.random(5, 1.0),
+	... })
+	>>> qtab
+	pykx.Table(pykx.q('
+	x         x1       
+	-------------------
+	0.439081  0.4707883
+	0.5759051 0.6346716
+	0.5919004 0.9672398
+	0.8481567 0.2306385
+	0.389056  0.949975 
+	'))
+	>>> qtab.np()
+	rec.array([(0.43908099, 0.47078825), (0.57590514, 0.63467162),
+			(0.59190043, 0.96723983), (0.84815665, 0.23063848),
+			(0.38905602, 0.94997503)],
+			dtype=[('x', '<f8'), ('x1', '<f8')])
+	>>> qtab.pd()
+			x        x1
+	0  0.439081  0.470788
+	1  0.575905  0.634672
+	2  0.591900  0.967240
+	3  0.848157  0.230638
+	4  0.389056  0.949975
+	>>> qtab.pa()
+	pyarrow.Table
+	x: double
+	x1: double
+	```
 
-```python
-import pykx as kx
-qarr = kx.q('til 5')
->>> qarr.py()
-[0, 1, 2, 3, 4]
->>> qarr.np()
-array([0, 1, 2, 3, 4])
->>> qarr.pd()
-0    0
-1    1
-2    2
-3    3
-4    4
-dtype: int64
->>> qarr.pa()
-<pyarrow.lib.Int64Array object at 0x7ffabf2f4fa0>
-[
-  0,
-  1,
-  2,
-  3,
-  4
-]
->>>
->>> qtab = kx.Table(data={
-...     'x': kx.random.random(5, 1.0),
-...     'x1': kx.random.random(5, 1.0),
-... })
->>> qtab
-pykx.Table(pykx.q('
-x         x1       
--------------------
-0.439081  0.4707883
-0.5759051 0.6346716
-0.5919004 0.9672398
-0.8481567 0.2306385
-0.389056  0.949975 
-'))
->>> qtab.np()
-rec.array([(0.43908099, 0.47078825), (0.57590514, 0.63467162),
-           (0.59190043, 0.96723983), (0.84815665, 0.23063848),
-           (0.38905602, 0.94997503)],
-          dtype=[('x', '<f8'), ('x1', '<f8')])
->>> qtab.pd()
-          x        x1
-0  0.439081  0.470788
-1  0.575905  0.634672
-2  0.591900  0.967240
-3  0.848157  0.230638
-4  0.389056  0.949975
->>> qtab.pa()
-pyarrow.Table
-x: double
-x1: double
-```
+!!! warning "Precision loss considerations"
 
-!!! warning "Precision Loss Considerations"
-
-	Care should be taken in particular when converting q temporal data to Python native data types. As Python temporal data types only support microsecond precision roundtrip conversions will reduce temporal granularity for q data.
+	Special care is needed when converting q temporal data to Python native data types. Since Python temporal data types only support microsecond precision, roundtrip conversions reduce the temporal granularity of q data.
 
 	```python
 	>>> import pykx as kx
@@ -369,4 +399,4 @@ x1: double
 	pykx.TimestampAtom(pykx.q('2024.01.05D03:16:23.736627000'))
 	```
 
-	See [here](../fundamentals/conversion_considerations.md#temporal-types) for further details.
+	See our [Conversion considerations for temporal types](../fundamentals/conversion_considerations.md#temporal-types) section for further details.

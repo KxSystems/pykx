@@ -1,15 +1,12 @@
-"""Query interfaces for PyKX."""
+"""_This page documents query interfaces for querying q tables using PyKX._"""
 
 from abc import ABCMeta
 from typing import Any, Dict, List, Optional, Union
-import warnings
-from uuid import uuid4
 
 from . import Q
 from . import wrappers as k
 from .ipc import QFuture
 from .exceptions import PyKXException, QError
-
 
 __all__ = [
     'Insert',
@@ -23,34 +20,28 @@ def __dir__():
 
 
 class QSQL:
-    """Generates and submits functional q SQL queries.
+    """The `#!python QSQL` class provides methods to query or modify q tables.
 
-    Instances of this class can be accessed as the `qsql` attribute of any [`pykx.Q`][pykx.Q]. For
-    instance, `pykx.q.qsql`, or `pykx.QConnection(...).qsql`.
+    The methods [select][pykx.QSQL.select], [exec][pykx.QSQL.exec], [update][pykx.QSQL.update]
+    and [delete][pykx.QSQL.delete] generate and execute functional queries on the given table.
+    To learn about functionally querying databases see [Chapter 9 Section 12 of Q for
+    Mortals](https://code.kx.com/q4m3/9_Queries_q-sql/#912-functional-forms).
 
-    The `QSQL` class provides Python users with a method of querying q simple, keyed, splayed and
-    partitioned tables using a single set of functionality.
+    There are a number of advantages to using this query style as opposed to interpolating
+    strings to generate simple qSQL queries:
 
-    This is achieved by wrapping the logic contained within the q functional select, exec, update,
-    and delete functionality. For more information on this functionality please refer to [Chapter 9
-    Section 12 of Q for Mortals](https://code.kx.com/q4m3/9_Queries_q-sql/#912-functional-forms).
-
-    While it is also conceivable that the interface could compile a qSQL statement to achieve the
-    same end goal there are a number of advantages to using the more complex functional form.
-
-    1. Users that are unfamiliar with q who use the interface are introduced to the more powerful
-        version of querying with q, while still operating within a familiar setting.
-    2. Using the functional form provides the ability when running functional updates to update the
-        q tables with data derived from Python:
+    1. Users that are unfamiliar with q who use the interface are introduced to this more powerful
+        version of querying with q, while still operating within a familiar setting in Python.
+    2. Using the functional form promotes data-oriented designs for modifying or querying the q
+        tables programmatically using data derived from Python:
 
         ```python
         qtable = pykx.q('([]1 2 3;4 5 6)')
         pykx.q.qsql.update(qtable, {'x': [10, 20, 30]})
         ```
 
-    3. It makes development and maintenance of the interface easier when dealing across the forms
-        of supported table within q within which the functional forms of interacting with tables
-        are more natural.
+    3. Development and maintenance of this interface is easier with regard to the different
+        supported table formats.
     """
 
     def __init__(self, q: Q):
@@ -63,23 +54,27 @@ class QSQL:
                by: Optional[Union[Dict[str, str], k.Dictionary]] = None,
                inplace: bool = False,
     ) -> k.K:
-        """Apply a q style select statement on tables defined within the process.
+        """
+        Execute a q functional select statement on tables defined within the process.
 
-        This implementation follows the q functional select syntax with limitations on
-        structures supported for the various clauses a result of this.
+        This implementation follows the q functional select syntax with limited support
+        on structures used in the parameters.
 
         Parameters:
-            table: The q table or name of the table (provided the table is named within the q
-                memory space) on which the select statement is to be applied.
-            columns: A dictionary mapping the name to be given to a column and the logic to be
-                applied in aggregation to that column both as strings.
-            where: Conditional filtering used to select subsets of the data on which by-clauses and
-                appropriate aggregations are to be applied.
-            by: A dictionary mapping the names to be assigned to the produced columns and the
-                columns whose results are used to construct the groups of the by clause.
-            inplace: Whether the result of an update is to be persisted. This operates for tables
-                referenced by name in q memory or general table objects
+            table: The q table or name of the table to query. The table must be named within
+                the q memory space.
+            columns: A dictionary where the keys are names assigned for the query's output columns
+                and the values are the logic used to compute the column's result.
+            where: Filtering logic for reducing the data used in group-bys and
+                output column aggregations.
+            by: A dictionary where they keys are names assigned for the produced columns and the
+                values are aggregation rules used to construct the group-by parameter.
+            inplace: Indicates if the result of an update is to be persisted. This applies to
+                tables referenced by name in q memory or general table objects
                 https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+
+        Returns:
+            A PyKX Table or KeyedTable object resulting from the executed select query
 
         Examples:
 
@@ -126,33 +121,36 @@ class QSQL:
              by: Optional[Union[Dict[str, str], k.Dictionary]] = None
     ) -> k.K:
         """
-        Apply a q style exec statement on tables defined within the process.
+        Execute a q functional exec statement on tables defined within the process.
 
-        This implementation follows the q functional exec syntax with limitations on structures
-        supported for the various clauses a result of this.
+        This implementation follows the q functional exec syntax with limited support on
+        structures used for the parameters.
 
         Parameters:
-            table: The q table or name of the table (provided the table is named within the q
-                memory space) on which the exec statement is to be applied.
-            columns: A dictionary mapping the name to be given to a column and the logic to be
-                applied in aggregation to that column both as strings. A string defining a single
-                column to be retrieved from the table as a list.
-            where: Conditional filtering used to select subsets of the data on which by clauses and
-                appropriate aggregations are to be applied.
-            by: A dictionary mapping the names to be assigned to the produced columns and the
-                the columns whose results are used to construct the groups of the by clause.
+            table: The q table or name of the table to query. The table must be named within
+                the q memory space.
+            columns: A dictionary where the keys are names assigned to the query's output columns
+                and the values are the logic used to compute the column's result.
+            where: Filtering logic for reducing the data used in group-by and
+                output column aggregations.
+            by: A dictionary where they keys are names assigned to the produced columns and the
+                values are aggregation rules used when q functionally applies group-by.
+
+        Returns:
+            A PyKX Vector or Dictionary object resulting from the executed exec query
 
         Examples:
 
         Define a q table in python and named in q memory
 
         ```python
-        pykx.q['qtab'] = pd.DataFrame.from_dict({
-            'col1': [['a', 'b', 'c'][randint(0, 2)] for _ in range(100)],
-            'col2': [random() for _ in range(100)],
-            'col3': [randint(0, 1) == 1 for _ in range(100)],
-            'col4': [random() * 10 for _ in range(100)]
-        })
+        qtab = pykx.Table(data={
+            'col1': pykx.random.random(100, ['a', 'b', 'c']),
+            'col2': pykx.random.random(100, 100),
+            'col3': pykx.random.random(100, [0, 1]),
+            'col4': pykx.random.random(100, 100.0)
+            })
+        pykx.q['qtab'] = qtab
         ```
 
         Select last item of the table
@@ -203,32 +201,29 @@ class QSQL:
                columns: Optional[Union[Dict[str, str], k.Dictionary]] = None,
                where: Optional[Union[List[str], str, k.SymbolAtom, k.SymbolVector]] = None,
                by: Optional[Union[Dict[str, str], k.Dictionary]] = None,
-               modify: bool = False,
                inplace: bool = False,
     ) -> k.K:
         """
-        Apply a q style update statement on tables defined within the process.
+        Execute a q style update statement on tables defined within the process.
 
-        This implementation follows the q functional update syntax with limitations on
-        structures supported for the various clauses a result of this.
+        This implementation follows the q functional update syntax with limited support on
+        structures used for the parameters.
 
         Parameters:
-            table: The q table or name of the table (provided the table is named within the q
-                memory space) on which the update statement is to be applied.
-            columns: A dictionary mapping the name of a column present in the table or one to be
-                added to the contents which are to be added to the column, this content can be a
-                string denoting q data or the equivalent Python data.
-            where: Conditional filtering used to select subsets of the data on which by-clauses and
-                appropriate aggregations are to be applied.
-            by: A dictionary mapping the names to be assigned to the produced columns and the
-                columns whose results are used to construct the groups of the by clause.
-            modify: `Deprecated`, please use `inplace` instead. Whether the result of an update
-                is to be saved. This operates for tables referenced by name in q memory or
-                general table objects
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+            table: The q table or name of the table to update. The table must be named within
+                the q memory space.
+            columns: A dictionary where the keys are names assigned to the query's output columns
+                and the values are the logic used to compute the column's result.
+            where: Filtering logic for reducing the data used in group-bys and
+                output column aggregations.
+            by: A dictionary where they keys are names assigned to the result columns and the
+                values are aggregation rules used to compute the group-by result.
             inplace: Whether the result of an update is to be persisted. This operates for tables
                 referenced by name in q memory or general table objects
                 https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+
+        Returns:
+            The updated PyKX Table or KeyedTable object resulting from the executed update query
 
         Examples:
 
@@ -272,27 +267,26 @@ class QSQL:
         pykx.q.qsql.update(byqtab, {'weight': 'avg weight'}, by={'city': 'city'})
         ```
 
-        Apply an update grouping based on a by phrase and persist the result using the modify keyword
+        Apply an update grouping based on a by phrase and persist the result using the inplace keyword
 
         ```python
         pykx.q.qsql.update('byqtab', columns={'weight': 'avg weight'}, by={'city': 'city'}, inplace=True)
         pykx.q['byqtab']
             ```
         """ # noqa: E501
-        return self._seud(table, 'update', columns, where, by, modify, inplace)
+        return self._seud(table, 'update', columns, where, by, inplace)
 
     def delete(self,
                table: Union[k.Table, str],
                columns: Optional[Union[List[str], k.SymbolVector]] = None,
                where: Optional[Union[List[str], str, k.SymbolAtom, k.SymbolVector]] = None,
-               modify: bool = False,
                inplace: bool = False,
     ) -> k.K:
         """
-        Apply a q style delete statement on tables defined within the process.
+        Execute a q functional delete statement on tables defined within the process.
 
-        This implementation follows the q functional delete syntax with limitations on
-        structures supported for the various clauses a result of this.
+        This implementation follows the q functional delete syntax with limited support on
+        structures used for the parameters.
 
         Parameters:
             table: The q table or name of the table (provided the table is named within the q
@@ -300,13 +294,12 @@ class QSQL:
             columns: Denotes the columns to be deleted from a table.
             where: Conditional filtering used to select subsets of the data which are to be
                 deleted from the table.
-            modify: `Deprecated`, please use `inplace` instead. Whether the result of a delete
-                is to be saved. This holds when `table` is the name of a table in q memory,
-                as outlined at:
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
             inplace: Whether the result of an update is to be persisted. This operates for tables
                 referenced by name in q memory or general table objects
                 https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+
+        Returns:
+            The updated PyKX Table or KeyedTable object resulting from the executed delete query
 
         Examples:
 
@@ -339,26 +332,19 @@ class QSQL:
         ```
 
         Delete a column from the dataset named in q memory and persist the result using the
-        modify keyword
+        inplace keyword
 
         ```python
-        pykx.q.qsql.delete('qtab', 'age', modify=True)
+        pykx.q.qsql.delete('qtab', 'age', inplace=True)
         pykx.q['qtab']
         ```
         """ # noqa: E501
         if columns is not None and where is not None:
             raise TypeError("'where' and 'columns' clauses cannot be used simultaneously in a "
                             "delete statement")
-        return self._seud(table, 'delete', columns, where, None, modify, inplace)
+        return self._seud(table, 'delete', columns, where, None, inplace)
 
-    def _seud(self, table, query_type, columns=None, where=None, by=None, modify=False, inplace=False) -> k.K: # noqa: C901, E501
-        if modify and inplace:
-            raise RuntimeError("Attempting to use both 'modify' and 'inplace' keywords, please use only 'inplace'") # noqa: E501
-
-        if modify:
-            warnings.warn("The 'modify' keyword is now deprecated please use 'inplace'")
-            inplace = modify
-
+    def _seud(self, table, query_type, columns=None, where=None, by=None, inplace=False) -> k.K: # noqa: C901, E501
         if not isinstance(table, str):
             table = k.K(table)
 
@@ -368,52 +354,43 @@ class QSQL:
         select_clause = self._generate_clause(columns, 'columns', query_type)
         by_clause = self._generate_clause(by, 'by', query_type)
         where_clause = self._generate_clause(where, 'where', query_type)
-        original_table = table
+        get = ''
+        query_char = '!' if query_type in ('delete', 'update') else '?'
         if isinstance(table, k.K):
             if not isinstance(table, (k.Table, k.KeyedTable)):
                 raise TypeError("'table' object provided was not a K tabular object or an "
                                 "object which could be converted to an appropriate "
                                 "representation")
-            randguid = str(uuid4())
-            self._q(f'''
-                    {{@[{{get x}};`.pykx.i.updateCache;{{.pykx.i.updateCache:(`guid$())!()}}];
-                    .pykx.i.updateCache["G"$"{randguid}"]:x}}
-                    ''', table)
-            original_table = table
-            table_code = f'.pykx.i.updateCache["G"$"{randguid}"]'
-            if not inplace:
-                query_char = '!' if query_type in ('delete', 'update') else '?'
-            else:
-                query_char = table_code + (':!' if query_type in ('delete', 'update') else ':?')
-        elif not isinstance(table, str):
+        elif isinstance(table, str):
+            if (not inplace and query_type in ('delete', 'update')):
+                get = 'get'
+        else:
             raise TypeError("'table' must be a an object which is convertible to a K object "
                             "or a string denoting an item in q memory")
-        else:
-            if (not inplace and query_type in ('delete', 'update')):
-                table_code = f'get`$"{table}"'
-            else:
-                table_code = f'`$"{table}"'
-            query_char = '!' if query_type in ('delete', 'update') else '?'
-        try:
-            res = self._q(
-                f'{{{query_char}[{table_code};value x;value y;value z]}}',
-                where_clause,
-                by_clause,
-                select_clause,
-                wait=True,
-            )
-            if inplace and isinstance(original_table, k.K):
-                res = self._q(table_code)
-                if isinstance(res, QFuture):
-                    raise QError("'inplace' not supported with asynchronous query")
-                if type(original_table) != type(res):
-                    raise QError('Returned data format does not match input type, '
-                                 'cannot perform inplace operation')
-                original_table.__dict__.update(res.__dict__)
-            return res
-        finally:
-            if isinstance(original_table, k.K):
-                self._q._call(f'.pykx.i.updateCache _:"G"$"{randguid}"', wait=True)
+        wv, bv, sv = 'value', 'value', 'value'
+        if isinstance(where_clause, k.QueryPhrase):
+            wv = ''
+            where_clause = where_clause._phrase
+        if isinstance(by_clause, (dict, k.ParseTree)):
+            bv = ''
+        if isinstance(select_clause, (dict, k.ParseTree)):
+            sv = ''
+        res = self._q(
+            f'{{[tab;x;y;z]{query_char}[{get} tab;{wv} x;{bv} y;{sv} z]}}',
+            table,
+            where_clause,
+            by_clause,
+            select_clause,
+            wait=True,
+        )
+        if inplace and isinstance(table, k.K):
+            if isinstance(res, QFuture):
+                raise QError("'inplace' not supported with asynchronous query")
+            if type(table) != type(res):
+                raise QError('Returned data format does not match input type, '
+                             'cannot perform inplace operation')
+            table.__dict__.update(res.__dict__)
+        return res
 
     def _generate_clause(self, clause_value, clause_name, query_type):
         if clause_value is None:
@@ -432,6 +409,32 @@ class QSQL:
     def _generate_clause_columns_by(self, clause_value, clause_name, query_type):
         if isinstance(clause_value, dict):
             return self._generate_clause_columns_by_dict(clause_value)
+        elif isinstance(clause_value, k.QueryPhrase):
+            if clause_value._are_trees[0]:
+                return [b'{x!.[y;(0 0);eval]}', clause_value._names, clause_value._phrase]
+            elif query_type == 'delete' and clause_name == 'columns':
+                return [b'{x}',  clause_value._names]
+            else:
+                return [b'{x!y}', clause_value._names, clause_value._phrase]
+        elif isinstance(clause_value, k.Column):
+            if query_type == 'exec':
+                if clause_value._is_tree:
+                    return [b'.[;enlist 0;eval]', clause_value._value]
+                else:
+                    return k.ParseTree(clause_value._value)
+            elif query_type == 'delete' and clause_name == 'columns':
+                return [b'enlist', clause_value._name]
+            else:
+                if clause_value._is_tree:
+                    return [b'{enlist[x]!enlist .[y;enlist 0;eval]}',
+                            clause_value._name, clause_value._value]
+                else:
+                    return {clause_value._name: clause_value._value}
+        elif isinstance(clause_value, k.Variable):
+            if query_type == 'exec':
+                return k.ParseTree(clause_value._name)
+            else:
+                return {clause_value._name: clause_value._name}
         elif clause_name == 'columns' and query_type == 'delete':
             if isinstance(clause_value, str):
                 if clause_value == '':
@@ -441,8 +444,21 @@ class QSQL:
                 clause_value = [k.CharVector(x) for x in clause_value]
             return [b'{parse each x}', clause_value]
         elif (query_type in ['select', 'exec']) and (clause_name in ['columns', 'by']):
-            if isinstance(clause_value, list):
-                return [b'{v!v:{$[0>type x;x;(0h>v 0)&1~count v:distinct type each x;raze x;x]}x}', clause_value] # noqa: E501
+            if isinstance(clause_value, k.Column):
+                return clause_value
+            elif isinstance(clause_value, k.QueryPhrase):
+                return [b'{x!y}', clause_value._names, clause_value._phrase]
+            elif isinstance(clause_value, list):
+                kys=[]
+                vls=[]
+                for x in clause_value:
+                    if isinstance(x, k.Column):
+                        kys.append(x._name)
+                        vls.append(x._value)
+                    else:
+                        kys.append(x)
+                        vls.append(x)
+                return [b'{x!y}', kys, vls]
             elif isinstance(clause_value, str) and query_type == 'select':
                 return [b'{x!x}enlist@', clause_value]
             return [b'{x}', k.K(clause_value)]
@@ -456,36 +472,47 @@ class QSQL:
             if isinstance(val, str):
                 if val == '':
                     raise ValueError(f'q query specifying column for key {key!r} cannot be empty')
-                clause_dict[key] = [True, k.CharVector(val)]
+                clause_dict[key] = [1, k.CharVector(val)]
+            elif isinstance(val, k.Column):
+                if val._is_tree:
+                    clause_dict[key] = [2, val._value]
+                else:
+                    clause_dict[key] = [0, val._value]
             else:
-                clause_dict[key] = [False, val]
-        return [b'{key[x]!{$[x 0;parse;{$[0>type x;x;(0h>v 0)&1~count v:distinct type each x;raze x;x]}]x 1}each value x}', clause_dict] # noqa: E501
+                clause_dict[key] = [0, val]
+        return [b'''{
+                key[x]!{$[0=x 0;(::);1=x 0;parse;2=x 0;.[;enlist 0;eval];(::)] x 1}each value x
+                }''', clause_dict]
 
     def _generate_clause_where(self, clause_value) -> k.List:
-        if isinstance(clause_value, k.List):
-            return [b'{x}', clause_value]
+        if isinstance(clause_value, (k.QueryPhrase, k.ParseTree, k.Column, k.List)):
+            return k.QueryPhrase(clause_value)
         if isinstance(clause_value, k.BooleanVector):
-            return [b'{enlist x}', clause_value]
+            return k.QueryPhrase([clause_value])
         if isinstance(clause_value, str):
             clause_value = [k.CharVector(clause_value)]
-        else:
+        elif all([isinstance(x, str) for x in clause_value]):
             clause_value = [k.CharVector(x) for x in clause_value]
+        else:
+            wp = k.QueryPhrase(clause_value[0])
+            for wc in clause_value[1:]:
+                wp.extend(k.QueryPhrase(wc))
+            return wp
         return [b'{parse each x}', clause_value]
 
 
 class SQL:
     """Wrapper around the [KX Insights Core ANSI SQL](https://code.kx.com/insights/core/sql.html) interface.
 
-    Lots of examples within this interface use a table named trades, an example of this table is
+    Examples within this interface use a table named **trades**, an example of this table is
 
     ```Python
-    >>> kx.q['trades'] = kx.toq(
-        pd.DataFrame.from_dict({
-            'sym': [['AAPL', 'GOOG', 'MSFT'][randint(0, 2)] for _ in range(100)],
-            'date': [[date(2022, 1, 1), date(2022, 1, 2), date(2022, 1, 3)][randint(0, 2)] for _ in range(100)],
-            'price': [random() * 1000 for _ in range(100)]
+    >>> trades = kx.Table(data={
+            'sym': kx.random.random(100, ['AAPL', 'GOOG', 'MSFT']),
+            'date': kx.random.random(100, kx.q('2022.01.01') + [0,1,2]),
+            'price': kx.random.random(100, 1000.0)
         })
-    )
+    >>> kx.q['trades'] = trades
     ```
     """ # noqa: E501
 
@@ -493,24 +520,24 @@ class SQL:
         self._q = q
 
     def __call__(self, query: str, *args: Any) -> k.Table:
-        """Compile and run a SQL statement.
+        """Compile and run a SQL statement using string interpolation.
 
         Parameters:
-            query: The SQL query, using KX Insights Core SQL, documented at
-                https://code.kx.com/insights/core/sql.html
-            *args: The arguments for the query, which will be interpolated into the query. Each
-                argument will be converted into a [`pykx.K`][] object.
+            query: The query to execute formatted in
+                [KX Insights SQL style](https://code.kx.com/insights/core/sql.html)
+            *args: The arguments for the query, which will be interpolated into the string. Each
+                argument will be converted into a [pykx.K][pykx.K] object.
 
         Returns:
-            The result of the evaluation of `query` with `args` interpolated.
+            The result of the evaluation of `#!python query` with `#!python args` interpolated.
 
-        Note: Avoid interpolating the table into the query when running over IPC.
-            It's common to interpolate a `pykx.Table` object into the query as `'$1'`. This works
-            well when running embedded within the process, but when the `Q` instance is an
-            [IPC connection][pykx.QConnection] this will result in the entire table being sent over
-            the connection, which will negatively impact performance. Instead, when running over
-            IPC, write the name of the table (as defined in the connected q server) directly into
-            the query.
+        Note: Avoid interpolating the table name into the query when using this with IPC.
+            Use the full name of the table in the string.
+            When using this class on the embedded q process it is common to interpolate a
+            `#!python pykx.Table` object into a query using `#!python '$1'`. When the `#!python Q`
+            object used in the initialization of this class is an [IPC connection][pykx.QConnection]
+            the entire table will be sent in the message over the connection. If the table is large
+            this will significantly impact performance.
 
         Examples:
 
@@ -529,7 +556,7 @@ class SQL:
         '))
         ```
 
-        Query a [`pykx.Table`][] instance by interpolating it in as the first argument:
+        Query a [`pykx.Table`][] instance by injecting it as the first argument using `$n` syntax:
 
         ```python
         >>> q.sql('select * from $1', trades) # where `trades` is a `pykx.Table` object
@@ -543,7 +570,8 @@ class SQL:
         ..
         '))
         ```
-        Query a table using interpolated conditions:
+
+        Query a table using multiple injected arguments:
 
         ```python
         >>> q.sql('select * from trades where date = $1 and price < $2', date(2022, 1, 2), 500.0)
@@ -561,35 +589,32 @@ class SQL:
         return self._q('.s.sp', k.CharVector(query), args)
 
     def prepare(self, query: str, *args: Any) -> k.List:
-        """Prepare a parametrized query to be executed later, the parameter types are deduced from
-        the types of the arguments used to prepare the statement.
+        """Prepare a parametrized query to be executed later.
 
         Parameters:
-            query: The SQL query, using KX Insights Core SQL, documented at
-                https://code.kx.com/insights/core/sql.html
-            *args: The arguments for the query, these arguments are not used in the query. They are
-                used to determine the types of the parameters that will later be used as parameters
-                when executing the query.
+            query: The query to parameterize in
+                [KX Insights SQL format](https://code.kx.com/insights/core/sql.html).
+            *args: The arguments for `#!python query`. The arguments are not used in the query. They
+                are used to determine the expected types of the parameters of the parameterization.
 
         Returns:
-            The parametrized query, which can later be used with `q.query.execute()`
+            The parametrized query, which can later be used with `#!python q.query.execute()`
 
         Examples:
 
-        Note: When preparing a query with K types you don't have to fully construct one.
-            For example you can pass `kx.LongAtom(1)` as a value to the prepare function as well as
-            just [`pykx.LongAtom`][]. This only works for Atom and Vector types. There is also a
-            helper function for tables that you can use called `pykx.Table.prototype`.
+        Note: Preparing a query does not require fully constructed K Atom and Vector types.
+            Both the value `#!python kx.LongAtom(1)` and the wrapper [pykx.LongAtom][pykx.LongAtom]
+            are valid. To determine table type use `#!python pykx.Table.prototype`.
 
         Prepare a query for later execution that will expect a table with 3 columns a, b, and c with
-        ktypes [`pykx.SymbolVector`][], [`pykx.FloatVector`][], and [`pykx.LongVector`][]
-        respectively.
+        ktypes [pykx.SymbolVector][pykx.SymbolVector], [pykx.FloatVector][pykx.FloatVector], and
+        [pykx.LongVector][pykx.LongVector] respectively.
 
         ```Python
         >>> p = q.sql.prepare('select * from $1', kx.q('([] a:``; b: 0n 0n; c: 0N 0N)'))
         ```
-        You can also use the `pykx.Table.prototype` helper function to build a table to pass into a
-        prepared SQL query.
+        You can also use the `#!python pykx.Table.prototype` helper function to build a table to
+        pass into a prepared SQL query.
 
         ```Python
         >>> p = q.sql.prepare('select * from $1', kx.Table.prototype({
@@ -609,7 +634,7 @@ class SQL:
         )
         ```
 
-        You can also directly pass in the [`pykx.K`][] types you wish to use instead.
+        You can also directly pass in the [pykx.K][pykx.K] types you wish to use instead.
 
         ```Python
         >>> p = q.sql.prepare('select * from trades where date = $1 and price < $2',
@@ -624,30 +649,30 @@ class SQL:
         return self._q('.s.sq', k.CharVector(query), _args)
 
     def execute(self, query: k.List, *args: Any) -> k.K:
-        """Execute a prepared query the parameter types must match the types of the arguments
-        used in the prepare statement.
+        """Execute a prepared query. Parameter types must match the types of the arguments
+        used when executing the `#!python sql.prepare` function.
 
         Parameters:
-            query: A prepared SQL statement returned by a call to `q.sql.prepare`.
+            query: A prepared SQL statement returned by a call to `#!python sql.prepare`.
             *args: The arguments for the query, which will be interpolated into the query. Each
-                argument will be converted into a [`pykx.K`][] object.
+                argument will be converted into a [pykx.K][pykx.K] object.
 
         Returns:
-            The result of the evaluation of `query` with `args` interpolated.
+            The result of the evaluation of `#!python query` with `#!python args` interpolated.
 
-        Note: Avoid interpolating the table into the query when running over IPC.
-            It's common to interpolate a [`pykx.Table`][] object into the query as `'$1'`. This
-            works well when running embedded within the process, but when the `Q` instance is an
-            [IPC connection][pykx.QConnection] this will result in the entire table being sent over
-            the connection, which will negatively impact performance. Instead, when running over
-            IPC, write the name of the table (as defined in the connected q server) directly into
-            the query.
+        Note: Avoid interpolating the table name into the query when using this with IPC.
+            Use the full name of the table in the string.
+            When using this class on the embedded q process it is common to interpolate a
+            `#!python pykx.Table` object into a query using `#!python '$1'`. When the `#!python Q`
+            object used in the initialization of this class is an [IPC connection][pykx.QConnection]
+            the entire table will be sent in the message over the connection. If the table is large
+            this will significantly impact performance.
 
         Examples:
 
-        Execute a prepared query passing in a [`pykx.Table`][] with 3 columns a, b, and c with
-        ktypes [`pykx.SymbolVector`][], [`pykx.FloatVector`][], and [`pykx.LongVector`][]
-        respectively.
+        Execute a prepared query passing in a [pykx.Table][pykx.Table] with 3 columns a, b, and c
+        with ktypes [pykx.SymbolVector][pykx.SymbolVector], [pykx.FloatVector][pykx.FloatVector],
+        and [pykx.LongVector][pykx.LongVector] respectively.
 
         ```Python
         >>> p = q.sql.prepare('select * from $1', kx.q('([] a:``; b: 0n 0n; c: 0N 0N)'))
@@ -684,10 +709,10 @@ class SQL:
         return self._q('.s.sx', query, args)
 
     def get_input_types(self, prepared_query: k.List) -> List[str]:
-        """Get the [`pykx.K`][] types that are expected to be used with a prepared query.
+        """Get the [pykx.K][pykx.K] types that are expected to be used with a prepared query.
 
         Parameters:
-            prepared_query: A prepared SQL statement returned by a call to `q.sql.prepare`.
+            prepared_query: A prepared SQL statement returned by a call to `#!python q.sql.prepare`.
 
         Returns:
             A Python list object containing the string representations of the expected K types for
@@ -734,7 +759,7 @@ class SQL:
 
 
 class TableAppend:
-    """Helper class for the q insert function"""
+    """Helper class for the q insert and upsert functions"""
 
     def __init__(self, _q):
         self._q = _q
@@ -802,7 +827,7 @@ class TableAppend:
 
 
 class Insert(TableAppend):
-    """Helper class for the q insert and upsert functions"""
+    """Helper class for the q insert function"""
 
     def __init__(self, _q: Q):
         super().__init__(_q)
@@ -814,40 +839,40 @@ class Insert(TableAppend):
         match_schema: bool = False,
         test_insert: bool = False
     ) -> Union[None, k.Table]:
-        """Helper function around `q`'s `insert` function which inserts a row or multiple rows into
+        """Helper function around q's `#!q insert` function which inserts a row or multiple rows into
         a q table object.
 
         Parameters:
-            table: The name of the table to be inserted onto.
-            row: A list of objects to be inserted as a row, or a list of lists containing objects
+            table: The name of the table for the insert operation.
+            row: A list of objects to be inserted as a row, or a list of lists of objects
                 to insert multiple rows at once.
-            match_schema: Whether the row/rows to be inserted must match the tables current schema.
+            match_schema: Whether the row/rows to be inserted must match the table's current schema.
             test_insert: Causes the function to modify a small local copy of the table and return
                 the modified example, this can only be used with embedded q and will not modify the
-                source tables contents.
+                source table's contents.
 
         Returns:
-            A `k.LongVector` denoting the index of the rows that were inserted, unless the
-            `test_insert` keyword argument is used in which case it returns the
-            last 5 rows of the table with the new rows inserted onto the end, this does not modify
-            the actual table object.
+            When `#!python test_insert` is false return a `#!python k.LongVector` denoting the
+                index of the rows that were inserted. When `#!python test_insert` is true return the
+                last 5 rows of the table with the new rows inserted onto the end leaving
+                `#!python table` unmodified.
 
         Raises:
-            PyKXException: If the `match_schema` parameter is used this function may raise an error
-                if the row to be inserted does not match the tables schema. The error message will
-                contain information about which columns did not match.
+            PyKXException: If the `#!python match_schema` parameter is used this function may raise
+                an error if the row to be inserted does not match the table's schema. The error
+                message will contain information about which columns did not match.
 
         Examples:
 
-        Insert a single row onto a table named `tab` ensuring that the row matches the tables
-        schema. Will raise an error if the row does not match
+        Insert a single row onto a table named `#!python tab` ensuring that the row matches the
+        table's schema. This will raise an error if the row does not match.
 
         ```Python
         >>> q.insert('tab', [1, 2.0, datetime.datetime(2020, 2, 24)], match_schema=True)
         ```
 
-        Insert multiple rows onto a table named `tab` ensuring that each of the rows being added
-        match the tables schema.
+        Insert multiple rows onto a table named `#!python tab` ensuring that each of the rows being
+        added match the table's schema.
 
         ```Python
         >>> q.insert(
@@ -897,40 +922,41 @@ class Upsert(TableAppend):
         match_schema: bool = False,
         test_insert: bool = False
     ) -> Union[None, k.Table]:
-        """Helper function around `q`'s `upsert` function which inserts a row or multiple rows into
+        """Helper function around q's `#!q upsert` function which inserts a row or multiple rows into
         a q table object.
 
         Parameters:
-            table: A `k.Table` object or the name of the table to be inserted onto.
-            row: A list of objects to be inserted as a row, if the table is within embedded q you
+            table: A `#!python k.Table` object or the name of the table.
+            row: A list of objects to be appended as a row, if the table is within embedded q you
                 may also pass in a table object to be upserted.
-            match_schema: Whether the row/rows to be inserted must match the tables current schema.
+            match_schema: Whether the row/rows to be appended must match the table's current schema.
             test_insert: Causes the function to modify a small local copy of the table and return
                 the modified example, this can only be used with embedded q and will not modify the
-                source tables contents.
+                source table's contents.
 
         Returns:
-            The modified table if a `k.Table` is passed in, otherwise `None` is returned.
-            If the `test_insert` keyword argument is used it returns the last 5 rows of the table
-            with the new rows inserted onto the end, this does not modify the actual table object.
+            When `#!python test_insert` is false and `#!python table` is a `#!python k.Table` return
+                the modified table. When `#!python test_insert` is true return the last 5 rows of
+                the table with new rows appended to the end. In all other cases `#!python None`
+                is returned.
 
         Raises:
-            PyKXException: If the `match_schema` parameter is used this function may raise an error
-                if the row to be inserted does not match the tables schema. The error message will
-                contain information about which columns did not match.
+            PyKXException: If the `#!python match_schema` parameter is used this function may raise
+                an error if the row to be inserted does not match the table's schema. The error
+                message will contain information about which columns did not match.
 
         Examples:
 
-        Upsert a single row onto a table named `tab` ensuring that the row matches the tables
-        schema. Will raise an error if the row does not match
+        Upsert a single row onto a table named `#!python tab` ensuring that the row matches the
+        table's schema. This will raise an error if the row does not match.
 
         ```Python
         >>> q.upsert('tab', [1, 2.0, datetime.datetime(2020, 2, 24)], match_schema=True)
         >>> table = q.upsert(table, [1, 2.0, datetime.datetime(2020, 2, 24)], match_schema=True)
         ```
 
-        Upsert multiple rows onto a table named `tab` ensuring that each of the rows being added
-        match the tables schema. Upserting multiple rows only works within embedded q.
+        Upsert multiple rows onto a table named `#!python tab` ensuring that each of the rows being
+        added match the table's schema.
 
         ```Python
         >>> q.upsert(
@@ -945,8 +971,8 @@ class Upsert(TableAppend):
         )
         ```
 
-        Run a test insert to modify a local copy of the table to test what the table would look
-        like after inserting the new rows.
+        Run a test upsert to modify a local copy of the table to test what the table would look
+        like after appending the new rows.
 
         ```Python
         >>> kx.q['tab'] = kx.Table([[1, 1.0, 'a'], [2, 2.0, 'b'], [3, 3.0, 'c']], columns=['a', 'b', 'c'])
