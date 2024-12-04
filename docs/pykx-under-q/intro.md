@@ -163,6 +163,23 @@ q).pykx.get[`func]
 {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 ```
 
+In some cases the `#!python .p` file being loaded does not contain syntax which can be parsed by q (used by `q)\l test.p` example), as such there is available a `#!q .pykx.loadPy` function:
+
+```q
+$ cat test.p
+def func(x,
+         y
+): -> None
+    return x+y
+$ q pykx.q
+q)\l test.p
+'SyntaxError('unexpected EOF while parsing...
+q).pykx.loadPy["test.p"]
+q)f:.pykx.get[`func;<]
+q)f[1;2]
+3
+```
+
 ### Interact with PyKX objects
 
 #### Foreign objects
@@ -760,6 +777,7 @@ x         x1
 0.2296615 0.1959907 
 0.6919531 0.375638  
 ```
+
 ## Next steps
 
 - Use the [pykx.q Library Reference Card](../pykx-under-q/api.md).

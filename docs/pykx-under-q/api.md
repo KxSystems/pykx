@@ -47,6 +47,7 @@ q)\l pykx.q
 [print                             print a Python object directly to stdout](#pykxprint)
 [repr                              evaluate the Python function repr() on supplied Python object](#pykxrepr)
 [debugInfo                         print useful process debug information to q session](#pykxdebuginfo)
+[loadPy                            load a .py/.p script executed according to Python script execution logic](#pykxloadpy)
 
 **Data Conversions:**
 [setdefault                        define the default conversion for KX objects to Python](#pykxsetdefault)
@@ -333,11 +334,37 @@ q)`dash in key `.pykx
 1b
 ```
 
-**Parameter:**
+## `.pykx.loadPy`
 
-|Name|Type|Description|
-|---|---|---|
-|ext|||
+
+_Load and execute a .p/.py file manually_
+
+```q
+.pykx.loadPy["file.py"]
+```
+
+**Parameters:**
+
+name     | type     | description
+---------|----------|-------------
+`fname`  | `string` | The name of the python file to be executed
+
+**Returns:**
+
+type | description |
+-----|-------------|
+`::` | Returns generic null on successful execution otherwise returns the error message raised
+
+**Example:**
+
+```q
+q)\cat file.py
+"def func(x):"
+"    return x+1"
+q).pykx.loadPy["file.py"]
+q).pykx.get[`func][10]`
+11
+```
 
 ## `.pykx.print`
 
@@ -843,9 +870,10 @@ type | description |
     [Pandas](https://pandas.pydata.org/docs/user_guide/index.html) | `"pd", "pandas", "Pandas"`   |
     [Python](https://docs.python.org/3/library/datatypes.html)     | `"py", "python", "Python"`   |
     [PyArrow](https://arrow.apache.org/docs/python/index.html)     | `"pa", "pyarrow", "PyArrow"` |
-    K                                                              | `"k", "q"`                   |
+    [K](type_conversions.md)                                       | `"k", "q"`                   |
     raw                                                            | `"raw"`                      |
     default                                                        | `"default"`                  |
+
 
 ```q
 // Default value on startup is "default"

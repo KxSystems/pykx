@@ -9,7 +9,7 @@ import sys
 
 from . import beta_features
 from .util import add_to_config, num_available_cores
-from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _check_beta, _get_config_value, pykx_lib_dir, ignore_qhome, lic_path
+from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _get_config_value, pykx_lib_dir, ignore_qhome, lic_path
 
 
 def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
@@ -362,7 +362,6 @@ if not pykx_threading:
                     raise PyKXException( # nocov
                         f'Non-zero qinit return code {qinit_return_code} despite successful pre-check') # nocov
 else:
-    _check_beta('PYKX Threading')
     beta_features.append('PyKX Threading')
     _libq_path_py = bytes(str(find_core_lib('q')), 'utf-8')
     _tcore_path = tcore_path_location

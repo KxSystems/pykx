@@ -10,7 +10,7 @@ tags: PyKX, q, streaming, basic
 
 _This page outlines the steps taken and functionality shown in demonstrating your first PyKX streaming application_
 
-To run this example please download the [zip](./real-time-pykx.zip) file containing the notebook or visit our github repository [here](https://github.com/pykx/docs/examples/streaming) to view the code directly.
+To run this example please download the [zip](./real-time-pykx.zip) file containing the notebook or visit our github repository [here](https://github.com/KxSystems/pykx/tree/main/docs/examples/streaming) to view the code directly.
 
 In this example we will generate a real-time and historical analysis system which completes the following actions:
 

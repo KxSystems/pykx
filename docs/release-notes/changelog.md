@@ -4,6 +4,79 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+## PyKX 3.0.1
+
+#### Release Date
+
+2024-12-04
+
+!!! Note
+
+        PyKX 3.0.1 is currently not available for Mac x86/ARM for all Python versions. Updated builds will be provided once available. To install PyKX 3.0.1 on Mac please install from source [here](https://github.com/kxsystems/pykx).
+
+### Additions
+
+- Addition of the property `#!python day` to `#!python kx.Column` objects to allow users to retrieve the day of month of a timestamp.
+
+	```python
+	>>> import pykx as kx
+	>>> tab = kx.Table(data={
+	...     'a': kx.random.random(100, kx.TimestampAtom.inf),
+	...     'b': kx.random.random([100, 3], 10.0)
+	...     })
+	>>> tab.exec(kx.Column('a').day)
+	pykx.IntVector(pykx.q('7 10 12..'))
+	```
+
+### Fixes and Improvements
+
+- Added warning to `kx.q.system.load` and context registration when attempting to load path with a space. Can be suppressed by enabling `PYKX_SUPPRESS_WARNINGS`.
+- Changed `%%python` heading to `%%py` when calling Python code during `jupyter_qfirst` mode so as not to conflict with inbuilt Jupyter cell magics. 
+- Fixed `kx.license.check(format='string')` to remove newline characters during comparison.
+- Configuration file `.pykx-config` now supports use of boolean toml configuration
+
+	```python
+	$ cat ~/.pykx-config
+	[default]
+	PYKX_QDEBUG = true
+	$ python
+	>>> import pykx as kx
+	>>> kx.config.pykx_qdebug
+	True
+	```
+
+- Reintroduced unsetting/setting of `PYKX_SKIP_UNDERQ` in `PyKXReimport` these had been removed in the 3.0.0 release.
+- Added type checking for the `cast` flag when calling `kx.toq()` or creating a `kx.K` variable such as `kx.FloatVector()` or `kx.DatetimeAtom()`.
+- Removed the need to enable `PYKX_BETA_FEATURES` to use `pykx_threading`.
+- Fixed a memory leak when calling `pickle.loads` on a `PyKX` object which previously had been called with `pickle.dumps`.
+- Removal of column `type` from the return of `#!python dtypes` method for `#!python kx.Table` objects, previously this had raised a deprecation warning
+
+=== "Behavior prior to change"
+
+	```python
+	>>> tab = kx.q('([] a:1 2 3j;b:4 5 6i)')
+	>>> tab.dtypes
+	pykx.Table(pykx.q('
+	columns datatypes     type
+	-----------------------------------
+	a       "kx.LongAtom" "kx.LongAtom"
+	b       "kx.IntAtom"  "kx.IntAtom"
+	'))
+	```
+
+=== "Behavior post change"
+
+	```python
+	>>> tab = kx.q('([] a:1 2 3j;b:4 5 6i)')
+	>>> tab.dtypes
+	pykx.Table(pykx.q('
+	columns datatypes
+	---------------------
+	a       "kx.LongAtom"
+	b       "kx.IntAtom" 
+	'))
+	```
+
 ## PyKX 3.0.0
 
 #### Release Date
@@ -1066,11 +1139,20 @@
 	/usr/python/site-packages/pykx/config.py: RuntimeWarning: '-t' argument unsupported in QARGS..
 	```
 
-- PyKX Pandas dependency for Python 3.8 has been clamped to `<2.0` due to support being dropped for it by Pandas after 2.0.3.
-
 ### Upgrade considerations
 
 - PyKX 3.0.0 is a major version update which includes changes requiring review before upgrading from 2.5.*. A page details these changes in full [here](../upgrades/2030.md)
+
+## PyKX 2.5.5
+
+#### Release Date
+
+2024-11-28
+
+### Fixes and Improvements
+
+- PyKX Pandas dependency has been raised to allow `<=2.2.3` for Python>3.8
+- PyKX Pandas dependency for Python 3.8 has been clamped to `<2.0` due to support being dropped for it by Pandas after 2.0.3.
 
 ## PyKX 2.5.4
 

@@ -29,6 +29,22 @@ def test_missing_profile(capsys):
 
 
 @pytest.mark.isolate
+def test_boolean_config():
+    config = '''
+    [default]
+    PYKX_SUPPRESS_WARNINGS = true
+    PYKX_QDEBUG = 'true'
+    '''
+    with TemporaryDirectory() as tmp_dir:
+        os.chdir(tmp_dir)
+        with open('.pykx-config', 'w+') as f:
+            f.writelines(config)
+        import pykx as kx
+        assert kx.config.suppress_warnings
+        assert kx.config.pykx_qdebug
+
+
+@pytest.mark.isolate
 def test_qargs_single():
     os.environ['QARGS'] = '-p 5050'
     with pytest.warns() as warnings:

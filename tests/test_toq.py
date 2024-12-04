@@ -1701,3 +1701,44 @@ def test_pandas_timedelta(kx):
         assert kx.toq(kx.q('16:36:29.214').pd()) == kx.q('0D16:36:29.214000000')
         assert kx.toq(kx.q('16:36:29.214344').pd()) == kx.q('0D16:36:29.214344000')
         assert kx.toq(kx.q('16:36:29.214344678').pd()) == kx.q('0D16:36:29.214344678')
+
+
+def test_cast_setting(kx):
+    with pytest.raises(TypeError) as err:
+        kx.IntAtom(9, cast="Test")
+        assert "must be of type" in str(err)
+
+    testVal = "9"
+    assert kx.IntAtom(9) == kx.IntAtom(testVal, cast=True)
+    with pytest.raises(TypeError):
+        kx.IntAtom(testVal, cast=False)
+
+    testVal = "9.3"
+    assert kx.FloatAtom(9.3) == kx.FloatAtom(testVal, cast=True)
+    with pytest.raises(TypeError):
+        kx.FloatAtom(testVal, cast=False)
+
+    assert kx.DateAtom(np.datetime64('2024-11-06T14:38:03')) == date(2024, 11, 6)
+    with pytest.raises(TypeError):
+        kx.DateAtom(np.datetime64('2024-11-06T14:38:03'), cast=False)
+
+    assert kx.TimespanAtom(np.timedelta64(1, 'D'), cast=True) == timedelta(days=1)
+    with pytest.raises(TypeError):
+        kx.DateAtom(np.timedelta64(1, 'D'), cast=False)
+
+    assert kx.TimeAtom(np.timedelta64(1, 'h'), cast=True) == time(1, 0, 0)
+    with pytest.raises(AttributeError):
+        kx.TimeAtom(np.timedelta64(1, 'h'), cast=False)
+
+    assert kx.TimestampAtom(np.datetime64('2024-11-06T16:43:50'), cast=True) == datetime(2024, 11, 6, 16, 43, 50) # noqa: E501
+    with pytest.raises(Exception) as e:
+        kx.TimestampAtom(np.datetime64('2024-11-06T16:43:50'), cast=False)
+        assert "numpy" in str(e)
+
+    testVal = [b'a', b'ab', 1.3, [1.3, 1.2], 'x']
+    assert (kx.K(np.array(testVal, dtype=object), cast=False) == [b'a', b'ab', 1.3, [1.3, 1.2], 'x']).all() # noqa: E501
+    with pytest.raises(KeyError):
+        kx.K(np.array(testVal, dtype=object), cast=True)
+
+    nparray = np.array([1, 2, 3])
+    assert (kx.toq(nparray, kx.FloatVector, cast=True) == kx.FloatVector(kx.q('1 2 3f'))).all()

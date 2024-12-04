@@ -5,6 +5,7 @@ from warnings import warn
 
 from . import help, Q, wrappers as k
 from .exceptions import PyKXWarning, QError
+from .config import suppress_warnings
 
 
 __all__ = ['SystemCommands']
@@ -260,10 +261,12 @@ class SystemCommands:
                 path = path[:-1]
             print(path)
             return self._q._call(f'\\l {path}', wait=True)
-        warn('Detected a space in supplied path\n'
-             f'  Path: \'{path}\'\n'
-             'q system loading does not support spaces, attempting load '
-             'using alternative load operation', PyKXWarning)
+        if not suppress_warnings:
+            warn('Detected a space in supplied path\n'
+                 f'  Path: \'{path}\'\n'
+                 'q system loading does not support spaces, attempting load '
+                 'using alternative load operation.\n'
+                 'To turn off this warning set PYKX_SUPPRESS_WARNINGS to True.', PyKXWarning)
         full_path = os.path.abspath(path)
         load_path = Path(full_path)
         folder = load_path.parent.as_posix()

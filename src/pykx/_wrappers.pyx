@@ -179,7 +179,9 @@ cpdef k_unpickle(x):
     cdef bytes as_bytes = x.tobytes()
     cdef core.K kx = core.kpn(as_bytes, len(x))
     kx.t = 4 # Convert from char vector to byte vector
-    return factory(<uintptr_t>core.d9(kx), False)
+    res = factory(<uintptr_t>core.d9(kx), False)
+    core.r0(kx)
+    return res
 
 
 # We pickle to a Numpy array instead of bytes to benefit from Numpy's highly performant pickling.

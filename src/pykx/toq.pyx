@@ -661,6 +661,8 @@ def from_int(x: Any,
     elif ktype is None and isinstance(x, (bool, np.bool_)):
         ktype = k.BooleanAtom
 
+    if not isinstance(cast, (bool, type(None))):
+        raise TypeError("Cast must be of type Boolean")
     if cast and type(x) is not int:
         x = cast_to_python_int(x)
 
@@ -719,6 +721,8 @@ def from_float(x: Any,
     Returns:
         An instance of a `pykx.NonIntegralNumericAtom` subclass.
     """
+    if not isinstance(cast, (bool, type(None))):
+        raise TypeError("Cast must be of type Boolean")
     if cast and type(x) is not float:
         x = cast_to_python_float(x)
 
@@ -1357,6 +1361,8 @@ def from_numpy_ndarray(x: np.ndarray,
 
     ktype = _resolve_ndarray_k_type(x, ktype)
 
+    if not isinstance(cast, (bool, type(None))):
+        raise TypeError("Cast must be of type Boolean")
     if cast:
         try:
             if _dtype_to_ktype[x.dtype] != ktype:
@@ -2014,6 +2020,8 @@ def from_datetime_date(x: Any,
     Returns:
         An instance of a subclass of `pykx.TemporalFixedAtom`.
     """
+    if not isinstance(cast, (bool, type(None))):
+        raise TypeError("Cast must be of type Boolean")
     if (cast is None or cast) and type(x) is not datetime.date:
         x = cast_to_python_date(x)
 
@@ -2085,6 +2093,8 @@ def from_datetime_datetime(x: Any,
     Returns:
         An instance of a subclass of `pykx.TemporalFixedAtom`.
     """
+    if not isinstance(cast, (bool, type(None))):
+        raise TypeError("Cast must be of type Boolean")
     if (cast is None or cast) and type(x) is not datetime.datetime:
         x = cast_to_python_datetime(x)
 
@@ -2153,6 +2163,8 @@ def from_datetime_timedelta(x: Any,
     Returns:
         An instance of a subclass of `pykx.TemporalSpanAtom`.
     """
+    if not isinstance(cast, (bool, type(None))):
+        raise TypeError("Cast must be of type Boolean")
     if (cast is None or cast) and type(x) is not datetime.timedelta:
         x = cast_to_python_timedelta(x)
 
@@ -2637,6 +2649,8 @@ def _from_iterable(x: Any,
                    handle_nulls: bool = False,
                    strings_as_char: bool = False,
                    ):
+    if not isinstance(cast, (bool, type(None))):
+        raise TypeError("Cast must be of type Boolean")
     if type(x) is np.ndarray:
         return from_numpy_ndarray(x,
                                   ktype,

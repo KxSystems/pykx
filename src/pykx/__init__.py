@@ -241,6 +241,10 @@ class Q(metaclass=ABCMeta):
                 ('.q', '.k'),
                 ('', '_')
             )])
+        if " " in str(path) and not suppress_warnings:
+            warn("""Space detected in path being loaded.
+                     PyKX will change directory to the path parent and then load directly before returning to current working directory.
+                     To turn off this warning set PYKX_SUPPRESS_WARNINGS to True.""", exceptions.PyKXWarning) # noqa: E501
         if name is None: # defaults to filename at end of path sans extension
             name = path.stem
         prev_ctx = self._call('string system"d"', wait=True)
@@ -318,7 +322,7 @@ from .compress_encrypt import Compress, CompressionAlgorithm, Encrypt
 from .db import DB
 from .tick import TICK
 from .ipc import AsyncQConnection, QConnection, QFuture, RawQConnection, SecureQConnection, SyncQConnection # noqa
-from .config import qargs, qhome, qlic
+from .config import qargs, qhome, qlic, suppress_warnings
 from .wrappers import *
 from .wrappers import CharVector, K
 

@@ -6,6 +6,28 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 3.0.1
+
+#### Release Date
+
+2024-12-04
+
+### Additions
+
+- Added a function `.pykx.loadPy` which can be used to execute/load a Python file following expected Python syntax, this removes limitations which exist due to use of q parsing syntax when loading a Python file using `system"l /path/to/file.p"` for example
+
+	```q
+	q)\cat /path/to/file.p
+	"def func(x: int,"
+	"         y: int"
+	"): -> None"
+	"    return x+y"
+	q).pykx.loadPy["/path/to/file.p"]
+	q)f:.pykx.get[`func;<]
+	q)f[10;20]
+	30
+	```
+
 ## PyKX 3.0.0
 
 #### Release Date

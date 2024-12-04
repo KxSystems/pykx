@@ -305,7 +305,6 @@ def test_subview(kx):
 @pytest.mark.isolate
 def test_q_lo_move_dir():
     os.environ['PYKX_4_1_ENABLED'] = 'True'
-    os.environ['PYKX_BETA_FEATURES'] = 'True'
     curr_dir = os.getcwd()
     import pykx as kx
     db = kx.DB(path='db') # noqa: F841
@@ -317,7 +316,6 @@ def test_q_lo_move_dir():
 @pytest.mark.isolate
 def test_q_lo_keep_dir():
     os.environ['PYKX_4_1_ENABLED'] = 'True'
-    os.environ['PYKX_BETA_FEATURES'] = 'True'
     curr_dir = os.getcwd()
     import pykx as kx
     db = kx.DB(path='db', change_dir=False) # noqa: F841

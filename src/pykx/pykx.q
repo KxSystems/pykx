@@ -1660,15 +1660,52 @@ safeReimport:{[x]
 // @name .pykx.enableJupyter
 // @overview
 // Enable qfirst mode in a Jupyter Notebook.
-
 .pykx.enableJupyter:{.pykx.import[`pykx;`:util.jupyter_qfirst_enable][];}
 
 // @kind function
 // @name .pykx.disableJupyter
 // @overview
 // Disable qfirst mode in a Jupyter Notebook and return to Python first execution.
-
 .pykx.disableJupyter:{.pykx.import[`pykx;`:util.jupyter_qfirst_disable][];}
+
+// @kind function
+// @name .pykx.loadPy
+// @category api
+// @overview
+// _Load and execute a .p/.py file manually_
+//
+// ```q
+// .pykx.loadPy["file.py"]
+// ```
+//
+// **Parameters:**
+//
+// name     | type     | description
+// ---------|----------|-------------
+// `fname`  | `string` | The name of the python file to be executed
+//
+// **Returns:**
+//
+// type | description |
+// -----|-------------|
+// `::` | Returns generic null on successful execution otherwise returns the error message raised
+//
+// **Example:**
+//
+// ```q
+// q)\cat file.py
+// "def func(x):"
+// "    return x+1"
+// q).pykx.loadPy["file.py"]
+// q).pykx.get[`func][10]`
+// 11
+// ```
+loadPy:{[file]
+  if[10h<>type file;'"Parameter 'file' must be of type string"];
+  if[not last["." vs file]in("py";enlist"p");'"File extension must be .py/.p"];
+  .pykx.pyexec"exec(open('",ssr[file;"\\";"\\\\"],"').read())"
+  }
+
 
 // @kind function
 // @name .pykx.debugInfo

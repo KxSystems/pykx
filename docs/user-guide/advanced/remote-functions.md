@@ -3,7 +3,7 @@ title: PyKX Remote Functions
 description: How to execute Python functions on q servers in PyKX
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, perfromance, paralellization, secondary q threads, multithreading, peach
+tags: PyKX, q, performance, parallelization, secondary q threads, multithreading, peach
 ---
 
 # Remote Function Execution

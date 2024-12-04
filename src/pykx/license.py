@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import licensed
-from .config import qlic
+from .config import lic_type, qlic
 
 
 __all__ = [
@@ -27,7 +27,7 @@ def _init(_q):
 def check(license: str,
           *,
           format: Optional[str] = 'FILE',
-          license_type: Optional[str] = 'kc.lic'
+          license_type: Optional[str] = lic_type
 ) -> bool:
     """
     Validate the license key information you provided matches the license
@@ -87,6 +87,9 @@ def check(license: str,
     if format not in ('file', 'string'):
         raise Exception('Unsupported option provided for format parameter')
 
+    if license_type not in ('kx.lic', 'kc.lic', 'k4.lic'):
+        raise Exception(f'License type {license_type} not supported.')
+
     license_located = False
     installed_lic = qlic/license_type
     if os.path.exists(installed_lic):
@@ -98,19 +101,24 @@ def check(license: str,
         return False
 
     with open(installed_lic, 'rb') as f:
-        license_content = base64.encodebytes(f.read())
+        license_content = base64.encodebytes(f.read()).decode('utf-8')
+        license_content = license_content.replace('\n', '')
+        license_content = bytes(license_content, 'utf-8')
 
     if format == 'file':
         license_path = Path(os.path.expanduser(license))
         if os.path.exists(license_path):
             with open(str(license_path), 'rb') as f:
-                license = base64.encodebytes(f.read())
+                license = base64.encodebytes(f.read()).decode('utf-8')
+                license = license.replace('\n', '')
         else:
             print(f'Unable to locate license {license_path} for comparison')
             return False
 
     if isinstance(license, str):
+        license = license.replace('\n', '')
         license = bytes(license, 'utf-8')
+
     if not license_content == license:
         print('Supplied license information does not match.\n'
               'Please consider reinstalling your license using pykx.util.install_license\n\n'

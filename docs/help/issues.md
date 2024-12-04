@@ -120,3 +120,44 @@ q)f[]
 q)f[::] /equivalent
 7
 ```
+
+## Pandas
+
+### Known issues
+#### Changes in `DataFrame.equals` behavior from Pandas 2.2.0
+
+In Pandas 2.2.0, a difference was introduced in how `DataFrame.equals` handles DataFrames with different `_mgr` types.
+
+**Example:**
+```python
+>>> import pandas as pd
+>>> import pykx as kx
+
+>>> df1 = pd.DataFrame({'cl': ['foo']})
+>>> df2 = kx.q('([] cl:enlist `foo)').pd()
+
+>>> df2.equals(df1)
+True
+
+>>> df1.equals(df2) # Prior to Pandas 2.2.0, this would also evaluate to True
+False
+```
+
+**Cause:**  
+Pandas now checks the type of the `_mgr` (dataframes manager) property. PyKX uses a custom `_mgr` implementation for performance optimization.
+
+```python
+>>> type(df1._mgr)
+<class 'pandas.core.internals.managers.BlockManager'>
+
+>>> type(df2._mgr)
+<class 'pykx.util.BlockManagerUnconsolidated'>
+```
+
+**Workaround:**
+Comparing the full contents of DataFrames irrespective of `_mgr` types works regardless of order of df1 and df2 in the comparison. To do so, use one of the following approaches:
+```python
+>>> assert (df2 == df1).all().all()  # Element-wise comparison
+>>> pd.testing.assert_frame_equal(df2, df1)  # Pandas' built-in test
+>>> assert df1.compare(df2).empty  # Check if there are no differences
+```
