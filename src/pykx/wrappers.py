@@ -9476,6 +9476,28 @@ class Column:
         return self.call('`year$')
 
     @property
+    def day(self):
+        """
+        Retrieve the day of the month information from a temporal column
+
+
+        Examples:
+
+        Retrieve day of month information from a column
+
+        ```python
+        >>> import pykx as kx
+        >>> tab = kx.Table(data={
+        ...     'a': kx.random.random(100, kx.TimestampAtom.inf),
+        ...     'b': kx.random.random([100, 3], 10.0)
+        ...     })
+        >>> tab.exec(kx.Column('a').day)
+        pykx.IntVector(pykx.q('7 10 12..'))
+        ```
+        """
+        return self.call('`dd$')
+
+    @property
     def month(self):
         """
         Retrieve the month information from a temporal column
@@ -9483,7 +9505,7 @@ class Column:
 
         Examples:
 
-        Retrieve year information from a column
+        Retrieve month information from a column
 
         ```python
         >>> import pykx as kx

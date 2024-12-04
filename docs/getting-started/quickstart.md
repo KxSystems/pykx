@@ -122,7 +122,7 @@ You can generate PyKX objects in three ways. Click on the tabs below to follow t
 
 ## 3. Interact with PyKX objects
 
-You can interact with PyKX objects in a variety of ways, for example, through [indexing using Pythonic syntax](../user-guide/fundamentals/indexing.md), passing [PyKX objects to q/NumPy](../user-guide/fundamentals/creating.md#converting-pykx-objects-to-pythonic-types) functions, [querying via SQL/qSQL](https://code.kx.com/pykx/user-guide/fundamentals/querying.html) syntax or by [using the q functionality](https://code.kx.com/pykx/user-guide/advanced/context_interface.html) via the context interface. Each way is described in more depth under the the User guide > Fundamentals section. For now, we recommend a few examples:
+You can interact with PyKX objects in a variety of ways, for example, through [indexing using Pythonic syntax](../user-guide/fundamentals/indexing.md), passing [PyKX objects to q/NumPy](../user-guide/fundamentals/creating.md#converting-pykx-objects-to-pythonic-types) functions, [querying via Python/SQL/qSQL](..//user-guide/fundamentals/query/index.md) syntax or by [using the q functionality](../user-guide/advanced/context_interface.md) via the context interface. Each way is described in more depth under the the User guide > Fundamentals section. For now, we recommend a few examples:
 
 * Create a PyKX list and interact with it using indexing and slices:
 

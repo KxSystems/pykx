@@ -30,9 +30,7 @@ def test_df_columns(q):
 
 def test_df_dtypes(q):
     df = q('([] til 10; 10?0Ng; 10?1f;0f,til 9;10?("abc";"def");10?1e)')
-    with pytest.warns(DeprecationWarning,
-                      match=r"dtypes column 'type' is deprecated, please use 'datatypes'"):
-        assert all(df.dtypes.columns == ['columns', 'datatypes', 'type'])
+    assert all(df.dtypes.columns == ['columns', 'datatypes'])
     assert q('{x~y}',
              q('("kx.LongAtom";"kx.GUIDAtom";"kx.FloatAtom";"kx.List";"kx.CharVector";"kx.RealAtom")'), # noqa: E501
              df.dtypes['datatypes'])

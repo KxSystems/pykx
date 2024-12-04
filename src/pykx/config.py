@@ -46,7 +46,11 @@ def _get_config_value(param, default):
 
 
 def _is_enabled(param, cmdflag=False, deprecated=False):
-    env_config = _get_config_value(param, '').lower() in ('1', 'true')
+    val = _get_config_value(param, '')
+    if isinstance(val, bool):
+        env_config = val
+    else:
+        env_config = val.lower() in ('1', 'true')
     if deprecated and env_config:
         warn('The environment variable ' + param + ' is deprecated.\n'
              'See https://code.kx.com/pykx/user-guide/configuration.html\n'

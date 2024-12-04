@@ -254,14 +254,15 @@ This command should display the installed version of PyKX.
 
 		PyKX depends on the following third-party Python packages:
 
-		- `numpy~=1.22, <2.0; python_version<'3.11'`
-		- `numpy~=1.23, <2.0; python_version=='3.11'`
-		- `numpy~=1.26, <2.0; python_version=='3.12'`
-		- `pandas>=1.2, < 2.0; python_version=='3.8'`
-		- `pandas>=1.2, < 2.2.0; python_version>'3.8'`
-		- `pytz>=2022.1`
-		- `toml~=0.10.2`
-		- `dill>=0.2.0`
+      - `pandas>=1.2, <2.0; python_version=='3.8'`
+      - `pandas>=1.2, <=2.2.3; python_version>'3.8'`
+      - `numpy~=1.22, <2.0; python_version<'3.11'`
+      - `numpy~=1.23, <2.0; python_version=='3.11'`
+      - `numpy~=1.26, <2.0; python_version=='3.12'`
+      - `pytz>=2022.1`
+      - `toml~=0.10.2`
+      - `dill>=0.2.0`
+      - `requests>=2.25.0`
 
 		**Note**: All are installed automatically by `#!bash pip` when you install PyKX.
 

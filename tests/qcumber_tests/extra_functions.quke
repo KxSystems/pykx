@@ -87,3 +87,26 @@ feature .pykx.print
                 (::)~.pykx.print til 10;
                 (::)~.pykx.print .pykx.import[`numpy;`:array][til 10]
                )
+
+feature .pykx.loadPy
+    should error under various conditions
+        expect to error if the file is not a string
+            @[{.pykx.loadPy x;0b};`file;{x like"Parameter 'file'*"}]
+        expect to error if the file does not have the correct extension
+            @[{.pykx.loadPy x;0b};"file.t";{x like"File extension must be .py/.p"}]
+        expect to error if loading .p file directly without loadPy
+            @[{system"l ",x;0b};"tests/test_files/func1.p";{x like"SyntaxError*"}]
+
+    should allow loading of various files
+        expect loading of .py files to work using .pykx.loadPy
+            .pykx.loadPy"tests/test_files/func0.py";
+            all(
+                99h~type .pykx.get[`dict0]`;
+                11~.pykx.get[`func0;<][10]
+                )
+        expect loading of .p files to work using .pykx.loadPy
+            .pykx.loadPy"tests/test_files/func1.p";
+            all(
+                99h~type .pykx.get[`dict1]`;
+                11~.pykx.get[`func1;<][10]
+                )

@@ -221,6 +221,9 @@ def test_check_license_success_file(kx):
 def test_check_license_success_b64(kx):
     with open(os.environ['QLIC'] + '/kc.lic', 'rb') as f:
         license = base64.encodebytes(f.read())
+    license = license.decode()
+    license = license.replace('\n', '')
+    license = bytes(license, 'utf-8')
     assert kx.license.check(license, format='STRING')
 
 
@@ -252,3 +255,16 @@ def test_install_license_invalid_file(kx):
         kx.license.install('/test/location.lic', force=True)
     except Exception as e:
         assert pattern.match(str(e))
+
+
+def test_string_conversions(kx):
+    licFile = kx.qlic/kx.config.lic_type
+    with open(licFile, 'rb') as f:
+        lic_contents = base64.encodebytes(f.read()).decode('utf-8')
+        lic_contents = lic_contents.replace('\n', '')
+
+    assert kx.license.check(kx.qlic/kx.config.lic_type)
+    assert kx.license.check(lic_contents, format='string')
+    with pytest.raises(Exception) as err:
+        kx.license.check(lic_contents, format='string', license_type='blah.lic')
+        assert "License type" in str(err)

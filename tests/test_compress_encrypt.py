@@ -39,7 +39,6 @@ def test_compress_encrypt_errors(kx):
 
 @pytest.mark.isolate
 def test_compression():
-    os.environ['PYKX_BETA_FEATURES'] = 'True'
     import pykx as kx
     compress = kx.Compress(kx.CompressionAlgorithm.ipc)
     compress.global_init()
@@ -57,7 +56,6 @@ def test_compression():
 @pytest.mark.isolate
 def test_compression_4_1():
     os.environ['PYKX_4_1_ENABLED'] = 'True'
-    os.environ['PYKX_BETA_FEATURES'] = 'True'
     import pykx as kx
     compress = kx.Compress(kx.CompressionAlgorithm.zstd, level=0)
     compress.global_init()
@@ -66,7 +64,6 @@ def test_compression_4_1():
 
 @pytest.mark.isolate
 def test_encrypt():
-    os.environ['PYKX_BETA_FEATURES'] = 'True'
     import pykx as kx
     encrypt = kx.Encrypt('tests/test_files/testkek.key', 'password')
     encrypt.load_key()
@@ -77,7 +74,6 @@ def test_encrypt():
 
 @pytest.mark.isolate
 def test_encrypt_path():
-    os.environ['PYKX_BETA_FEATURES'] = 'True'
     import pykx as kx
     encrypt = kx.Encrypt(Path('tests/test_files/testkek.key'), 'password')
     encrypt.load_key()

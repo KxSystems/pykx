@@ -5383,6 +5383,13 @@ def test_all_timetypes(kx, q_port):
             assert all(td['a'] == td_a_roundtrip)
 
 
+def test_column_day(kx):
+    tab = kx.Table(data={
+        'a': kx.random.random(100, kx.TimestampAtom.inf),
+        'b': kx.random.random([100, 3], 10.0)})
+    assert isinstance(tab.exec(kx.Column('a').day), kx.IntVector)
+
+
 @pytest.mark.unlicensed
 def test_datetime64(kx):
     df = pd.DataFrame(data={'a': np.array([9999, 1577899899], dtype='datetime64[s]')})

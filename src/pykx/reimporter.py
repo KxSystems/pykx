@@ -33,6 +33,7 @@ class PyKXReimport:
         self.envlist = ('PYKX_DEFAULT_CONVERSION',
                         'PYKX_UNDER_Q',
                         'PYKX_UNDER_PYTHON',
+                        'PYKX_SKIP_UNDERQ',
                         'PYKX_Q_LOADED_MARKER',
                         'PYKX_LOADED_UNDER_Q',
                         'QHOME',

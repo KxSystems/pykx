@@ -1,7 +1,7 @@
 ---
 title: PyKX Objects and Attributes
 description: Objects explained for PyKX 
-date: Septmeber 2024
+date: September 2024
 author: KX Systems, Inc.,
 tags: PyKX, object
 ---

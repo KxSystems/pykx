@@ -84,7 +84,7 @@ doc = [
     "pymdown-extensions>=9.3",
     "matplotlib",
     "seaborn",
-    "kaleido",
+    "kaleido~=0.2.0",
 ]
 debug = [
     "find-libpython~=0.2",

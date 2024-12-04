@@ -1,5 +1,8 @@
 import os
+from pathlib import Path
 from platform import system
+import shutil
+import warnings
 
 # Do not import pykx here - use the `kx` fixture instead!
 import pytest
@@ -521,3 +524,39 @@ def test_system_display_size_ipc(q_port):
                                  ' ba..\n4  | fo..\n..')
         with pytest.raises(kx.QError):
             q.system.display_size = [10, 10]
+
+
+@pytest.mark.isolate
+def test_suppress_warning_false():
+    os.environ['PYKX_SUPPRESS_WARNINGS'] = 'False'
+    import pykx as kx
+    path = Path('Test Folder')
+    os.makedirs(path, exist_ok=True)
+    with open(path/'test.q', 'w') as f:
+        f.write('j:"junk"')
+    with warnings.catch_warnings(record=True) as w:
+        kx.q.system.load('Test Folder/test.q')
+        msg_string = ""
+        for i in w:
+            message = str(i.message)
+            msg_string = msg_string + message
+        assert "space" in msg_string
+    shutil.rmtree('Test Folder')
+
+
+@pytest.mark.isolate
+def test_suppress_warning_true():
+    os.environ['PYKX_SUPPRESS_WARNINGS'] = 'True'
+    import pykx as kx
+    path = Path('Test Folder')
+    os.makedirs(path, exist_ok=True)
+    with open(path/'test.q', 'w') as f:
+        f.write('j:"junk"')
+    with warnings.catch_warnings(record=True) as w:
+        kx.q.system.load('Test Folder/test.q')
+        msg_string = ""
+        for i in w:
+            message = str(i.message)
+            msg_string = msg_string + message
+        assert "space" not in msg_string
+    shutil.rmtree('Test Folder')

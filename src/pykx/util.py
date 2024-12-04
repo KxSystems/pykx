@@ -508,7 +508,7 @@ def q_information():
 
 
 def _run_all_cell_with_magics(lines):
-    if "%%python" == lines[0].strip():
+    if "%%py" == lines[0].strip():
         return lines[1:]
     elif "%%q" in lines[0].strip():
         return lines
@@ -534,7 +534,7 @@ Include '%%q' at the beginning of each cell to run as q code. """) # noqa
         elif _run_all_cell_with_magics not in ipython.input_transformers_cleanup and state == "q":
             ipython.input_transformers_cleanup.append(_run_all_cell_with_magics)
             print("""PyKX now running in 'jupyter_qfirst' mode. All cells by default will be run as q code. 
-Include '%%python' at the beginning of each cell to run as python code. """) # noqa 
+Include '%%py' at the beginning of each cell to run as python code. """) # noqa 
         else:
             print(f"PyKX already running in '{state}' mode")
     except NameError:

@@ -34,7 +34,7 @@ pykx.SymbolAtom(pykx.q('`test string'))
 pykx.CharVector(pykx.q('"test string"'))
 ```
 
-Alternatively, you use the automatic conversion function `#!python pykx.toq` which takes an incoming Python type and converts it to its analagous PyKX type. The following table shows the mapping between the two types:
+Alternatively, you use the automatic conversion function `#!python pykx.toq` which takes an incoming Python type and converts it to its analogous PyKX type. The following table shows the mapping between the two types:
 
 | **Python Type**| **PyKX Type**                  |
 |-------------|-----------------------------------|

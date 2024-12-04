@@ -22,7 +22,7 @@ class serialize:
             - 1: sync
             - 2: response\n
             More information about the serialization of `K` objects can be found
-            [here](https://code.kx.com/pykx/2.0/user-guide/advanced/serialization.html).
+            [here](https://code.kx.com/pykx/user-guide/advanced/serialization.html).
 
         Note: To access the memory view of the serialized object you can use the `data` property.
             If you need a copy of the data instead you can use the `copy` method.

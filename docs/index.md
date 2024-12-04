@@ -14,7 +14,7 @@ To begin your journey with PyKX, follow the sections below:
 
 !!! home-page "[Get Started](./getting-started/installing.md)"
 
-    This section is for new users. Includes everything you need to begin your journey with PyKX: [installation instructions](../docs/getting-started/installing.md) and a [quickstart guide](../docs/getting-started/quickstart.md).
+    This section is for new users. Includes everything you need to begin your journey with PyKX: [installation instructions](./getting-started/installing.md) and a [quickstart guide](./getting-started/quickstart.md).
 
 !!! home-page "[Learn](./getting-started/what_is_pykx.md)"
 
@@ -38,4 +38,4 @@ To begin your journey with PyKX, follow the sections below:
 
 !!! home-page "[Help and Support](./help/troubleshooting.md)"
 
-    Get assistance with any questions or issues you might have. This section includes [troubleshooting](../docs/help/troubleshooting.md) guides, [FAQs](../docs/help/faq.md), and [support](../docs/help/support.md) contact information.
+    Get assistance with any questions or issues you might have. This section includes [troubleshooting](./help/troubleshooting.md) guides, [FAQs](./help/faq.md), and [support](./help/support.md) contact information.

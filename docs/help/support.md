@@ -19,4 +19,4 @@ If you have any issues or questions you can post them to the following locations
 ## Customer Support
 
 * Inquires or feedback: [`pykx@kx.com`](mailto:pykx@kx.com)
-* Support for Licensed Subscribers: [support.kx.com](https://support.kx.com/support/home)
+* Support for Licensed Subscribers: [support.kx.com](https://client.support.kx.com/)

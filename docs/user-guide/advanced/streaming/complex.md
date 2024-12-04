@@ -35,9 +35,9 @@ In the [basic infrastructure](basic.md) section we made use of the function [`#!
 
 While the single-call basic infrastructure is useful, you might want to load these process types on separate virtual/physical machines. For example, you might consider loading your RDB on a process with significantly higher RAM requirements to your HDB, where user queries are limited in expected RAM by well-controlled APIs.
 
-A full breakdown of the APIs for each of these process types is provided in the dropdown for the API documentation below. 
+A full breakdown of the APIs for each of these process types is provided in the dropdown for the API documentation below.
 
-To manually generate a [basic infrastructure](basic.md) using the individual APIs, follow the steps bellow: 
+To manually generate a [basic infrastructure](basic.md) using the individual APIs, follow the steps below:
 
 1. Start the Tickerplant process by defining the `#!python trade` and `#!python aggregate` tables:
 

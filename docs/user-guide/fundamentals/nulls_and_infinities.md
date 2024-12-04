@@ -43,7 +43,7 @@ pykx.GUIDAtom(pykx.q('00000000-0000-0000-0000-000000000000'))
 pykx.SymbolAtom(pykx.q('`'))
 ```
 
-Unsupported values return a `#!python NotImplemetedError` as below:
+Unsupported values return a `#!python NotImplementedError` as below:
 
 ```python
 >>> import pykx as kx
