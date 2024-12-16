@@ -75,7 +75,7 @@ This script can additionally be downloaded [here](examples/streamlit.py).
 import os
 os.environ['PYKX_BETA_FEATURES'] = 'true'
 
-# This is optional but suggested as without it's usage caching
+# This is optional but suggested as without its usage caching
 # is not supported within streamlit
 os.environ['PYKX_THREADING'] = 'true'
 

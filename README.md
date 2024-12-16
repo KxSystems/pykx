@@ -93,7 +93,8 @@ KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX 
 
 PyKX depends on the following third-party Python packages:
 
-- `pandas>=1.2, < 2.2.0`
+- `pandas>=1.2, <2.0; python_version=='3.8'`
+- `pandas>=1.2, <=2.2.3; python_version>'3.8'`
 - `numpy~=1.22, <2.0; python_version<'3.11'`
 - `numpy~=1.23, <2.0; python_version=='3.11'`
 - `numpy~=1.26, <2.0; python_version=='3.12'`

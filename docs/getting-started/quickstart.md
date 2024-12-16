@@ -10,7 +10,7 @@ To complete the quickstart guide below you will need to have completed the follo
 
 ## How to import PyKX
 
-To access PyKX and it's functionality import it within your Python code using the following syntax
+To access PyKX and its functionality import it within your Python code using the following syntax
 
 ```python
 >>> import pykx as kx

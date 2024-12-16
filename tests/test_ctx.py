@@ -275,3 +275,7 @@ def test_ctx_no_overwrite_qerror(q_port, kx):
         with kx.QConnection(port=q_port, username='a', password='aaaa') as q:
             q('type')
         assert 'Access Denied' in str(err.value)
+
+
+def test_context_loadfile(kx):
+    assert isinstance(kx.q.csvutil, kx.ctx.QContext)
