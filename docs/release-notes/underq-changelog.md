@@ -6,6 +6,42 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 2.5.4
+
+#### Release Date
+
+2024-10-22
+
+### Fixes and Improvements
+
+- `.pykx.util.loadfile` now loads a file using it's full path unless it contains a space. This is to avoid issues loading scripts which are sensitive to their working directory.
+
+## PyKX 2.5.3
+
+#### Release Date
+
+2024-08-22
+
+### Fixes and Improvements
+
+- Previously PyKX conversions of generic lists (type 0h) would convert this data to it's `raw` representation rather than it's `python` representation as documented. This had the effect of restricting the usability of some types within PyKX under q in non-trivial use-cases. With the `2.5.2` changes to more accurately represent `raw` data at depth this became more obvious as an issue.
+
+	=== "Behaviour prior to change"
+
+		```q
+		q).pykx.version[]
+		"2.5.2"
+		q).pykx.print .pykx.eval["lambda x:x"](`test;::;first 1?0p)
+		[b'test', None, 49577290277400616]
+		```
+
+	=== "Behaviour post change"
+
+		```q
+		q).pykx.print .pykx.eval["lambda x:x"](`test;::;first 1?0p)
+		['test', None, datetime.datetime(2002, 1, 25, 11, 16, 58, 871372)]
+		```
+
 ## PyKX 2.5.0
 
 #### Release Date

@@ -266,7 +266,7 @@ Additional to the above inconsistency with Pandas you may also run into issues w
 [1000 rows x 3 columns]    
 ```
 
-While `-9223372036854778080` does represent an underlying PyKX Null value for display purposes visually it is distracting. To display the DataFrame with the masked values you must set it's `display.max_rows` to be longer than the length of the specified table, the effect of this can be seen as follows.
+While `-9223372036854778080` does represent an underlying PyKX Null value for display purposes visually it is distracting. To display the DataFrame with the masked values you must set its `display.max_rows` to be longer than the length of the specified table, the effect of this can be seen as follows.
 
 ```python
 >>> import pandas as pd

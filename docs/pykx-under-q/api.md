@@ -1135,7 +1135,7 @@ type         | description
 **Example:**
 
 The following example shows the usage of `pyarglist` with a Python function and
-various configurations of it's use
+various configurations of its use
 
 ```q
 q)p)import numpy as np
@@ -1218,7 +1218,7 @@ type         | description
 **Example:**
 
 The following example shows the usage of `pykwargs` with a Python function and
-various configurations of it's use
+various configurations of its use
 
 ```q
 q)p)import numpy as np

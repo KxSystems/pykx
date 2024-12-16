@@ -174,7 +174,7 @@ docs_dir: docs
 nav:
   - Home: 'https://code.kx.com/insights/'
   - kdb+ and q: 'https://code.kx.com/q'
-  - kdb Insights: "https://code.kx.com/insights/core"
+  - kdb Insights SDK: "https://code.kx.com/insights/core"
   - kdb Insights Enterprise: "https://code.kx.com/insights/platform/"
   - KDB.AI: "https://code.kx.com/kdbai/"
   - PyKX:
@@ -243,10 +243,10 @@ nav:
       - Remote Function Execution: beta-features/remote-functions.md
       - Multithreading: beta-features/threading.md
       - Streamlit: beta-features/streamlit.md
-    - Python interfacing within q:
+    - Python within q:
       - Overview: pykx-under-q/intro.md
       - API: pykx-under-q/api.md
-      - Upgrading from embedPy: pykx-under-q/upgrade.md
+      - Upgrade from embedPy: pykx-under-q/upgrade.md
       - Known Issues: pykx-under-q/known_issues.md
     - Examples:
       - Subscriber: examples/subscriber/readme.md

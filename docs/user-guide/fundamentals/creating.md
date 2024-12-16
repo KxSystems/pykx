@@ -1,6 +1,6 @@
 # Interacting with PyKX objects
 
-In order to use the power of q and the functionality provided by PyKX a user must at some point interact with a PyKX object. At it's most basic level these items are allocated C representations of q/kdb+ objects within a memory space managed by q. Keeping the data in this format allows it to be used directly for query/analytic execution in q without any translation overhead.
+In order to use the power of q and the functionality provided by PyKX a user must at some point interact with a PyKX object. At its most basic level these items are allocated C representations of q/kdb+ objects within a memory space managed by q. Keeping the data in this format allows it to be used directly for query/analytic execution in q without any translation overhead.
 
 There are a number of ways to generate PyKX objects:
 

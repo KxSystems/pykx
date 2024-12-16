@@ -228,13 +228,14 @@ class Q(metaclass=ABCMeta):
             name = path.stem
         prev_ctx = self._call('string system"d"', wait=True)
         try:
-            self._call(
-                f'{"" if name[0] == "." else "."}{name}:(enlist`)!enlist(::);'
-                f'system "d {"" if name[0] == "." else "."}{name}";'
-                '$[@[{get x;1b};`.pykx.util.loadfile;{0b}];'
-                f' .pykx.util.loadfile["{path.parent}";"{path.name}"];'
-                f' system"l {path}"];',
-                wait=True,
+            self._call('''{[name;folder;file]
+                            name set (enlist`)!enlist(::);
+                            system "d ",string name;
+                            $[@[{get x;1b};`.pykx.util.loadfile;{0b}];
+                              .pykx.util.loadfile[folder;file];
+                              system"l ",$[.z.o like "w*";"\\\\";"/"] sv ((),folder;(),file)]}
+                       ''', "" if name[0] == "." else "."+name, str(path.parent).encode(),
+                       path.name.encode(), wait=True,
             )
             return name[1:] if name[0] == '.' else name
         finally:

@@ -277,7 +277,7 @@ class QSQL:
         ```python
         pykx.q.qsql.update('byqtab', columns={'weight': 'avg weight'}, by={'city': 'city'}, inplace=True)
         pykx.q['byqtab']
-            ```
+        ```
         """ # noqa: E501
         return self._seud(table, 'update', columns, where, by, modify, inplace)
 

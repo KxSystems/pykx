@@ -2,7 +2,7 @@
 
 !!! Warning
 
-        This functionality is provided in it's present form as a BETA
+        This functionality is provided in its present form as a BETA
         Feature and is subject to change. To enable this functionality
         for testing please following configuration instructions
         [here](../user-guide/configuration.md) setting `PYKX_BETA_FEATURES='true'`

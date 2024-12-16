@@ -30,7 +30,8 @@ requirements:
   run:
     - python
     - numpy>=1.22,<2.0
-    - pandas>=1.2, <2.2.0
+    - pandas>=1.2, <=2.2.3 # [py>38]
+    - pandas<2.0 # [py==38]
     - pytz>=2022.1
     - toml>=0.10.2
 

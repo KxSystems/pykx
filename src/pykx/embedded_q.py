@@ -125,6 +125,8 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             code = ''
             code += '''
                     .pykx.util.loadfile:{[folder;file]
+                      path:$[.z.o like "w*";"\\\\";"/"] sv ((),folder;(),file);
+                      if[not " " in path;:system"l ",path];
                       cache:system"cd";
                       system"cd ",folder;
                       folder:system"cd";

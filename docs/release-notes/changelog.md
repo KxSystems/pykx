@@ -4,9 +4,72 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
-!!! Warning
+## PyKX 2.5.5
 
-    Currently PyKX is not compatible with Pandas 2.2.0 or above as it introduced breaking changes which cause data to be cast to the incorrect type.
+#### Release Date
+
+2024-11-28
+
+### Fixes and Improvements
+
+- PyKX Pandas dependency has been raised to allow <=2.2.3 for Python>3.8
+- PyKX Pandas dependency for Python 3.8 has been clamped to <2.0 due to support being dropped for it by Pandas after 2.0.3.
+
+## PyKX 2.5.4
+
+#### Release Date
+
+2024-10-22
+
+!!! Note
+
+        PyKX 2.5.4 is currently not available for Mac x86/ARM for all Python versions. Updated builds will be provided once available.
+
+### Fixes and Improvements
+
+- Resolved context interface failing to load files on Windows.
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> kx.q.context
+		Traceback (most recent call last):
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\__init__.py", line 162, in __getattr__
+			self.__getattribute__('_register')(name=key)
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\__init__.py", line 248, in _register
+			self._call(
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\embedded_q.py", line 246, in __call__
+			return factory(result, False, name=query.__str__())
+				^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		File "pykx\\_wrappers.pyx", line 521, in pykx._wrappers._factory
+		File "pykx\\_wrappers.pyx", line 514, in pykx._wrappers.factory
+		pykx.exceptions.QError: "C:\lib"
+
+		The above exception was the direct cause of the following exception:
+
+		Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\__init__.py", line 166, in __getattr__
+			raise attribute_error from inner_error
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\__init__.py", line 159, in __getattr__
+			return ctx.__getattr__(key)
+				^^^^^^^^^^^^^^^^^^^^
+		File "C:\Users\user\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\pykx\ctx.py", line 153, in __getattr__
+			raise AttributeError(
+		AttributeError: 'pykx.ctx.QContext' object has no attribute 'context'
+		QError: '.context
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		>>> kx.q.context
+		<pykx.ctx.QContext of .context with [success]>
+		```
+
+### Version Support Changes
+
+- Version 2.5.4 marks the removal of support for releases to PyPi/Anaconda of Python 3.7 supported versions of PyKX
 
 ## PyKX 2.5.2
 
@@ -734,7 +797,7 @@
 
 ### Beta Features
 
-- Addition of [streamlit](https://streamlit.io/) connection class `pykx.streamlit.Connection` to allow querying of q processes when building a streamlit application. For an example of this functionality and an introduction to it's usage see [here](../beta-features/streamlit.md).
+- Addition of [streamlit](https://streamlit.io/) connection class `pykx.streamlit.Connection` to allow querying of q processes when building a streamlit application. For an example of this functionality and an introduction to its usage see [here](../beta-features/streamlit.md).
 
 ## PyKX 2.4.2
 
@@ -943,9 +1006,9 @@
 		>>> conn('enlist 0Np').py()
 		Traceback (most recent call last):
 		File "<stdin>", line 1, in <module>
-		File "/home/rocuinneagain/.local/lib/python3.10/site-packages/pykx/wrappers.py", line 2443, in py
+		File "/home/user/.local/lib/python3.10/site-packages/pykx/wrappers.py", line 2443, in py
 		        converted_vector[i]=q('0Np')
-		File "/home/rocuinneagain/.local/lib/python3.10/site-packages/pykx/embedded_q.py", line 216, in __call__
+		File "/home/user/.local/lib/python3.10/site-packages/pykx/embedded_q.py", line 216, in __call__
 		        raise LicenseException("run q code via 'pykx.q'")
 		pykx.exceptions.LicenseException: A valid q license must be in a known location (e.g. `$QLIC`) to run q code via 'pykx.q'.
 		```
@@ -976,7 +1039,7 @@
 		'))
 		```
 
-- Application of `astype` conversions could error if attempting to convert the column of a dataset to it's current type, this could be raised if using `astype` explicitly or when used internal to PyKX such as when defining the expected type when reading a CSV file.
+- Application of `astype` conversions could error if attempting to convert the column of a dataset to its current type, this could be raised if using `astype` explicitly or when used internal to PyKX such as when defining the expected type when reading a CSV file.
 - PyKX database table listing now uses `kx.q.Q.pt` instead of `kx.q.tables()` when presenting the available tables to a users, this more accurately reflects the tables that can be interacted with by a users within the process.
 
 	=== "Behavior prior to change"
@@ -1126,7 +1189,7 @@
 		>>> kx.q('func', '')
 		Traceback (most recent call last):
 		File "<stdin>", line 1, in <module>
-		File "/home/rocuinneagain/.local/lib/python3.10/site-packages/pykx/embedded_q.py", line 227, in __call__
+		File "/home/user/.local/lib/python3.10/site-packages/pykx/embedded_q.py", line 227, in __call__
 			return factory(result, False)
 		File "pykx/_wrappers.pyx", line 493, in pykx._wrappers._factory
 		File "pykx/_wrappers.pyx", line 486, in pykx._wrappers.factory
@@ -1134,7 +1197,7 @@
 		>>> kx.q('func', '.')
 		Traceback (most recent call last):
 		File "<stdin>", line 1, in <module>
-		File "/home/rocuinneagain/.local/lib/python3.10/site-packages/pykx/embedded_q.py", line 227, in __call__
+		File "/home/user/.local/lib/python3.10/site-packages/pykx/embedded_q.py", line 227, in __call__
 			return factory(result, False)
 		File "pykx/_wrappers.pyx", line 493, in pykx._wrappers._factory
 		File "pykx/_wrappers.pyx", line 486, in pykx._wrappers.factory
@@ -2547,7 +2610,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Added `pykx.Anymap`.
 - Fixed support for `kx.lic` licenses.
 - The KXIC libraries are now loaded after q has been fully initialized, rather than during the initialization. This significantly reduces the time it takes to import PyKX.
-- PyKX now uses a single location for `$QHOME`: its `lib` directory within the installed package. The top-level contents of the `$QHOME` directory (prior to PyKX updating the env var when embedded q is initialized) will be symlinked into PyKX's `lib` directory, along with the content of any subdirectories under `lib` (e.g. `l64`, `m64`, `w64`). This enables loading scripts and libraries located in the original `$QHOME` directory during q initialization.
+- PyKX now uses a single location for `$QHOME`: it's `lib` directory within the installed package. The top-level contents of the `$QHOME` directory (prior to PyKX updating the env var when embedded q is initialized) will be symlinked into PyKX's `lib` directory, along with the content of any subdirectories under `lib` (e.g. `l64`, `m64`, `w64`). This enables loading scripts and libraries located in the original `$QHOME` directory during q initialization.
 - Improved performance (both execution speed and memory usage) of calling `np.array` on `pykx.Vector` instances. The best practice is still to use the `np` method instead of calling `np.array` on the `pykx.Vector` instance.
 - `pykx.Vector` is now a subclass of `collections.abc.Sequence`.
 - `pykx.Mapping` is not a subclass of `collections.abc.Mapping`.

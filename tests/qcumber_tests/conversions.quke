@@ -50,6 +50,10 @@ feature default conversions
             .qu.compare["<class 'pandas.core.frame.DataFrame'>"; t ([]a:2 3; b:4 5)];
         expect default for keyed table
             .qu.compare["<class 'pandas.core.frame.DataFrame'>"; t ([a:2 3] b:4 5)];
+        expect default conversion of lists to return appropriate non null representation
+            data:(`test;::;0D20:23:25.800000000);
+            lst:.pykx.eval["lambda x:x";<]data;
+            lst~data
     should support python default
         expect python default
             .pykx.setdefault["python"];

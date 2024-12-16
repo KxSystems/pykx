@@ -440,8 +440,8 @@ def test_table_merge_copy(kx, q):
     df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
     tab1 = kx.toq(df1)
     tab2 = kx.toq(df2)
-    tab1.merge(tab2, left_on='lkey', right_on='rkey', copy=False)
-    assert df1.merge(df2, left_on='lkey', right_on='rkey').equals(tab1.pd())
+    tab1.merge(tab2, left_on='lkey', right_on='rkey', copy=False, sort=True)
+    assert df1.merge(df2, left_on='lkey', right_on='rkey', sort=True).equals(tab1.pd())
 
     # Replace_self property
     df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
@@ -449,8 +449,8 @@ def test_table_merge_copy(kx, q):
     tab1 = kx.toq(df1)
     tab1.replace_self = True
     tab2 = kx.toq(df2)
-    tab1.merge(tab2, left_on='lkey', right_on='rkey')
-    assert df1.merge(df2, left_on='lkey', right_on='rkey').equals(tab1.pd())
+    tab1.merge(tab2, left_on='lkey', right_on='rkey', sort=True)
+    assert df1.merge(df2, left_on='lkey', right_on='rkey', sort=True).equals(tab1.pd())
 
 
 def test_table_inner_merge(kx, q):
@@ -462,12 +462,14 @@ def test_table_inner_merge(kx, q):
     assert df1.merge(
         df2,
         left_on='lkey',
-        right_on='rkey'
+        right_on='rkey',
+        sort=True
     ).equals(
         tab1.merge(
             tab2,
             left_on='lkey',
-            right_on='rkey'
+            right_on='rkey',
+            sort=True
         ).pd()
     )
 
@@ -479,12 +481,14 @@ def test_table_inner_merge(kx, q):
     assert df1.merge(
         df2,
         left_on='lkey',
-        right_on='rkey'
+        right_on='rkey',
+        sort=True
     ).equals(
         q('{0!x}', tab1.merge(
             tab2,
             left_on='lkey',
-            right_on='rkey'
+            right_on='rkey',
+            sort=True
         )).pd()
     )
 
@@ -657,7 +661,7 @@ def test_table_left_merge(kx, q):
         res = tab1.merge(tab2, on='key', how='left').pd()
         assert str(res.at[6, 'value_y']) == '--'
         res.at[6, 'value_y'] = np.NaN
-        assert res.equals(df_res)
+        assert df_res.equals(res)
 
 
 def test_table_right_merge(kx, q):
@@ -773,7 +777,7 @@ def test_table_right_merge(kx, q):
         res = tab1.merge(tab2, on='key', how='right').pd()
         assert str(res.at[6, 'key']) == ''
         res.at[6, 'key'] = None
-        assert res.equals(df_res)
+        assert df_res.equals(res)
 
 
 def test_table_outer_merge(kx, q):
@@ -783,19 +787,6 @@ def test_table_outer_merge(kx, q):
         df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
         tab1 = kx.toq(df1)
         tab2 = kx.toq(df2)
-        assert df1.merge(
-            df2,
-            left_on='lkey',
-            right_on='rkey',
-            how='outer'
-        ).equals(
-            tab1.merge(
-                tab2,
-                left_on='lkey',
-                right_on='rkey',
-                how='outer'
-            ).pd()
-        )
         assert df1.merge(
             df2,
             left_on='lkey',
@@ -838,12 +829,12 @@ def test_table_outer_merge(kx, q):
         df2 = pd.DataFrame({'a': ['foo', 'baz'], 'c': [3, 4]})
         tab1 = kx.toq(df1)
         tab2 = kx.toq(df2)
-        tab_res = tab1.merge(tab2, on='a', how='outer').pd()
-        assert str(tab_res.at[1, 'c']) == '--'
-        tab_res.at[1, 'c'] = np.NaN
-        assert str(tab_res.at[2, 'b']) == '--'
-        tab_res.at[2, 'b'] = np.NaN
-        assert df1.merge(df2, on='a', how='outer').equals(tab_res)
+        tab_res = tab1.merge(tab2, on='a', how='outer', sort=True).pd()
+        assert str(tab_res.at[0, 'c']) == '--'
+        tab_res.at[0, 'c'] = np.NaN
+        assert str(tab_res.at[1, 'b']) == '--'
+        tab_res.at[1, 'b'] = np.NaN
+        assert df1.merge(df2, on='a', how='outer', sort=True).equals(tab_res)
 
         # Merge on same indexes
         df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
@@ -929,6 +920,8 @@ def test_table_outer_merge(kx, q):
         res = tab1.merge(tab2, on='key', how='outer').pd()
         assert res.at[7, 'key'] == ''
         res.at[7, 'key'] = None
+        res.sort_values(['key'], inplace=True, ignore_index=True)
+        df_res.sort_values(['key'], inplace=True, ignore_index=True)
         assert df_res.equals(res)
 
 

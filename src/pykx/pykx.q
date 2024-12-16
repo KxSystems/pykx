@@ -46,6 +46,8 @@ util.startup:.Q.opt .z.x
 // @desc Load a file at an associated folder location, this is used
 //     to allow loading of files at folder locations containing spaces
 util.loadfile:{[folder;file]
+  path:$[.z.o like "w*";"\\";"/"] sv ((),folder;(),file);
+  if[not " " in path;:system"l ",path];
   cache:system"cd";
   system"cd ",folder;
   folder:system"cd";
@@ -651,7 +653,7 @@ tok: {x y}(`..k;;)
 // `projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a raw object. |
 //
 // ```q
-// // Denote that a q object once passed to Python should be managed as a Numpy object
+// // Denote that a q object once passed to Python should be managed as a raw representation of that object
 // q).pykx.toraw til 10
 // enlist[`..raw;;][0 1 2 3 4 5 6 7 8 9]
 //
@@ -703,7 +705,7 @@ toraw: {x y}(`..raw;;)
 // q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault ([]til 10;til 10)
 // <class 'pandas.core.frame.DataFrame'>
 // ```
-todefault:{$[0h=type x;toraw x;$[99h~type x;all 98h=type each(key x;value x);0b]|98h=type x;topd x;tonp x]}
+todefault:{$[0h=type x;topy x;$[99h~type x;all 98h=type each(key x;value x);0b]|98h=type x;topd x;tonp x]}
 
 // @kind function
 // @name .pykx.wrap
