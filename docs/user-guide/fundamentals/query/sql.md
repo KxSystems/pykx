@@ -119,10 +119,11 @@ GOOG 2022.01.02 423.6121
 
 ## Next Steps
 
-Now that you have learnt how to query your data using the Pythonic API you may be interested in other methods for querying your data:
+Now that you have learnt the fundamentals of how to query your data using the SQL API you may be interested in:
 
-- To optimize frequently called SQL queries the [prepare](../../../api/query.md#pykx.query.SQL.prepare) and [execute](../../../api/query.md#pykx.query.SQL.execute) can be used to separate SQL parsing from query execution as detailed [here](https://code.kx.com/insights/1.10/core/sql.html#prepare-and-execute).
+- To optimize frequently called SQL queries the [prepare](../../../api/query.md#pykx.query.SQL.prepare) and [execute](../../../api/query.md#pykx.query.SQL.execute) methods can be used to separate SQL parsing from query execution as detailed [here](https://code.kx.com/insights/1.10/core/sql.html#prepare-and-execute).
 - If you want to query your data in a more Python-first way follow the guide [here](./pyquery.md).
+- If you want to query your data in q follow the guide [here](./qquery.md).
 - To learn how to make your queries more performant following the tips and tricks [here](./perf.md).
 
 For some further reading, here are some related topics:

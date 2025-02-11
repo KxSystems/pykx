@@ -9,11 +9,19 @@ tags: PyKX, setup, install,
 
 _This page explains how to install PyKX on your machine._
 
+!!! License
+
+	PyKX is released under a dual license covering the files within the [PyKX repository](https://github.com/kxsystems/pykx) as outlined [here](../license.md).
+
+	**Acceptance of license terms:**
+	
+	By downloading, installing, or using PyKX, you acknowledge and agree that you have read, understood, and accept the license [link](../license.md) and will adhere to its terms. 
+
 ## Pre-requisites
 
 Before you start, make sure you have:
 
-- [**Python**](https://www.python.org/downloads/) (versions 3.8-3.12)
+- [**Python**](https://www.python.org/downloads/) (versions 3.8-3.13)
 - [**pip**](https://pypi.org/project/pip/)
 
 Recommended: a virtual environment with packages such as [venv](https://docs.python.org/3/library/venv.html) from the standard library.
@@ -22,15 +30,19 @@ Recommended: a virtual environment with packages such as [venv](https://docs.pyt
 
 KX only supports versions of PyKX built by KX (installed from wheel files) for:
 
-- **Linux** (`manylinux_2_17_x86_64`, `linux-arm64`) with CPython 3.8-3.12
-- **macOS** (`macosx_10_10_x86_64`, `macosx_10_10_arm`) with CPython 3.8-3.12
-- **Windows** (`win_amd64`) with CPython 3.8-3.12
+- **Linux** (`manylinux_2_17_x86_64`, `linux-arm64`) with CPython 3.8-3.13
+- **macOS** (`macosx_10_10_x86_64`, `macosx_10_10_arm`) with CPython 3.8-3.13
+- **Windows** (`win_amd64`) with CPython 3.8-3.13
 
 We provide assistance to user-built installations of PyKX only on a best-effort basis.
 
 ## 1. Install PyKX
 
 You can install PyKX from three sources:
+
+!!! Note "Installing in air-capped environments"
+
+        If you are installing in a location without internet connection you may find [this section](#installing-in-an-air-gapped-environment) useful.
 
 === "Install PyKX from PyPI"
 
@@ -256,9 +268,9 @@ This command should display the installed version of PyKX.
 
       - `pandas>=1.2, <2.0; python_version=='3.8'`
       - `pandas>=1.2, <=2.2.3; python_version>'3.8'`
-      - `numpy~=1.22, <2.0; python_version<'3.11'`
-      - `numpy~=1.23, <2.0; python_version=='3.11'`
-      - `numpy~=1.26, <2.0; python_version=='3.12'`
+      - `numpy~=1.22; python_version<'3.11'`
+      - `numpy~=1.23; python_version=='3.11'`
+      - `numpy~=1.26; python_version>='3.12'`
       - `pytz>=2022.1`
       - `toml~=0.10.2`
       - `dill>=0.2.0`
@@ -279,13 +291,14 @@ This command should display the installed version of PyKX.
 
 		**Optional Python dependencies:**
 
-		- **`pyarrow >=3.0.0`**: install `pyarrow` extra, for example `pip install pykx[pyarrow]`.
+		- **`pyarrow >=3.0.0, <19.0.0`**: install `pyarrow` extra, for example `pip install pykx[pyarrow]`.
 		- **`find-libpython ~=0.2`**: install `debug` extra, for example `pip install pykx[debug]`.
 		- **`ast2json ~=0.3`**: install with `dashboards` extra, for example `pip install pykx[dashboards]`
 		- **`dill >=0.2`**: install via pip, with `remote` extra, for example `pip install pykx[remote]`
 		- **`beautifulsoup4 >=4.10.0`**: install with `help` extra, for example `pip install pykx[help]`
 		- **`markdown2 >=2.5.0`**: install with `help` extra, for example `pip install pykx[help]`
 		- **`psutil >=5.0.0`**: install via pip, with `streaming` extra, for example `pip install pykx[streaming]`
+		- **`torch >2.1`**: install via pip, with `torch` extra, for example `pip install pykx[torch]`
 
         Here's a breakdown of how PyKX uses these libraries:
 
@@ -293,6 +306,7 @@ This command should display the installed version of PyKX.
 		- [find-libpython](https://pypi.org/project/find-libpython): provides the `libpython.{so|dll|dylib}` file required by [PyKX under q](../pykx-under-q/intro.md).
 		- [ast2json](https://pypi.org/project/ast2json/): required for KX Dashboards Direct integration.
 		- [psutil](https://pypi.org/project/psutil/): facilitates the stopping and killing of a q process on a specified port allowing for orphaned q processes to be stopped, functionality defined [here](../api/util.md#pykxutilkill_q_process).
+		- [torch](https://pytorch.org/docs/stable/): required for conversions between `#!python torch.Tensor` objects and their PyKX equivalents.
 
 	    **Optional non-Python dependencies:**
 
@@ -328,9 +342,9 @@ If however you need to make use of the [Real-Time Capture](../user-guide/advance
 
 By default when attempting to start a q process for use within the Real-Time Capture workflows PyKX will attempt to call `q` directly, this method however is not fully reliable when using the Python `subprocess` module. As such the following setup can be completed to point more explicitly at your executable.
 
-If you already have a q executable PyKX can use this when initializing the Real-Time Capture APIs through the setting of the following in you [configuration file](../user-guide/configuration.md#configuration-file) or as [environment variables](../user-guide/configuration.md#environment-variables)
+If you already have a q executable, PyKX can use this when initializing the Real-Time Capture APIs through the setting of the following in your [configuration file](../user-guide/configuration.md#configuration-file) or as [environment variables](../user-guide/configuration.md#environment-variables):
 
-| Variable            | Explanation                                                                                                      |
+| **Variable**        | **Explanation**                                                                                                      |
 | :------------------ | :--------------------------------------------------------------------------------------------------------------- |
 | `PYKX_Q_EXECUTABLE` | Specifies the location of the q executable which should be called. Typically this will be `QHOME/[lmw]64/q[.exe]`|
 | `QHOME`             | The directory to which q was installed                                                                           |
@@ -343,7 +357,7 @@ For users who do not have access to a q executable, PyKX provides a utility func
 
 The following default information is used when installing the q executable:
 
-| Parameter        | Default             | Explanation                                                                                                            |
+| **Parameter**    | **Default**         | **Explanation**                                                                                                        |
 | :--------------- | :------------------ | :--------------------------------------------------------------------------------------------------------------------- |
 | location         | `'~/q'` or `'C:\q'` | The location to which q will be installed if not otherwise specified.                                                  |
 | date             | `'2024.07.08'`      | The dated version of kdb+ 4.0 which is to be installed.                                                                |
@@ -367,6 +381,40 @@ Installation of q via this method will update the configuration file `.pykx-conf
 #### Installing without PyKX
 
 The installed q executable is not required to be installed via PyKX. If you wish to install q following the traditional approach you can follow the install instructions outlined [here](https://code.kx.com/q/learn/install/) or through signing up for a free-trial [here](https://kx.com/download-kdb/).
+
+### Installing in an air-gapped environment
+
+Installing Python libraries in air-gapped environments requires users to first download the [Python wheel](https://realpython.com/python-wheels/) files for the libraries you need to install.
+
+!!! Note "Build using the same environment as you're installing"
+
+	When downloading the `.whl` files and dependencies make sure you are using the same OS and Python version as you will be when installing in your isolated environment 
+
+In the case of PyKX users can in a internet enabled environment either
+
+1. Download the `.whl` file for the OS, library version and Python version you are intending to use on the air-gapped environment. These files can be sourced from [here](https://pypi.org/project/pykx/#files).
+2. Generate the `.whl` file from a git clone of the [PyKX repository](https://github.com/kxsystems/pykx). An example of this is as follows:
+
+	```bash
+	$ git clone https://github.com/kxsystems/pykx
+	$ cd pykx
+	$ pip install build
+	# The below will install the `.whl` to a `dist/` folder
+	$ python -m build .
+	```
+Once locally downloaded the dependencies of the `*.whl` file can be downloaded as follows:
+
+	```bash
+	$ pip download dist/*.whl
+	```
+
+Copy the content of your `dist/` folder to an external storage device (USB-key etc.) and upload the `.whl` files to your air-gapped device.
+
+Install the wheels which for simplicity are stored at a location `/opt/airgap/wheels`
+
+```bash
+pip install --no-cache /opt/airgap/wheels/*
+```
 
 ### Verify PyKX can use the executable
 

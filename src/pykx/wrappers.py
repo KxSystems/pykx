@@ -164,6 +164,7 @@ graph LR
 
 from abc import ABCMeta
 from collections import abc
+import copy
 from datetime import datetime, timedelta
 import importlib
 from inspect import signature
@@ -179,14 +180,19 @@ import numpy as np
 import pandas as pd
 import pytz
 
-from . import _wrappers, help
+from . import _wrappers, beta_features, help
 from ._pyarrow import pyarrow as pa
-from .config import k_gc, licensed, pandas_2, suppress_warnings
+from .config import _check_beta, k_gc, licensed, pandas_2, suppress_warnings
 from .core import keval as _keval
 from .constants import INF_INT16, INF_INT32, INF_INT64, INF_NEG_INT16, INF_NEG_INT32, INF_NEG_INT64
 from .constants import NULL_INT16, NULL_INT32, NULL_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
-from .util import cached_property, classproperty, detect_bad_columns, df_from_arrays, slice_to_range
+from .util import cached_property, class_or_instancemethod, classproperty, detect_bad_columns, df_from_arrays, slice_to_range # noqa E501
+
+import importlib.util
+_torch_unavailable = importlib.util.find_spec('torch') is None
+if not _torch_unavailable:
+    beta_features.append('PyTorch Conversions')
 
 q_initialized = False
 
@@ -414,6 +420,9 @@ class K:
 
     any = __bool__
     all = __bool__
+
+    def copy(self):
+        return copy.copy(self)
 
     @property
     def is_atom(self):
@@ -1293,6 +1302,15 @@ class CharAtom(Atom):
 
 class NumericAtom(Atom):
     """Base type for all q numeric atoms."""
+
+    def __new__(cls, x: Any, *args, cast: bool = None, **kwargs):
+        try:
+            if math.isinf(x):
+                return cls.inf if x>0 else -cls.inf
+        except BaseException:
+            pass
+        return toq(x, ktype=None if cls is K else cls, cast=cast)
+
     def __int__(self):
         return int(self.py())
 
@@ -2286,6 +2304,20 @@ class Vector(Collection, abc.Sequence):
             else:
                 raise e
 
+    def replace(self, to_replace, replace_with):
+        res = q('''
+                {[l;s;r]
+                lT:type l;
+                rT:type r;
+                sOp:$[(rT>=0) or lT=0;~/:;=];
+                rI:where sOp[s;l];
+                if[0=count rI;:l];
+                atF:$[(0=lT) or neg[lT]=rT;@[;;:;];{1_ @[(::),x;1+y;:;z]}];
+                r:count[rI]#enlist r;
+                atF[l;rI;r]
+            }''', self, to_replace, replace_with)
+        return res
+
 
 class List(Vector):
     """Wrapper for q lists, which are vectors of K objects of any type.
@@ -2315,9 +2347,26 @@ class List(Vector):
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         return [_rich_convert(x, stdlib, raw) for x in self]
 
-    def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+    def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None, reshape: Union[bool, list] = False):  # noqa: E501
         """Provides a Numpy representation of the list."""
-        return _wrappers.list_np(self, False, has_nulls, raw)
+        if reshape == False: # noqa: E712
+            return _wrappers.list_np(self, False, has_nulls, raw)
+        if isinstance(reshape, bool):
+            dims = q("{$[0=t:type x;count[x],'distinct raze .z.s each x;enlist(count x;neg t)]}", self)  # noqa: E501
+            if len(dims) != 1:
+                raise TypeError('Data must be a singular type "rectangular" matrix')
+            dims = dims[0][:-1]
+        else:
+            dims = reshape
+        razed = q('(raze/)', self)
+        return razed.np().reshape(dims)
+
+    def pt(self, *, reshape: Union[bool, list] = True):
+        _check_beta('PyTorch Conversion')
+        if _torch_unavailable:
+            raise QError('PyTorch not available, please install PyTorch')
+        import torch
+        return torch.from_numpy(self.np(reshape=reshape))
 
 
 class NumericVector(Vector):
@@ -2383,6 +2432,13 @@ class IntegralNumericVector(NumericVector):
                 arr = pd.arrays.IntegerArray(arr, mask=arr.mask, copy=False)
             res = pd.Series(arr, copy=False)
         return res
+
+    def pt(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+        _check_beta('PyTorch Conversion')
+        if _torch_unavailable:
+            raise QError('PyTorch not available, please install PyTorch')
+        import torch
+        return torch.from_numpy(self.np(raw=raw, has_nulls=has_nulls))
 
 
 class BooleanVector(IntegralNumericVector):
@@ -2633,6 +2689,13 @@ class NonIntegralNumericVector(NumericVector):
 
     def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         return _wrappers.k_vec_to_array(self, self._np_type)
+
+    def pt(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+        _check_beta('PyTorch Conversion')
+        if _torch_unavailable:
+            raise QError('PyTorch not available, please install PyTorch')
+        import torch
+        return torch.from_numpy(self.np(raw=raw, has_nulls=has_nulls))
 
 
 class RealVector(NonIntegralNumericVector):
@@ -5126,6 +5189,21 @@ class Lambda(Function):
             str(x) for x in q('k){x:.:x;$[min (x:x[1]) like "PyKXParam*"; `$9_\'$x; x]}', self)
         )
 
+    def __new__(cls, x: Any, *args, cast: bool = None, **kwargs):
+        if isinstance(x, str):
+            x = q(x)
+            if not isinstance(x, Lambda):
+                raise TypeError("String passed is not in the correct lambda form")
+        return toq(x, ktype=None if cls is K else cls, cast=cast)
+
+    @property
+    def string(self):
+        return q.string(self)
+
+    @property
+    def value(self):
+        return q.value(self)
+
 
 class UnaryPrimitive(Function):
     """Wrapper for q unary primitive functions, including `::`, and other built-ins.
@@ -6937,11 +7015,13 @@ class Column:
         """
         return self.call('exp', iterator=iterator)
 
-    @staticmethod
-    def fby(by, aggregate, data, by_table=False, data_table=False):
+    @class_or_instancemethod
+    def fby(int_or_class, by, aggregate, data, by_table=False, data_table=False): # noqa B902
         """Helper function to create an `fby` inside a Column object
         Creates: `(fby;(enlist;aggregate;data);by)`
         `data_table` and `by_table` can be set to True to create Table ParseTree of their input"""
+        if not isinstance(int_or_class, type):
+            raise RuntimeError('Please use pykx.Column.fby() instead of running .fby() on a created Column object.') # noqa E501
         if by_table or isinstance(by, (dict, Dictionary)):
             if isinstance(by, dict):
                 name = list(by.keys())[0]

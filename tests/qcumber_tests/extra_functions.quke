@@ -39,6 +39,14 @@ feature .pykx.toq
             .qu.compare[-7h; type .pykx.toq .pykx.eval["1"]];
         expect a short atom
             .qu.compare[-5h; type .pykx.toq .pykx.eval["pykx.ShortAtom(1)"]];
+    should round trip if the item is a conversion object
+        expect round trips to be handled gracefully
+            all(
+                val~.pykx.toq .pykx.tonp val:til 10;
+                val~.pykx.toq .pykx.topy val:100?0Ng;
+                val~.pykx.toq .pykx.topd val:([]10?1f;10?1f);
+                val~.pykx.toq .pykx.tonp .pykx.topy val:1 2 3
+               )
     should round trip if the item is not a foreign/wrapper
         expect round trips to be handled gracefully for existing q data
             all(
@@ -96,6 +104,8 @@ feature .pykx.loadPy
             @[{.pykx.loadPy x;0b};"file.t";{x like"File extension must be .py/.p"}]
         expect to error if loading .p file directly without loadPy
             @[{system"l ",x;0b};"tests/test_files/func1.p";{x like"SyntaxError*"}]
+        expect the name of the file in error message if file does not exist
+            @[{.pykx.loadPy x;0b};"file.py";{x like "*file.py*"}]
 
     should allow loading of various files
         expect loading of .py files to work using .pykx.loadPy
@@ -110,3 +120,63 @@ feature .pykx.loadPy
                 99h~type .pykx.get[`dict1]`;
                 11~.pykx.get[`func1;<][10]
                 )
+
+feature .pykx.typepy
+    after
+        .pykx.setdefault["default"]
+
+    should return correct datatype when conversion is set as default
+        expect a string to be returned
+            .qu.compare[10h;type .pykx.typepy 5]
+        expect numpy int
+            .qu.compare["<class 'numpy.int64'>";.pykx.typepy 5]
+        expect numpy array
+            .qu.compare["<class 'numpy.ndarray'>";.pykx.typepy til 10]
+        expect list
+            .qu.compare["<class 'list'>";.pykx.typepy (10?1f;10?1f)]
+        expect pandas df
+            .qu.compare["<class 'pandas.core.frame.DataFrame'>";.pykx.typepy ([]100?1f;100?1f)]
+
+    should return correct datatype when conversion is set as Python
+        expect a string to be returned
+            .pykx.setdefault["py"];   // Set conversion type to Python
+            .qu.compare[10h;type .pykx.typepy 5]
+        expect int
+            .qu.compare["<class 'int'>";.pykx.typepy 5]
+        expect list
+            .qu.compare["<class 'list'>";.pykx.typepy (10?1f;10?1f)]
+        expect dict
+            .qu.compare["<class 'dict'>";.pykx.typepy ([]100?1f;100?1f)]
+
+    should return correct datatype when conversion is set as Pandas
+        expect a string to be returned
+            .pykx.setdefault["pd"];   // Set conversion type to Pandas
+            .qu.compare[10h;type .pykx.typepy 5]
+        expect numpy int
+            .qu.compare["<class 'numpy.int64'>";.pykx.typepy 5];
+        expect pandas array
+            .qu.compare["<class 'pandas.core.series.Series'>";.pykx.typepy (10?1f;10?1f)]
+        expect pandas df
+            .qu.compare["<class 'pandas.core.frame.DataFrame'>";.pykx.typepy ([]100?1f;100?1f)]
+
+    should return correct datatype when conversion is set as PyArrow
+        expect a string to be returned
+            .pykx.setdefault["pa"];   // Set conversion type to PyArrow
+            .qu.compare[10h;type .pykx.typepy 5]
+        expect numpy int
+            .qu.compare["<class 'numpy.int64'>";.pykx.typepy 5];
+        expect pyarrow array
+            .qu.compare["<class 'pyarrow.lib.ListArray'>";.pykx.typepy (10?1f;10?1f)]
+        expect pyarrow table
+            .qu.compare["<class 'pyarrow.lib.Table'>";.pykx.typepy ([]100?1f;100?1f)]
+
+    should return correct datatype when conversion is set as Pykx
+        expect a string to be returned
+            .pykx.setdefault["k"];   // Set conversion type to k
+            .qu.compare[10h;type .pykx.typepy 5]
+        expect pykx atom
+            .qu.compare["<class 'pykx.wrappers.LongAtom'>";.pykx.typepy 5];
+        expect pykx vector
+            .qu.compare["<class 'pykx.wrappers.List'>";.pykx.typepy (10?1f;10?1f)]
+        expect pykx table
+            .qu.compare["<class 'pykx.wrappers.Table'>";.pykx.typepy ([]100?1f;100?1f)]

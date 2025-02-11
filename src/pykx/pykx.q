@@ -4,20 +4,19 @@
 // @category api
 // @end
 
+if[`e in key`.p;
+  if[not"{.pykx.pyexec x}"~string get `.p.e;
+   -1"Warning: Detected invalid '.p.e' function definition expected for PyKX.\n",
+   "Have you loaded another Python integration first?\n\n",
+   "Please consider full installation of PyKX under q following instructions at:\n",
+   "https://code.kx.com/pykx/pykx-under-q/intro.html#install.\n";
+   '"Unable to load PyKX, see logged output for more information"
+  ]
+ ]
+
 // @private
 // @desc Process context prior to PyKX initialization
 .pykx.util.prevCtx:system"d";
-
-@[
-  {if[not"{.pykx.pyexec x}"~string get x;
-     -1"Warning: Detected invalid '.p.e' function definition expected for PyKX.\n",
-     "Have you loaded another Python integration first?\n\n",
-     "Please consider full installation of PyKX under q following instructions at:\n",
-     "https://code.kx.com/pykx/pykx-under-q/intro.html#installation.\n"
-     ]
-    };
-  `.p.e;
-  {::}]
 
 \d .pykx
 
@@ -65,7 +64,7 @@ if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
   if[not count pykxDir:getenv`PYKX_DIR;
     util.dirSysCall:{ret:system x," ",util.dirCommand;util.whichPython:x;ret};
     pykxDir:$[count util.whichPython;util.dirSysCall[util.whichPython];
-      @[util.dirSysCall;"python";{util.dirSysCall["python3"]}]
+      @[util.dirSysCall;"python3";{util.dirSysCall["python"]}]
       ];
     pykxDir:ssr[;"\\";"/"]last vs["PYKX_DIR: "]last pykxDir
     ];
@@ -177,11 +176,12 @@ util.ispd  :util.isch[`..pandas]
 util.ispa  :util.isch[`..pyarrow]
 util.isk   :util.isch[`..k]
 util.israw :util.isch[`..raw]
+util.ispt  :util.isch[`..torch]
 
 // @private
 // @desc
 // Determine if a supplied object requires conversion
-util.isconv:{any(util.ispy;util.isnp;util.ispd;util.ispa;util.isk;util.israw)@\:x}
+util.isconv:{any(util.ispy;util.isnp;util.ispd;util.ispa;util.isk;util.israw;util.ispt)@\:x}
 
 // @private
 // @desc Convert a supplied argument to the specified python object type
@@ -195,6 +195,7 @@ util.convertArg:{
       util.ispd  x 0; [.z.s[(x[0][::][1]; 3; x[2])]];
       util.ispa  x 0; [.z.s[(x[0][::][1]; 4; x[2])]];
       util.isk   x 0; [.z.s[(x[0][::][1]; 5; x[2])]];
+      util.ispt  x 0; [.z.s[(x[0][::][1]; 6; x[2])]];
       util.israw x 0; [.z.s[(x[0][::][1]; x[1]; 1b)]];
       '"Unsupported conversion attempted"
       ]
@@ -213,6 +214,7 @@ util.toDefault:{
     "k"       ~ util.defaultConv;tok;
     "raw"     ~ util.defaultConv;toraw;
     "default" ~ util.defaultConv;todefault;
+    "pt"      ~ util.defaultConv;topt;
     (::)
     ]x
   };
@@ -479,12 +481,12 @@ util.parseArgs:{
 // enlist[`..python;;][0 1 2 3 4 5 6 7 8 9]
 //
 // // Pass a q object to Python with default conversions and return type
-// q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-// <class 'numpy.ndarray'>
+// q).pykx.typepy til 10
+// "<class 'numpy.ndarray'>"
 //
 // // Pass a q object to Python treating the Python object as a Python Object
-// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.topy til 10
-// <class 'list'>
+// q).pykx.typepy .pykx.topy til 10
+// "<class 'list'>"
 // ```
 topy:{x y}(`..python;;)
 
@@ -518,12 +520,12 @@ topy:{x y}(`..python;;)
 // q).pykx.util.defaultConv:"py"
 //
 // // Pass a q object to Python with default conversions and return type
-// q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-// <class 'list'>
+// q).pykx.typepy til 10
+// "<class 'list'>"
 //
 // // Pass a q object to Python treating the Python object as a Numpy Object
-// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.tonp til 10
-// <class 'numpy.ndarray'>
+// q).pykx.typepy .pykx.tonp til 10
+// "<class 'numpy.ndarray'>"
 // ```
 tonp:{x y}(`..numpy;;)
 
@@ -555,12 +557,12 @@ tonp:{x y}(`..numpy;;)
 //
 //
 // // Pass a q object to Python with default conversions and return type
-// q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-// <class 'numpy.ndarray'>
+// q).pykx.typepy til 10
+// "<class 'numpy.ndarray'>"
 //
 // // Pass a q object to Python treating the Python object as a Pandas Object
-// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.topd til 10
-// <class 'pandas.core.series.Series'>
+// q).pykx.typepy .pykx.topd til 10
+// "<class 'pandas.core.series.Series'>"
 // ```
 topd:{x y}(`..pandas;;)
 
@@ -591,14 +593,53 @@ topd:{x y}(`..pandas;;)
 // enlist[`..pyarrow;;][0 1 2 3 4 5 6 7 8 9]
 //
 // // Pass a q object to Python with default conversions and return type
-// q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-// <class 'numpy.ndarray'>
+// q).pykx.typepy til 10
+// "<class 'numpy.ndarray'>"
 //
 // // Pass a q object to Python treating the Python object as a PyArrow Object
-// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.topa til 10
-// <class 'pyarrow.lib.Int64Array'>
+// q).pykx.typepy .pykx.topa til 10
+// "<class 'pyarrow.lib.Int64Array'>"
 // ```
 topa:{x y}(`..pyarrow;;)
+
+// @name .pykx.topt
+// @category api
+// @overview
+// _Tag a q object to be indicate conversion to a PyTorch object when called in Python (BETA)_
+//
+// ```q
+// .pykx.topt[qObject]
+// ```
+//
+// **Parameters:**
+//
+// name      | type    | description |
+// ----------|---------|-------------|
+// `qObject` | `any`   | A q object which is to be defined as a PyTorch object in Python. |
+//
+// **Return:**
+//
+// type         | description
+// -------------|------------
+// `projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a Torch type object. |
+//
+// ```q
+// // Denote that a q object once passed to Python should be managed as a NumPy object
+// q).pykx.topt til 10
+// enlist[`..torch;;][0 1 2 3 4 5 6 7 8 9]
+//
+// // Update the default conversion type to be non NumPy
+// q).pykx.setdefault"pt"
+//
+// // Pass a q object to Python with default conversions and return type
+// q).pykx.typepy til 10
+// "<class 'torch.Tensor'>"
+//
+// // Pass a q object to Python treating the Python object as a Numpy Object
+// q).pykx.typepy .pykx.tonp til 10
+// "<class 'numpy.ndarray'>"
+// ```
+topt:{x y}(`..torch;;)
 
 // @name .pykx.tok
 // @category api
@@ -627,12 +668,12 @@ topa:{x y}(`..pyarrow;;)
 // enlist[`..k;;][0 1 2 3 4 5 6 7 8 9]
 //
 // // Pass a q object to Python with default conversions and return type
-// q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-// <class 'numpy.ndarray'>
+// q).pykx.typepy til 10
+// "<class 'numpy.ndarray'>"
 //
 // // Pass a q object to Python treating the Python object as a PyKX object
-// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.tok til 10
-// <class 'pykx.wrappers.LongVector'>
+// q).pykx.typepy .pykx.tok til 10
+// "<class 'pykx.wrappers.LongVector'>"
 // ```
 tok: {x y}(`..k;;)
 
@@ -663,12 +704,12 @@ tok: {x y}(`..k;;)
 // enlist[`..raw;;][0 1 2 3 4 5 6 7 8 9]
 //
 // // Pass a q object to Python with default conversions and return type
-// q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-// <class 'numpy.ndarray'>
+// q).pykx.typepy til 10
+// "<class 'numpy.ndarray'>"
 //
 // // Pass a q object to Python treating the Python object as a raw Object
-// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.toraw til 10
-// <class 'list'>
+// q).pykx.typepy .pykx.toraw til 10
+// "<class 'list'>"
 // ```
 toraw: {x y}(`..raw;;)
 
@@ -703,12 +744,12 @@ toraw: {x y}(`..raw;;)
 // enlist[`..numpy;;][0 1 2 3 4 5 6 7 8 9]
 //
 // // Pass a q list to Python treating the Python object as PyKX default
-// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault (til 10;til 10)
-// <class 'list'>
+// q).pykx.typepy .pykx.todefault (til 10;til 10)
+// "<class 'list'>"
 //
 // // Pass a q Table to Python by default treating the Python table as a Pandas DataFrame
-// q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault ([]til 10;til 10)
-// <class 'pandas.core.frame.DataFrame'>
+// q).pykx.typepy .pykx.todefault ([]til 10;til 10)
+// "<class 'pandas.core.frame.DataFrame'>"
 // ```
 todefault:{$[0h=type x;topy x;$[99h~type x;all 98h=type each(key x;value x);0b]|98h=type x;topd x;tonp x]}
 
@@ -889,8 +930,23 @@ setdefault:{
 // foreign
 // q).pykx.toq b
 // 2
+//
+// // Convert a PyKX conversion object back to q
+// q).pykx.toq .pykx.topd ([]5?1f;5?`a`b`c)
+// 
+// x         x1
+// ------------
+// 0.3017723 a 
+// 0.785033  a 
+// 0.5347096 c 
+// 0.7111716 b 
+// 0.411597  c
 // ```
-py2q:toq:{$[type[x]in 104 105 112h;util.foreignToq[unwrap x;0b];x]}
+py2q:toq:{
+ x:{$[util.isconv x;last value::;]x}/[x];
+ if[type[x]in 104 105 112h;x:unwrap x];
+ $[type[x]=112h;util.foreignToq[unwrap x;0b];x]
+ }
 
 // @kind function
 // @name .pykx.toq0
@@ -942,7 +998,9 @@ toq0:ce {
     [if[not -1h~type x 1;'"Supplied 2nd argument must be a boolean"];
      fn:x 0;conv:x 1];
     [fn:x 0;conv:0b]];
-  $[type[fn]in 104 105 112h;util.foreignToq[unwrap fn;conv];fn]
+  fn:{$[util.isconv x;last value::;]x}/[fn];
+  if[type[fn]in 104 105 112h;fn:unwrap fn];
+  $[type[fn]=112h;util.foreignToq[fn;conv];fn]
   }
 
 // @private
@@ -1703,7 +1761,10 @@ safeReimport:{[x]
 loadPy:{[file]
   if[10h<>type file;'"Parameter 'file' must be of type string"];
   if[not last["." vs file]in("py";enlist"p");'"File extension must be .py/.p"];
-  .pykx.pyexec"exec(open('",ssr[file;"\\";"\\\\"],"').read())"
+  @[.pykx.pyexec;
+    "exec(open('",ssr[file;"\\";"\\\\"],"').read())";
+    {$[y like "FileNotFound*";'ssr[y;"2";x];'x]}[file]
+    ]
   }
 
 
@@ -1874,6 +1935,44 @@ loadExtension:{[ext]
     {'x," raised when attempting to load extension"}
     ];
   }
+
+// @private
+// @kind function
+// @name .pykx.typepy
+// @category api
+// @overview
+// _Determine the datatype of an object passed to Python and return it as a string_
+//
+// ```q
+// .pykx.typepy[object]
+// ```
+//
+// **Parameters:**
+//
+// name       | type     | description
+// -----------|----------|-------------
+// `object`  | `any`    | An object that is passed to python and its datatype determined.
+//
+// **Returns:**
+//
+// type     | description
+// ---------|------------
+// `string` | The string representation of an objects datatype after being passed to python
+//
+// **Example:**
+//
+// ```q
+// q)\l pykx.q
+// q).pykx.typepy 1
+// "<class 'numpy.int64'>"
+//
+// q).pykx.typepy (10?1f;10?1f)
+// "<class 'list'>"
+//
+// q).pykx.typepy ([]100?1f;100?1f)
+// "<class 'pandas.core.frame.DataFrame'>"
+// ```
+.pykx.typepy:{.pykx.eval["lambda x: str(type(x)).encode()";<]x}
 
 // @desc Restore context used at initialization of script
 system"d ",string .pykx.util.prevCtx;

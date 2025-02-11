@@ -131,3 +131,14 @@ feature Qlog functions to not be defined in pykx namespace
             $[.z.o~`l64;@[{get x;1b};`.com_kx_log.setCorrelator;0b];1b]
         expect logging functionality to have loaded in the .i namespace
             $[.z.o~`l64;@[{get x;1b};`.com_kx_log.i.endpoint;0b];1b]
+
+feature toq conversions to support compositions
+    should pass through compositions
+        expect q composition
+            .qu.compare[any;.pykx.toq any]
+        expect q composition
+            .qu.compare[any;.pykx.toq0 any]
+        expect q composition
+            .qu.compare[any;.pykx.toq0[any;0b]]
+        expect q composition
+            .qu.compare[any;.pykx.toq0[any;1b]]

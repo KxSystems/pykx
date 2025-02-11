@@ -3,7 +3,7 @@ site_name: 'PyKX'
 site_author: 'KX'
 site_description: 'PyKX Documentation'
 site_url: 'https://code.kx.com/pykx'
-copyright: '© 2024 Kx Systems, Inc. KX and kdb+ are registered trademarks of Kx Systems, Inc., a subsidiary of FD Technologies plc.'
+copyright: '© 2025 Kx Systems, Inc. KX and kdb+ are registered trademarks of Kx Systems, Inc., a subsidiary of FD Technologies plc.'
 site_dir: 'public'
 dev_addr: 'localhost:8080'
 
@@ -284,7 +284,9 @@ nav:
         - PyKX under q: release-notes/underq-changelog.md
       - 2.x -> 3.x Upgrade : upgrades/2030.md
       - Roadmap: roadmap.md
-      - Beta features: beta-features/index.md
+      - Beta features:
+        - Introduction: beta-features/index.md
+        - PyTorch Conversions: beta-features/torch.md
     - Help and Support:
       - Troubleshooting: help/troubleshooting.md
       - FAQ: help/faq.md

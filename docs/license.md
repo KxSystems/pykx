@@ -1,6 +1,9 @@
 # Licenses
 
-PyKX operates on a dual licensing model with interactions with the q binary shared objects covered by a commercial license and remaining functionality supplied under an Apache 2 license.
+All files contained within the [PyKX repository](https://github.com/kxsystems/pykx) are not covered by a single license. The following outlines the differences.
+
+1. All files and folders contained within the source code directory 'src/pykx/q.so/' are licensed under the terms of the 'Software License for q.so' which are included below
+2. All other files within this repository are licensed under the "Apache 2.0" license include below
 
 ## Apache 2 License
 

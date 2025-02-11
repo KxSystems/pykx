@@ -88,3 +88,7 @@ a float as input and the value denotes how often the server will attempt to clea
 By default the value is `#!python 0.0` and this will cause the list of connections to be cleaned on every call
 to `#!python poll_recv`. With lots of incoming connections, this can deteriorate the performance. If you
 set the `#!python conn_gc_time` to `#!python 10.0` then this clean-up happens every 10 seconds.
+
+!!! Note
+
+    [reval](../../api/pykx-execution/q.md#reval) will not impose read only exection on a PyKX server as Python manages the sockets rather than `q`.

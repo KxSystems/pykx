@@ -26,6 +26,9 @@ def test_tick_init(kx):
     assert tick('1b')
     assert tick('system"p"').py() == 5030
     assert tick('.tick.tabs').py() == []
+    with pytest.raises(kx.QError) as err:
+        tick.set_tables({'quote': kx.schema.builder({'px': kx.FloatAtom})})
+    assert "'time' and 'sym' must be first" in str(err.value)
     tick.set_tables({'trade': trade_schema})
     assert tick('.tick.tabs').py() == ['trade']
     tick.stop()
@@ -142,6 +145,8 @@ def test_rtp_vanilla(kx):
 
     rdb = kx.tick.RTP(port=5031)
     rdb.start({'tickerplant': 'localhost:5030'})
+    rdb.set_tables({'px': trade_schema})
+    assert isinstance(rdb('px'), kx.Table)
     assert isinstance(rdb('trades'), kx.Table)
     assert isinstance(rdb('quotes'), kx.Table)
     assert len(rdb('trades')) == 0
@@ -228,11 +233,17 @@ def test_rtp_timer(kx):
     reason='Not supported with PYKX_THREADING'
 )
 def test_hdb_vanilla(kx):
+    trade_schema = kx.schema.builder({
+        'time': kx.TimespanAtom,
+        'sym': kx.SymbolAtom,
+        'px': kx.FloatAtom})
     hdb = kx.tick.HDB(port=5032)
     assert hdb('1b')
     with pytest.raises(kx.QError) as err:
         hdb('custom_api', 5, 2)
     assert "custom_api" in str(err.value)
+    hdb.set_tables({'px': trade_schema})
+    assert isinstance(hdb('px'), kx.Table)
     hdb.register_api('custom_api', custom_api)
     with pytest.raises(kx.QError) as err:
         hdb('custom_api', 5, 2)

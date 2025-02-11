@@ -294,7 +294,8 @@ test_libs = [
     'import subprocess',
     'from packaging import version',
     'import uuid',
-    'import itertools'
+    'import itertools',
+    'import operator'
 ]
 
 

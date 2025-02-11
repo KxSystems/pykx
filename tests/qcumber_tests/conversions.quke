@@ -16,6 +16,8 @@ feature conversions
             .qu.compare["<class 'int'>"; t .pykx.toraw .z.t];
         expect raw datetime conversions to work
             .qu.compare["<class 'float'>"; t .pykx.toraw 2006.07.21T09:13:39];
+        expect pytorch type
+            .qu.compare["<class 'torch.Tensor'>"; t .pykx.topt enlist til 10]
     should convert wrapped foreigns to correct types
         expect python type
             x:.pykx.eval"pykx.LongVector(list(range(10)))";
@@ -29,6 +31,9 @@ feature conversions
         expect pyarrow type
             x:.pykx.eval"pykx.LongVector(list(range(10)))";
             .qu.compare["<class 'pyarrow.lib.Int64Array'>"; t .pykx.topa x];
+        expect pytorch type
+            x:.pykx.eval"pykx.List([[10, 20, 30],[20, 30, 40]])";
+            .qu.compare["<class 'torch.Tensor'>"; t .pykx.topt x]
         expect K type
             x:.pykx.eval"pykx.LongVector(list(range(10)))";
             .qu.compare["<class 'pykx.wrappers.LongVector'>"; t .pykx.tok x];

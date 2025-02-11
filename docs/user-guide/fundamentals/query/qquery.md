@@ -77,7 +77,7 @@ GOOG 2022.01.02 423.6121
 
 ## Next Steps
 
-Now that you have learnt how to query your data using the Pythonic API you may be interested in other methods for querying your data:
+Now that you have learnt how to query your data using q you may be interested in other methods for querying your data:
 
 - If you want to query your data in a more Python-first way follow the guide [here](./pyquery.md).
 - If you wish to query your data using SQL, you can follow the introduction to this functionality [here](./sql.md).

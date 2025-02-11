@@ -45,14 +45,21 @@ def test_boolean_config():
 
 
 @pytest.mark.isolate
+def test_valid_qlic():
+    os.environ['QLIC'] = 'invalid'
+    with pytest.warns() as warnings:
+        import pykx as kx
+    assert len(warnings) == 1
+    assert 'Configuration value QLIC set to non directory' in str(warnings[0].message)
+    assert 2 == kx.q('2').py()
+
+
+@pytest.mark.isolate
 def test_qargs_single():
     os.environ['QARGS'] = '-p 5050'
     with pytest.warns() as warnings:
         import pykx as kx
-    if os.getenv('PYKX_THREADING', None) is None:
-        assert len(warnings) == 1
-    else:
-        assert len(warnings) == 2
+    assert len(warnings) == 1
     assert 'setting a port in this way' in str(warnings[0].message)
     assert 2 == kx.q('2').py()
 
@@ -62,10 +69,7 @@ def test_qargs_multi():
     os.environ['QARGS'] = '-p 5050 -t 1000'
     with pytest.warns() as warnings:
         import pykx as kx
-    if os.getenv('PYKX_THREADING', None) is None:
-        assert len(warnings) == 2
-    else:
-        assert len(warnings) == 3
+    assert len(warnings) == 2
     assert 'setting a port in this way' in str(warnings[0].message)
     assert 'setting timers in this way' in str(warnings[1].message)
     assert 2 == kx.q('2').py()

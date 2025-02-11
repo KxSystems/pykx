@@ -1,7 +1,17 @@
 feature pykx.q
+    
+    after
+        .p.e:{.pykx.pyexec x}
+
     should not error
         expect not error
             .qu.compare[(::); system"l pykx.q"]
+    should error
+	expect an error if embedPy is already loaded
+	    .p.e:{"not the pykx version"};
+	    err:@[{system"l pykx.q"};`;{x}];
+	   .qu.compare["Unable to load PyKX, see logged output for more information";err];
+    
 
 feature .pykx.safeReimport
     should function safely 

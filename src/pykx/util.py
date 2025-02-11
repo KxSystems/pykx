@@ -44,6 +44,7 @@ __all__ = [
     'classproperty',
     'attr_as',
     'cached_property',
+    'class_or_instancemethod',
     'debug_environment',
     'df_from_arrays',
     'get_default_args',
@@ -104,6 +105,12 @@ class cached_property:
         value = self.func(instance)
         instance.__dict__[self.attrname] = value
         return value
+
+
+class class_or_instancemethod(classmethod):
+    def __get__(self, instance, type_):
+        descr_get = super().__get__ if instance is None else self.__func__.__get__
+        return descr_get(instance, type_)
 
 
 def slice_to_range(s: slice, n: int) -> range:

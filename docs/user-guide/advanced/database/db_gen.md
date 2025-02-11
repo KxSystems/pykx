@@ -13,7 +13,7 @@ _This page explains how to create and expand databases using PyKX._
 
 !!! tip "Tip: For the best experience, we recommend reading [Databases in PyKX](index.md) first. If you already have access to a database and only need to load it, you can skip this page and jump right to [load database](db_loading.md)."
 
-Before leveraging the performance of PyKX when querying on-disk data, you need to create a [persisted database](..//..//..//extras/glossary.md#persisted-database). In the following sections we complete the following:
+Before leveraging the performance of PyKX when querying on-disk data, you need to create a [persisted database](../../../extras/glossary.md#persisted-database). In the following sections we complete the following:
 
 1. [Create a new database](#1-create-database) containing a single table `#!python trade` and multiple days of data.
 1. [Add a new day worth of data](#2-add-new-database-partition) for `#!python today` to the database for the `#!python trade` table.
@@ -26,7 +26,7 @@ Before leveraging the performance of PyKX when querying on-disk data, you need t
 
 ## 1. Create database
 
-For more information on database structures, see the linked section on [what is a database](index.md#whats-a-pykx-database). With PyKX, use the `#!python pykx.DB` class for all database interactions in Python. This class lets you create, expand, and maintain on-disk partitioned databases. First, we need to create a database.
+For more information on database structures, see the linked section on [what is a database](index.md#whats-a-pykx-database). With PyKX, use the `#!python pykx.DB` class for all database interactions in Python. This class lets you create, expand, and maintain on-disk splayed/partitioned databases. First, we need to create a database.
 
 In the next cell, we create a `#!python trade` table with data from multiple days in the chat.
 
@@ -43,25 +43,47 @@ In the next cell, we create a `#!python trade` table with data from multiple day
 
 Now that we have generated our trade table, we can persist it to disk at the location `#!python /tmp/db`.
 
-```python
->>> db = kx.DB(path='/tmp/db')
->>> db.create(trade, 'trade', 'date')
-```
+=== "Partitioned Database"
+
+	```python
+	>>> db = kx.DB(path='/tmp/db')
+	>>> db.create(trade, 'trade', 'date')
+	```
+
+=== "Splayed Database"
+
+	```python
+	>>> db = kx.DB(path='/tmp/splay')
+	>>> db.create(trade, 'trade', format='splayed')
+	```
 
 That's it, you now have a persisted database. To verify the availability of the database and its tables, we can examine the database object:
 
-```python
->>> db.tables
-['trade']
->>> type(db.trade)
-<class 'pykx.wrappers.PartitionedTable'>
-```
+=== "Partitioned Database"
 
-The above database persistence uses the default parameters within the `#!python create` function. If you need to compress/encrypt the persisted database partitions or need to define a `#!python by` or specify the symbol enumeration name, you can follow the API documentation [here](../../../api/db.md#pykx.db.DB.create).
+	```python
+	>>> db.tables
+	['trade']
+	>>> type(db.trade)
+	<class 'pykx.wrappers.PartitionedTable'>
+	```
+
+=== "Splayed Database"
+
+	```python
+	>>> db.tables
+	['trade']
+	>>> type(db.trade)
+	<class 'pykx.wrappers.SplayedTable'>
+	```
+
+The above database persistence uses the default parameters within the `#!python create` function. If you need to compress/encrypt the tables persisted to the database or need to define a `#!python by` or specify the symbol enumeration name when persisting a Partitioned Database, you can follow the API documentation [here](../../../api/db.md#pykx.db.DB.create).
 
 ## 2. Add new database partition
 
-Now that you have generated a database, you can add extra partitions using the same database class and the `#!python create` function. In this example we will add new data for the current day created in the below cell:
+The following section outlines functionality only applicable to Partitioned Databases.
+
+Now that you have generated a database, you can add extra partitions using the same database class and the `#!python create` function. In this example we will add new data for the current day created in the below cell and convert it to a Pandas DataFrame prior to persistence:
 
 ```python
 >>> N = 2000000
@@ -69,7 +91,9 @@ Now that you have generated a database, you can add extra partitions using the s
 ...     'time': kx.q.asc(kx.random.random(N, kx.q('1D'))),
 ...     'sym': kx.random.random(N, ['AAPL', 'GOOG', 'MSFT']),
 ...     'price': kx.random.random(N, 10.0)
-...     })
+...     }).pd()
+>>> type(trade)
+pandas.core.frame.DataFrame
 ```
 
 Note that in comparison to the original database creation logic, we do not have a `#!python date` column. Instead, we add a date at partition creation. Below we provide a variety of examples of adding new partitions under various conditions:
@@ -100,7 +124,7 @@ Note that in comparison to the original database creation logic, we do not have 
 
 ## 3. Add new table to database
 
-After onboarding your first table to a database, a common question is “How can I add a new table of related data?”. You can use the `#!python database` class and the `#!python create` function to do this. For instance, let’s add a `#!python quote` table for the current day:
+After onboarding your first table to a database, a common question is “How can I add a new table of related data?”. You can use the `#!python DB` class and the `#!python create` function to do this. For instance, let’s add a `#!python quote` table for the current day:
 
 ```python
 >>> N = 1000000
@@ -112,17 +136,35 @@ After onboarding your first table to a database, a common question is “How can
 ... })
 ```
 
-We can now add this as the data for the current day to the `#!python quote` table and see that the table is defined:
+We can now add this data to your database
 
-```python
->>> db.create(quote, 'quote', kx.DateAtom('today'))
->>> db.tables
-['quote', 'trade']
->>> type(db.quote)
-<class 'pykx.wrappers.PartitionedTable'>
-```
+=== "Partitioned Database"
+
+	For the current day we can add the `#!python quote` table and see that the table is defined:
+
+	```python
+	>>> db.create(quote, 'quote', kx.DateAtom('today'))
+	>>> db.tables
+	['quote', 'trade']
+	>>> type(db.quote)
+	<class 'pykx.wrappers.PartitionedTable'>
+	```
+
+=== "Splayed Database"
+
+	Add the table `#!python quote` to the database
+
+	```python
+	>>> db.create(quote, 'quote', format='splayed')
+	>>> db.tables
+	['trade', 'quote']
+	>>> type(db.quote)
+	<class 'pykx.wrappers.SplayedTable'>
+	```
 
 ## 4. Ensure new table is queryable
+
+The following section outlines a restriction only applicable to Partitioned Databases, Splayed Databases should be queryable immediately.
 
 You have now persisted another table to your database, however, you will notice if you access the `#!python quote` table that the return is surprising:
 

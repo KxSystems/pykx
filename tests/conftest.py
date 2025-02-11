@@ -82,7 +82,7 @@ def random_free_port():
     with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
         s.bind(('localhost', 0))
         port = s.getsockname()[1]
-        if port == 15001 or port == 15002 or port == 15003 or port == 15004:
+        if port in [15001, 15002, 15003, 15004, 15005]:
             return random_free_port()
         else:
             return port

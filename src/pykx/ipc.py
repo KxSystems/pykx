@@ -7,12 +7,15 @@ from abc import abstractmethod
 import asyncio
 from contextlib import nullcontext
 from multiprocessing import Lock as multiprocessing_lock, RawValue
+from pathlib import Path
 import selectors
 import socket
 from threading import Lock as threading_lock
 from time import monotonic_ns, sleep
 from typing import Any, Callable, Optional, Union
+import warnings
 from weakref import finalize, WeakMethod
+import warnings
 import sys
 
 from . import deserialize, serialize, Q
@@ -62,7 +65,7 @@ class MessageType(Enum):
 class QFuture(asyncio.Future):
     """
     A Future object to be returned by calls to q from an instance of
-    [pykx.AsyncQConnection][pykx.AsyncQConnection].
+    [pykx.AsyncQConnection][pykx.AsyncQConnection] or [pykx.RawQConnection][pykx.RawQConnection].
 
     This object can be awaited to receive the resulting value.
 
@@ -101,9 +104,16 @@ class QFuture(asyncio.Future):
             FutureCancelled: This QFuture instance has been cancelled and cannot be awaited.
             BaseException: If the future has an exception set it will be raised upon awaiting it.
         """
+        async def closure():
+            await self.q_connection._recv2(acceptAsync=True, fut=self)
+            await asyncio.sleep(0)
+            return self
+
         if self.done():
             return self.result()
         while not self.done():
+            if self.done():
+                return self.result()
             if self.poll_recv is not None:
                 try:
                     res = self.q_connection.poll_recv()
@@ -113,7 +123,7 @@ class QFuture(asyncio.Future):
                     self.set_exception(QError(str(e)))
             else:
                 try:
-                    self.q_connection._recv(acceptAsync=True)
+                    return closure().__await__()
                 except BaseException as e:
                     if isinstance(e, QError):
                         raise e
@@ -160,20 +170,22 @@ class QFuture(asyncio.Future):
     async def __async_await__(self) -> Any:
         if self.done():
             return self.result()
+
         while not self.done():
             await asyncio.sleep(0)
             if self.done():
                 return self.result()
             if self.poll_recv is not None:
                 try:
-                    res = self.q_connection.poll_recv()
+                    res = await self.q_connection.poll_recv2(fut=self)
                     if res is not None:
                         self.set_result(res)
+                        return res
                 except BaseException as e:
                     self.set_exception(QError(str(e)))
             else:
                 try:
-                    self.q_connection._recv(acceptAsync=True)
+                    await self.q_connection._recv2(acceptAsync=True, fut=self)
                 except BaseException as e:
                     if isinstance(e, QError):
                         raise e
@@ -226,7 +238,7 @@ class QFuture(asyncio.Future):
         except BaseException as e:
             if isinstance(e, QError):
                 raise e
-            if self._connection_info['reconnection_attempts'] != -1:
+            if self.q_connection._connection_info['reconnection_attempts'] != -1:
                 # TODO: Clear call stack futures
                 print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
                 loops = self._connection_info['reconnection_attempts']
@@ -522,9 +534,9 @@ class QConnection(Q):
             )
             self._sock.setblocking(0)
             object.__setattr__(self, '_reader', selectors.DefaultSelector())
-            self._reader.register(self._sock, selectors.EVENT_READ, WeakMethod(self._recv_socket))
+            self._reader.register(self._sock, selectors.EVENT_READ, (WeakMethod(self._recv_socket), WeakMethod(self._recv_socket2)))
             object.__setattr__(self, '_writer', selectors.DefaultSelector())
-            self._writer.register(self._sock, selectors.EVENT_WRITE, WeakMethod(self._send_sock))
+            self._writer.register(self._sock, selectors.EVENT_WRITE, (WeakMethod(self._send_sock), WeakMethod(self._send_sock)))
 
     def _init(self,
               host: Union[str, bytes] = 'localhost',
@@ -614,9 +626,9 @@ class QConnection(Q):
         if not isinstance(self, SecureQConnection):
             self._sock.setblocking(0)
             object.__setattr__(self, '_reader', selectors.DefaultSelector())
-            self._reader.register(self._sock, selectors.EVENT_READ, WeakMethod(self._recv_socket))
+            self._reader.register(self._sock, selectors.EVENT_READ, (WeakMethod(self._recv_socket), WeakMethod(self._recv_socket2)))
             object.__setattr__(self, '_writer', selectors.DefaultSelector())
-            self._writer.register(self._sock, selectors.EVENT_WRITE, WeakMethod(self._send_sock))
+            self._writer.register(self._sock, selectors.EVENT_WRITE, (WeakMethod(self._send_sock), WeakMethod(self._send_sock)))
         object.__setattr__(self, '_timeouts', 0)
         object.__setattr__(self, '_initialized', True)
         super().__init__()
@@ -685,7 +697,7 @@ class QConnection(Q):
             for key, _mask in events:
                 callback = key.data
                 if debugging:
-                    return callback()(
+                    return callback[0]()(
                         key.fileobj,
                         bytes(CharVector(
                             '{[pykxquery] .Q.trp[{[x] (0b; value x)}; pykxquery;'
@@ -697,7 +709,7 @@ class QConnection(Q):
                         debug=debug
                     )
                 else:
-                    return callback()(key.fileobj, query, *params, wait=wait, error=error, debug=debug)
+                    return callback[0]()(key.fileobj, query, *params, wait=wait, error=error, debug=debug)
 
     def _ipc_query_builder(self, query, *params):
         data = bytes(query, 'utf-8') if isinstance(query, str) else query
@@ -767,7 +779,7 @@ class QConnection(Q):
             return q_future
 
     # flake8: noqa: C901
-    def _recv(self, locked=False, acceptAsync=False):
+    async def _recv2(self, locked=False, acceptAsync=False, fut: Optional[QFuture]=None):
         timeout = self._connection_info['timeout']
         while self._timeouts > 0:
             events = self._reader.select(timeout)
@@ -775,18 +787,20 @@ class QConnection(Q):
                 key.data()(key.fileobj)
                 self._timeouts -= 1
         if isinstance(self, RawQConnection):
-            if len(self._send_stack) == len(self._call_stack) and len(self._send_stack) != 0:
-                self.poll_send()
+            if len(self._send_stack) != 0:
+                self.poll_send(0)
         start_time = monotonic_ns()
         with self._lock if self._lock is not None and not locked else nullcontext():
             while True:
+                if fut is not None and fut.done():
+                    return fut.result()
                 if timeout != 0.0 and monotonic_ns() - start_time >= (timeout * 1000000000):
                     self._timeouts += 1
                     raise QError('Query timed out')
                 events = self._reader.select(timeout)
                 for key, _ in events:
                     callback = key.data
-                    msg_type, res = callback()(key.fileobj)
+                    msg_type, res = callback[0]()(key.fileobj)
                     if MessageType.sync_msg.value == msg_type:
                         print("WARN: Discarding unexpected sync message from handle: "
                               + str(self.fileno()), file=sys.stderr)
@@ -803,6 +817,108 @@ class QConnection(Q):
                         return res
                     else:
                         raise RuntimeError('MessageType unknown')
+                    return
+                await asyncio.sleep(0.0)
+
+
+    # flake8: noqa: C901
+    def _recv(self, locked=False, acceptAsync=False):
+        timeout = self._connection_info['timeout']
+        while self._timeouts > 0:
+            events = self._reader.select(timeout)
+            for key, _ in events:
+                key.data[0]()(key.fileobj)
+                self._timeouts -= 1
+        if isinstance(self, RawQConnection):
+            if len(self._send_stack) == len(self._call_stack) and len(self._send_stack) != 0:
+                self.poll_send()
+        start_time = monotonic_ns()
+        with self._lock if self._lock is not None and not locked else nullcontext():
+            while True:
+                if timeout != 0.0 and monotonic_ns() - start_time >= (timeout * 1000000000):
+                    self._timeouts += 1
+                    raise QError('Query timed out')
+                events = self._reader.select(timeout)
+                for key, _ in events:
+                    callback = key.data
+                    msg_type, res = callback[0]()(key.fileobj)
+                    if MessageType.sync_msg.value == msg_type:
+                        print("WARN: Discarding unexpected sync message from handle: "
+                              + str(self.fileno()), file=sys.stderr)
+                        try:
+                            self._send(SymbolAtom("PyKX cannot receive queries in client mode"),
+                                       error=True)
+                        except BaseException:
+                            pass
+                    elif MessageType.async_msg.value == msg_type and not acceptAsync:
+                        print("WARN: Discarding unexpected async message from handle: "
+                              + str(self.fileno()), file=sys.stderr)
+                    elif MessageType.resp_msg.value == msg_type or \
+                            MessageType.async_msg.value == msg_type:
+                        return res
+                    else:
+                        raise RuntimeError('MessageType unknown')
+
+    async def _recv_socket2(self, sock):
+        tot_bytes = 0
+        chunks = []
+        # message header
+        a = await self._loop.sock_recv(sock, 8)
+        chunks = list(a)
+        tot_bytes += 8
+        if len(chunks) == 0:
+            try:
+                if self._connection_info['reconnection_attempts'] == -1:
+                    self.close()
+            except BaseException:
+                self.close()
+            raise RuntimeError("Attempted to use a closed IPC connection")
+        elif len(chunks) <8:
+            try:
+                if self._connection_info['reconnection_attempts'] == -1:
+                    self.close()
+            except BaseException:
+                self.close()
+            raise RuntimeError("PyKX attempted to process a message containing less than "
+                               "the expected number of bytes, connection closed."
+                               f"\nReturned bytes: {chunks}.\n"
+                               "If you have a reproducible use-case please raise an "
+                               "issue at https://github.com/kxsystems/pykx/issues with "
+                               "the use-case provided.")
+
+        # The last 5 bytes of the header contain the size and the first byte contains information
+        # about whether the message is encoded in big-endian or little-endian form
+        endianness = chunks[0]
+        if endianness == 1: # little-endian
+            size = chunks[3]
+            for i in range(7, 3, -1):
+                size = size << 8
+                size += chunks[i]
+        else: # nocov
+            # big-endian
+            size = chunks[3]
+            for i in range(4, 8):
+                size = size << 8
+                size += chunks[i]
+
+        buff = bytearray(size)
+        chunks = bytearray(chunks)
+        for i in range(8):
+            buff[i] = chunks[i]
+        view = memoryview(buff)[8:]
+        # message body
+        while tot_bytes < size:
+            try:
+                to_read = min(self._socket_buffer_size, size - tot_bytes)
+                read, _ = await self._loop.sock_recvfrom_into(sock, view, to_read)
+                view = view[read:]
+                tot_bytes += read
+            except BlockingIOError: # nocov
+                # The only way to get here is if we start processing a message before all the data
+                # has been received by the socket
+                pass
+        res = chunks[1], self._create_result(buff)
+        return res
 
     def _recv_socket(self, sock):
         tot_bytes = 0
@@ -961,17 +1077,33 @@ class QConnection(Q):
         conn.file_execute('/User/path/to/file.q')
         ```
         """
+        wlist = ['k', 'q', 'p', 'py']
         with open(pykx_lib_dir/'q.k', 'r') as f:
             lines = f.readlines()
             for line in lines:
                 if 'pykxld:' in line:
-                    ld = line[7:]
+                    ld = line[7:].encode()
+        if isinstance(file_path, str):
+            path_stem = Path(file_path).suffix[1:]
+            if not path_stem in wlist:
+                raise QError(f"Provided file type '{path_stem}' unsupported")
         with open(file_path) as f:
             lines = f.readlines()
-        return self("{[fn;code;file] value (@';last file;enlist[file],/:value[\"k)\",string fn]string code)}",   # noqa : E501
+        lines = [CharVector(i.rstrip('\n')) for i in lines]
+        return self("""
+                    {[fn;code;file;stem]
+                        $[any stem~/:("p";"py");
+                            $[`pykx in key `;
+                              .pykx.pyexec "\n" sv code;
+                              '"PyKX must be loaded on remote server"];
+                            value (@';last file;enlist[file],/:value[\"k)\",fn]code)
+                            ]
+                        }
+                    """,
                     ld,
                     lines,
                     bytes(file_path, 'utf-8'),
+                    bytes(path_stem, 'utf-8'),
                     wait=return_all)
 
     def fileno(self) -> int:
@@ -1324,8 +1456,7 @@ class AsyncQConnection(QConnection):
             port: The port to which a connection is to be established.
             username: Username for q connection authorization.
             password: Password for q connection authorization.
-            timeout: Timeout for blocking socket operations in seconds. If set to 0, the socket
-                will be non-blocking.
+            timeout: Timeout is not supported when using `AsyncQConnection` objects.
             large_messages: Whether support for messages >2GB should be enabled.
             tls: Whether TLS should be used.
             unix: Whether a Unix domain socket should be used instead of TCP. If set to
@@ -1339,7 +1470,8 @@ class AsyncQConnection(QConnection):
                 method then you can provide the event loop here and the returned future object will
                 be an instance of the loops future type. This will allow the current event loop
                 to manage awaiting `#!python QFuture` objects as well as any other async tasks that
-                may be running.
+                may be running. If no event loop is provided the default result of
+                `aysncio.get_event_loop()` will be used.
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
@@ -1363,12 +1495,6 @@ class AsyncQConnection(QConnection):
             The `#!python username` and `#!python password` parameters are only required if
             the q server requires authorization. Refer to
             [ssl documentation](https://code.kx.com/q/kb/ssl/) for more information.
-
-        Note: The `#!python timeout` argument may not always be enforced when making
-            successive queries. When making successive queries if one query times out the next query
-            will wait until a response has been received from the previous query before starting the
-            timer for its own timeout. This can be avoided by using a separate
-            `#!python QConnection` instance for each query.
 
         Note: When querying KX Insights the `#!python no_ctx=True` keyword argument must be used.
 
@@ -1428,22 +1554,32 @@ class AsyncQConnection(QConnection):
         0 1 2 3 4 5 6 7 8 9
         ```
         """
+        if timeout != 0.0:
+            warnings.warn('Timeout is not supported when using AsyncQConnection objects.')
         # TODO: Remove this once TLS support is fixed
         if tls:
             raise PyKXException('TLS is currently only supported for SyncQConnections')
+        loop = event_loop
+        if loop is None:
+            # `asyncio.get_event_loop()` used to do this automatically but it is deprecated as of
+            #  Python 3.12, so we do this weird try - except to future proof.
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
         object.__setattr__(self, '_stored_args', {
             'host': host,
             'port': port,
             'args': args,
             'username': username,
             'password': password,
-            'timeout': timeout,
+            'timeout': 0.0,
             'large_messages': large_messages,
             'tls': tls,
             'unix': unix,
             'wait': wait,
             'lock': lock,
-            'loop': event_loop,
+            'loop': loop,
             'no_ctx': no_ctx,
             'reconnection_attempts':reconnection_attempts,
             'reconnection_delay': reconnection_delay,
@@ -1528,6 +1664,7 @@ class AsyncQConnection(QConnection):
                  wait: bool = True,
                  reuse: bool = True,
                  debug: bool = False,
+                 async_response: bool = False,
     ) -> QFuture:
         """Evaluate a query on the connected q process over IPC.
 
@@ -1547,6 +1684,11 @@ class AsyncQConnection(QConnection):
                 if using q queries that respond in a deferred/asynchronous manner this should be set
                 to `#!python False` so the query can be made in a dedicated
                 `#!python AsyncQConnection` instance.
+            async_response: When using `reuse=False` and `wait=False` if an asynchronous response is
+                expected you can use this argument to keep the connection alive until an
+                asynchronous response has been received. Awaiting the inital returned future object
+                will return a second future that you can await upon to recieve the asynchronous
+                response.
 
         Returns:
             A QFuture object that can be awaited on to get the result of the query.
@@ -1606,6 +1748,10 @@ class AsyncQConnection(QConnection):
         await q(kx.q.floor, [5.2, 10.4])
         ```
         """
+        if async_response and reuse:
+            warnings.warn('Cannot use async_response=True without reuse=False.')
+        if async_response and wait:
+            warnings.warn('Cannot use async_response=True without wait=False.')
         if not reuse:
             conn = _DeferredQConnection(self._stored_args['host'],
                                         self._stored_args['port'],
@@ -1619,6 +1765,13 @@ class AsyncQConnection(QConnection):
                                         wait=self._stored_args['wait'],
                                         no_ctx=self._stored_args['no_ctx'])
             q_future = conn(query, *args, wait=wait, debug=debug)
+            if async_response and not wait:
+                q_future2 = QFuture(conn, conn._connection_info['timeout'], debug)
+                conn._call_stack.append(q_future2)
+                q_future2 = self._loop.create_task(q_future2.__async_await__())
+                q_future2.add_done_callback(lambda x: conn.close())
+                q_future.set_result(q_future2)
+                return q_future
             q_future.add_done_callback(lambda x: conn.close())
             if self._loop is None:
                 return q_future
@@ -1758,7 +1911,7 @@ class AsyncQConnection(QConnection):
                 events = self._reader.select()
                 for key, _mask in events:
                     callback = key.data
-                    callback()(key.fileobj)
+                    callback[0]()(key.fileobj)
             object.__setattr__(self, 'closed', True)
             self._reader.unregister(self._sock)
             self._writer.unregister(self._sock)
@@ -1830,7 +1983,7 @@ class _DeferredQConnection(QConnection):
                 events = self._reader.select()
                 for key, _mask in events:
                     callback = key.data
-                    callback()(key.fileobj)
+                    callback[0]()(key.fileobj)
             object.__setattr__(self, 'closed', True)
             self._reader.unregister(self._sock)
             self._writer.unregister(self._sock)
@@ -1905,8 +2058,7 @@ class RawQConnection(QConnection):
             port: The port to which a connection is to be established.
             username: Username for q connection authorization.
             password: Password for q connection authorization.
-            timeout: Timeout for blocking socket operations in seconds. If set to 0, the socket
-                will be non-blocking.
+            timeout: Timeout is not supported when using `RawQConnection` objects.
             large_messages: Whether support for messages >2GB should be enabled.
             tls: Whether TLS should be used.
             unix: Whether a Unix domain socket should be used instead of TCP. If set to
@@ -1916,11 +2068,12 @@ class RawQConnection(QConnection):
                 Python will wait for the q server to execute the query, and respond with the
                 results. If `#!python False`, the q server will respond immediately to every query
                 with generic null (`#!q ::`), then execute them at some point in the future.
-            event_loop: If running an event loop that supports the `#!python create_task()` method
-                then you can provide the event loop here and the returned future object will be an
-                instance of the loops future type. This will allow the current event loop to manage
-                awaiting `#!python QFuture` objects as well as any other async tasks that may be
-                running.
+            event_loop: If running an event loop that supports the `#!python create_task()`
+                method then you can provide the event loop here and the returned future object will
+                be an instance of the loops future type. This will allow the current event loop
+                to manage awaiting `#!python QFuture` objects as well as any other async tasks that
+                may be running. If no event loop is provided the default result of
+                `aysncio.get_event_loop()` will be used.
             no_ctx: This parameter determines whether or not the context interface will be disabled.
                 disabling the context interface will stop extra q queries being sent but will
                 disable the extra features around the context interface.
@@ -1937,12 +2090,6 @@ class RawQConnection(QConnection):
             server requires authorization. Refer to
             [ssl documentation](https://code.kx.com/q/kb/ssl/) for more information.
 
-        Note: The `#!python timeout` argument may not always be enforced when making successive
-            queries. When making successive queries if one query times out the next query will wait
-            until a response has been received from the previous query before starting the timer for
-            its own timeout. This can be avoided by using a separate `#!python QConnection` instance
-            for each query.
-
         Note: The overhead of calling `#!python clean_open_connections` is large.
             When running as a server you should ensure that `#!python clean_open_connections` is
             called fairly infrequently as the overhead of clearing all the dead connections can be
@@ -1950,6 +2097,11 @@ class RawQConnection(QConnection):
             manually.
 
         Note: When querying KX Insights the `#!python no_ctx=True` keyword argument must be used.
+
+        Note: 3.1 Upgrade considerations
+            As of PyKX version 3.1 all QFuture objects returned from calls to `RawQConnection`
+            objects must be awaited to recieve their results. Previously you could use just
+            `conn.poll_recv()` and then directly get the result with `future.result()`.
 
         Raises:
             PyKXException: Using both tls and unix is not possible with a QConnection.
@@ -1975,21 +2127,31 @@ class RawQConnection(QConnection):
         await pykx.RawQConnection(port=5001, unix=True)
         ```
         """
+        if timeout != 0.0:
+            warnings.warn('Timeout is not supported when using AsyncQConnection objects.')
         # TODO: Remove this once TLS support is fixed
         if tls:
             raise PyKXException('TLS is currently only supported for SyncQConnections')
+        loop = event_loop
+        if loop is None:
+            # `asyncio.get_event_loop()` used to do this automatically but it is deprecated as of
+            #  Python 3.12, so we do this weird try - except to future proof.
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                loop = asyncio.new_event_loop()
         object.__setattr__(self, '_stored_args', {
             'host': host,
             'port': port,
             'args': args,
             'username': username,
             'password': password,
-            'timeout': timeout,
+            'timeout': 0.0,
             'large_messages': large_messages,
             'tls': tls,
             'unix': unix,
             'wait': wait,
-            'loop': event_loop,
+            'loop': loop,
             'no_ctx': True if as_server else no_ctx,
             'as_server': as_server,
             'conn_gc_time': conn_gc_time,
@@ -2130,9 +2292,12 @@ class RawQConnection(QConnection):
         """
         if not self._initialized:
             raise UninitializedConnection()
-        res = QFuture(self, self._connection_info['timeout'], debug)
+        fut = QFuture(self, self._connection_info['timeout'], debug)
+        res = self._loop.create_task(
+            fut.__async_await__()
+        )
         self._send_stack.append({'query': query, 'args': args, 'wait': wait, 'debug': debug})
-        self._call_stack.append(res)
+        self._call_stack.append(fut)
         return res
 
     def _call(self,
@@ -2312,7 +2477,7 @@ class RawQConnection(QConnection):
             events = reader.select(timeout)
             for key, _ in events:
                 callback = key.data
-                res = callback()(key.fileobj)
+                res = callback[0]()(key.fileobj)
                 if res is None:
                     count -= 1
                     if count > 1:
@@ -2342,7 +2507,7 @@ class RawQConnection(QConnection):
                         elif MessageType.async_msg.value == msg_type:
                             print(e)
                     if MessageType.sync_msg.value == msg_type:
-                        callback()(key.fileobj, res, level)
+                        callback[0]()(key.fileobj, res, level)
                     count -= 1
                     if count > 1:
                         return
@@ -2398,6 +2563,83 @@ class RawQConnection(QConnection):
         if self._loop is not None:
             return self._loop.create_task(q_future.__async_await__())
         return q_future
+
+    async def poll_recv2(self, amount: int = 1, fut: Optional[QFuture] = None):
+        """Recieve queries from the process connected to over IPC.
+
+        Parameters:
+            amount: The number of receive requests to handle, defaults to one, if 0 is used then
+                all currently waiting responses will be received.
+
+        Raises:
+            QError: Query timed out, may be raised if the time taken to make or receive a query goes
+                over the timeout limit.
+
+        Examples:
+
+        ```python
+        q = await pykx.RawQConnection(host='localhost', port=5002)
+        ```
+
+        Receive a single queued message.
+
+        ```python
+        q_fut = q('til 10') # not sent yet
+        q.poll_send() # message is sent
+        q.poll_recv() # message response is received
+        ```
+
+        Receive two queued messages.
+
+        ```python
+        q_fut = q('til 10') # not sent yet
+        q_fut2 = q('til 10') # not sent yet
+        q.poll_send(2) # messages are sent
+        q.poll_recv(2) # message responses are received
+        ```
+
+        Receive all queued messages.
+
+        ```python
+        q_fut = q('til 10') # not sent yet
+        q_fut2 = q('til 10') # not sent yet
+        q.poll_send(0) # all messages are sent
+        q.poll_recv(0) # all message responses are received
+        ```
+        """
+        if fut is not None and fut.done():
+            return fut.result()
+        count = amount
+        timeout = self._connection_info['timeout']
+        if self._stored_args['as_server']:
+            self._poll_server(amount)
+        else:
+            last = None
+            if count == 0:
+                count = len(self._call_stack) if len(self._call_stack) > 0 else 1
+            while count >= 0:
+                if fut is not None and fut.done():
+                    return fut.result()
+                start_time = monotonic_ns()
+                with self._lock if self._lock is not None else nullcontext():
+                    if timeout != 0.0 and monotonic_ns() - start_time >= (timeout * 1000000000):
+                        self._timeouts += 1
+                        raise QError('Query timed out')
+                    events = self._reader.select(timeout)
+                    if len(events) != 0:
+                        for key, _ in events:
+                            callback = key.data
+                            res = callback[0]()(key.fileobj)
+                            res = res[1] if isinstance(res, tuple) else res
+                            if count == 1:
+                                return res
+                            count -= 1
+                            last = res
+                    else:
+                        if count == 1:
+                            return last
+                        count -= 1
+            return last
 
     def poll_recv(self, amount: int = 1):
         """Recieve queries from the process connected to over IPC.
@@ -2460,7 +2702,7 @@ class RawQConnection(QConnection):
                     if len(events) != 0:
                         for key, _ in events:
                             callback = key.data
-                            res = callback()(key.fileobj)
+                            res = callback[0]()(key.fileobj)
                             res = res[1] if isinstance(res, tuple) else res
                             if count == 1:
                                 return res
@@ -2507,7 +2749,7 @@ class RawQConnection(QConnection):
                 events = self._reader.select()
                 for key, _mask in events:
                     callback = key.data
-                    callback(key.fileobj)
+                    callback[0](key.fileobj)
             self._reader.unregister(self._sock)
             self._writer.unregister(self._sock)
             self._reader.close()

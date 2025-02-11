@@ -486,17 +486,17 @@ func[>;arg]            / equivalent
 
 #### Function argument types
 
-PyKX supports data type conversions between q and Python for Python native objects, Numpy objects, Pandas objects, PyArrow objects, and PyKX objects.
+PyKX supports data type conversions between q and Python for Python native objects, NumPy objects, Pandas objects, PyArrow objects, and PyKX objects.
 
-By default, when passing a q object to a callable function, it's converted to the most "natural" analogous type, as detailed below: 
+By default, when passing a q object to a callable function, it's converted to the most "natural" analogous type, as detailed below:
 
 - PyKX/q generic list objects become Python lists.
 - PyKX/q table/keyed table objects become Pandas equivalent DataFrames.
-- All other PyKX/q objects become their analogous numpy equivalent types.
+- All other PyKX/q objects become their analogous NumPy equivalent types.
 
 !!! Warning
 
-	Prior to PyKX 2.1.0, all conversions from q objects to Python would convert to their Numpy equivalent. To achieve this now, set the environment variable `PYKX_DEFAULT_CONVERSION="np"`
+	Prior to PyKX 2.1.0, all conversions from q objects to Python would convert to their NumPy equivalent. To achieve this now, set the environment variable `PYKX_DEFAULT_CONVERSION="np"`
 
 For function/method calls, control the default behavior of the conversions by setting `#!python .pykx.util.defaultConv`:
 
@@ -506,70 +506,68 @@ q).pykx.util.defaultConv
 ```
 You can apply one of the following values:
 
-|**Python type**|Default|Python|Numpy|Pandas|PyArrow|PyKX|
+|**Python type**|Default|Python|NumPy|Pandas|PyArrow|PyKX|
 |---------------|-------|------|-----|------|-------|----|
 |**Value**:     |"default"|"py"|"np"|"pd"|"pa"|"k"|  
 
 
-In the example below, we start with Numpy and update the default types across all function calls:
+In the example below, we start with NumPy and update the default types across all function calls:
 
-=== "Numpy"
+=== "NumPy"
 
     ```q
-    q)typeFunc:.pykx.eval"lambda x:print(type(x))"
-    q)typeFunc 1; 
-    <class 'numpy.int64'>
-    q)typeFunc til 10;
-    <class 'numpy.ndarray'>
-    q)typeFunc (10?1f;10?1f)
-    <class 'list'>
-    q)typeFunc ([]100?1f;100?1f);
-    <class 'pandas.core.frame.DataFrame'>
+    q).pykx.typepy 1; 
+    "<class 'numpy.int64'>"
+    q).pykx.typepy til 10;
+    "<class 'numpy.ndarray'>"
+    q).pykx.typepy (10?1f;10?1f)
+    "<class 'list'>"
+    q).pykx.typepy ([]100?1f;100?1f);
+    "<class 'pandas.core.frame.DataFrame'>"
     ```
 === "Python"
 
     ```q
-    q)typeFunc:.pykx.eval"lambda x:print(type(x))"
     q).pykx.util.defaultConv:"py"
-    q)typeFunc 1;
-    <class 'int'>
-    q)typeFunc til 10;
-    <class 'list'>
-    q)typeFunc ([]100?1f;100?1f);
-    <class 'dict'>
+    q).pykx.typepy 1;
+    "<class 'int'>"
+    q).pykx.typepy til 10;
+    "<class 'list'>"
+    q).pykx.typepy ([]100?1f;100?1f);
+    "<class 'dict'>"
     ```
 === "Pandas"
 
     ```q
     q).pykx.util.defaultConv:"pd"
-    q)typeFunc 1;
-    <class 'numpy.int64'>
-    q)typeFunc til 10;
-    <class 'pandas.core.series.Series'>
-    q)typeFunc ([]100?1f;100?1f);
-    <class 'pandas.core.frame.DataFrame'>
+    q).pykx.typepy 1;
+    "<class 'numpy.int64'>"
+    q).pykx.typepy til 10;
+    "<class 'pandas.core.series.Series'>"
+    q).pykx.typepy ([]100?1f;100?1f);
+    "<class 'pandas.core.frame.DataFrame'>"
     ```
 === "PyArrow"
 
     ```q
     q).pykx.util.defaultConv:"pa"
-    q)typeFunc 1;
-    <class 'numpy.int64'>
-    q)typeFunc til 10;
-    <class 'pyarrow.lib.Int64Array'>
-    q)typeFunc ([]100?1f;100?1f);
-    <class 'pyarrow.lib.Table'>
+    q).pykx.typepy 1;
+    "<class 'numpy.int64'>"
+    q).pykx.typepy til 10;
+    "<class 'pyarrow.lib.Int64Array'>"
+    q).pykx.typepy ([]100?1f;100?1f);
+    "<class 'pyarrow.lib.Table'>"
     ```
 === "PyKX"
 
     ```q
     q).pykx.util.defaultConv:"k"
-    q)typeFunc 1;
-    <class 'pykx.wrappers.LongAtom'>
-    q)typeFunc til 10;
-    <class 'pykx.wrappers.LongVector'>
-    q)typeFunc ([]100?1f;100?1f);
-    <class 'pykx.wrappers.Table'>
+    q).pykx.typepy 1;
+    "<class 'pykx.wrappers.LongAtom'>"
+    q).pykx.typepy til 10;
+    "<class 'pykx.wrappers.LongVector'>"
+    q).pykx.typepy ([]100?1f;100?1f);
+    "<class 'pykx.wrappers.Table'>"
     ```
 
 Alternatively, to modify individual arguments to functions, use the `#!python .pykx.to*` functionality:

@@ -40,7 +40,6 @@ static P M, errfmt;
 static void** N;
 
 int pykx_flag = -1;
-bool pykx_threading = false;
 
 // Equivalent to starting Python with the `-S` flag. Allows us to edit some global config variables
 // before `site.main()` is called.
@@ -68,8 +67,6 @@ static int check_py_foreign(K x){return x->t==112 && x->n==2 && *kK(x)==(K)py_de
 EXPORT K k_check_python(K x){return kb(check_py_foreign(x));}
 
 EXPORT K k_pykx_init(K k_q_lib_pat, K _pykx_threading) {
-    if (_pykx_threading->g)
-        pykx_threading = true;
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 

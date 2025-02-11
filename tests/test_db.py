@@ -19,6 +19,13 @@ def test_creation(kx):
         'sym': kx.q('`a`b`b`c')
     })
     db.create(tab, 't', 'date', by_field='sym', sym_enum='sym')
+    db.create(tab[['ti', 'p', 'sz', 'sym']].pd(),
+              't',
+              kx.DateAtom(2015, 1, 3),
+              by_field='sym',
+              sym_enum='sym'
+    )
+    assert 3 == len(db.t.select(kx.Column('date')))
     assert db.tables == ['t']
 
 
@@ -193,11 +200,11 @@ def test_column_copy(kx):
 def test_column_apply(kx):
     db = kx.DB()
     db.load('db')
-    assert all([100, 200, 150, 210] == kx.q.qsql.select(db.t, 'size')['size'])
+    assert all([100, 200, 150, 210, 100, 200, 150, 210] == kx.q.qsql.select(db.t, 'size')['size'])
     db.apply_function('t', 'size', kx.q('2*'))
-    assert all([200, 400, 300, 420] == kx.q.qsql.select(db.t, 'size')['size'])
+    assert all([200, 400, 300, 420, 200, 400, 300, 420] == kx.q.qsql.select(db.t, 'size')['size'])
     db.apply_function('t', 'size', lambda x: x.np()/2)
-    assert all([100, 200, 150, 210] == kx.q.qsql.select(db.t, 'size')['size'])
+    assert all([100, 200, 150, 210, 100, 200, 150, 210] == kx.q.qsql.select(db.t, 'size')['size'])
     with pytest.raises(RuntimeError) as err:
         db.apply_function('t', 'size', 2)
     assert "Provided 'function' is not callable" in str(err.value)
@@ -221,19 +228,20 @@ def test_db_fill(kx):
         'col1': kx.random.random(1000, 10.0),
         'col2': kx.random.random(1000, 10)
     })
-    db.create(qtab, 'newtab', kx.q('2015.01.02'))
+    db.create(qtab, 'newtab', kx.q('2015.01.03'))
     with pytest.raises(kx.QError) as err:
         db.partition_count()
     assert '2015.01.01/newtab. OS reports: No such file or directory' in str(err.value)
     db.fill_database()
     parts = db.partition_count()
-    all(kx.q.qsql.exec(parts.values(), 'newtab') == [0, 1000])
+    all(kx.q.qsql.exec(parts.values(), 'newtab') == [0, 0, 1000])
 
 
 @pytest.mark.order(18)
 def test_load_warning(kx):
     kx.q('`:./db/2015.01.01/table/ set .Q.en[`:./db;]([] ti:09:30:00 09:31:00; p:101 102f; sz:100 200; sym:`a`b)') # noqa: E501
     kx.q('`:./db/2015.01.02/table/ set .Q.en[`:./db;]([] ti:09:30:00 09:31:00; p:101.5 102.5; sz:150 210;sym:`b`c)') # noqa: E501
+    kx.q('`:./db/2015.01.03/table/ set .Q.en[`:./db;]([] ti:09:30:00 09:31:00; p:101.5 102.5; sz:150 210;sym:`b`c)') # noqa: E501
     db = kx.db.DB()
     assert db.tables is None
     with warnings.catch_warnings(record=True) as w:
@@ -252,10 +260,10 @@ def test_compress(kx):
         'col1': kx.random.random(1000, 10.0),
         'col2': kx.random.random(1000, 10)
     })
-    db.create(qtab, 'comptab', kx.q('2015.01.02'), compress=compress)
+    db.create(qtab, 'comptab', kx.q('2015.01.03'), compress=compress)
     db.fill_database()
     assert zd_cache == kx.q.z.zd
-    compress_info = kx.q('-21!key`:./2015.01.02/comptab/col1')
+    compress_info = kx.q('-21!key`:./2015.01.03/comptab/col1')
     assert type(compress_info) == kx.Dictionary
     assert compress_info['algorithm'].py() == 2
     assert compress_info['zipLevel'].py() == 8
@@ -284,10 +292,12 @@ def test_partition_count(kx):
     db = kx.DB(path='db')
     fullview = db.partition_count()
     assert type(fullview) == kx.Dictionary # noqa: E721
-    assert 2 == len(fullview)
+    assert 3 == len(fullview)
+    cache = kx.q.Q.pv
     subview = db.partition_count(subview=kx.q('2015.01.02'))
     assert type(subview) == kx.Dictionary # noqa: E721
     assert 1 == len(subview)
+    assert all(cache == kx.q.Q.pv)
 
 
 def test_subview(kx):
@@ -299,7 +309,7 @@ def test_subview(kx):
     db.subview()
     qtab = kx.q.qsql.select(db.trades)
     assert type(qtab) == kx.Table # noqa: E721
-    assert 4 == len(qtab)
+    assert 8 == len(qtab)
 
 
 @pytest.mark.isolate
@@ -347,7 +357,8 @@ def test_spaces_load(tmp_path):
         'sz': kx.q('100 200 150 210'),
         'sym': kx.q('`a`b`b`c')
     })
-    db.create(tab, 't', 'date', by_field='sym', sym_enum='sym')
+    # removal of by_field allows testing of 'dpfs' error fixed in 3.1
+    db.create(tab, 't', 'date', sym_enum='sym')
     assert db.tables == ['t']
     db.load(path=test_location, overwrite=True)
     assert db.tables == ['t']

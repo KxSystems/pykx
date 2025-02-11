@@ -1,6 +1,7 @@
 """_This page documents query interfaces for querying q tables using PyKX._"""
 
 from abc import ABCMeta
+import asyncio
 from typing import Any, Dict, List, Optional, Union
 
 from . import Q
@@ -384,7 +385,7 @@ class QSQL:
             wait=True,
         )
         if inplace and isinstance(table, k.K):
-            if isinstance(res, QFuture):
+            if isinstance(res, QFuture) or isinstance(res, asyncio.Task):
                 raise QError("'inplace' not supported with asynchronous query")
             if type(table) != type(res):
                 raise QError('Returned data format does not match input type, '

@@ -166,3 +166,48 @@ The following section outlines how a user can get access to a verbose set of env
 	which q: /usr/local/anaconda3/bin/q
 	q info: 
 	```
+
+## Development issues
+
+### Debugging q code issues
+
+If you are developing a library of q code, by default PyKX does not provide the full backtrace on error. As an example assume you have developed the a function and pass it an incorrect input
+
+```python
+>>> import pykx as kx
+>>> kx.q('{x+1}', 'e')
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/usr/local/anaconda3/lib/python3.12/site-packages/pykx/wrappers.py", line 5124, in __call__
+    return _wrappers.function_call(self, args, no_gil)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "pykx/_wrappers.pyx", line 383, in pykx._wrappers.function_call
+  File "pykx/_wrappers.pyx", line 384, in pykx._wrappers.function_call
+  File "pykx/_wrappers.pyx", line 515, in pykx._wrappers.factory
+pykx.exceptions.QError: type
+```
+
+While this provides you the appropriate `QError`, without setting the configuration value `PYKX_QDEBUG` your error does not indicate where your error has arisen from. Using the same example below you can see the backtrace information provided when setting the configuration value `PYKX_QDEBUG` to True.
+
+```python
+>>> import os
+>>> os.environ['PYKX_QDEBUG'] = 'True'
+>>> import pykx as kx
+>>> kx.q('{x+1}', 'e')
+backtrace:
+  [2]  {x+1}
+         ^
+  [1]  (.Q.trp)
+
+  [0]  {[pykxquery] .Q.trp[value; pykxquery; {2@"backtrace:
+                    ^
+",.Q.sbt y;'x}]}
+Traceback (most recent call last):
+  File "<stdin>", line 1, in <module>
+  File "/usr/local/anaconda3/lib/python3.12/site-packages/pykx/embedded_q.py", line 246, in __call__
+    return factory(result, False, name=query.__str__())
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "pykx/_wrappers.pyx", line 522, in pykx._wrappers._factory
+  File "pykx/_wrappers.pyx", line 515, in pykx._wrappers.factory
+pykx.exceptions.QError: type
+```

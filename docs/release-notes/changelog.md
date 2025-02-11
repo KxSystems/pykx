@@ -4,6 +4,339 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+## PyKX 3.1.0
+
+#### Release Date
+
+2025-02-11
+
+### Additions
+
+- Added support for `Python 3.13`.
+- Added support for `NumPy 2.0`
+- Added `kx.Lambda.value` property to return the value of the Lambda object, specific details on return values are available [here](https://code.kx.com/q/ref/value/#lambda).
+- Added `kx.Lambda.string` property which returns the string of the Lambda function unaffected by console size as the inbuilt `str(Lambda)` method is.
+- Added ability for user to explicitly create Lambda objects from strings.
+
+	```python
+	>>> import pykx as kx
+	>>> kx.Lambda('{1+1}')
+	pykx.Lambda(pykx.q('{1+1}'))
+	```
+
+- When using the `kx.tick` module users initializing a real-time processor (RTP) or historical database (HDB) can now provide the `tables` parameter at startup to allow definition of table schemas for derived data at initialization or using the `set_tables` method following process start.
+
+	```python
+	>>> import pykx as kx
+	>>> prices = kx.schema.builder({
+	...     'time': kx.TimespanAtom  , 'sym': kx.SymbolAtom,
+	...     'exchange': kx.SymbolAtom, 'sz': kx.LongAtom,
+	...     'px': kx.FloatAtom})
+	>>> rte = kx.tick.RTP(port=5034,
+	...                   subscriptions = ['trade', 'quote'],
+	...                   tables = {'price': prices},
+	...                   vanilla=False)
+	>>> rte('price')
+	pykx.Table(pykx.q('
+	time sym exchange sz px
+	-----------------------
+	'))
+	>>> rte.set_tables({'px': prices})
+	>>> rte('px')
+	pykx.Table(pykx.q('
+	time sym exchange sz px
+	-----------------------
+	'))
+	```
+
+- Addition of `reshape` keyword to the `.np()` method of `kx.List` objects. This can provide two benefits:
+
+	1. Conversions of `kx.List` objects to NumPy by default produce an array of NumPy arrays rather than an N-Dimensional NumPy array. Setting `reshape=True` when handling N-Dimensional rectangular lists allows the shape to be pre-processed prior to conversion and a more natural N-Dimensional NumPy array to be generated.
+
+		=== "Default conversion"
+
+			```python
+			>>> kx.q('2 2#4?1f').np()
+			array([
+			        array([0.47078825, 0.63467162]),
+			        array([0.96723983, 0.23063848])
+			      ],
+			    dtype=object)
+			```
+
+		=== "Using reshape=True"
+
+			```python
+			>>> kx.q('2 2#4?1f').np(reshape=True)
+			array([[0.94997503, 0.43908099],
+			       [0.57590514, 0.59190043]])
+			```
+
+	2. Provide a performance boost when converting regularly shaped (rectangular) N-Dimensional lists of uniform type when the shape of the resulting numpy array is known prior to conversion
+
+		```python
+		>>> import pykx as kx
+		>>> lst = kx.q('100000 100 10#100000000?1f')
+		>>> %timeit lst.np()
+		9.72 s ± 272 ms per loop (mean ± std. dev. of 7 runs, 1 loop each)
+		>>> %timeit lst.np(reshape=[100000, 100, 10])
+		883ms ± 19.8 ms per loop (mean ± std. dev. of 7 runs, 1 loops each)
+		```
+
+- Added support for the creation and management of splayed format databases when using the `#!python pykx.DB` class.
+
+	```python
+	>>> import pykx as kx
+	>>> db = kx.DB(path='/tmp/splay')
+	>>> tab = kx.Table(data={
+	...     'date': kx.q('2015.01.01 2015.01.01 2015.01.02 2015.01.02'),
+	...     'ti': kx.q('09:30:00 09:31:00 09:30:00 09:31:00'),
+	...     'p': kx.q('101 102 101.5 102.5'),
+	...     'sz': kx.q('100 200 150 210'),
+	...     'sym': kx.q('`a`b`b`c')
+	... })
+	>>> db.create(tab, 'trade', format='splayed')
+	>>> db.list_columns('trade')
+	['date', 'ti', 'p', 'sz', 'sym']
+	>>> db.rename_columns('trade', 'p', 'price')
+	2025.01.28 11:18:54 renaming p to price in `:/tmp/splay/trade
+	>>> db.list_columns('trade')
+	['date', 'ti', 'price', 'sz', 'sym']
+	```
+
+- Addition of `.copy()` method for all `pykx` objects allowing users to modify copied objects without interfering with the original object.
+
+	```python
+	>>> import pykx as kx
+	>>> vec = kx.q.til(5)
+	>>> as_vec = vec
+	>>> cp_vec = vec.copy()
+	>>> vec[1] = 20
+	>>> vec
+	pykx.LongVector(pykx.q('0 20 2 3 4'))
+	>>> as_vec
+	pykx.LongVector(pykx.q('0 20 2 3 4'))
+	>>> cp_vec
+	pykx.LongVector(pykx.q('0 1 2 3 4'))
+	```
+
+- IPC file execution logic now allows execution of `.py` files on remote servers by executing using the Python [`exec`](https://docs.python.org/3/library/functions.html#exec) function if PyKX is loaded on the remote server.
+
+	```python
+	>>> import pykx as kx
+	>>> with kx.SyncQConnection(port=5050) as q:
+	...     q.file_execute('./file.py')
+	```
+
+- Added `async_response` keyword argument when calling `AsyncQConnection` objects with `reuse=False` and `wait=False` to allow keeping the connection alive until an asynchronous response message has been received.
+
+    ```python
+    >>> async with kx.AsyncQConnection(port=5050) as q:
+    >>>     future = await q('system"sleep 5"; show"x"; neg[.z.w]"til 5"', wait=False, reuse=False, async_response=True)
+    >>>     print(await future)
+	pykx.LongVector(pykx.q('0 1 2 3 4'))
+    ```
+
+### Fixes and Improvements
+
+- Application of the `#!python str` function on empty PyKX objects could return unexpected results
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> str(kx.q('()!()'))
+		''
+		>>> str(kx.q('()'))
+		''
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		>>> str(kx.q('()!()'))
+		'()!()'
+		>>> str(kx.q('()'))
+		'()'
+		```
+
+- Removal of previously deprecated use of keyword `labels` when using the `rename` method for table objects. Users should use the `mapper` keyword to maintain the same behavior.
+- Removal of now unneeded warning indicating that use of `.pykx.q` calls are not supported when operating in a threading environment.
+- Attempting to generate an `fby` clause using the syntax `kx.Column().fby()` now errors, instead pointing to the correct syntax `kx.Column.fby()`.
+- When a client attempted to retrieve an object which could not be serialized from a PyKX server it resulted in the client process hanging. An appropriate error is now sent to the client.
+
+	```python
+	q)h:hopen 5000
+	q)h".pykx.getattr"
+	'Result of query with return type '<class 'pykx.wrappers.Foreign'>' failed to serialize for IPC transport.
+	```
+
+- Addition of warning if the configuration value `QLIC` is set as a non directory path.
+
+	```python
+	>>> import os
+	>>> os.environ['QLIC'] = 'invalid_path'
+	>>> import pykx as kx
+	UserWarning: Configuration value QLIC set to non directory value: invalid_path
+	```
+
+- Database generation functionality now allows users to pass any data-type which will convert to a `#!python pykx.Table` as the `#!python table` parameter, such as a `#!python pandas.DataFrame` or `#!python pyarrow.Table`.
+
+	```python
+	>>> import pykx as kx
+	>>> import pandas as pd
+	>>> import numpy as np
+	>>> data = pd.DataFrame({
+	...     'time': np.array([1,2,3], dtype='timedelta64[us]'),
+	...     'sym': ['msft', 'ibm', 'ge'],
+	...     'qty': [100, 200, 150]})
+	>>> db = kx.DB(path='/tmp/db')
+	>>> db.create(data, 'tab', kx.DateAtom(2020, 1, 1))
+	Writing Database Partition 2020.01.01 to table tab
+	```
+
+- Attempting to create a partitioned databases/add a partition to a database with a `sym_enum` keyword but no `by_field` would result in a `KeyError`.
+- Improved output when a licence file cannot be found, full paths checked for a license file are now shown and default license installation process is offered to user.
+- Users are now given the option to input a base64 encoded string when activating an existing license 
+- Using `math.inf` or `-math.inf` when creating numeric values now creates equivalent PyKX types
+
+	```python
+	>>> import pykx as kx
+	>>> import math
+	>>> kx.ShortAtom(math.inf)
+	pykx.ShortAtom(pykx.q('0Wh'))
+	>>> kx.FloatAtom(-math.inf)
+	pykx.FloatAtom(pykx.q('-0w'))
+	```
+
+- Attempting to execute a local file on a remote connection containing multiple empty newlines would result in an execution error.
+
+	```python
+	>>> import pykx as kx
+	>>> content = """.test.testFunc:{[x;y]
+	...     z: 1+1;
+	...
+	...     k: 2+3;
+	...
+	...     x+y
+	...     };
+	...
+	...
+	... .test.testFunc[1;100]
+	... """
+	>>> with open('test.q', 'w') as file:
+	...     file.write(content)
+	>>> conn = kx.SyncQConnection(port=5010)
+	>>> conn.file_execute('test.q', return_all=True)
+	```
+
+- Fixed a bug where `QFuture` objects returned by `AsyncQConnection` objects could block each other unnecessarily.
+
+	```python
+	async def async_query(port, qry):
+	    async with await kx.AsyncQConnection(port=port) as q:
+	        return await q(qry)
+
+	async with asyncio.TaskGroup() as tg:
+	    tg.create_task(async_query(5050, '{system"sleep 2"; til 10}[]'))
+	    tg.create_task(async_query(5051, '{system"sleep 5"; til 20}[]'))
+	    tg.create_task(async_query(5052, '{system"sleep 1"; til 5}[]'))
+	    tg.create_task(async_query(5053, '{system"sleep 3"; til 7}[]'))
+	# Previously took 11 seconds now correctly returns the results in the order they complete and
+	# takes 5 seconds to run.
+	```
+
+!!! Note
+
+        All QFuture objects returned from calls to `RawQConnection` objects must be awaited to recieve their results. Previously you could use just `conn.poll_recv()` and then directly get the result with `future.result()`.
+
+- Fixed error when attempting to convert `numpy.datetime64` variables to `kx.TimestampAtom` objects directly using the `kx.TimestampAtom` constructor method.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> x = np.datetime64('now', 'ns')
+		>>> kx.TimestampAtom(x)
+		Traceback (most recent call last):
+			File "<stdin>", line 1, in <module>
+			File "/home/andymc/work/KXI-17767/KXI-17767/lib/python3.10/site-packages/pykx/wrappers.py", line 924, in __new__
+				return toq(x, ktype=None if cls is K else cls, cast=cast) # TODO: 'strict' and 'cast' flags
+			File "pykx/toq.pyx", line 2672, in pykx.toq.ToqModule.__call__
+			File "pykx/toq.pyx", line 1922, in pykx.toq.from_datetime_datetime
+		TypeError: unsupported operand type(s) for -: 'int' and 'datetime.datetime'
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> x = np.datetime64('now', 'ns')
+		>>> kx.TimestampAtom(x)
+		pykx.TimestampAtom(pykx.q('2025.01.28D09:43:06.000000000'))
+		```
+ 
+- Fixed error when attempting to convert a `pandas.Categorical` to an existing `pykx.EnumVector` via `pykx.toq`. If the `pandas.Categorical` data contained a value outside of the `pykx.EnumVector` an error was thrown.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> cat = pd.Series(['aaa', 'bbb', 'ccc'], dtype='category', name='cat')
+		>>> kx.toq(cat)
+		pykx.EnumVector(pykx.q('`cat$`aaa`bbb`ccc'))
+		>>> cat = pd.Series(['aaa', 'bbb', 'ccc', 'ddd'], dtype='category', name='cat')
+		>>> kx.toq(cat)
+		Traceback (most recent call last):
+		    File "<stdin>", line 1, in <module>
+		    File "pykx/toq.pyx", line 2964, in pykx.toq.ToqModule.__call__
+		    File "pykx/toq.pyx", line 1715, in pykx.toq.from_pandas_series
+		    File "pykx/toq.pyx", line 1555, in pykx.toq._to_numpy_or_categorical
+		    File "pykx/toq.pyx", line 1828, in pykx.toq.from_pandas_categorical
+		    File "/home/phagan/brokeCategories/brokeCategoryEnv/lib/python3.11/site-packages/pykx/embedded_q.py", line 246, in __call__
+		            return factory(result, False, name=query.__str__())
+		                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		    File "pykx/_wrappers.pyx", line 522, in pykx._wrappers._factory
+		    File "pykx/_wrappers.pyx", line 515, in pykx._wrappers.factory
+		pykx.exceptions.QError: cast
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> cat = pd.Series(['aaa', 'bbb', 'ccc'], dtype='category', name='cat')
+		>>> kx.toq(cat)
+		pykx.EnumVector(pykx.q('`cat$`aaa`bbb`ccc'))
+		>>> cat = pd.Series(['aaa', 'bbb', 'ccc', 'ddd'], dtype='category', name='cat')
+		>>> kx.toq(cat)
+		pykx.EnumVector(pykx.q('`cat$`aaa`bbb`ccc`ddd'))
+		```
+
+- IPC file execution now raises an error message if users attempt to use an unsupported file extension. Supported extensions: `.k`, `.q`, `.p`, `.py`.
+
+	```python
+	>>> conn = kx.SyncQConnection(port=5050)
+	>>> conn.file_execute('file.l')
+	QError: Provided file type 'l' unsupported
+	```
+
+- Error message when checking a license referenced a function `pykx.util.install_license` which is deprecated, this has now been updated to reference `pykx.license.install`
+
+### Beta Features
+
+- Added ability for users to convert between PyKX numeric vectors or N-Dimensional Lists and PyTorch Tensor objects using the `pt` method.
+
+	```python
+	>>> import os
+	>>> os.environ['PYKX_BETA_FEATURES'] = 'True'
+	>>> import pykx as kx
+	>>> kx.q.til(10).pt()
+	tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+	>>> kx.q('4 5#20?1f').pt()
+	tensor([[0.3928, 0.5171, 0.5160, 0.4067, 0.1781],
+	        [0.3018, 0.7850, 0.5347, 0.7112, 0.4116],
+	        [0.4932, 0.5785, 0.0839, 0.1960, 0.3756],
+	        [0.6137, 0.5295, 0.6916, 0.2297, 0.6920]], dtype=torch.float64)
+	```
+
 ## PyKX 3.0.1
 
 #### Release Date
@@ -15,6 +348,19 @@
         PyKX 3.0.1 is currently not available for Mac x86/ARM for all Python versions. Updated builds will be provided once available. To install PyKX 3.0.1 on Mac please install from source [here](https://github.com/kxsystems/pykx).
 
 ### Additions
+
+- Addition of `.replace()` function to `kx.Vector` and `kx.List` objects to search for and replace items in each collection, retaining typing where appropriate.
+
+	```python 
+	>>> l = kx.q('("a";3;1.3;`b)')
+	>>> l.replace(1.3, "junk")
+	pykx.List(pykx.q('
+	"a"
+	3
+	`junk
+	`b
+	'))
+	```
 
 - Addition of the property `#!python day` to `#!python kx.Column` objects to allow users to retrieve the day of month of a timestamp.
 

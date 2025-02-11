@@ -1,4 +1,7 @@
-This work is dual licensed under "Apache 2.0" and the "Software License for q.so", users are required to abide by the terms of both licenses in their entirety. The terms of these licenses are included below
+All files contained within this repository are not covered by a single license. The following outlines the differences.
+
+1. All files and folders contained within the source code directory 'src/pykx/q.so/' are licensed under the terms of the 'Software License for q.so' which are included below
+2. All other files within this repository are licensed under the "Apache 2.0" license include below
 
 ***********************************************************************************
                                   Apache 2.0

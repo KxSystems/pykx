@@ -112,7 +112,7 @@ pykx.List(pykx.q('
 
 Restricted evaluation of a parse tree.
 
-Behaves similar to [`eval`](#eval) except the evaluation is blocked from modifying values or global state.
+Behaves similar to [`eval`](#eval) except the evaluation is blocked from modifying state  for any handle context other than 0.
 
 ```python
 >>> pykx.q.reval(pykx.q.parse(b'til 10'))

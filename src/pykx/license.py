@@ -62,7 +62,7 @@ def check(license: str,
     >>> import pykx as kx
     >>> check = kx.license.check('/usr/location/kc.lic')
     Supplied license information does not match.
-    Please consider reinstalling your license using pykx.util.install_license
+    Please consider reinstalling your license using pykx.license.install
 
     Installed license representation:
     b'iIXSiEWzCNTkkCWK5Gggy..'
@@ -78,7 +78,7 @@ def check(license: str,
     >>> import pykx as kx
     >>> check = kx.license.check('setup.py', license_type='kc.lic')
     Unable to find an installed license: kc.lic at location: /usr/local/anaconda3/envs/qenv/q.
-    Please consider installing your license again using pykx.util.install_license
+    Please consider installing your license again using pykx.license.install
     >>> check
     False
     ```
@@ -97,7 +97,7 @@ def check(license: str,
 
     if not license_located:
         print(f'Unable to find an installed license: {license_type} at location: {str(qlic)}.\n'
-              'Please consider installing your license again using pykx.util.install_license')
+              'Please consider installing your license again using pykx.license.install')
         return False
 
     with open(installed_lic, 'rb') as f:
@@ -121,7 +121,7 @@ def check(license: str,
 
     if not license_content == license:
         print('Supplied license information does not match.\n'
-              'Please consider reinstalling your license using pykx.util.install_license\n\n'
+              'Please consider reinstalling your license using pykx.license.install\n\n'
               f'Installed license representation:\n{license_content}\n\n'
               f'User expected license representation:\n{license}')
         return False

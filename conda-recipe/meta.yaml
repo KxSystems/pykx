@@ -18,18 +18,25 @@ requirements:
     - python
     - setuptools>=68.0
     - setuptools_scm[toml]>=8.0.0
-    - cython==3.0.0
-    - numpy==1.26  # [py==312]
-    - numpy==1.22.*  # [py<312]
+    - cython==3.0.*
+    - numpy==2.*  # [py==313]
+    - numpy==2.0.*  # [py==312]
+    - numpy==2.0.*  # [py==311]
+    - numpy==2.0.*  # [py==310]
+    - numpy==2.0.*  # [py==39]
+    - numpy==1.22.*  # [py==38]
+    - numpy==1.20.*  # [py==37]
     - tomli>=2.0.1
     - wheel>=0.36
     - sysroot_linux-64 # [linux64]
 
   run:
     - python
-    - numpy>=1.22,<2.0
+    - numpy>=1.20  # [py==37]
+    - numpy>=1.22 # [py>37]
     - pandas>=1.2, <=2.2.3 # [py>38]
     - pandas<2.0 # [py==38]
+    - pyarrow>=3.0.0, <19.0.0
     - pytz>=2022.1
     - toml>=0.10.2
     - dill>=0.2.0

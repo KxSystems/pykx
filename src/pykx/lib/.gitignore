@@ -1,0 +1,12 @@
+*.q_
+*.k_
+**/*q.so
+**/*q.dylib
+**/q.dll
+**/q.lib
+**/kxreaper
+**/libkurl.so
+**/libobjstor.so
+**/pg
+pykx.q
+pykx*

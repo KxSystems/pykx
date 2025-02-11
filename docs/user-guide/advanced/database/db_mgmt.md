@@ -60,10 +60,10 @@ In the below cell, we complete the following:
 >>> db.apply_function('trade', 'price_copy', lambda x: x * 0.5)
 >>> db.delete_column('trade', 'price')
 >>> db.rename_column('trade', 'price_copy', 'price')
->>> db.reorder_columns(col_order)
+>>> db.reorder_columns('trade', col_order)
 ```
 
 ## Next Steps
 
 - [Query your database with Python](../../fundamentals/query/pyquery.md)
-- [Compress/encrypt data](../compress-encrypt.md#persisting-database-partitions-with-various-configurations) for persisting database partitions.
+- [Compress/encrypt data](../compress-encrypt.md) when persisting databases.

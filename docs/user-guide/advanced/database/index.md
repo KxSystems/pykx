@@ -12,7 +12,31 @@ _This page explains the concept of databases in PyKX, including the creation and
 
 ## What's a PyKX database?
 
-In PyKX, the term database refers to [partitioned kdb+ databases](https://code.kx.com/q/kb/partition/). A partitioned kdb+ database consists of one or more tables saved on-disk, where they are split into separate folders called partitions. These partitions are most often based on a temporal field within the dataset, such as date or month. Each table within the database must follow the same partition structure.
+In PyKX, the term database refers to a kdb+ database which can hold a set of [splayed](https://code.kx.com/q/kb/splayed-tables/) and [partitioned](https://code.kx.com/q/kb/partition/) tables.
+
+### Splayed Database
+
+A splayed kdb+ database consists of a single table stored on-disk with each column stored as a separate file rather than using a single file for the whole table. Tables of medium-size with < 100 million rows and many columns are good candidates for being stored as splayed tables, in particular when only a small subset of columns are being accessed often.
+
+```bash
+quotes
+ ├── .d
+ ├── price
+ ├── sym
+ └── time
+```
+
+!!! note "More information on splayed databases"
+
+	The splayed database format used by PyKX has been used in production environments for decades. As such there is a significant amount of information available on the creation and use of these databases. Below are some articles.
+
+	- [q knowledge base splayed databases](https://code.kx.com/q/kb/splayed-tables/)
+	- [Q for Mortals splayed tables](https://code.kx.com/q4m3/14_Introduction_to_Kdb%2B/#142-splayed-tables)
+	- [Basics of splayed tables](https://thinqkdb.wordpress.com/splayed-tables/)
+
+### Partitioned Database
+
+A partitioned kdb+ database consists of one or more tables saved on-disk, where they are split into separate folders called partitions. These partitions are most often based on a temporal field within the dataset, such as date or month. Each table within the database must follow the same partition structure.
 
 A visual representation of a database containing 2 tables (trade and quote) partitioned by date would be as follows, where `#!python price`, `#!python sym`, `#!python time` in the quotes folder are columns within the table:
 

@@ -107,9 +107,8 @@ def k_str(self):
         return repr(self)
     cdef core.K x = core.k(0, <char* const>'.Q.s', core.r1(_k(self)), NULL)
     if x.n == 0:
-        s = ''
-    else:
-        s = np.asarray(<char[:x.n]><char*>x.G0).tobytes().decode()
+        x = core.k(0, <char* const>'.Q.s1', core.r1(_k(self)), NULL)
+    s = np.asarray(<char[:x.n]><char*>x.G0).tobytes().decode()
     core.r0(x)
     if len(s) and s.endswith(os.linesep):
         # Use `len(s) - X` instead of `-X` because wraparound is disabled here
@@ -536,6 +535,8 @@ def _pyfactory(addr: int, incref: bool, typenum: int, raw: bool = False):
             return k_object.pa(raw=raw)
         elif typenum == 5:
             return k_object
+        elif typenum == 6:
+            return k_object.pt()
     k_dir = dir(k_object)
     if 'np' in k_dir: # nocov
         return k_object.np(raw=raw) # nocov
@@ -545,4 +546,6 @@ def _pyfactory(addr: int, incref: bool, typenum: int, raw: bool = False):
         return k_object.pd(raw=raw) # nocov
     elif 'pa' in k_dir: # nocov
         return k_object.pa(raw=raw) # nocov
+    elif 'pt' in k_dir: #nocov
+        return k_object.pt(raw=raw) # nocov
 
