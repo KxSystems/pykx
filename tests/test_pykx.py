@@ -1,3 +1,4 @@
+import operator
 import os
 from pathlib import Path
 from platform import system
@@ -9,6 +10,7 @@ import sys
 
 # Do not import pykx here - use the `kx` fixture instead!
 import pytest
+import requests
 
 
 # Decorator for tests that may damage the environment they are run in, and thus should only be run
@@ -383,3 +385,55 @@ def test_import_cd():
     cd = os.getcwd()
     import pykx as kx # noqa: F401
     assert cd == os.getcwd()
+
+
+@pytest.mark.xfail(reason='Allow to xfail if internet not available', strict=False)
+def test_links():
+    links = ['https://code.kx.com/q4m3/12_Workspace_Organization/#122-contexts',
+             'https://numpy.org/neps/nep-0049.html',
+             'https://code.kx.com/q/basics/internal/#-36-load-master-key',
+             'https://code.kx.com/q/kb/file-compression/#compression-parameters',
+             'https://code.kx.com/q/kb/file-compression/#compression-by-default',
+             'https://code.kx.com/pykx/user-guide/configuration.html',
+             'https://code.kx.com/q4m3/12_Workspace_Organization',
+             'https://code.kx.com/q/basics/errors',
+             'https://code.kx.com/q/kb/ssl',
+             'https://code.kx.com/q/basics/ipc',
+             'https://code.kx.com/q/kb/serialization',
+             'https://github.com/kxsystems/pykx/issues',
+             'https://code.kx.com/q4m3/9_Queries_q-sql/#912-functional-forms',
+             'https://code.kx.com/q/basics/qsql/#result-and-side-effects',
+             'https://code.kx.com/insights/core/sql.html',
+             'https://github.com/KxSystems/kdb/blob/master/utils/csvutil.q',
+             'https://code.kx.com/q/ref/upsert',
+             'https://code.kx.com/q/ref/insert',
+             'https://code.kx.com/q/basics/ipc/#handshake',
+             'https://code.kx.com/pykx/user-guide/advanced/serialization.html',
+             'https://code.kx.com/q/basics/syscmds/',
+             'https://code.kx.com/q/basics/cmdline/',
+             'https://code.kx.com/pykx/getting-started/installing.html',
+             'https://code.kx.com/pykx/help/troubleshooting.html',
+             'https://code.kx.com/q/ref/enumeration/',
+             'https://code.kx.com/q/ref/enumerate/',
+             'https://code.kx.com/q/ref/enum-extend/',
+             'https://code.kx.com/q/basics/qsql/#result-and-side-effects.',
+             'https://code.kx.com/q4m3/8_Tables/#84-primary-keys-and-keyed-tables',
+             'https://code.kx.com/q4m3/6_Functions/',
+             'https://code.kx.com/q/ref/#operators',
+             'https://code.kx.com/q/ref/#iterators',
+             'https://code.kx.com/q/ref/cast/']
+    for url in links:
+        req = requests.get(url)
+        print(url, req.status_code)
+        assert req.status_code == 200
+
+
+def test_error_attrs(kx):
+    attributes = ['_pyarrow.import_attempt_output', 'toq', 'Table', 'Compress', 'Encrypt',
+                  'DB', 'license.install', 'SplayedTable', 'PartitionedTable',
+                  'Dictionary', 'Foreign', 'Column', 'Column.fby', 'QueryPhrase']
+    for i in attributes:
+        try:
+            operator.attrgetter(i)(kx)
+        except BaseException as err:
+            raise AssertionError(f"Exception {err} raised when retrieving atrribute {i}")

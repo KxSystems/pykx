@@ -80,6 +80,50 @@ Once you are familiar with the options available to you, it's time to initialize
 
 We use this object in the remaining sections of the walkthrough, in a local (one-shot) and global context.
 
+### Persist a splayed table with various configurations
+
+In cases where your are dealing with data security is important or where data is accessed at low frequency where latency considerations are not important persisting a table with encryption/compression enabled can be advantageous.
+
+1. Create a new `trade` table with gzip compression enabled.
+
+	```python
+	>>> import pykx as kx
+	>>> N = 10000000
+	>>> trade = kx.Table(data={
+	...     'date': kx.random.random(N, kx.DateAtom('today') - [1, 2, 3, 4]),
+	...     'time': kx.q.asc(kx.random.random(N, kx.q('1D'))),
+	...     'sym': kx.random.random(N, ['AAPL', 'GOOG', 'MSFT']),
+	...     'price': kx.random.random(N, 10.0)
+	...     })
+	>>> gzip = kx.Compress(algo=kx.CompressionAlgorithm.gzip, level=4)
+	>>> db = kx.DB(path='/tmp/splay')
+	>>> db.create(trade, 'trade', format='splayed', compress=gzip)
+	>>> kx.q('-21!`:/tmp/splay/trade/price')
+	pykx.Dictionary(pykx.q('
+	compressedLength  | 42727971
+	uncompressedLength| 80000016
+	algorithm         | 2i
+	logicalBlockSize  | 17i
+	zipLevel          | 4i
+	'))
+	```
+
+2. Create a new `quote` table with encryption enabled.
+
+	```python
+	>>> import pykx as kx
+	>>> N = 10000000
+	>>> quote = kx.Table(data={
+	...     'time': kx.q.asc(kx.random.random(N, kx.q('1D'))),
+	...     'sym': kx.random.random(N, ['AAPL', 'GOOG', 'MSFT']),
+	...     'ask': kx.random.random(N, 100),
+	...     'bid': kx.random.random(N, 100)
+	... })
+	>>> encrypt = kx.Encrypt(path='/path/to/my.key', password='PassWorD')
+	>>> db = kx.DB(path='/tmp/splay')
+	>>> db.create(trade, 'trade', format='splayed', encrypt=encrypt)
+	```
+
 ### Persist database partitions with various configurations
 
 Not all data is created equally, in time-series applications such as algorithmic trading it is often the case that older data is less valuable than newer data. As a result, when backfilling historical data, you may more aggressively compress older datasets. The PyKX compression logic allows you to persist different partitions within a historical database to different levels.

@@ -860,3 +860,12 @@ def test_column_licensed(kx):
         with pytest.raises(kx.LicenseException) as err:
             kx.Column('s')
             assert "kx.Column" in str(err)
+
+
+def test_fby_instance_call(kx):
+    table = kx.q('([] x:`a`b`c;x1:1 2 3;x2:`a`e`g;x11:0 3 3;b:011b)')
+    assert kx.Column.fby(['c1,c2'], 'sum', table)._name == ['c1,c2']
+
+    with pytest.raises(RuntimeError) as err:
+        kx.Column('a').fby(['c1,c2'], 'sum', table)
+        assert "Column object" in str(err)

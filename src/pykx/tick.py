@@ -273,6 +273,48 @@ class STREAMING:
         """
         self._connection('{system"t ",string[x]}', timer)
 
+    def set_tables(self, tables: dict, tick: bool = False) -> None:
+        """
+        Define the tables to be available to the process being initialized.
+
+        Parameters:
+            tables: A dictionary mapping the name of a table to be defined on
+                the process to the table schema
+            tick: Is the process you are setting the table on a tickerplant?
+
+        Returns:
+            On a process persist the table schema as the supplied name
+
+        Example:
+
+        Set a table 'trade' with a supplied schema on a tickerplant process
+
+        ```python
+        >>> import pykx as kx
+        >>> trade = kx.schema.builder({
+        ...     'time': kx.TimespanAtom  , 'sym': kx.SymbolAtom,
+        ...     'exchange': kx.SymbolAtom, 'sz': kx.LongAtom,
+        ...     'px': kx.FloatAtom})
+        >>> tick = kx.tick.TICK(port=5030)
+        >>> tick.set_tables({'trade': trade})
+        >>> tick('trade')
+        pykx.Table(pykx.q('
+        time sym exchange sz px
+        -----------------------
+        '))
+        ```
+        """
+        for key, value in tables.items():
+            if not isinstance(key, str):
+                raise QError('Provided table name must be an "str"')
+            if not isinstance(value, k.Table):
+                raise QError('Provided table schema must be an "kx.Table"')
+            if tick:
+                if not q('~', ['time', 'sym'], value.columns[:2]):
+                    raise QError("'time' and 'sym' must be first two columns "
+                                 f"in Table: {key}")
+            self._connection('.tick.set_tables', key, value)
+
 
 class TICK(STREAMING):
     """
@@ -490,15 +532,7 @@ class TICK(STREAMING):
         '))
         ```
         """
-        for key, value in tables.items():
-            if not isinstance(key, str):
-                raise QError('Provided table name must be an "str"')
-            if not isinstance(value, k.Table):
-                raise QError('Provided table schema must be an "kx.Table"')
-            if not q('~', ['time', 'sym'], value.columns[:2]):
-                raise QError("'time' and 'sym' must be first two columns "
-                             f"in Table: {key}")
-            self._connection('.tick.set_tables', key, value)
+        super().set_tables(tables, tick=True)
 
     def set_snap(self, snap_function: Callable) -> None:
         """
@@ -586,6 +620,8 @@ class RTP(STREAMING):
         init_args: A list of arguments passed to the initialized q process at startup
             denoting the command line options to be used for the initialized q process
             see [here](https://code.kx.com/q/basics/cmdline/) for a full breakdown.
+        tables: A dictionary mapping the names of tables and their schemas which can be
+            used to define the tables available to the real-time processor.
 
     Returns:
         On successful initialisation will initialise the RTP process and set
@@ -698,10 +734,12 @@ class RTP(STREAMING):
                  vanilla: bool = True,
                  pre_processor: Callable = None,
                  post_processor: Callable = None,
-                 init_args: list = None) -> None:
+                 init_args: list = None,
+                 tables: dict = None) -> None:
         self._subscriptions=subscriptions
         self._pre_processor=pre_processor
         self._post_processor=post_processor
+        self._tables = tables
         self._vanilla = vanilla
         self._name = 'Real-time'
 
@@ -720,6 +758,8 @@ class RTP(STREAMING):
                 self.post_processor(post_processor)
             if subscriptions is not None:
                 self.subscriptions(subscriptions)
+            if isinstance(tables, dict):
+                self.set_tables(tables)
         except BaseException as err:
             print(f'{self._name} processor failed to initialise on port: {port}\n')
             if self._connection is not None:
@@ -851,7 +891,8 @@ class RTP(STREAMING):
                       apis=self._apis,
                       vanilla=self._vanilla,
                       pre_processor=self._pre_processor,
-                      post_processor=self._post_processor)
+                      post_processor=self._post_processor,
+                      tables=self._tables)
         if self._init_config is not None:
             self.init(config=self._init_config)
         print(f'{self._name} processor on port {self._port} successfully restarted\n')
@@ -984,6 +1025,40 @@ class RTP(STREAMING):
                          function.__name__,
                          '.tick.RTPPostProc')
 
+    def set_tables(self, tables: dict) -> None:
+        """
+        Define tables to be available on the RTP processes.
+
+        Parameters:
+            tables: A dictionary mapping the name of a table to be defined on
+                the process to the table schema
+
+        Returns:
+            On the RTP persist the table schemas as the supplied name
+
+        Example:
+
+        Set a table 'trade' with a supplied schema on a tickerplant process
+
+        ```python
+        >>> import pykx as kx
+        >>> prices = kx.schema.builder({
+        ...     'time': kx.TimespanAtom  , 'sym': kx.SymbolAtom,
+        ...     'exchange': kx.SymbolAtom, 'sz': kx.LongAtom,
+        ...     'px': kx.FloatAtom})
+        >>> rte = kx.tick.RTP(port=5034,
+        ...                   subscriptions = ['trade', 'quote'],
+        ...                   vanilla=False)
+        >>> rte.set_tables({'prices': prices})
+        >>> rte('prices')
+        pykx.Table(pykx.q('
+        time sym exchange sz px
+        -----------------------
+        '))
+        ```
+        """
+        super().set_tables(tables)
+
     def subscriptions(self, sub_list):
         self._connection('{.tick.subscriptions:x}', sub_list)
 
@@ -1007,6 +1082,8 @@ class HDB(STREAMING):
         init_args: A list of arguments passed to the initialized q process at startup
             denoting the command line options to be used for the initialized q process
             see [here](https://code.kx.com/q/basics/cmdline/) for a full breakdown.
+         tables: A dictionary mapping the names of tables and their schemas which can be
+            used to define the tables available to the HDB.
 
     Returns:
         On successful initialisation will initialise the HDB process and set
@@ -1049,10 +1126,12 @@ class HDB(STREAMING):
                  process_logs: Union[str, bool] = True,
                  libraries: dict = None,
                  apis: dict = None,
-                 init_args: list = None):
+                 init_args: list = None,
+                 tables: dict = None):
         self._name = 'HDB'
         self._libraries = libraries
         self._apis = apis
+        self._tables = tables
         print(f'Initialising {self._name} process on port: {port}')
         try:
             super().__init__(port,
@@ -1061,6 +1140,8 @@ class HDB(STREAMING):
                              libraries=libraries,
                              init_args=init_args)
             self._connection('.pykx.loadExtension["hdb"]')
+            if isinstance(tables, dict):
+                super().set_tables(tables)
         except BaseException as err:
             print(f'{self._name} failed to initialise on port: {port}\n')
             if self._connection is not None:
@@ -1146,10 +1227,45 @@ class HDB(STREAMING):
         self.__init__(port=self._port,
                       process_logs=self._process_logs,
                       libraries=self._libraries,
-                      apis=self._apis)
+                      apis=self._apis,
+                      tables=self._tables)
         if self._init_config is not None:
             self.init(self._database, self._init_config)
         print(f'{self._name} on port {self._port} successfully restarted\n')
+
+    def set_tables(self, tables: dict) -> None:
+        """
+        Define tables to be available on the HDB processes.
+
+        Parameters:
+            tables: A dictionary mapping the name of a table to be defined on
+                the process to the table schema
+
+        Returns:
+            On the HDB persist the table schemas as the supplied name
+
+        Example:
+
+        Set a table 'prices' with a supplied schema on a HDB process
+
+        ```python
+        >>> import pykx as kx
+        >>> prices = kx.schema.builder({
+        ...     'time': kx.TimespanAtom  , 'sym': kx.SymbolAtom,
+        ...     'exchange': kx.SymbolAtom, 'sz': kx.LongAtom,
+        ...     'px': kx.FloatAtom})
+        >>> hdb = kx.tick.HDB(port=5035)
+        Initialising HDB process on port: 5035
+        HDB process initialised successfully on port: 5035
+        >>> hdb.set_tables({'prices': prices})
+        >>> hdb('prices')
+        pykx.Table(pykx.q('
+        time sym exchange sz px
+        -----------------------
+        '))
+        ```
+        """
+        super().set_tables(tables)
 
 
 class GATEWAY(STREAMING):

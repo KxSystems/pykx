@@ -34,6 +34,16 @@ def _check_loading(cls, table, err_msg):
             raise QError(err_msg + " not possible as specified table not available")
 
 
+def _get_type(cls, table):
+    type_str = str(type(getattr(cls, table)))
+    if 'SplayedTable' in type_str:
+        return 'splayed'
+    elif 'PartitionedTable' in type_str:
+        return 'partitioned'
+    else:
+        raise QError(f'Unsupported type {type_str} passed to _get_type')
+
+
 def _check_column(cls, table, column):
     table_cols = cls.list_columns(table)
     if column not in table_cols:
@@ -64,7 +74,7 @@ _ktype_to_conversion = {
 _func_mapping = {
     'dpt': '{[d;p;f;t;s] .Q.dpt[d;p;t]}',
     'dpft': '{[d;p;f;t;s] .Q.dpft[d;p;f;t]}',
-    'dpfs': '{[d;p;f;t;s] .Q.dpfs[d;p;f;s]}',
+    'dpts': '{[d;p;f;t;s] .Q.dpts[d;p;t;s]}',
     'dpfts': '{[d;p;f;t;s] .Q.dpfts[d;p;f;t;s]}'
 }
 
@@ -159,8 +169,9 @@ class DB(_TABLES):
     def create(self,
                table: k.Table,
                table_name: str,
-               partition: Union[int, str, k.DateAtom],
+               partition: Union[int, str, k.DateAtom] = None,
                *, # noqa: C901
+               format: Optional[str] = 'partitioned',
                by_field: Optional[str] = None,
                sym_enum: Optional[str] = None,
                log: Optional[bool] = True,
@@ -181,6 +192,7 @@ class DB(_TABLES):
             partition: The name of the column which is to be used to partition the data if
                 supplied as a `#!python str` or if supplied as non string object this is
                 used as the partition to which all data is persisted.
+            format: Is the table that's being created a 'splayed' or 'partitioned' table
             by_field: A field of the table to be used as a by column, this column will be
                 the second column in the table (the first being the virtual column determined
                 by the partitioning column)
@@ -279,8 +291,15 @@ class DB(_TABLES):
         """
         save_dir = self.path
         func_name = 'dpfts'
+        table = k.toq(table)
         if type(table) != k.Table:
-            raise QError('Supplied table must be of type pykx.Table')
+            raise QError('Supplied table must be of type "pykx.Table" or can be converted to this type') # noqa: E501
+        if format not in ['splayed', 'partitioned']:
+            raise QError("'format' must be one of 'splayed'/'partitioned', supplied value: "
+                         f'{format}')
+        if (format == 'partitioned') & (partition == None): # noqa: E711
+            raise QError("Creation of partitioned format table requires a supplied "
+                         "'partition' parameter, currently set as default None")
         if by_field is None:
             func_name = func_name.replace('f', '')
         if sym_enum is None:
@@ -299,24 +318,28 @@ class DB(_TABLES):
             compress.global_init(encrypt=encrypt)
         qfunc = q(_func_mapping[func_name])
         try:
-            if type(partition) == str:
-                if partition not in table.columns:
-                    raise QError(f'Partition column {partition} not in supplied table')
-                if type(table[partition]).t not in [5, 6, 7, 13, 14]:
-                    raise QError(f'Unsupported type: {type(table[partition])} '
-                                 'not supported for table partitioning')
-                parts = q.distinct(table[partition])
-                for i in parts:
-                    if log:
-                        print(f'Writing Database Partition {i} to table {table_name}')
-                    q[table_name] = q('{?[x;enlist y;0b;()]}', table, [q('='), partition, i])
-                    q[table_name] = q('{![x;();0b;enlist y]}', q[table_name], partition)
-                    qfunc(save_dir, i, by_field, table_name, sym_enum)
+            if format == 'splayed':
+                table = q.Q.en(save_dir, table)
+                q('{.Q.dd[x;`] set y}', save_dir/table_name, table)
             else:
-                q[table_name] = table
-                if log:
-                    print(f'Writing Database Partition {partition} to table {table_name}')
-                qfunc(save_dir, partition, by_field, table_name, sym_enum)
+                if type(partition) == str:
+                    if partition not in table.columns:
+                        raise QError(f'Partition column {partition} not in supplied table')
+                    if type(table[partition]).t not in [5, 6, 7, 13, 14]:
+                        raise QError(f'Unsupported type: {type(table[partition])} '
+                                     'not supported for table partitioning')
+                    parts = q.distinct(table[partition])
+                    for i in parts:
+                        if log:
+                            print(f'Writing Database Partition {i} to table {table_name}')
+                        q[table_name] = q('{?[x;enlist y;0b;()]}', table, [q('='), partition, i])
+                        q[table_name] = q('{![x;();0b;enlist y]}', q[table_name], partition)
+                        qfunc(save_dir, i, by_field, table_name, sym_enum)
+                else:
+                    q[table_name] = table
+                    if log:
+                        print(f'Writing Database Partition {partition} to table {table_name}')
+                    qfunc(save_dir, partition, by_field, table_name, sym_enum)
         except QError as err:
             q('{![`.;();0b;enlist x]}', table_name)
             q.z.zd = compression_cache
@@ -469,7 +492,7 @@ class DB(_TABLES):
               ''', db_path, db_name)
         self.path = load_path
         self.loaded = True
-        self.tables = q.Q.pt.py()
+        self.tables = q('{x where {-1h=type .Q.qp get x}each x}', q.tables()).py()
         for i in self.tables:
             if i in self._dir_cache:
                 warn(f'A database table "{i}" would overwrite one of the pykx.DB() methods, please access your table via the table attribute') # noqa: E501
@@ -521,7 +544,11 @@ class DB(_TABLES):
         """
         _check_loading(self, table, 'Column rename')
         _check_column(self, table, original_name)
-        q.dbmaint.renamecol(self.path, table, original_name, new_name)
+        table_type = _get_type(self, table)
+        if table_type == 'splayed':
+            q.dbmaint.rename1col(self.path / table, original_name, new_name)
+        else:
+            q.dbmaint.renamecol(self.path, table, original_name, new_name)
         self._reload()
         return None
 
@@ -556,7 +583,11 @@ class DB(_TABLES):
         """
         _check_loading(self, table, 'Column deletion')
         _check_column(self, table, column)
-        q.dbmaint.deletecol(self.path, table, column)
+        table_type = _get_type(self, table)
+        if 'splayed' == table_type:
+            q.dbmaint.delete1col(self.path / table, column)
+        else:
+            q.dbmaint.deletecol(self.path, table, column)
         self._reload()
         return None
 
@@ -589,7 +620,11 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, original_name, 'Table rename')
-        q.dbmaint.rentable(self.path, original_name, new_name)
+        table_type = _get_type(self, original_name)
+        if 'splayed' == table_type:
+            q.dbmaint.ren1table(self.path / original_name, self.path / new_name)
+        else:
+            q.dbmaint.rentable(self.path, original_name, new_name)
         # Remove the original table, without this it persists as an accessible table
         q('{![`.;();0b;enlist x]`}', original_name)
         self._reload()
@@ -620,6 +655,9 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column listing')
+        table_type = _get_type(self, table)
+        if table_type == 'splayed':
+            return q('get', self.path / table / '.d').py()
         return q.dbmaint.listcols(self.path, table).py()
 
     def add_column(self,
@@ -658,7 +696,11 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column addition')
-        q.dbmaint.addcol(self.path, table, column_name, default_value)
+        table_type = _get_type(self, table)
+        if table_type == 'splayed':
+            q.dbmaint.add1col(self.path / table, column_name, default_value)
+        else:
+            q.dbmaint.addcol(self.path, table, column_name, default_value)
         self._reload()
         return(None)
 
@@ -687,7 +729,7 @@ class DB(_TABLES):
         ['testTable']
         >>> db.list_columns('testTable')
         ['month', 'sym', 'time', 'price', 'size']
-        >>> db.find_column('price')
+        >>> db.find_column('testTable', 'price')
         2023.11.10 16:48:57 column price (type 0) in `:/usr/pykx/db/2015.01.01/testTable
         2023.11.10 16:48:57 column price (type 0) in `:/usr/pykx/db/2015.01.02/testTable
         ```
@@ -702,7 +744,7 @@ class DB(_TABLES):
         ['testTable']
         >>> db.list_columns('testTable')
         ['month', 'sym', 'time', 'price', 'size']
-        >>> db.find_column('side')
+        >>> db.find_column('testTable', 'side')
         2023.11.10 16:49:02 column side *NOT*FOUND* in `:/usr/pykx/db/2015.01.01/testTable
         2023.11.10 16:49:02 column side *NOT*FOUND* in `:/usr/pykx/db/2015.01.02/testTable
         Traceback (most recent call last):
@@ -711,6 +753,9 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Finding columns')
+        table_type = _get_type(self, table)
+        if 'splayed' == table_type:
+            return q.dbmaint.find1col(self.path / table, column_name).py()
         return q.dbmaint.findcol(self.path, table, column_name).py()
 
     def reorder_columns(self, table: str, new_order: list) -> None:
@@ -747,7 +792,12 @@ class DB(_TABLES):
         ```
         """
         _check_loading(self, table, 'Column reordering')
-        q.dbmaint.reordercols(self.path, table, new_order)
+        table_type = _get_type(self, table)
+        if 'splayed' == table_type:
+            q.dbmaint.reordercols0(self.path / table, new_order)
+        else:
+            q.dbmaint.reordercols(self.path, table, new_order)
+        self._reload()
         return None
 
     def set_column_attribute(self, table: str, column_name: str, new_attribute: str) -> None:
@@ -797,6 +847,7 @@ class DB(_TABLES):
         """
         _check_loading(self, table, 'Attribute setting')
         _check_column(self, table, column_name)
+        table_type = _get_type(self, table)
         if new_attribute not in ['s', 'g', 'p', 'u', 'sorted',
                                  'grouped', 'partitioned', 'unique']:
             raise QError("new_attribute must be one of "
@@ -806,7 +857,11 @@ class DB(_TABLES):
                              'grouped': 'g',
                              'partitioned': 'p',
                              'unique': 'u'}[new_attribute]
-        q.dbmaint.setattrcol(self.path, table, column_name, new_attribute)
+        if 'splayed' == table_type:
+            q.dbmaint.fn1col(self.path / table, column_name, q('{x#y}', new_attribute))
+        else:
+            q.dbmaint.setattrcol(self.path, table, column_name, new_attribute)
+        self._reload()
         return None
 
     def set_column_type(self, table: str, column_name: str, new_type: k.K) -> None:
@@ -857,8 +912,12 @@ class DB(_TABLES):
         if new_type not in _ktype_to_conversion:
             raise QError("Unable to find user specified conversion type: " + str(new_type))
         col_type = _ktype_to_conversion[new_type]
+        table_type = _get_type(self, table)
         try:
-            q.dbmaint.castcol(self.path, table, column_name, col_type)
+            if table_type == 'splayed':
+                q.dbmaint.fn1col(self.path / table, column_name, q('{x$y}', col_type))
+            else:
+                q.dbmaint.castcol(self.path, table, column_name, col_type)
         except QError as err:
             if str(err) == 'type':
                 raise QError("Unable to convert specified column '" + column_name + "' to type: " + str(new_type)) # noqa: E501
@@ -910,6 +969,9 @@ class DB(_TABLES):
         """
         _check_loading(self, table, 'Attribute clearing')
         _check_column(self, table, column_name)
+        table_type = _get_type(self, table)
+        if 'splayed' == table_type:
+            q.dbmaint.fn1col(self.path / table, column_name, q('`#'))
         q.dbmaint.clearattrcol(self.path, table, column_name)
         return None
 
@@ -942,7 +1004,11 @@ class DB(_TABLES):
         """
         _check_loading(self, table, 'Column copying')
         _check_column(self, table, original_column)
-        q.dbmaint.copycol(self.path, table, original_column, new_column)
+        table_type = _get_type(self, table)
+        if 'splayed' == table_type:
+            q.dbmaint.copy1col(self.path / table, original_column, new_column)
+        else:
+            q.dbmaint.copycol(self.path, table, original_column, new_column)
         self._reload()
         return None
 
@@ -1027,7 +1093,11 @@ class DB(_TABLES):
         _check_column(self, table, column_name)
         if not callable(function):
             raise RuntimeError("Provided 'function' is not callable")
-        q.dbmaint.fncol(self.path, table, column_name, function)
+        table_type = _get_type(self, table)
+        if 'splayed' == table_type:
+            q.dbmaint.fn1col(self.path / table, column_name, function)
+        else:
+            q.dbmaint.fncol(self.path, table, column_name, function)
         self._reload()
         return None
 
@@ -1120,14 +1190,21 @@ class DB(_TABLES):
         ```
         """
         qtables = self.tables
+        cache = None
+        try:
+            cache = q.Q.pv
+        except QError:
+            pass
         if subview==None: # noqa: E711
             q.Q.view()
         else:
             q.Q.view(subview)
         for i in qtables:
-            q.Q.cn(getattr(self.table, i))
+            tab = getattr(self.table, i)
+            if isinstance(tab, k.PartitionedTable):
+                q.Q.cn(tab)
         res = q('.Q.pv!flip .Q.pn')
-        q.Q.view()
+        q.Q.view(cache)
         return res
 
     def subview(self, view: list = None) -> None:

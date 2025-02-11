@@ -1243,6 +1243,17 @@ def test_from_pandas_categorical(q, kx, pd):
     # no mutation of the initial symbol
     assert all(enum==q('series'))
 
+    # Test adding new value to existing enum
+    cat = pd.Series(['aaa', 'bbb', 'ccc', 'ddd'], dtype='category', name='index')
+    rez = kx.toq(cat)
+    assert isinstance(rez, kx.EnumVector)
+    assert isinstance(q('cat'), kx.SymbolVector)
+    assert isinstance(rez.pd(), pd.Series)
+    assert isinstance(rez.pd().values, pd.Categorical)
+    assert all(rez.pd() == cat)
+    # no mutation of original df
+    assert all((df.reset_index() == original_df))
+
     # Test that we don't overwrite an enum already existing on q side
     sym = q('sym:`aaa`bbb`ccc; a:`sym$10?sym; sym').py()
     assert(sym == ['aaa', 'bbb', 'ccc'])
@@ -1250,21 +1261,6 @@ def test_from_pandas_categorical(q, kx, pd):
     kx.toq(df)
     sym = q('sym').py()
     assert(sym == ['aaa', 'bbb', 'ccc'])
-
-    # Cant re-enumerate with any new symbols
-    with pytest.raises(kx.QError, match="cast"):
-        df = pd.DataFrame()
-        cat = pd.Series(['foo', 'bar', 'baz'], dtype='category', name='cat')
-        df['series'] = cat
-        rez = kx.toq(df)
-
-    # Cant re-enumerate with any new symbols
-    # enum would need extended manually via `?` operator
-    with pytest.raises(kx.QError, match="cast"):
-        df = pd.DataFrame()
-        cat = pd.Series(['aaa', 'bbb', 'ccc', 'ddd'], dtype='category', name='cat')
-        df['series'] = cat
-        rez = kx.toq(df)
 
     assert kx.toq.ENUMS == ['enum0', 'cat', 'index', 'series', 'sym']
 

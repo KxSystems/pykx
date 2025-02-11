@@ -12,7 +12,7 @@ from . import Q
 from . import toq
 from . import wrappers
 from . import schema
-from .config import find_core_lib, licensed, no_qce, pykx_dir, pykx_qdebug, pykx_threading, qargs, skip_under_q, suppress_warnings, pykx_debug_insights # noqa
+from .config import find_core_lib, licensed, no_qce, pykx_dir, pykx_libs_dir, pykx_qdebug, pykx_threading, qargs, skip_under_q, suppress_warnings, pykx_debug_insights # noqa
 from .core import keval as _keval
 from .exceptions import FutureCancelled, LicenseException, NoResults, PyKXException, PyKXWarning, QError # noqa
 from ._wrappers import _factory as factory
@@ -118,7 +118,7 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
     """Interface for using q within the current python process. Call this to execute q code."""
     def __init__(self): # noqa
         if licensed:
-            kxic_path = (pykx_dir/'lib').as_posix()
+            kxic_path = pykx_libs_dir.as_posix()
             kxic_file = 'kxic.k'
             pykx_qlib_path = (pykx_dir/'pykx').as_posix()
             # This q code is run as a single call into q to improve startup performance:
@@ -153,8 +153,6 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             else:
                 code += f'2:[`$"{pykx_qlib_path}q";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
-            if pykx_threading and (not suppress_warnings):
-                warn('pykx.q is not supported when using PYKX_THREADING.')
             code += '@[get;`.pykx.i.kxic.loadfailed;{()!()}]'
             kxic_loadfailed = self._call(code, skip_debug=True).py()
             if (not platform.system() == "Linux") and (not no_qce) and ('--no-sql' not in qargs):

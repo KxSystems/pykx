@@ -2,8 +2,6 @@ from ..wrappers import BooleanVector, IntVector, K, List, LongVector, ShortVecto
 from ..exceptions import QError
 from . import api_return, MetaAtomic
 
-import warnings
-
 
 def _init(_q):
     global q
@@ -435,13 +433,8 @@ class PandasReindexing:
 
         return t
 
-    def rename(self, labels=None, index=None, columns=None, axis=0,
-               copy=None, inplace=False, level=None, errors='ignore', mapper=None):
-        if labels is not None:
-            warnings.warn("Keyword 'labels' is deprecated please use 'mapper'",
-                          DeprecationWarning)
-            if mapper is None:
-                mapper = labels
+    def rename(self, mapper=None, index=None, columns=None, axis=0,
+               copy=None, inplace=False, level=None, errors='ignore'):
         if ("Keyed" not in str(type(self)) and columns is None
                 and ((axis == 'index' or axis == 0) or (index is not None))):
             raise ValueError("Can only rename index of a KeyedTable")

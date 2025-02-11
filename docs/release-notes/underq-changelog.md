@@ -6,6 +6,90 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 3.1.0
+
+#### Release Date
+
+2025-02-11
+
+### Additions
+
+- Addition of `.pykx.typepy` which returns an objects datatype as a `CharVector` after being passed to python.
+
+	```q
+	q).pykx.typepy til 10  // Data type conversion set to default
+	"<class 'numpy.ndarray'>"
+
+	q).pykx.util.defaultConv:"pd"  // Set data type conversion to pandas
+	q).pykx.typepy til 10
+	"<class 'pandas.core.series.Series'>"
+	```
+
+### Fixes and Improvements
+
+- Using `.pykx.toq`/`.pykx.toq0` now return the q representation of an object when passed a wrapped type conversion object
+
+	=== "Behaviour prior to change"
+
+		```q
+		q).pykx.toq .pykx.topd ([] a:1 2 3)
+		enlist[`..pandas;;][...
+		```
+
+	=== "Behaviour post change"
+
+		```q
+		q).pykx.toq .pykx.topd[([] a:1 2 3)]
+		a
+		-
+		1
+		2
+		3
+		```
+
+- When using `.pykx.toq`/`.pykx.toq0`, passing compositions such as `any` now returns the data as the appropriate object
+
+	=== "Behaviour prior to change"
+
+		```q
+		q).pykx.toq any
+		'Expected foreign object for call to .pykx.toq
+		```
+
+	=== "Behaviour post change"
+
+		```q
+		q).pykx.toq any
+		max$["b"]
+		```
+
+- When failing to find a file loaded with `.pykx.loadPy` the name of the file which was loaded is now included in the error message
+
+	=== "Behaviour prior to change"
+
+		```q
+		q).pykx.loadPy "file.py"
+		'FileNotFoundError(2, 'No such file or directory')
+		```
+
+	=== "Behaviour post change"
+
+		```q
+		q).pykx.loadPy "file.py"
+		'FileNotFoundError(file.py, 'No such file or directory')
+		```
+
+- When attempting to load PyKX after embedPy has already been loaded, an error will be thrown and PyKX will not continue to load.
+
+### Beta Features
+
+- Added ability for users to convert between PyKX numeric vectors or N-Dimensional Lists and PyTorch Tensor objects using the `.pykx.topt` function.
+
+	```python
+	q).pykx.eval["lambda x:print(type(x))"].pykx.topt enlist til 10;
+	<class 'torch.Tensor'>
+	```
+
 ## PyKX 3.0.1
 
 #### Release Date

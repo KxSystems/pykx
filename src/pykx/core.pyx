@@ -7,6 +7,7 @@ from typing import List, Tuple
 import re
 import sys
 
+
 from . import beta_features
 from .util import add_to_config, num_available_cores
 from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _get_config_value, pykx_lib_dir, ignore_qhome, lic_path
@@ -92,7 +93,7 @@ import subprocess
 import sys
 
 from .config import find_core_lib, k_gc, qargs, qhome, qlic, pykx_lib_dir, \
-    release_gil, _set_licensed, under_q, use_q_lock
+    release_gil, _set_licensed, under_q, use_q_lock, _qlic
 from .exceptions import PyKXException, PyKXWarning
 
 final_qhome = str(qhome if ignore_qhome else pykx_lib_dir)
@@ -295,10 +296,13 @@ if not pykx_threading:
                 if _qinit_unsuccessful: # Fallback to unlicensed mode
                     if _qinit_output != '    ':
                         _capout_msg = f'Captured output from initialization attempt:\n{_qinit_output}'
+                        _paths_checked = f'    QLIC ({_qlic if _qlic else "Not Set"})\n'\
+                                         f'    QHOME ({qhome})'
                         _lic_location = f'License location used:\n{lic_path}'
                     else:
                         _capout_msg = '' # nocov - this can only occur under extremely weird circumstances.
                         _lic_location = '' # nocov - this additional line is to ensure this code path is covered.
+                        _paths_checked = '' # nocov - this additional line is to ensure this code path is covered.
                     if hasattr(sys, 'ps1'):
                         if re.compile('exp').search(_capout_msg):
                             _exp_license = 'Your PyKX license has now expired.\n\n'\
@@ -309,7 +313,7 @@ if not pykx_threading:
                         elif re.compile('embedq').search(_capout_msg):
                             _ce_license = 'You appear to be using a non kdb Insights license.\n\n'\
                                           f'{_capout_msg}\n\n'\
-                                           f'{_lic_location}\n\n'\
+                                          f'{_lic_location}\n\n'\
                                           'Running PyKX in the absence of a kdb Insights license '\
                                           'has reduced functionality.\nWould you like to install '\
                                           'a kdb Insights personal license? [Y/n]: '
@@ -326,8 +330,14 @@ if not pykx_threading:
                     if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed'):
                         raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}\n\n{_lic_location}')
                     else:
-                        warn('Failed to initialize PyKX successfully with '
-                             f'the following error: {_capout_msg}\n\n{_lic_location}', PyKXWarning)
+                        warn('Failed to initialize PyKX successfully with ' f'the following error: {_capout_msg}\n', PyKXWarning)
+                        if _paths_checked:
+                            _missing_license = f'PyKX was unable to locate your license file in:\n{_paths_checked}\n\n'\
+                                               'Running PyKX in unlicensed mode has reduced functionality.\n\n'\
+                                               'Would you like to install a license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
+                            _license_install(_missing_license, True)
+                        else:
+                           _paths_checked
                     _libq_path_py = bytes(find_core_lib('e'))
                     _libq_path = _libq_path_py
                     _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
@@ -362,7 +372,6 @@ if not pykx_threading:
                     raise PyKXException( # nocov
                         f'Non-zero qinit return code {qinit_return_code} despite successful pre-check') # nocov
 else:
-    beta_features.append('PyKX Threading')
     _libq_path_py = bytes(str(find_core_lib('q')), 'utf-8')
     _tcore_path = tcore_path_location
     _libq_path = _libq_path_py

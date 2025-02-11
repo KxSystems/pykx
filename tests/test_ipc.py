@@ -153,15 +153,6 @@ def test_timeout(kx, q_port):
 
 @pytest.mark.asyncio
 @pytest.mark.unlicensed
-async def test_async_timeout(kx, q_port):
-    async with kx.AsyncQConnection('localhost', q_port, timeout=2.0) as q:
-        with pytest.raises(kx.QError):
-            await q('{t:.z.p;while[.z.p<t+00:00:05]; x} til 10')
-        assert [0, 1, 2, 3, 4] == (await q('til 5')).py()
-
-
-@pytest.mark.asyncio
-@pytest.mark.unlicensed
 async def test_async_repr(kx, q_port):
     assert repr(await kx.AsyncQConnection(port=q_port)) == f'pykx.AsyncQConnection(port={q_port!r})'
 
@@ -325,14 +316,51 @@ async def test_async_q_connection_clears_calls_on_close(kx, q_port):
         assert len(q._call_stack) == 0
 
 
-@pytest.mark.xfail(reason='Flaky file finding on windows', strict=False)
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_py_file_execution(kx):
+    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [q_exe_path, '-p', '15005'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        )
+    time.sleep(2)
+    with kx.SyncQConnection(port=15005) as q:
+        with pytest.raises(kx.QError) as err:
+            q.file_execute('./tests/qscripts/file.l')
+        assert "Provided file type 'l' unsupported" == str(err.value)
+        with pytest.raises(kx.QError) as err:
+            q.file_execute('./tests/qscripts/pyfile.py', return_all=True)
+        assert "PyKX must be loaded on remote server" == str(err.value)
+        q('\l pykx.q')
+        q.file_execute('./tests/qscripts/pyfile.py')
+        assert q('.pykx.get[`pyfunc;<][2;3]') == 6
+    proc.kill()
+    time.sleep(2)
+
+
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
 def test_sync_file_execution(kx, q_port):
     with kx.SyncQConnection(port=q_port) as q:
         q.file_execute('./tests/qscripts/sync_file_exec.q')
         assert q('.test.sync').py()
 
 
-@pytest.mark.xfail(reason='Flaky file finding on windows', strict=False)
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
 @pytest.mark.asyncio
 async def test_async_file_execution(kx, q_port):
     async with kx.AsyncQConnection(port=q_port) as q:
@@ -340,11 +368,24 @@ async def test_async_file_execution(kx, q_port):
         assert (await q('.test.async')).py()
 
 
-@pytest.mark.xfail(reason='Flaky file finding on windows', strict=False)
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
 def test_sync_file_execution_fail(kx, q_port):
     with pytest.raises(kx.QError):
         with kx.SyncQConnection(port=q_port) as q:
             q.file_execute('./tests/qscripts/sync_file_fail.q', return_all=True)
+
+
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
+def test_file_execution_newline(kx, q_port):
+    with kx.SyncQConnection(port=q_port) as q:
+        ret = q.file_execute('./tests/qscripts/empty_line.q', return_all=True)
+    assert ret[-1] == 101
 
 
 @pytest.mark.asyncio
@@ -357,7 +398,6 @@ async def test_async_async_q_connection(kx, q_port):
     async with kx.AsyncQConnection(port=q_port) as q:
         calls = [q('til 10'), q('til 5', wait=False), q('til 20')]
         assert til_ten == (await calls[0]).py()
-        assert isinstance(calls[1], kx.QFuture)
         assert isinstance(await calls[1], kx.Identity)
         assert til_twenty == (await calls[2]).py()
 
@@ -412,8 +452,8 @@ async def test_raw_poll_send_recv_all(kx, q_port, event_loop):
         assert len(q._call_stack) == 0
 
         for i in range(10):
+            assert (await calls[i]).py() == list(range(10 + i))
             assert calls[i].done()
-            assert calls[i].result().py() == list(range(10 + i))
 
 
 @pytest.mark.asyncio
@@ -436,8 +476,8 @@ async def test_raw_poll_send_recv_one(kx, q_port, event_loop):
         assert len(q._send_stack) == 0
         assert len(q._call_stack) == 0
         for i in range(10):
+            assert (await calls[i]).py() == list(range(10 + i))
             assert calls[i].done()
-            assert calls[i].result().py() == list(range(10 + i))
 
 
 @pytest.mark.asyncio
@@ -460,8 +500,8 @@ async def test_raw_poll_send_recv_n(kx, q_port, event_loop):
         assert len(q._send_stack) == 0
         assert len(q._call_stack) == 0
         for i in range(10):
+            assert (await calls[i]).py() == list(range(10 + i))
             assert calls[i].done()
-            assert calls[i].result().py() == list(range(10 + i))
 
 
 @pytest.mark.asyncio
@@ -633,11 +673,26 @@ def test_server(kx):
             with kx.QConnection(port=port, no_ctx=True) as q:
                 assert q('a').py() == list(range(10))
             with kx.QConnection(port=port, no_ctx=True) as q:
-                with pytest.raises(kx.exceptions.QError):
+                with pytest.raises(kx.QError):
                     q('1+`')
             with kx.QConnection(port=port, no_ctx=True) as q:
-                with pytest.raises(kx.exceptions.QError):
+                with pytest.raises(kx.QError):
                     q('.pykx.i.repr')
+            with kx.QConnection(port=port, no_ctx=True) as q:
+                with pytest.raises(kx.QError) as err:
+                    q('.pykx.getattr')
+                e = str(err.value)
+                assert "Result of query with return type '<class 'pykx.wrappers.Foreign" in e
+            with kx.QConnection(port=port, no_ctx=True) as q:
+                with pytest.raises(kx.QError) as err:
+                    q('.pykx.pyeval')
+                e = str(err.value)
+                assert "Result of query with return type '<class 'pykx.wrappers.Projection" in e
+            with kx.QConnection(port=port, no_ctx=True) as q:
+                with pytest.raises(kx.QError) as err:
+                    q('.pykx.preinit')
+                e = str(err.value)
+                assert "Result of query with return type '<class 'pykx.wrappers.Lambda" in e
         finally:
             if proc is not None:
                 proc.stdin.close()
@@ -915,10 +970,10 @@ def test_context_loadfile(kx):
     q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
     with kx.PyKXReimport():
         proc = subprocess.Popen(
-            [q_exe_path, '-p', '15001'],
+            [q_exe_path, '-p', '15023'],
         )
     time.sleep(2)
-    conn = kx.SyncQConnection(port=15001)
+    conn = kx.SyncQConnection(port=15023)
     try:
         assert isinstance(conn.csvutil, kx.ctx.QContext)
     except BaseException:
@@ -1082,87 +1137,6 @@ def test_SecureQConnection_reconnect(kx, capsys):
     system() == 'Windows',
     reason='Subprocess requiring tests not currently operating on Windows consistently'
 )
-async def test_AsyncQConnection_reconnect(kx, capsys):
-    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
-    with kx.PyKXReimport():
-        proc = subprocess.Popen(
-            [q_exe_path, '-p', '15003'],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT
-        )
-    time.sleep(2)
-
-    conn = await kx.AsyncQConnection(
-        port=15003,
-        reconnection_attempts=3,
-        event_loop=asyncio.get_event_loop()
-    )
-
-    assert (await conn('til 20')).py() == list(range(20))
-    proc.kill()
-    time.sleep(2)
-    with pytest.raises(BaseException):
-        await conn('til 5')
-    captured = capsys.readouterr()
-    assert 'trying again in 0.5 seconds' in captured.err
-    assert 'trying again in 1.0 seconds' in captured.err
-
-    with kx.PyKXReimport():
-        proc = subprocess.Popen(
-            [q_exe_path, '-p', '15003'],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT
-        )
-    time.sleep(2)
-    assert (await conn('10?`a`b`c`d')).py() is None
-    assert (await conn('til 10')).py() == list(range(10))
-    fut = conn('{t:.z.p;while[.z.p<t+x]; 10?`a`b`c`d} 00:00:05')
-    fut2 = conn('{t:.z.p;while[.z.p<t+x]; 10?`a`b`c`d} 00:00:05')
-    proc.kill()
-    time.sleep(2)
-    with pytest.raises(BaseException):
-        await fut
-    captured = capsys.readouterr()
-    assert 'trying again in 0.5 seconds' in captured.err
-    assert 'trying again in 1.0 seconds' in captured.err
-
-    with kx.PyKXReimport():
-        proc = subprocess.Popen(
-            [q_exe_path, '-p', '15003'],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT
-        )
-    time.sleep(2)
-    assert (await fut2) is None
-    assert (await conn('10?`a`b`c`d')).py() is None
-    assert (await conn('til 10')).py() == list(range(10))
-
-    conn = await kx.AsyncQConnection(
-        port=15003,
-        reconnection_attempts=3,
-        reconnection_delay=1.0,
-        reconnection_function=lambda x: x,
-        event_loop=asyncio.get_event_loop()
-    )
-
-    assert (await conn('til 20')).py() == list(range(20))
-    proc.kill()
-    time.sleep(2)
-
-    with pytest.raises(BaseException):
-        await conn('til 5')
-    captured = capsys.readouterr()
-    assert 'trying again in 0.5 seconds' not in captured.err
-    assert 'trying again in 1.0 seconds' in captured.err
-    assert 'trying again in 2.0 seconds' not in captured.err
-
-
-@pytest.mark.asyncio
-@pytest.mark.unlicensed
-@pytest.mark.skipif(
-    system() == 'Windows',
-    reason='Subprocess requiring tests not currently operating on Windows consistently'
-)
 async def test_AsyncQConnection_reconnect_with_event_loop(kx, event_loop, capsys):
     q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
 
@@ -1237,3 +1211,57 @@ async def test_AsyncQConnection_reconnect_with_event_loop(kx, event_loop, capsys
     assert 'trying again in 0.5 seconds' not in captured.err
     assert 'trying again in 1.0 seconds' in captured.err
     assert 'trying again in 2.0 seconds' not in captured.err
+
+
+@pytest.mark.asyncio
+@pytest.mark.unlicensed
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='Subprocess requiring tests not currently operating on Windows consistently'
+)
+async def test_AsyncQConnection_proper_QFuture_hanlding(kx):
+    q_exe_path = subprocess.run(['which', 'q'], stdout=subprocess.PIPE).stdout.decode().strip()
+
+    q = [15100 + i for i in range(4)]
+    with kx.PyKXReimport():
+        procs = [subprocess.Popen(
+            [q_exe_path, '-p', str(qp)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT
+        ) for qp in q]
+    time.sleep(2)
+
+    async def async_query(port, qry):
+        async with await kx.AsyncQConnection(port=port) as q:
+            return await q(qry)
+    qrys = [
+        '{s:.z.p;system"sleep 2";(s;.z.p); til 10}[]',
+        '{s:.z.p;system"sleep 5";(s;.z.p); til 20}[]',
+        '{s:.z.p;system"sleep 1";(s;.z.p); til 5}[]',
+        '{s:.z.p;system"sleep 3";(s;.z.p); til 7}[]',
+    ]
+    start = time.time()
+    await asyncio.gather(*[asyncio.create_task(async_query(q[i], qrys[i])) for i in range(4)])
+    end = time.time()
+    assert end - start < 6.0
+    [p.kill() for p in procs]
+    time.sleep(2)
+
+
+@pytest.mark.asyncio
+@pytest.mark.unlicensed
+async def test_async_reponse(kx, q_port):
+    async with await kx.AsyncQConnection(port=q_port) as q:
+        future1 = q(
+            '{t: .z.p;while[.z.p < t+00:00:02; neg[.z.w]99]}[]',
+            wait=False,
+            reuse=False,
+            async_response=True
+        )
+        future2 = await future1
+        result = (await future2).py()
+        assert result == 99
+        with pytest.warns(UserWarning, match='Cannot use async_response=True without wait=False.'):
+            q('{t: .z.p;while[.z.p < t+00:00:02; neg[.z.w]99]}[]', reuse=False, async_response=True)
+        with pytest.warns(UserWarning, match='Cannot use async_response=True without reuse=False.'):
+            q('{t: .z.p;while[.z.p < t+00:00:02; neg[.z.w]99]}[]', wait=False, async_response=True)

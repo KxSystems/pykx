@@ -122,6 +122,24 @@ class Test_K:
         q('![`c;();0b;enlist`a]')
         assert q('-16!a') == kx._wrappers.k_r(q('a'))== 1
 
+    def test_copy(self, kx):
+        vec = kx.q.til(10)
+        as_vec = vec
+        cp_vec = vec.copy()
+        vec[3] = 20
+        assert as_vec[3] == 20
+        assert cp_vec[3] != 20
+        assert vec._addr == as_vec._addr
+        assert vec._addr != cp_vec._addr
+        assert (cp_vec == kx.q.til(10)).all()
+
+        tab = kx.q('([]100?1f;100?1f)')
+        as_tab = tab
+        cp_tab = tab.copy()
+        tab.select(where=kx.Column('x') > 0.5, inplace=True)
+        assert len(tab) == len(as_tab)
+        assert len(tab) != len(cp_tab)
+
     def test_repr(self, q, kx):
         q.system.console_size = [25, 80]
         pykx = kx # noqa: F401
@@ -161,8 +179,11 @@ class Test_K:
         assert str(q('enlist(::)')) == '::'
         assert str(q('til 4')) == '0 1 2 3'
         assert str(q('enlist each til 4')).replace('\r\n', '\n') == '0\n1\n2\n3'
+        assert str(q('\"\"')) == ''
+        assert str(q('`')) == ''
         assert str(q('::')) == '::'
-        assert str(q('()')) == ''
+        assert str(q('()')) == '()'
+        assert str(q('()!()')) == '()!()'
 
     @pytest.mark.unlicensed(unlicensed_only=True)
     @pytest.mark.skipif(
@@ -928,6 +949,18 @@ class Test_Atom:
         assert isinstance(q('0x7b'), kx.IntegralNumericAtom)
         assert isinstance(q('1b  '), kx.IntegralNumericAtom)
 
+    def test_numeric_inf(self, kx):
+        assert kx.ShortAtom(math.inf) == kx.q('0Wh')
+        assert kx.ShortAtom(-math.inf) == kx.q('-0Wh')
+        assert kx.IntAtom(math.inf) == kx.q('0Wi')
+        assert kx.IntAtom(-math.inf) == kx.q('-0Wi')
+        assert kx.LongAtom(math.inf) == kx.q('0W')
+        assert kx.LongAtom(-math.inf) == kx.q('-0W')
+        assert kx.RealAtom(math.inf) == kx.q('0we')
+        assert kx.RealAtom(-math.inf) == kx.q('-0we')
+        assert kx.FloatAtom(math.inf) == kx.q('0w')
+        assert kx.FloatAtom(-math.inf) == kx.q('-0w')
+
     @pytest.mark.nep49
     def test_pd(self, q, pd):
         assert q('0b').pd() is False
@@ -1272,6 +1305,24 @@ class Test_TemporalAtom:
         assert time.py() == timedelta(seconds=59789, microseconds=214000)
         assert time.np(raw=True) == 59789214
         assert time.py(raw=True) == 59789214
+
+    @pytest.mark.nep49
+    def test_timestamp_from_datetime(self, kx, q):
+        time = np.datetime64('2025-01-27T14:34:21')
+        assert isinstance(kx.TimestampAtom(time), kx.TimestampAtom)
+        assert kx.TimestampAtom(time) == kx.TimestampAtom(kx.q('2025.01.27D14:34:21'))
+
+        time_ns_precise = np.datetime64('2025-01-27T14:36:08.987654321', 'ns')
+        assert isinstance(kx.TimestampAtom(time_ns_precise), kx.TimestampAtom)
+        assert kx.TimestampAtom(time_ns_precise) == kx.TimestampAtom(kx.q('2025.01.27D14:36:08.987654321')) # noqa: E501
+
+        time_epoch = np.datetime64(0, 's')
+        assert isinstance(kx.TimestampAtom(time_epoch), kx.TimestampAtom)
+        assert kx.TimestampAtom(time_epoch) == kx.TimestampAtom(kx.q('1970.01.01D00:00:00'))
+
+        time_last = np.datetime64('2262-04-11T23:47:16.854775', 'ns')
+        assert isinstance(kx.TimestampAtom(time_last), kx.TimestampAtom)
+        assert kx.TimestampAtom(time_last) == kx.TimestampAtom(kx.q('2262.04.11D23:47:16.854775')) # noqa: E501
 
 
 class Test_SymbolAtom:
@@ -1660,6 +1711,56 @@ class Test_Vector:
             r = conn('([] t:2#0Np)').py()
             assert pd.isna(r['t'][0])
 
+    def test_vector_replace(self, kx, q):
+        v = q('1 2 3 4 4 3 2 1')
+        assert (v.replace(4, 10).count(10) == 2)
+        assert type(v.replace(4, 10)) == type(v)
+        assert all(v.replace(0, 101) == v)
+        assert ("List" in str(type(v.replace(1, 'a'))))
+
+        v2 = q('1 1 1')
+        assert ("Float" in str(type(v2.replace(1, 2.3))))
+
+        v3 = q('()')
+        assert v3.replace(1, 101) == v3
+
+    @pytest.mark.isolate
+    def test_torch(self):
+        import os
+        os.environ['PYKX_BETA_FEATURES'] = 'True'
+        import pykx as kx
+        q = kx.q
+        import torch
+        lvec = q.til(10)
+        llst = q('5 5#25?10')
+        for i in [lvec, llst]:
+            assert isinstance(i.pt(), torch.Tensor)
+            assert i.pt().dtype == torch.int64
+
+        fvec = q('10?1f')
+        flst = q('5 5#25?1f')
+        for i in [fvec, flst]:
+            assert isinstance(i.pt(), torch.Tensor)
+            assert i.pt().dtype == torch.float64
+
+        for i in [llst, flst]:
+            assert (i.pt() == i.pt(reshape=[5, 5])).all()
+
+        with pytest.raises(TypeError) as err:
+            q('(1 2;2 3f)').pt()
+        assert 'Data must be a singular type "rectangular" matrix' in str(err.value)
+
+        with pytest.raises(AttributeError) as err:
+            q('"abc"').pt()
+        assert "'CharVector' object has no attribute 'pt'" in str(err.value)
+
+    @pytest.mark.isolate
+    def test_torch_beta(self):
+        import pykx as kx
+        with pytest.raises(kx.QError) as err:
+            kx.q.til(10).pt()
+        assert 'Attempting to use a beta feature "PyTorch Con' in str(err.value)
+
 
 class Test_List:
     v = '(0b;"G"$"00000000-0000-0000-0000-000000000001";0x02;3h;4i;5j;6e;7f)'
@@ -1784,6 +1885,44 @@ class Test_List:
             assert isinstance(qnest, kx.List)
             assert isinstance(q('{x[;3]}', qnest), kx.FloatVector)
             assert q('{x[;3]~"z"$y[;3]}', nestarr, qnest)
+
+    def test_list_replace(self, kx, q):
+        list1 = kx.q('("a";3;1.3;`b)')
+        assert (list1.replace(3, "junk").count("junk") == 1)
+        list2 = list1.replace(1.3, (1, 2, 3))
+        assert all(list2[2] == kx.q('1 2 3'))
+
+        list2 = kx.List(('a', 3, 'c'))
+        assert "SymbolVector" in str(type(list2.replace(3, 'b')))
+
+        vector_list = kx.q('(1 2 3;`a`b`c)')
+        assert vector_list.replace((1, 2, 3), "junk")[0] == "junk"
+        assert all(vector_list.replace(('a', 'b', 'c'), (1.1, 2.2, 3.3))[1] == (1.1, 2.2, 3.3))
+
+    def test_reshape(self, kx, q):
+        list1 = kx.q('5 4#20?1f')
+        assert list1.np().shape == (5,)
+        assert list1.np().dtype == np.dtype('O')
+        assert list1.np(reshape=True).shape == (5, 4)
+        assert list1.np(reshape=True).dtype == np.dtype('float64')
+        assert list1.np(reshape=[4, 5]).shape == (4, 5)
+        assert (list1.np(reshape=True) == list1.np(reshape=[5, 4])).all()
+
+        list2 = kx.q('5 4#20?10')
+        assert list2.np().shape == (5,)
+        assert list2.np().dtype == np.dtype('O')
+        assert list2.np(reshape=True).shape == (5, 4)
+        assert list2.np(reshape=True).dtype == np.dtype('int64')
+        assert list2.np(reshape=[4, 5]).shape == (4, 5)
+        assert (list2.np(reshape=True) == list2.np(reshape=[5, 4])).all()
+
+        with pytest.raises(TypeError) as err:
+            q('(1 2;2 3f)').np(reshape=True)
+        assert 'Data must be a singular type "rectangular" matrix' in str(err.value)
+
+        with pytest.raises(TypeError) as err:
+            q('(1 2;2)').np(reshape=True)
+        assert 'Data must be a singular type "rectangular" matrix' in str(err.value)
 
 
 # NaN is tricky to compare, so we generate GUID vectors until we get one whose complex form has no
@@ -3766,6 +3905,35 @@ class Test_Function:
             assert not conn('testAlias')
             f3()
             assert conn('testAlias')
+
+    def test_lambda_from_string(self, kx):
+        assert isinstance(kx.Lambda('{1+1}'), kx.Lambda)
+        with pytest.raises(TypeError) as e:
+            kx.Lambda('1+1')
+            assert "not in correct lambda form" in str(e)
+
+    def test_lambda_properties(self, kx):
+        saved_console_value = kx.q.system.console_size.py()
+        kx.q.system.console_size = [2000, 2000]
+        test_lambda = kx.q('''{a:1+1;
+                 a:a+2.0000000000000000000000000000000000000000000000000000000000000000000;
+                 a:a+2.0000000000000000000000000000000000000000000000000000000000000000000;
+                 a:a+2;
+                 a:a+2;
+                 a:a+2;
+                 a:a+2;
+                 a:a+2;
+                 a:a+2;
+                 a:a+2;
+                 a:a+2;}''')
+        prev_str_len = len(str(test_lambda))
+        prev_property_len = len(test_lambda.string)
+        kx.q.system.console_size = [5, 5]
+        assert len(str(test_lambda)) != prev_str_len
+        assert len(test_lambda.string) == prev_property_len
+        kx.q.system.console_size = saved_console_value
+
+        assert all(test_lambda.value[-1] == test_lambda.string)
 
 
 def test_nulls(kx, q, pa):

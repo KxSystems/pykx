@@ -249,3 +249,5 @@ multiColSplay/**
 singleColSplay/**
 sym
 symsEnumsSplay/**
+
+src/pykx/pykx_init.q_

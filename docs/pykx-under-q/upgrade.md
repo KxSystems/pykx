@@ -148,7 +148,8 @@ q)pyfunc `a
 x1| 0.5592623
 x2| 0.486176
 ```
+
 ## Next steps
 
-- Learn[How to use PyKX within q](../pykx-under-q/intro.md).
+- Learn [how to use PyKX within q](../pykx-under-q/intro.md).
 - Use the [pykx.q Library Reference Card](../pykx-under-q/api.md).

@@ -262,13 +262,43 @@ if __name__ == '__main__':
                     numpy=False,
                     cython=False,
                     libraries=['dl', *windows_libraries]))
-    with cd(src_dir/'lib'):
+
+    with cd(src_dir/'q.so'/'qk'):
         [
-            shutil.copy(f, f'4-1-libs/{f}')
+            shutil.copy(f, f'../../lib/4-1-libs/{f}')
             for f in
-            [str(f) for f in os.listdir() if os.path.isfile(f) and str(f) != 'q.k']
+            [str(f) for f in os.listdir() if os.path.isfile(f) and (str(f) != 'q.k') and ('pykx_init' not in str(f))] # noqa: E501
         ]
+
+        [
+            shutil.copy(f, f'../../lib/{f}')
+            for f in
+            [str(f) for f in os.listdir() if os.path.isfile(f) and (str(f) != 'q.k') and ('pykx_init' not in str(f))] # noqa: E501
+        ]
+
+        [
+            shutil.copy('pykx_init.q_', '../../' + p + 'pykx_init.q_')
+            for p in
+            ['', 'lib/', 'lib/4-1-libs/']
+        ]
+
     for p in ('l64', 'l64arm', 'm64', 'm64arm', 'w64'):
+        with cd(src_dir/'q.so'/'libs'/'4-1'/p):
+            [
+                shutil.copy(f, f'../../../../lib/4-1-libs/{p}/{f}')
+                for f in
+                [str(f) for f in os.listdir()
+                 if str(f) != 'symbols.txt' and not os.path.exists(f'../../../../4-1-libs/{p}/{f}')]
+            ]
+
+        with cd(src_dir/'q.so'/'libs'/'4-0'/p):
+            [
+                shutil.copy(f, f'../../../../lib/{p}/{f}')
+                for f in
+                [str(f) for f in os.listdir()
+                 if str(f) != 'symbols.txt' and not os.path.exists(f'../../../../../{p}/{f}')]
+            ]
+
         with cd(src_dir/'lib'/p):
             [
                 shutil.copy(f, f'../4-1-libs/{p}/{f}')
@@ -276,6 +306,18 @@ if __name__ == '__main__':
                 [str(f) for f in os.listdir()
                  if str(f) != 'symbols.txt' and not os.path.exists(f'../4-1-libs/{p}/{f}')]
             ]
+
+        with cd(src_dir/'lib'):
+            [
+                shutil.copy(f, f'4-1-libs/{f}')
+                for f in
+                [str(f) for f in os.listdir() if os.path.isfile(f) and (str(f) != 'q.k')]
+            ]
+
+        with cd(src_dir):
+            shutil.copy('pykx.q', 'lib')
+            shutil.copy('pykx.q', 'lib/4-1-libs')
+
     setup(
         name=pyproject['name'],
         description=pyproject['description'],

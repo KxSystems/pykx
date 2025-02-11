@@ -40,3 +40,10 @@ init:{[config]
   .u.x:rdb_config`tickerplant`hdb;
   .u.rep[rdb_config`database] . hopen[`$":",.u.x 0]("{(.u.sub[;`]each x;`.u `i`L)}";.tick.subscriptions)
   }
+
+tabs:()
+
+set_tables:{[tabname;schema]
+  tabs,:enlist[tabname];
+  tabname set schema
+  }

@@ -26,7 +26,7 @@ There are five ways to create PyKX objects:
 
 ### 1.a Convert Python objects to PyKX objects
 
-The simplest way to create a PyKX object is by converting a similar Python type into a PyKX object. You can do this with the `#!python pykx.toq function`, which supports conversions from Python, NumPy, pandas, and PyArrow types to PyKX objects. Open the tabs that interest you to see conversion examples:
+The simplest way to create a PyKX object is by converting a similar Python type into a PyKX object. You can do this with the `#!python pykx.toq function`, which supports conversions from Python, NumPy, Pandas, PyArrow, and PyTorch (Beta) types to PyKX objects. Open the tabs that interest you to see conversion examples:
 
 ??? Note "Specify target types"
 
@@ -167,6 +167,29 @@ The simplest way to create a PyKX object is by converting a similar Python type 
 	-----------------------
 	n_legs  "kx.LongAtom"  
 	animals "kx.CharVector"
+	'))
+	```
+
+=== "PyTorch (Beta)"
+
+	When converting data from PyTorch types to PyKX support is only provided for `#!python torch.Tensor` object conversions to PyKX at this time and requires setting of the configuration `PYKX_BETA_FEATURES=True` as shown below
+
+	```python
+	>>> import os
+	>>> os.environ['PYKX_BETA_FEATURES'] = 'True'
+	>>> import pykx as kx
+	>>> import torch
+	>>> pt = torch.Tensor([1, 2, 3])
+	tensor([1., 2., 3.])
+	>>> ptl = torch.Tensor([[1, 2, 3], [4, 5, 6]])
+	tensor([[1., 2., 3.],
+	        [4., 5., 6.]])
+	>>> kx.toq(pt)
+	pykx.RealVector(pykx.q('1 2 3e'))
+	>>> kx.toq(ptl)
+	pykx.List(pykx.q('
+	1 2 3
+	4 5 6
 	'))
 	```
 
@@ -319,20 +342,23 @@ a 0.02810674 0.481821
 
 Converting data to a PyKX format allows for easy interaction with these objects using q or the analytic functionality provided by PyKX. However, this format may not be suitable for all use cases. For instance, if a function requires a Pandas DataFrame as input, a PyKX object must be converted to a Pandas DataFrame.
 
-Once the data is ready for use in Python, it may be more appropriate to convert it into a representation using Python, NumPy, Pandas, or PyArrow by using the following methods:
+Once the data is ready for use in Python, it may be more appropriate to convert it into a representation using Python, NumPy, Pandas, PyArrow, or PyTorch (Beta) by using the following methods:
 
-| **Method** | **Description**                |
-|----------|----------------------------------|
-| `*.py()` | Convert a PyKX object to Python  |
-| `*.np()` | Convert a PyKX object to Numpy   |
-| `*.pd()` | Convert a PyKX object to Pandas  |
-| `*.pa()` | Convert a PyKX object to PyArrow |
+| **Method**      | **Description**                  |
+|-----------------|----------------------------------|
+| `*.py()`        | Convert a PyKX object to Python  |
+| `*.np()`        | Convert a PyKX object to Numpy   |
+| `*.pd()`        | Convert a PyKX object to Pandas  |
+| `*.pa()`        | Convert a PyKX object to PyArrow |
+| `*.pt()` (Beta) | Convert a PyKX object to PyTorch |
     
 ??? example "Example"
 
 	```python
-	import pykx as kx
-	qarr = kx.q('til 5')
+	>>> import os
+	>>> os.environ['PYKX_BETA_FEATURES'] = 'True'
+	>>> import pykx as kx
+	>>> qarr = kx.q('til 5')
 	>>> qarr.py()
 	[0, 1, 2, 3, 4]
 	>>> qarr.np()
@@ -353,6 +379,8 @@ Once the data is ready for use in Python, it may be more appropriate to convert 
 	3,
 	4
 	]
+	>>> qarr.pt()
+	tensor([0, 1, 2, 3, 4])
 	>>>
 	>>> qtab = kx.Table(data={
 	...     'x': kx.random.random(5, 1.0),

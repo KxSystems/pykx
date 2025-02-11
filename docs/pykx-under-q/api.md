@@ -65,6 +65,7 @@ q)\l pykx.q
 [pyeval                            evaluate a string as Python code returning a foreign object](#pykxpyeval)
 [qeval                             evaluate a string as Python code returning a q object](#pykxqeval)
 [pyexec                            execute a string as Python code in Python memory](#pykxpyexec)
+[typepy                            determine the target Python datatype of an object passed returning as a string](#pykxtypepy)
 
 **Python Library Integration:**
 [import                            import a Python library and store as a wrapped foreign object](#pykximport)
@@ -446,6 +447,17 @@ q)show b:a`.
 foreign
 q).pykx.toq b
 2
+
+// Convert a PyKX conversion object back to q
+q).pykx.toq .pykx.topd ([]5?1f;5?`a`b`c)
+
+x         x1
+------------
+0.3017723 a 
+0.785033  a 
+0.5347096 c 
+0.7111716 b 
+0.411597  c
 ```
 
 ## `.pykx.pycallable`
@@ -711,12 +723,6 @@ q).pykx.safeReimport {system"q child.q"}
 "Hello World"                 
 ```
 
-**Parameter:**
-
-|Name|Type|Description|
-|---|---|---|
-|x|||
-
 ## `.pykx.set`
 
 
@@ -917,12 +923,12 @@ q).pykx.todefault til 10
 enlist[`..numpy;;][0 1 2 3 4 5 6 7 8 9]
 
 // Pass a q list to Python treating the Python object as PyKX default
-q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault (til 10;til 10)
-<class 'list'>
+q).pykx.typepy .pykx.todefault (til 10;til 10)
+"<class 'list'>"
 
 // Pass a q Table to Python by default treating the Python table as a Pandas DataFrame
-q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.todefault ([]til 10;til 10)
-<class 'pandas.core.frame.DataFrame'>
+q).pykx.typepy .pykx.todefault ([]til 10;til 10)
+"<class 'pandas.core.frame.DataFrame'>"
 ```
 
 ## `.pykx.tok`
@@ -952,12 +958,12 @@ q).pykx.tok til 10
 enlist[`..k;;][0 1 2 3 4 5 6 7 8 9]
 
 // Pass a q object to Python with default conversions and return type
-q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-<class 'numpy.ndarray'>
+q).pykx.typepy til 10
+"<class 'numpy.ndarray'>"
 
 // Pass a q object to Python treating the Python object as a PyKX object
-q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.tok til 10
-<class 'pykx.wrappers.LongVector'>
+q).pykx.typepy .pykx.tok til 10
+"<class 'pykx.wrappers.LongVector'>"
 ```
 
 ## `.pykx.tonp`
@@ -990,12 +996,12 @@ enlist[`..numpy;;][0 1 2 3 4 5 6 7 8 9]
 q).pykx.util.defaultConv:"py"
 
 // Pass a q object to Python with default conversions and return type
-q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-<class 'list'>
+q).pykx.typepy til 10
+"<class 'list'>"
 
 // Pass a q object to Python treating the Python object as a Numpy Object
-q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.tonp til 10
-<class 'numpy.ndarray'>
+q).pykx.typepy .pykx.tonp til 10
+"<class 'numpy.ndarray'>"
 ```
 
 ## `.pykx.topa`
@@ -1025,12 +1031,12 @@ q).pykx.topa til 10
 enlist[`..pyarrow;;][0 1 2 3 4 5 6 7 8 9]
 
 // Pass a q object to Python with default conversions and return type
-q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-<class 'numpy.ndarray'>
+q).pykx.typepy til 10
+"<class 'numpy.ndarray'>"
 
 // Pass a q object to Python treating the Python object as a PyArrow Object
-q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.topa til 10
-<class 'pyarrow.lib.Int64Array'>
+q).pykx.typepy .pykx.topa til 10
+"<class 'pyarrow.lib.Int64Array'>"
 ```
 
 ## `.pykx.topd`
@@ -1061,12 +1067,50 @@ enlist[`..pandas;;][0 1 2 3 4 5 6 7 8 9]
 
 
 // Pass a q object to Python with default conversions and return type
-q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-<class 'numpy.ndarray'>
+q).pykx.typepy til 10
+"<class 'numpy.ndarray'>"
 
 // Pass a q object to Python treating the Python object as a Pandas Object
-q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.topd til 10
-<class 'pandas.core.series.Series'>
+q).pykx.typepy .pykx.topd til 10
+"<class 'pandas.core.series.Series'>"
+```
+
+## `.pykx.topt`
+
+
+_Tag a q object to be indicate conversion to a PyTorch object when called in Python (BETA)_
+
+```q
+.pykx.topt[qObject]
+```
+
+**Parameters:**
+
+name      | type    | description |
+----------|---------|-------------|
+`qObject` | `any`   | A q object which is to be defined as a PyTorch object in Python. |
+
+**Return:**
+
+type         | description
+-------------|------------
+`projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a Torch type object. |
+
+```q
+// Denote that a q object once passed to Python should be managed as a Numpy object
+q).pykx.topt til 10
+enlist[`..torch;;][0 1 2 3 4 5 6 7 8 9]
+
+// Update the default conversion type to be non numpy
+q).pykx.setdefault"pt"
+
+// Pass a q object to Python with default conversions and return type
+q).pykx.typepy til 10
+"<class 'torch.Tensor'>"
+
+// Pass a q object to Python treating the Python object as a Numpy Object
+q).pykx.typepy .pykx.tonp til 10
+"<class 'numpy.ndarray'>"
 ```
 
 ## `.pykx.topy`
@@ -1096,12 +1140,12 @@ q).pykx.topy til 10
 enlist[`..python;;][0 1 2 3 4 5 6 7 8 9]
 
 // Pass a q object to Python with default conversions and return type
-q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-<class 'numpy.ndarray'>
+q).pykx.typepy til 10
+"<class 'numpy.ndarray'>"
 
 // Pass a q object to Python treating the Python object as a Python Object
-q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.topy til 10
-<class 'list'>
+q).pykx.typepy .pykx.topy til 10
+"<class 'list'>"
 ```
 
 ## `.pykx.toq0`
@@ -1175,12 +1219,47 @@ q).pykx.toraw til 10
 enlist[`..raw;;][0 1 2 3 4 5 6 7 8 9]
 
 // Pass a q object to Python with default conversions and return type
-q).pykx.print .pykx.eval["lambda x: type(x)"]til 10
-<class 'numpy.ndarray'>
+q).pykx.typepy til 10
+"<class 'numpy.ndarray'>"
 
 // Pass a q object to Python treating the Python object as a raw Object
-q).pykx.print .pykx.eval["lambda x: type(x)"] .pykx.toraw til 10
-<class 'list'>
+q).pykx.typepy .pykx.toraw til 10
+"<class 'list'>"
+```
+
+## `.pykx.typepy`
+
+
+_Determine the datatype of an object passed to Python and return it as a string_
+
+```q
+.pykx.typepy[object]
+```
+
+**Parameters:**
+
+name       | type     | description
+-----------|----------|-------------
+`object`  | `any`    | An object that is passed to python and its datatype determined.
+
+**Returns:**
+
+type     | description
+---------|------------
+`string` | The string representation of an objects datatype after being passed to python 
+
+**Example:**
+
+```q
+q)\l pykx.q
+q).pykx.typepy 1
+"<class 'numpy.int64'>"
+
+q).pykx.typepy (10?1f;10?1f)
+"<class 'list'>"
+
+q).pykx.typepy ([]100?1f;100?1f)
+"<class 'pandas.core.frame.DataFrame'>"
 ```
 
 ## `.pykx.unwrap`
@@ -1534,15 +1613,6 @@ q).pykx.dash.runFunction["import numpy as np\n\ndef func(x):\n\treturn np.linspa
 0 2.5 5 7.5 10
 ```
 
-**Parameters:**
-
-|Name|Type|Description|
-|---|---|---|
-|pyCode|||
-|args|||
-
-
-
 ## `.pykx.dash.util.getFunction`
 
 
@@ -1569,9 +1639,3 @@ type          | description |
 q).pykx.dash.util.getFunction["def func(x):\n\treturn 1"]
 {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 ```
-
-**Parameter:**
-
-|Name|Type|Description|
-|---|---|---|
-|pyCode|||

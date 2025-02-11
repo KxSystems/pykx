@@ -104,17 +104,21 @@ from . import wrappers as k
 from ._pyarrow import pyarrow as pa
 from .cast import *
 from . import config
-from .config import find_core_lib, k_allocator, licensed, pandas_2, system
+from .config import beta_features, find_core_lib, k_allocator, licensed, pandas_2, system
 from .constants import NULL_INT16, NULL_INT32, NULL_INT64
 from .constants import INF_INT16, INF_INT32, INF_INT64, INF_NEG_INT16, INF_NEG_INT32, INF_NEG_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
 from .util import df_from_arrays, slice_to_range
+
+import importlib.util
+_torch_unavailable = importlib.util.find_spec('torch') is None
 
 
 __all__ = [
     'from_arrow',
     'from_bytes',
     'from_callable',
+    'from_datetime',
     'from_datetime_date',
     'from_datetime_time',
     'from_datetime_datetime',
@@ -185,7 +189,7 @@ np_float32_types = (
 
 # 64-bits floating-point types to convert to q Float
 np_float64_types = (
-    np.double, np.longdouble, np.float64, np.float_
+    np.double, np.longdouble, np.float64
 )
 
 np_float_types = np_float32_types + np_float64_types
@@ -1821,7 +1825,7 @@ def from_pandas_categorical(x: pd.Categorical,
                      x.categories)
         ENUMS.append(name)
     else:
-        res = q(f"{{if[any not y in {name}; `cast]; `{name}$y@x}}",
+        res = q(f"{{if[any not y in {name}; `cast]; `{name}?y@x}}",
                 x.codes.astype('int32'),
                 x.categories)
     return res
@@ -2097,7 +2101,6 @@ def from_datetime_datetime(x: Any,
         raise TypeError("Cast must be of type Boolean")
     if (cast is None or cast) and type(x) is not datetime.datetime:
         x = cast_to_python_datetime(x)
-
     cdef core.K kx
     epoch = datetime.datetime(2000, 1, 1)
     if ktype is None or ktype is k.TimestampAtom:
@@ -2299,6 +2302,37 @@ def from_numpy_timedelta64(x: np.timedelta64,
         raise _conversion_TypeError(x, repr('numpy.timedelta64'), ktype)
     return factory(<uintptr_t>kx, False)
 
+
+def from_datetime(x: Any,
+                  ktype: Optional[KType] = None,
+                  *,
+                  cast: bool = False,
+                  handle_nulls: bool = False,
+                  strings_as_char: bool = False,
+) -> k.TemporalFixedAtom:
+    """Helper function to handle `np.datetime64` by calling the correct conversion functions.
+
+    Parameters:
+        x: The object that will be converted into an instance of a `pykx.TemporalFixedAtom`.
+        ktype: Desired `pykx.K` subclass (or type number) for the returned value. If `None`, the
+            type is inferred from `x`. 
+        cast: Unused.
+        handle_nulls: Unused.
+
+    Returns:
+        An instance of a subclass of `pykx.TemporalStampAtom`.
+    """
+
+    if isinstance(x, np.datetime64):
+        return from_numpy_datetime64(x,
+                                     ktype=ktype,
+                                     cast=cast,
+                                     handle_nulls=handle_nulls)
+    else:
+        return from_datetime_datetime(x,
+                                      ktype=ktype,
+                                      cast=cast,
+                                      handle_nulls=handle_nulls)
 
 def from_slice(x: slice,
                ktype: Optional[KType] = None,
@@ -2622,6 +2656,21 @@ def from_callable(x: Callable,
     return q('{.pykx.wrap[x][<]}', k.Foreign(x))
 
 
+def from_torch_tensor(x: pt.Tensor,
+                  ktype: Optional[KType] = None,
+                  *,
+                  cast: bool = False,
+                  handle_nulls: bool = False,
+                  strings_as_char: bool = False,
+) -> k.List:
+    if not beta_features:
+        raise QError('Conversions to PyTorch objects only supported as a beta feature')
+    if _torch_unavailable:
+        raise QError('PyTorch not available, please install PyTorch')
+    import torch
+    return toq(x.numpy())
+
+
 cdef extern from 'include/foreign.h':
     uintptr_t py_to_pointer(object x)
     void py_destructor(core.K x)
@@ -2727,7 +2776,7 @@ _converter_from_ktype = {
     k.FloatAtom: from_float,
     k.CharAtom: _from_str_like,
     k.SymbolAtom: _from_str_like,
-    k.TimestampAtom: from_datetime_datetime,
+    k.TimestampAtom: from_datetime,
     k.MonthAtom: from_datetime_datetime,
     k.DateAtom: from_datetime_date,
 
@@ -2795,7 +2844,6 @@ _converter_from_python_type = {
     np.double: from_float,
     np.longdouble: from_float,
     np.float64: from_float,
-    np.float_: from_float,
 
     str: from_str,
     bytes: from_bytes,
@@ -2827,6 +2875,7 @@ _converter_from_python_type = {
     pd.core.indexes.multi.MultiIndex: from_pandas_index,
     pd.core.indexes.category.CategoricalIndex: from_pandas_index,
     pd.Categorical: from_pandas_categorical,
+
 }
 
 
@@ -2839,7 +2888,6 @@ _converter_from_python_type[pd._libs.tslibs.timedeltas.Timedelta] = from_pandas_
 class ToqModule(ModuleType):
     def __call__(self, x: Any, ktype: Optional[KType] = None, *, cast: bool = None, handle_nulls: bool = False, strings_as_char: bool = False) -> k.K:
         ktype = _resolve_k_type(ktype)
-
         check_ktype = False
         try:
             check_ktype = ktype is not None \
@@ -2871,7 +2919,6 @@ class ToqModule(ModuleType):
         else:
             if type(x) in _converter_from_python_type:
                 converter = _converter_from_python_type[type(x)]
-
             elif isinstance(x, Path):
                 converter = from_pathlib_path
             elif x is Ellipsis:
@@ -2901,6 +2948,8 @@ class ToqModule(ModuleType):
                 converter = from_bytes    
             elif isinstance(x, k.PandasUUIDArray):
                 converter = from_numpy_ndarray
+            elif "'torch.Tensor'" in str(type(x)):
+                converter = from_torch_tensor
             else:
                 converter = _default_converter
         if type(ktype)==dict:

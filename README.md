@@ -95,9 +95,9 @@ PyKX depends on the following third-party Python packages:
 
 - `pandas>=1.2, <2.0; python_version=='3.8'`
 - `pandas>=1.2, <=2.2.3; python_version>'3.8'`
-- `numpy~=1.22, <2.0; python_version<'3.11'`
-- `numpy~=1.23, <2.0; python_version=='3.11'`
-- `numpy~=1.26, <2.0; python_version=='3.12'`
+- `numpy~=1.22; python_version<'3.11'`
+- `numpy~=1.23; python_version=='3.11'`
+- `numpy~=1.26; python_version>'3.11'`
 - `pytz>=2022.1`
 - `toml~=0.10.2`
 - `dill>=0.2.0`
@@ -105,13 +105,15 @@ PyKX depends on the following third-party Python packages:
 
 They are installed automatically by `pip` when PyKX is installed.
 
-PyKX also has an optional Python dependency of `pyarrow>=3.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`
+PyKX also has an optional Python dependency of `pyarrow>=3.0.0, <19.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`
 
 When using PyKX with KX Dashboards users will be required to install `ast2json~=0.3` this can be installed using the `dashboards` extra, e.g. `pip install pykx[dashboards]`
 
 When using PyKX Streaming users may require the ability to stop processes initialized in a now unavailable process to facilitate this PyKX can make use of `psutil` this can be installed using the `streaming` extra, e.g. `pip install pykx[streaming]`
 
 When using Streamlit users will be required to install `streamlit~=1.28` this can be installed using the `streamlit` extra, e.g. `pip install pykx[streamlit]`
+
+When attempting to convert data to/from PyTorch users will be required to install `torch>2.1` this can be installed using the `torch` extra, e.g. `pip install pykx[torch]`
 
 **Warning:** Trying to use the `pa` conversion methods of `pykx.K` objects or the `pykx.toq.from_arrow` method when PyArrow is not installed (or could not be imported without error) will raise a `pykx.PyArrowUnavailable` exception.
 

@@ -108,6 +108,10 @@ qhome = _get_qhome()
 
 # License search
 _qlic = _get_config_value('QLIC', '')
+if _qlic != '':
+    if not os.path.isdir(_qlic):
+        warn(f'Configuration value QLIC set to non directory value: {_qlic}')
+
 _pwd = os.getcwd()
 license_located = False
 lic_path = ''
@@ -151,6 +155,18 @@ def _check_qargs():
 
 
 qargs = _check_qargs()
+
+
+def _license_install_path(root, lic_type, qlic):
+    license = input('\nProvide the download location of your license '
+                    f'(for example, {root}{lic_type}) : ').strip()
+    download_location = os.path.expanduser(Path(license))
+
+    if not os.path.exists(download_location):
+        raise Exception(f'Download location provided {download_location} does not exist.')
+
+    shutil.copy(download_location, qlic)
+    print(f'\nPyKX license successfully installed to: {qlic / lic_type}\n')
 
 
 def _license_install_B64(license, license_type): # pragma: no cover
@@ -253,6 +269,8 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
     elif continue_license in ('y', 'Y', ''):
         existing_license = input('\nDo you have access to an existing license for PyKX '
                                  'that you would like to use? [N/y]: ')
+        if existing_license not in ('Y', 'y', 'N', 'n', ''):
+            raise Exception('Invalid input provided please try again')
         if existing_license in ('N', 'n', ''):
             commercial = input('\nIs the intended use of this software for:'
                                '\n    [1] Personal use (Default)'
@@ -296,16 +314,9 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
                 raise Exception('User provided option was not one of [1/2/3]')
 
             if install_type in ('1', ''):
-                license = input('\nProvide the download location of your license '
-                                f'(for example, {root}{lic_type}) : ').strip()
-                download_location = os.path.expanduser(Path(license))
 
-                if not os.path.exists(download_location):
-                    err_msg = f'Download location provided {download_location} does not exist.'
-                    raise Exception(err_msg)
+                _license_install_path(root, lic_type, qlic)
 
-                shutil.copy(download_location, qlic)
-                print(f'\nPyKX license successfully installed to: {qlic / lic_type}\n')
             elif install_type == '2':
 
                 license = input('\nProvide your activation key (base64 encoded string) '
@@ -319,15 +330,35 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
                 if return_value:
                     return False
         else:
-            license = input('\nProvide the location of your license '
-                            f'(for example, {root}<license>) : ').strip()
-            download_location = os.path.expanduser(Path(license))
+            commercial = input('\nPlease confirm the license type:\n'
+                               '    [1] Personal use (kc.lic)\n'
+                               '    [2] Commercial use (k4.lic)\n'
+                               'Enter your choice here [1/2]: ')
+            if commercial not in ('1', '2', ''):
+                raise Exception('User provided option was not one of [1/2]')
 
-            if not os.path.exists(download_location):
-                raise Exception(f'Download location provided {download_location} does not exist.')
+            personal = commercial in ('1', '')
+            lic_type = 'kc.lic' if personal else 'k4.lic'
 
-            shutil.copy(download_location, qlic)
-            print('\nPyKX license successfully installed to: {qlic / lic_type}\n') # noqa: E501
+            install_type = input(
+                '\nPlease select the method you wish to use to activate your license:\n'
+                '    [1] Provide the location of your license\n'
+                '    [2] Input the activation key\n'
+                'Enter your choice here [1/2]: ')
+
+            if install_type not in ('1', '2', ''):
+                raise Exception('User provided option was not one of [1/2]')
+            if install_type in ('1', ''):
+
+                _license_install_path(root, lic_type, qlic)
+
+            else:
+
+                license = input('\nProvide your activation key (base64 encoded string) : ').strip()
+
+                _license_install_B64(license, lic_type)
+
+                print(f'\nPyKX license successfully installed to: {qlic / lic_type}\n')  # noqa: E501
     else:
         raise Exception('Invalid input provided please try again')
     if return_value:

@@ -1,8 +1,13 @@
+---
+title: PyKX Beta Features
+description: PyKX features in beta status
+date: January 2025
+author: KX Systems, Inc.,
+tags: PyKX, beta features, 
+---
 # Beta Features
 
-!!! "Note"
-
-	There are currently no active features in beta status, the following page outlines broadly the concept of beta features within PyKX and how it is managed today
+_This page provides an overview of PyKX Beta Features, including what they are, how to enable them, and what features are available._
 
 ## What is a Beta Feature?
 
@@ -12,14 +17,14 @@ Feedback on Beta Feature development is incredibly helpful and helps to determin
 
 ## How do I enable Beta Features?
 
-Within PyKX beta features are enabled through the use of a configuration/environment variable `PYKX_BETA_FEATURES`, within a Python session users can set this prior to importing PyKX as shown below, note that when enabled you will be able to see what features are in beta through access of `kx.beta_features`:
+Enable PyKX beta features using the `#!python PYKX_BETA_FEATURES` configuration/environment variable. Set this before importing PyKX in a Python session, as shown below, to view available beta features through `#!python kx.beta_features`:
 
 ```python
 >>> import os
 >>> os.environ['PYKX_BETA_FEATURES'] = 'True'
 >>> import pykx as kx
 >>> kx.beta_features
-[]
+['PyTorch Conversions']
 ```
 
 Alternatively you can set beta features to be available at all times by adding `PYKX_BETA_FEATURES` to your `.pykx-config` file as outlined [here](../user-guide/configuration.md#configuration-file). An example of a configuration making use of this is as follows:
@@ -34,12 +39,12 @@ PYKX_BETA_FEATURES='true'
 
 ## What Beta Features are available?
 
-As mentioned above the list of available features to a user is contained within the `beta_features` property, for users with these features available you can get access to this information as follows within a Python session
+As mentioned above, the `beta_features` property contains the list of available features. You can retrieve this information in a Python session as follows:
 
 ```python
 >>> import pykx as kx
 >>> kx.beta_features
-[]
+['PyTorch Conversions']
 ```
 
-There are currently no active features in beta status. This page will be updated when new beta features are added at a future point in time.
+1. [`PyTorch Conversions`](torch.md): Allow users to convert numeric type PyKX vectors and N-Dimensional lists to PyTorch Tensor objects.

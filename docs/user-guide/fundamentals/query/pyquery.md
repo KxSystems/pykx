@@ -199,6 +199,17 @@ The `columns` keyword provides the ability to access columnar data by name or ap
         AAPL 2022.01.02 140.0383 54   280.0766
         ..
         '))
+	>>> trades.update(columns=kx.Column('price', name='dpx') * 2)
+	pykx.Table(pykx.q('
+	sym  date       price    size dpx
+	--------------------------------------
+	AAPL 2022.01.01 145.6259 19   291.2518
+	MSFT 2022.01.02 533.9187 92   1067.837
+	MSFT 2022.01.02 17.17696 7    34.35393
+	GOOG 2022.01.03 916.1286 60   1832.257
+	AAPL 2022.01.02 140.0383 54   280.0766
+	..
+	'))
 	```
 
 - Multiple columns can be modified, retrieved or aggregations applied by using queries can be returned and have aggregations/operation performed on them.
@@ -263,12 +274,18 @@ The `columns` keyword provides the ability to access columnar data by name or ap
 	'))
 	```
 
-- Columns can be named by using the `name` method on you column objects
+- Columns can be named/renamed by using the `name` method or keyword.
 
 === "select"
 
 	```python
 	>>> trades.select(columns=kx.Column('price').max().name('maxPrice'))
+	pykx.Table(pykx.q('
+	maxPrice
+	--------
+	989.3873
+	'))
+	>>> trades.select(columns=kx.Column('price', name='maxPrice').max())
 	pykx.Table(pykx.q('
 	maxPrice
 	--------
@@ -285,6 +302,12 @@ The `columns` keyword provides the ability to access columnar data by name or ap
 	multiPrice| 291.2518 1067.837 34.35..
 	symName   | AAPL     MSFT     MSFT ..
 	'))
+        >>> trades.exec(columns=(2 * kx.Column('price', name='multiPrice') &
+        ...                     kx.Column('sym', name='symName'))
+        pykx.Dictionary(pykx.q('
+        multiPrice| 291.2518 1067.837 34.35..
+        symName   | AAPL     MSFT     MSFT ..
+        '))
 	```
 
 === "update"
@@ -303,18 +326,44 @@ The `columns` keyword provides the ability to access columnar data by name or ap
 	AAPL 2022.01.02 140.0383 54   140.0383
 	..
 	'))
+	>>> trades.update(columns=kx.Column('price', name='priceCol'))
+	pykx.Table(pykx.q('
+	sym  date       price    size priceCol
+	--------------------------------------
+	AAPL 2022.01.01 145.6259 19   145.6259
+	MSFT 2022.01.02 533.9187 92   533.9187
+	MSFT 2022.01.02 17.17696 7    17.17696
+	GOOG 2022.01.03 916.1286 60   916.1286
+	AAPL 2022.01.02 140.0383 54   140.0383
+	..
+	'))
 	```
 
-Finally as an alternative approach for renaming a dictionary can be used to control names of returned columns.
+- As an alternative approach for renaming, a dictionary can be used to control names of returned columns.
 
-```python
->>> trades.select(columns={'maxPrice':kx.Column('price').max()})
-pykx.Table(pykx.q('
-maxPrice
---------
-993.6284
-'))
-```
+	```python
+	>>> trades.select(columns={'maxPrice':kx.Column('price').max()})
+	pykx.Table(pykx.q('
+	maxPrice
+	--------
+	993.6284
+	'))
+	```
+
+- You can also use the `value` keyword to pass data when generating a new column. For example
+
+	```python
+	>>> trades.update(kx.Column('newCol', value = kx.random.random(100, 10.0))).head(5)
+	pykx.Table(pykx.q('
+	sym  date       price    size newCol   
+	---------------------------------------
+	AAPL 2022.01.01 145.6259 19   3.489322 
+	MSFT 2022.01.02 533.9187 92   4.731594 
+	MSFT 2022.01.02 17.17696 7    8.769994 
+	GOOG 2022.01.03 916.1286 60   0.3928818
+	AAPL 2022.01.02 140.0383 54   4.937273 
+	'))
+	```
 
 #### where
 

@@ -605,7 +605,7 @@ def test_table_left_merge(kx, q):
         tab2 = kx.toq(df2)
         tab_res = tab1.merge(tab2, on='a', how='left').pd()
         assert str(tab_res.at[1, 'c']) == '--'
-        tab_res.at[1, 'c'] = np.NaN
+        tab_res.at[1, 'c'] = np.nan
         assert df1.merge(df2, on='a', how='left').equals(tab_res)
 
         # Merge on same indexes
@@ -656,8 +656,8 @@ def test_table_left_merge(kx, q):
         res = q('{(enlist `idx)_(0!x)}', res).pd()
         df_res = df_res.reset_index() # Reset pandas index to default, we already checked it
         df_res.pop('index')
-        res.at[0, 'rkey'] = np.NaN
-        res.at[0, 'value_y'] = np.NaN
+        res.at[0, 'rkey'] = np.nan
+        res.at[0, 'value_y'] = np.nan
         assert df_res.equals(res)
 
         df1 = pd.DataFrame(
@@ -670,7 +670,7 @@ def test_table_left_merge(kx, q):
         df_res = df1.merge(df2, on='key', how='left')
         res = tab1.merge(tab2, on='key', how='left').pd()
         assert str(res.at[6, 'value_y']) == '--'
-        res.at[6, 'value_y'] = np.NaN
+        res.at[6, 'value_y'] = np.nan
         assert df_res.equals(res)
 
 
@@ -721,7 +721,7 @@ def test_table_right_merge(kx, q):
         tab2 = kx.toq(df2)
         tab_res = tab1.merge(tab2, on='a', how='right').pd()
         assert str(tab_res.at[1, 'b']) == '--'
-        tab_res.at[1, 'b'] = np.NaN
+        tab_res.at[1, 'b'] = np.nan
         assert df1.merge(df2, on='a', how='right').equals(tab_res)
 
         # Merge on same indexes
@@ -772,8 +772,8 @@ def test_table_right_merge(kx, q):
         res = q('{(enlist `idx)_(0!x)}', res).pd()
         df_res = df_res.reset_index() # Reset pandas index to default, we already checked it
         df_res.pop('index')
-        res.at[0, 'lkey'] = np.NaN
-        res.at[0, 'value_x'] = np.NaN
+        res.at[0, 'lkey'] = np.nan
+        res.at[0, 'value_x'] = np.nan
         assert df_res.equals(res)
 
         df1 = pd.DataFrame(
@@ -841,9 +841,9 @@ def test_table_outer_merge(kx, q):
         tab2 = kx.toq(df2)
         tab_res = tab1.merge(tab2, on='a', how='outer', sort=True).pd()
         assert str(tab_res.at[0, 'c']) == '--'
-        tab_res.at[0, 'c'] = np.NaN
+        tab_res.at[0, 'c'] = np.nan
         assert str(tab_res.at[1, 'b']) == '--'
-        tab_res.at[1, 'b'] = np.NaN
+        tab_res.at[1, 'b'] = np.nan
         assert df1.merge(df2, on='a', how='outer', sort=True).equals(tab_res)
 
         # Merge on same indexes
@@ -909,10 +909,10 @@ def test_table_outer_merge(kx, q):
         res = q('{(enlist `idx)_(0!x)}', res).pd()
         df_res = df_res.reset_index() # Reset pandas index to default, we already checked it
         df_res.pop('index')
-        res.at[0, 'lkey'] = np.NaN
-        res.at[0, 'value_x'] = np.NaN
-        res.at[4, 'rkey'] = np.NaN
-        res.at[4, 'value_y'] = np.NaN
+        res.at[0, 'lkey'] = np.nan
+        res.at[0, 'value_x'] = np.nan
+        res.at[4, 'rkey'] = np.nan
+        res.at[4, 'value_y'] = np.nan
         assert df_res.equals(res)
 
         df1 = pd.DataFrame(
@@ -1502,6 +1502,13 @@ def test_df_rename(kx, q):
         t.rename(kx.q.lower, axis=1)
         assert str(e) == "Passing of non dictionary mapper items not yet implemented"
 
+    q('sym:`aaa`bbb`ccc')
+    t = q('([] 10?sym; til 10; 10?10; 10?1f)')
+    cols = {'sym': 'Symbol', 'x2': 'xsquare'}
+    with pytest.raises(TypeError) as e:
+        t.rename(labels=cols)
+    assert "rename() got an unexpected keyword argument 'labels'" in str(e.value)
+
 
 @pytest.mark.pandas_api
 @pytest.mark.xfail(reason='Flaky randomization')
@@ -1865,7 +1872,7 @@ def test_mode(kx, q): # noqa
                     except BaseException:
                         pass
                     if str(tab.at[i, c]) == '--':
-                        tab.at[i, c] = np.NaN
+                        tab.at[i, c] = np.nan
                     if str(tab.at[i, c]) == '':
                         tab.at[i, c] = 'nan'
                     if str(tab.at[i, c]) == 'nan' and str(df.at[i, df_c]) == 'nan':
@@ -1920,8 +1927,8 @@ def test_mode(kx, q): # noqa
         assert compare_q_to_pd(q_m, p_m)
 
         df = pd.DataFrame({
-            'x': [0, 1, 2, 3, 4, 5, 6, 7, np.NaN, np.NaN],
-            'y': [10, 11, 12, 13, 14, 15, 16, 17, 18, np.NaN],
+            'x': [0, 1, 2, 3, 4, 5, 6, 7, np.nan, np.nan],
+            'y': [10, 11, 12, 13, 14, 15, 16, 17, 18, np.nan],
             'z': ['a', 'b', 'c', 'd', 'd', 'e', 'e', 'f', 'g', 'h']
         })
         tab = kx.toq(df)
@@ -2294,7 +2301,7 @@ def test_pandas_groupby(kx, q):
     )
     tab = kx.toq(df)
 
-    # NaN in column is filled when converted to q this unfills it and re-sorts it
+    # np.nan in column is filled when converted to q this unfills it and re-sorts it
     assert q(
         '{[x; y] x:update a:` from x where i=2; x: `a xasc x; x~y}',
         df.groupby('a', dropna=False).sum(),
@@ -2553,7 +2560,7 @@ def test_std_extended(kx, q):
             # important to note that this is m*n array where m!=n
             'a': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             'b': [10, 30, 20, 4, 9.5, 2.445, 999, 302, 11.11, 6], # mixed types
-            'c': [3, 4, 5, np.NaN, 6, np.NaN, 2, np.NaN, 9, 5], # NaN types included
+            'c': [3, 4, 5, np.nan, 6, np.nan, 2, np.nan, 9, 5], # np.nan types included
             'd': ['foo', 'bar', 'foobar', 'fizz', 'buzz', 'fizzbuzz', 'test', '123', 'test123', ''], # noqa: E501
         })
     numdf = df_full[['a', 'b', 'c']]  # numerical columns only
