@@ -330,14 +330,15 @@ if not pykx_threading:
                     if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed'):
                         raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}\n\n{_lic_location}')
                     else:
-                        warn('Failed to initialize PyKX successfully with ' f'the following error: {_capout_msg}\n', PyKXWarning)
-                        if _paths_checked:
-                            _missing_license = f'PyKX was unable to locate your license file in:\n{_paths_checked}\n\n'\
-                                               'Running PyKX in unlicensed mode has reduced functionality.\n\n'\
+                        warning = f'Failed to initialize PyKX successfully with the following error: {_capout_msg}\n\n'\
+                                  f'PyKX was unable to locate your license file in:\n{_paths_checked}\n'
+                        if _paths_checked and hasattr(sys, 'ps1'):
+                            warn(warning, PyKXWarning)
+                            _missing_license = 'Running PyKX in unlicensed mode has reduced functionality.\n\n'\
                                                'Would you like to install a license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
                             _license_install(_missing_license, True)
                         else:
-                           _paths_checked
+                            warn(warning + 'PyKX running in unlicensed mode', PyKXWarning)
                     _libq_path_py = bytes(find_core_lib('e'))
                     _libq_path = _libq_path_py
                     _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)

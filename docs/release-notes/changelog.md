@@ -4,6 +4,26 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+## PyKX 3.1.2
+
+#### Release Date
+
+2025-03-18
+
+### Fixes and Improvements
+
+- Fixes an issue when using `PYKX_THREADING` that could cause a segfault in some scenarios.
+
+## PyKX 3.1.1
+
+#### Release Date
+
+2025-02-14
+
+### Fixes and Improvements
+
+- Fixed issue whereby PyKX would prompt for user inputs if a license was not found in a non-interactive session, now correctly falls back to unlicensed mode.
+
 ## PyKX 3.1.0
 
 #### Release Date

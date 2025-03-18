@@ -55,6 +55,7 @@ static pthread_cond_t cond;
 static pthread_mutex_t init_mutex;
 static pthread_cond_t init;
 static bool kill_thread;
+static bool is_closing = false;
 
 
 int (*_qinit)(int, char**, char*, char*, char*);
@@ -398,12 +399,19 @@ K _orr(const char* x) {
 
 static void (*__r0)(K k);
 void _r0(K k){
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
     __r0(k);
+    PyGILState_Release(gstate);
 }
 
 static K (*__r1)(K k);
 K _r1(K k) {
-    return __r1(k);
+    PyGILState_STATE gstate;
+    gstate = PyGILState_Ensure();
+    K x = __r1(k);
+    PyGILState_Release(gstate);
+    return x;
 }
 
 static void (*__sd0)(int d);
@@ -489,8 +497,10 @@ void* q_thread_init(void* _qini) {
         }
         pthread_mutex_unlock(&cond_mutex);
         pthread_mutex_lock(&head_mutex);
-        if (kill_thread)
+        if (kill_thread) {
+            pthread_mutex_unlock(&head_mutex);
             break;
+        }
         if (calls_head != NULL) {
             struct QCall* call = calls_head->call;
             if (call->is_dot) {
