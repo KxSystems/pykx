@@ -3849,14 +3849,11 @@ class Test_Function:
         reason='Not supported with PYKX_THREADING'
     )
     def test_nested_error(self, kx, q):
-        try:
+        with pytest.raises(Exception) as e:
             q('{x[y;z]}', lambda x, y: x.py() + y.py(), 'sym', 2)
-        except Exception as e:
             ex = e
-        else:
-            raise AssertionError
-        assert isinstance(ex, kx.QError)
-        assert isinstance(ex.__cause__, TypeError)
+            assert isinstance(ex, kx.QError)
+            assert isinstance(ex.__cause__, TypeError)
 
     def test_symbolic_function(self, kx, q, q_port):
         f1 = q.Q.dpft

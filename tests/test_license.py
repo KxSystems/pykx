@@ -9,6 +9,12 @@ import pytest
 from unittest.mock import patch
 
 
+def test_initialization_using_unlicensed_fallback(tmp_path, q):
+    os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
+    import pykx as kx
+    assert 2 == kx.toq(2).py()
+
+
 def test_initialization_using_unlicensed_mode(tmp_path, q):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     os.environ['QARGS'] = '--unlicensed'
@@ -61,12 +67,9 @@ def test_invalid_lic_continue(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['F'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
-    try:
+    with pytest.raises(Exception) as e:
         import pykx as kx # noqa: F401
-    except Exception as e:
         assert str(e) == 'Invalid input provided please try again'
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(
@@ -77,12 +80,9 @@ def test_invalid_existing_lic_input(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['Y', 'F'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
-    try:
+    with pytest.raises(Exception) as e:
         import pykx as kx # noqa: F401
-    except Exception as e:
         assert str(e) == 'Invalid input provided please try again'
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(
@@ -97,12 +97,9 @@ def test_invalid_commercial_input(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['Y', 'N', 'F'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
-    try:
+    with pytest.raises(Exception) as e:
         import pykx as kx # noqa: F401
-    except Exception as e:
         assert str(e) == 'User provided option was not one of [1/2]'
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(
@@ -117,12 +114,9 @@ def test_licensed_signup_no_file(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['Y', 'n', '1', 'n', '1', '/test/test.blah'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
-    try:
+    with pytest.raises(Exception) as e:
         import pykx as kx # noqa: F401
-    except Exception as e:
         assert str(e) == "Download location provided /test/test.blah does not exist."
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(
@@ -137,14 +131,10 @@ def test_licensed_signup_invalid_b64(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['Y', 'n', '1', 'n', '2', 'data:image/png;test'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
-    try:
+    with pytest.raises(Exception) as e:
         import pykx as kx # noqa: F401
-    except Exception as e:
-        err_msg = 'Invalid license copy provided, '\
-                  'please ensure you have copied the license information correctly'
-        assert str(e) == err_msg
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
+        assert str(e) == 'Invalid license copy provided, '\
+                         'please ensure you have copied the license information correctly'
 
 
 @pytest.mark.skipif(
@@ -201,13 +191,9 @@ def test_invalid_licensed_available_type_input(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['Y', 'Y', 'F'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
-    try:
+    with pytest.raises(Exception) as e:
         import pykx as kx # noqa: F401
-    except Exception as e:
-        print(e)
         assert str(e) == 'User provided option was not one of [1/2]'
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(
@@ -218,13 +204,9 @@ def test_invalid_licensed_available_method_input(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     inputs = iter(['Y', 'Y', '1', 'F'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
-    try:
+    with pytest.raises(Exception) as e:
         import pykx as kx # noqa: F401
-    except Exception as e:
-        print(e)
         assert str(e) == 'User provided option was not one of [1/2]'
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(
@@ -337,12 +319,9 @@ def test_check_license_no_qlic(kx):
     reason='License tests are being skipped'
 )
 def test_check_license_format(kx):
-    try:
+    with pytest.raises(Exception) as e:
         kx.license.check('/test/location', format='UNSUPPORTED')
-    except Exception as e:
         assert str(e) == 'Unsupported option provided for format parameter'
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(
@@ -391,12 +370,9 @@ def test_check_license_invalid(kx):
 )
 def test_install_license_exists(kx):
     pattern = re.compile("Installed license: kc.lic at location:*")
-    try:
+    with pytest.raises(Exception) as e:
         kx.license.install('test', format='STRING')
-    except Exception as e:
         assert pattern.match(str(e))
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(
@@ -404,12 +380,9 @@ def test_install_license_exists(kx):
     reason='License tests are being skipped'
 )
 def test_install_license_invalid_format(kx):
-    try:
+    with pytest.raises(Exception) as e:
         kx.license.install('test', format='UNSUPPORTED')
-    except Exception as e:
         assert str(e) == 'Unsupported option provided for format parameter'
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(
@@ -418,12 +391,9 @@ def test_install_license_invalid_format(kx):
 )
 def test_install_license_invalid_file(kx):
     pattern = re.compile("Download location provided*")
-    try:
+    with pytest.raises(Exception) as e:
         kx.license.install('/test/location.lic', force=True)
-    except Exception as e:
         assert pattern.match(str(e))
-    else:
-        raise AssertionError('Expected exception not raised') # Exception should have been thrown
 
 
 @pytest.mark.skipif(

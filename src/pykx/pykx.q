@@ -1711,7 +1711,7 @@ safeReimport:{[x]
 
   pyexec["del pykx_internal_reimporter"];
   setenv'[envlist;envvals];
-  $[r 0;';::] r 1
+  $[r 0;{'x};::] r 1
   }
 
 // @kind function

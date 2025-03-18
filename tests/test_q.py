@@ -246,23 +246,20 @@ def test_debug_global():
     kx.q('.Q.sbt:{.pykx_test.cache:x}')
 
     assert kx.q('=', kx.q('"z"'), b'z').py()
-    try:
+    with pytest.raises(Exception) as e:
         kx.q('til "asd"')
-    except Exception as e:
         assert "type" in str(e)
 
     assert kx.q('{til x}', 10).py() == list(range(10))
-    try:
+    with pytest.raises(Exception) as e:
         kx.q('{til x}', b'asd')
-    except Exception as e:
         assert "type" in str(e)
     assert b'{til x}' == kx.q('.pykx_test.cache')[1][1][-1].py()
 
     assert kx.q('{[x; y] .[mavg; (x; til y)]}', 3, 10).py() ==\
         [0.0, 0.5, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
-    try:
+    with pytest.raises(Exception) as e:
         kx.q('{[x; y] .[mavg; (x; til y)]}', 3, b'asd')
-    except Exception as e:
         assert "type" in str(e)
     assert b'{[x; y] .[mavg; (x; til y)]}' == kx.q('.pykx_test.cache')[1][1][-1].py()
 

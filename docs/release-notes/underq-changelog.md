@@ -6,6 +6,38 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 3.1.1
+
+#### Release Date
+
+2025-02-14
+
+### Fixes and Improvements
+
+- Fix throwing of errors for `.pykx.safeReimport`, now throws an error instead of returning a value.
+  
+	=== "Behavior prior to change"
+
+		```q
+		q).pykx.safeReimport {1+`this}
+		"type"'
+		```
+
+	=== "Behavior post change"
+	
+		```q
+		q).pykx.safeReimport {1+`this}
+		'type
+		  [2]  /home/user/q/pykx.q:1714: .pykx.safeReimport@:{'x}
+                                                                      ^
+ 		  [1]  /home/user/q/pykx.q:1714: .pykx.safeReimport:
+ 		  setenv'[envlist;envvals];
+ 		  $[r 0;{'x};::] r 1
+  		  ^
+  		  }
+		q.pykx))
+		```
+
 ## PyKX 3.1.0
 
 #### Release Date

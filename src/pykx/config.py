@@ -228,6 +228,9 @@ def _unlicensed_config(unlicensed_message):
 
 def _license_install(intro=None, return_value=False, license_check=False, license_error=None): # noqa: 
 
+    if not hasattr(sys, 'ps1'):  # Exit if running in a non-interactive session
+        return False
+
     if license_check:
         install_success = False
         kc_b64 = _get_config_value('KDB_LICENSE_B64', None)
