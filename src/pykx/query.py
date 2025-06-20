@@ -71,8 +71,8 @@ class QSQL:
             by: A dictionary where they keys are names assigned for the produced columns and the
                 values are aggregation rules used to construct the group-by parameter.
             inplace: Indicates if the result of an update is to be persisted. This applies to
-                tables referenced by name in q memory or general table objects
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+                tables referenced by name in q memory or general table objects.
+                See [here](https://code.kx.com/q/basics/qsql/#result-and-side-effects).
 
         Returns:
             A PyKX Table or KeyedTable object resulting from the executed select query
@@ -557,7 +557,8 @@ class SQL:
         '))
         ```
 
-        Query a [`pykx.Table`][] instance by injecting it as the first argument using `$n` syntax:
+        Query a [`pykx.Table`][pykx.Table] instance by injecting it as the first argument using `$n`
+          syntax:
 
         ```python
         >>> q.sql('select * from $1', trades) # where `trades` is a `pykx.Table` object
@@ -646,7 +647,7 @@ class SQL:
         """
         _args = []
         for a in args:
-            _args.append(a._prototype() if (type(a) == type or type(a) == ABCMeta) else a)
+            _args.append(a._prototype() if (isinstance(a, type) or isinstance(a, ABCMeta)) else a)
         return self._q('.s.sq', k.CharVector(query), _args)
 
     def execute(self, query: k.List, *args: Any) -> k.K:
@@ -770,9 +771,9 @@ class TableAppend:
             return row
         if isinstance(row, k.K):
             row = row.py()
-        if type(row) != list:
+        if not isinstance(row, list):
             raise TypeError('Expected list like object to append to table')
-        if type(row[0]) == list:
+        if isinstance(row[0], list):
             k_rows = []
             for v in row:
                 n = str(type(k.K(v[0])))

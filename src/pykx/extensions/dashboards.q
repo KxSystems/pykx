@@ -57,7 +57,7 @@ if[dash.available[];
 // ```
 dash.util.getFunction:{[pyCode]
   if[not dash.available[];
-    '"Required libraries for PyKX Dashboards integration not found"
+    '"Required libraries for PyKX Dashboards integration not found: ",", " sv string where not .pykx.dash.util.lib;
     ];
   funcName:@[.pykx.get[`$"_pykx_func_parse";<];
     .pykx.topy pyCode;

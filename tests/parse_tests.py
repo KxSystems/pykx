@@ -295,7 +295,9 @@ test_libs = [
     'from packaging import version',
     'import uuid',
     'import itertools',
-    'import operator'
+    'import operator',
+    'import platform',
+    'import toml'
 ]
 
 

@@ -69,7 +69,7 @@ show:{1 .Q.s x;};csv:"," / ";"  also \z 1 for "D"$"dd/mm/yyyy"
 parse:{$["\\"=*x;(system;1_x);-5!x]};eval:-6!;reval:-24!
 \d .Q  /def[`a`b`c!(0;0#0;`)]`b`c!(("23";"24");,"qwe")
 k:4.1;K:0Nd;host:-12!;addr:-13!;gc:-20!;ts:{-34!(x;y)};gz:-35!;w:{`used`heap`peak`wmax`mmap`mphy`syms`symw!(."\\w"),."\\w 0"}  / used: dpft en par chk ind fs fu fc
-res:`abs`acos`asin`atan`avg`bin`binr`cor`cos`cov`delete`dev`div`do`enlist`exec`exit`exp`getenv`hopen`if`in`insert`last`like`log`max`min`prd`select`setenv`sin`sqrt`ss`sum`tan`update`var`wavg`while`within`wsum`xexp
+res:`abs`acos`asin`atan`avg`bin`binr`cor`cos`cov`delete`dev`div`do`enlist`exec`exit`exp`getenv`hopen`if`in`insert`last`like`log`max`min`prd`select`setenv`sin`sqrt`ss`sum`tan`update`var`wavg`while`within`wsum`xexp`from`by
 addmonths:{("d"$m+y)+x-"d"$m:"m"$x}
 f:{$[^y;"";y<0;"-",f[x;-y];y<1;1_f[x;10+y];9e15>j:"j"$y*prd x#10f;(x_j),".",(x:-x)#j:$j;$y]}
 fmt:{$[x<#y:f[y;z];x#"*";(-x)$y]}
@@ -125,21 +125,21 @@ bv:{vt::(,`)!,()!();vp::(0#`)!();vpv::0#pv;bvfp[x;pv]}
 
 sp:{$[0>."\\s";x'y;x':y]}
 pt:pm:();MAP:{{$[0>@a:.+0!. x;.q.set[x]@.`$-1_$a;]}'a@&~(a:."\\a")in pt;pm::();if[#pt;pm::pt!sp[{(`u#pd,'pv)!sp[p2[(x;();0b;())]/;+(pd;pv)]}]pt]}
-dd:{`/:x,`$$y};d0:{dd[*|pd;*|pv]};p1:{$[#pm;+((,pf)!,z),+pm[x](y;z);z in vt[y;x];vp x;+(!+. x)!`/:dd[y;z],x]};p2:{0!(?).@[x;0;p1[;y;z]]}
+pfc:{$[$[#pm;|/{|/0b,{f:{pf~*`\:x};|/$[-11h=t:@x;f x;(t&~11h~t)|2>#:x;0b;11h=t;f'x;.z.s'x]}'$[99h=@x;.:x;x]}'x 1 2 3;0];+((,pf)!,z),+y;y]}
+dd:{`/:x,`$$y};d0:{dd[*|pd;*|pv]};p1:{$[#pm;pm[x](y;z);z in vt[y;x];vp x;+(!+. x)!`/:dd[y;z],x]};p2:{0!(?).@[x;0;pfc[x;;z]p1[;y;z]@]}
 
-p:{$[~#D;sp[p2[x;d]]y;(,/sp[p2[x]'/]P[i](;)'y)@<,/y@:i:&0<#:'y:D{x@&x in y}\:y]}
+p:{$[~#D;sp[p2[x;d]]y;sp[p2[x]/;,/P[i](;)''y]@<,/y@:i:&0<#:'y:D{x@&x in y}\:y]}
 view:{pd::PD x:$[(::)~x;x;$[#x:&PV in x;x;'"invalid partition filter"]];u~:?u::..[pf;();:;pv::PV x];.[;();:;]'[pt;sp[{+(x . y,`.d)!y}[x]]pt::!x:d0[]];pn::pt!(#pt)#()}
 
-jp:{$[$["w"~*$.z.o;u[$[(_u:$y)like"[a-z]:*";2;0]]in"\\/";("/"=*$y)|objp y];-1!y;`/:x,y]};rp:-500!;fobj:{!:'?{-1!`$("/"/:3#"/"\:x),"/_"}'u&objp'u:1_'$x;x}
-L1:{[x;y;z;i;p]D::`$'$D;fobj@,d::$[z;rp y;y];$[x~,`par.txt;if[~#x:,/D::$[i;{?:'D,'{x@&{11h=@!x}'`/:'y,'x:`$$x}[x]'y}[p];{x@&~(x:!x)like"*$"}']@P::fobj@jp[d]'`$0:`/:d,*x;'empty];i;x:`$$?PV,p@&{11h=@!x}'jp[d]'`$$p];if[^*PV::x@:<x:(t:"DMJJ"i:10 7 4?#$*x)$$x;'`part];
- PD::$[#D::t$'$D;,/{P@&x in'D}'?PV;(#PV)#d];pf::`date`month`year`int i;view[];if[(0>."\\p")|."\\_";cn'.:'pt];}
+jp:{$[$["w"~*$.z.o;u[$[(_u:$y)like"[a-z]:*";2;0]]in"\\/";("/"=*$y)|objp y];-1!y;`/:x,y]};rp:-500!;fobj:{!:'?{-1!`$("/"/:3#"/"\:x),"/_"}'u@&objp'u:1_'$x;x}
+L1:{[x;y;z;i;p]D::`$'$D;fobj@,d::$[z;rp y;y];$[x~,`par.txt;if[~#x:,/D::$[i;{?:'D,'{x@&{11h=@!x}'`/:'y,'x:`$$x}[x]'y}[p];{x@&~(x:!x)like"*$"}']@P::fobj@jp[d]'`$0:`/:d,*x;'empty];i;x:`$$?PV,p@&{11h=@!x}'jp[d]'`$$p];if[i;dv:+(PD;PV);{PN[y;x]:0N}[&PV in p]'pt];if[^*PV::x@:<x:(t:"DMJJ"j:10 7 4?#$*x)$$x;'`part];
+ PD::$[#D::t$'$D;,/{P@&x in'D}'?PV;(#PV)#d];pf::`date`month`year`int j;view[];PN::pt!$[i;{$[#n:PN y;n x;(#PV)#0N]}[dv?+(PD;PV)]'pt;(#pt)#,(#PV)#0N];if[(0>."\\p")|."\\_";cn'.:'pt];}
 L:{D::();L1[x;y;z;0;()]};li:{L1[$[D~();::;,`par.txt];d;0;1;x,()]}
 /L:{P::,`:.;D::,x;pf::`date;pt::!P[0]@**D;T::P!P{z!{x!(y . ,[;`]z,)'x}[x;y]'z}[pt]'D}
-
-cn:{$[#n:pn x:.+x;n;pn[x]:sp[#p1 .;+(x;pd;pv)]]};pcnt:{+/cn x};dt:{cn[y]@&pv in x}
+cN:{$[~#PN x;PN[x]:sp[#p1 .;+(x;PD;PV)];#i:&^PN x;PN[x;i]:sp[#p1 .;+(x;PD i;PV i)];];PN x};cn:{$[#n:pn x:.+x;n;pn[x]:cN[x]@&PV in pv]};pcnt:{+/cn x};dt:{cn[y]@&pv in x}
 ind:{,/i[j]{fp[pf;p]p1[x;pd y;p:pv y]z}[.+x]'(j:&~=':i)_y-n i:(n:+\0,cn x)bin y}
 fp:{+((,*x)!,(#z)#$[-7h=@y;y;(*|x)$y]),+z}
-foo:{[t;c;b;a;v;d]if[v;g:*|`\:b f:*!b;b:1_b];,/$[v|~#a;d fp[$[v;f,g;pf]]';::]p[(.+t;c;b;a)]d}
+foo:{[t;c;b;a;v;d]if[v;g:*|`\:b f:*!b;b:1_b];,/r(::;i)1=#i:&0<#:'r:$[v|~#a;d fp[$[v;f,g;pf]]';::]p[(.+t;c;b;a)]d}
 
 / select{u's|a's[by[date,]u's]}from t where[date..],[sym{=|in}..],..
 a2:({(%;(sum;("f"$;x));(sum;(~^:;x)))};{(sum;(*;("f"$;x);y))};{(%;(wsum;x;y);(sum;(*;x;(~^:;y))))};{(cov;x;x)};{(sqrt;(var;x))}
@@ -158,7 +158,7 @@ ps:{[t;c;b;a]if[-11h=@t;t:. t];if[~qe[a]&qe[b]|-1h=@b;'`nyi];d:pv;v:$[q:0>@b;0;~
 /if[$[#a;pf~*!a;0];:fp[pf'`pf];if[$[#.Q.pm;(=;`date)~2#*c;0];:p3(pm[.+t;-6!*|*c];1_c;b;a)]
 /dir part [`p#field] table [:,] x(dict) /group&index?  `:d/sym?x
 /.[dir;();,;.Q.en[dir]x];@[f xasc dir;f;`p#]
-enxs:{[x;d;t;s]if[#c@:&{$[11h=@*x;&/11h=@:'x;11h=@x]}'t c:!+t;(`/:d,s)??,/?:'{$[0h=@x;,/x;x]}'t c];@[t;c;{$[0h=@z;(-1_+\0,#:'z)_x[y;,/z];x[y;z]]}[x;s]]};enx:enxs[;;;`sym];en:enx[?];ens:enxs[?]
+enxs:{[x;d;t;s]if[(~(::)~d)&#c:&{$[11h=@*x;&/11h=@:'x;11h=@x]}'+t;(`/:d,s)??,/(?,/)'t c];@[t;c;{$[@y;x y;(-1_+\0,#:'y)_x@,/y]}x s]};enx:enxs[;;;`sym];en:enx[?];ens:enxs[?]
 /en:{[d;x]@[x;f@&11h=@:'x f:!+x;`sym?]}  init(`:sym set `u#0#`)  everyday (sym:get`:sym;.Q.en;.Q.en;..;`:sym set sym)
 par:{[d;p;t]`/:($[@!h:`/:d,`par.txt;`$":",h .q.mod[p;#h:0:h];d];`$$p;t)}
 dpts:{[d;p;t;s]@[par[d;p;t];`;:;enxs[?;d;;s]`. . `\:t]} / allows `a.b

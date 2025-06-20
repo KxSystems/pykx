@@ -2,6 +2,8 @@ from ..wrappers import BooleanVector, IntVector, K, List, LongVector, ShortVecto
 from ..exceptions import QError
 from . import api_return, MetaAtomic
 
+import inspect
+
 
 def _init(_q):
     global q
@@ -397,7 +399,7 @@ class PandasReindexing:
             raise ValueError('Errors should be "raise" (default) or "ignore".')
 
         if inplace:
-            raise ValueError('nyi')
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is not implemented for inplace=True.") # noqa: E501
 
         if type(labels) is tuple:
             labels = [labels]
@@ -423,11 +425,11 @@ class PandasReindexing:
     def drop_duplicates(self, subset=None, keep='first', inplace=False, ignore_index=False):
 
         if subset is not None or keep != 'first' or inplace or ignore_index:
-            raise ValueError('nyi')
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only implemented for keep='first', inplace=False, ignore_index=False.") # noqa: E501
 
         t = self
         if "Keyed" in str(type(self)):
-            raise ValueError('nyi')
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is not implemented for KeyedTable objects.") # noqa: E501
         else:
             t = q('distinct', self)
 
@@ -439,11 +441,10 @@ class PandasReindexing:
                 and ((axis == 'index' or axis == 0) or (index is not None))):
             raise ValueError("Can only rename index of a KeyedTable")
         if (not isinstance(mapper, dict) and mapper is not None):
-            raise NotImplementedError("Passing of non dictionary mapper items not yet implemented")
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() mapper parameter requires a dictionary mapper object.") # noqa: E501
         if (columns is None and ((axis == 'index' or axis == 0) or (index is not None))):
             if len(self.index.columns)!=1:
-                raise NotImplementedError(
-                    "Index renaming only supported for single key column KeyedTables")
+                raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() index renaming is only supported for single key column KeyedTables.") # noqa: E501
         if mapper is None and index is None and columns is None:
             raise ValueError("must pass an index to rename")
         elif axis !=0 and (index is not None or columns is not None):
@@ -453,7 +454,7 @@ class PandasReindexing:
             raise ValueError('q/kdb+ tables only support symbols as column mapper (no multi index on the column axis).')  # noqa
 
         if copy is not None or inplace or level is not None or errors != 'ignore':
-            raise ValueError('nyi')
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only implemented for copy=None, inplace=False, level=None, errors='ignore'.") # noqa: E501
 
         t = self
         if mapper is not None:
@@ -482,7 +483,8 @@ class PandasReindexing:
                   }''', suffix, t)
         elif axis == 0:
             if 'Keyed' in str(type(t)):
-                raise ValueError('nyi')
+                raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is \
+                                            not implemented for KeyedTable objects.") # noqa: E501
             else:
                 return q('{[s;t] c:cols t; (c!`$string[c],\\:string s) xcol t}', suffix, t)
         else:
@@ -498,10 +500,9 @@ class PandasReindexing:
                   }''', prefix, t)
         elif axis == 0:
             if 'Keyed' in str(type(t)):
-                raise ValueError('nyi')
+                raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is not implemented for KeyedTable objects.") # noqa: E501
             else:
                 return q('{[s;t] c:cols t; (c!`$string[s],/:string[c]) xcol t}', prefix, t)
-            raise ValueError('nyi')
         else:
             raise ValueError(f'No axis named {axis}')
         return t
@@ -515,7 +516,8 @@ class PandasReindexing:
 
         if weights is not None or random_state is not None \
            or axis is not None or ignore_index:
-            raise ValueError('nyi')
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only implemented \
+                                        for weights=None, random_state=None, axis=None, ignore_index=False.") # noqa: E501
 
         if replace:
             if "Keyed" in str(type(self)):

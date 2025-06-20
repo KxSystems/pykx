@@ -1,6 +1,17 @@
 {#-
   This file was automatically generated - do not edit
 -#}
+<!-- Announcement begins-->
+{% block announce %}
+<div class="md-grid">
+  <h2>New Documentation Site!</h2>
+  <p style="font-size: 14px;">
+      We are excited to announce the launch of our enhanced product documentation site for <a href="https://docs.kx.com/3.1/PyKX/home.htm" style="color: var(--md-typeset-a-color);">PyKX</a> at <a href="https://docs.kx.com/home/index.htm" style="color: var(--md-typeset-a-color);">docs.kx.com</a>. 
+      It offers improved search capabilities, organized navigation, and developer-focused content. Please, take a moment to explore the site and share your feedback with us.
+  </p>
+</div>
+{% endblock %}
+<!-- ends -->
 {% set class = "md-header" %}
 {% if "navigation.tabs.sticky" in features %}
   {% set class = class ~ " md-header--lifted" %}

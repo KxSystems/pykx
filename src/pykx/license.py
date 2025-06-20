@@ -119,7 +119,7 @@ def check(license: str,
         license = license.replace('\n', '')
         license = bytes(license, 'utf-8')
 
-    if not license_content == license:
+    if license_content != license:
         print('Supplied license information does not match.\n'
               'Please consider reinstalling your license using pykx.license.install\n\n'
               f'Installed license representation:\n{license_content}\n\n'

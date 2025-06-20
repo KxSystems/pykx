@@ -101,15 +101,15 @@ def test_errors(q, kx):
 
     with pytest.raises(NotImplementedError) as err:
         tab.agg('min', axis=1)
-    assert 'axis parameter only presently supported' in str(err.value)
+    assert "'axis' parameter" in str(err.value)
 
     with pytest.raises(NotImplementedError) as err:
         gtab.agg({'x': 'min'})
-    assert 'Dictionary input func not presently supported for GroupbyTable' in str(err.value)
+    assert 'dictionary input' in str(err.value)
 
     with pytest.raises(NotImplementedError) as err:
         tab.agg({'x': ['min', 'max']})
-    assert "Unsupported type '<class 'list'>' supplied as dictionary value" in str(err.value)
+    assert ("unsupported type" in str(err.value)) and ("supplied as dictionary value" in str(err.value)) # noqa : E501
 
     with pytest.raises(kx.QError) as err:
         q('0#([]10?1f;10?1f)').agg('mean')

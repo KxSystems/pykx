@@ -41,7 +41,7 @@ from typing import Any, List, Optional, Union
 from warnings import warn
 from weakref import proxy
 
-from .config import k_allocator, licensed, no_pykx_signal, pykx_platlib_dir, under_q
+from .config import k_allocator, licensed, no_pykx_signal, pykx_lib_dir, pykx_platlib_dir, under_q
 from . import util
 
 if platform.system() == 'Windows': # nocov
@@ -76,8 +76,8 @@ class Q(metaclass=ABCMeta):
     """Abstract base class for all interfaces between Python and q.
 
     See Also:
-        - [`pykx.EmbeddedQ`][]
-        - [`pykx.QConnection`][]
+        - [`pykx.EmbeddedQ`][pykx.EmbeddedQ]
+        - [`pykx.QConnection`][pykx.QConnection]
     """
     reserved_words = {
         'abs', 'acos', 'aj', 'aj0', 'ajf', 'ajf0', 'all', 'and', 'any', 'asc',
@@ -123,7 +123,6 @@ class Q(metaclass=ABCMeta):
         if licensed or '_connection_info' in self.__dict__:
             if '_connection_info' in self.__dict__ and self._connection_info['no_ctx']:
                 object.__setattr__(self, 'ctx', QContext(proxy(self), '', None, no_ctx=True))
-                pass
             else:
                 object.__setattr__(self, 'ctx', QContext(proxy(self), '', None))
                 object.__setattr__(self, '_q_ctx_keys', {
@@ -381,13 +380,30 @@ def install_into_QHOME(overwrite_embedpy=False,
         Parameters:
             overwrite_embedpy: If embedPy had previously been installed replace it otherwise
                 save functionality as pykx.q.
-            to_local_folder: Copy the files to your local folder rather than `#!bash QHOME`.
+            to_local_folder: Copy the files to your local folder using True, or specify '/some/path'
+              rather than `#!bash QHOME`.
             cloud_libraries: Copy cloud libraries to `#!bash QHOME`.
 
         Returns:
             None
     """
-    dest = Path('.') if to_local_folder else qhome
+    if isinstance(to_local_folder, (str, Path)):
+        dest = Path(to_local_folder)
+    elif to_local_folder:
+        dest = Path('.')
+    else:
+        dest = qhome
+    if dest == pykx_lib_dir:
+        warn(f"""
+             The destination {dest} matches pykx.config.pykx_lib_dir which already contains pykx.q,
+             no files will be copied.
+             If your environment does not have QHOME set or you wish to control where pykx.q
+             is installed use to_local_folder:
+                 to_local_folder = True will install pykx.q to your current working directory
+                 to_local_folder = 'path/to/folder' will install pykx.q to the specified path
+            """)
+        return
+
     p = Path(dest)/'p.k'
     c_files = ['kurl.q_', 'kurl.sidecar.q_', 'objstor.q_', 'qlog.q_', 'rest.q_', 'bq.q_', 's.k_']
 

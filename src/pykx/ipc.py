@@ -46,6 +46,15 @@ def _init(_q):
     global q
     q = _q
 
+_ipc_err_warning = {
+  'reconnect_warn': 'WARNING: Connection lost attempting to reconnect.',
+  'delay_type': 'reconnection_delay must be either int/float',
+  'reconnected': 'Connection successfully reestablished.',
+  'closed': 'Attempted to use a closed IPC connection',
+  'cannot_send': 'Cannot send object of passed type over IPC: ',
+  'timeout': 'Query timed out'
+}
+
 def reconnection_function(reconnection_delay):
     return reconnection_delay * 2
 
@@ -129,7 +138,7 @@ class QFuture(asyncio.Future):
                         raise e
                     if self.q_connection._connection_info['reconnection_attempts'] != -1:
                         self.q_connection._cancel_all_futures()
-                        print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                        print(_ipc_err_warning['reconnect_warn'], file=sys.stderr)
                         loops = self.q_connection._connection_info['reconnection_attempts']
                         reconnection_delay = self.q_connection._connection_info['reconnection_delay']
                         reconnection_function = self.q_connection._connection_info['reconnection_function']
@@ -154,12 +163,12 @@ class QFuture(asyncio.Future):
                                 )
                                 if not isinstance(reconnection_delay, (int, float)):
                                     raise TypeError(
-                                        'reconnection_delay must be either int/float'
+                                        _ipc_err_warning['delay_type']
                                     )
                                 sleep(reconnection_delay)
                                 reconnection_delay = reconnection_function(reconnection_delay)
                                 continue
-                            print('Connection successfully reestablished.', file=sys.stderr)
+                            print(_ipc_err_warning['reconnected'], file=sys.stderr)
                             break
                     else:
                         raise e
@@ -191,7 +200,7 @@ class QFuture(asyncio.Future):
                         raise e
                     if self.q_connection._connection_info['reconnection_attempts'] != -1:
                         self.q_connection._cancel_all_futures()
-                        print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                        print(_ipc_err_warning['reconnect_warn'], file=sys.stderr)
                         loops = self.q_connection._connection_info['reconnection_attempts']
                         reconnection_delay = self.q_connection._connection_info['reconnection_delay']
                         reconnection_function = self.q_connection._connection_info['reconnection_function']
@@ -216,12 +225,12 @@ class QFuture(asyncio.Future):
                                 )
                                 if not isinstance(reconnection_delay, (int, float)):
                                     raise TypeError(
-                                        'reconnection_delay must be either int/float'
+                                        _ipc_err_warning['delay_type']
                                     )
                                 sleep(reconnection_delay)
                                 reconnection_delay = reconnection_function(reconnection_delay)
                                 continue
-                            print('Connection successfully reestablished.', file=sys.stderr)
+                            print(_ipc_err_warning['reconnected'], file=sys.stderr)
                             break
                     else:
                         raise e
@@ -240,7 +249,7 @@ class QFuture(asyncio.Future):
                 raise e
             if self.q_connection._connection_info['reconnection_attempts'] != -1:
                 # TODO: Clear call stack futures
-                print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                print(_ipc_err_warning['reconnect_warn'], file=sys.stderr)
                 loops = self._connection_info['reconnection_attempts']
                 reconnection_delay = self.q_connection._connection_info['reconnection_delay']
                 reconnection_function = self.q_connection._connection_info['reconnection_function']
@@ -264,12 +273,12 @@ class QFuture(asyncio.Future):
                         )
                         if not isinstance(reconnection_delay, (int, float)):
                             raise TypeError(
-                                'reconnection_delay must be either int/float'
+                                _ipc_err_warning['delay_type']
                             )
                         sleep(reconnection_delay)
                         reconnection_delay = reconnection_function(reconnection_delay)
                         continue
-                    print('Connection successfully reestablished.', file=sys.stderr)
+                    print(_ipc_err_warning['reconnected'], file=sys.stderr)
                     break
             else:
                 raise e
@@ -316,7 +325,7 @@ class QFuture(asyncio.Future):
             raise FutureCancelled(self._cancelled_message)
         if self._result is not None:
             if self._cancelled_message != '':
-                print(f'Connection was lost no result', file=sys.stderr)
+                print('Connection was lost no result', file=sys.stderr)
                 return None
             if self._debug or pykx_qdebug:
                 if self._result._unlicensed_getitem(0).py() == True:
@@ -676,7 +685,7 @@ class QConnection(Q):
               skip_debug=False
     ):
         if self.closed:
-            raise RuntimeError("Attempted to use a closed IPC connection")
+            raise RuntimeError(_ipc_err_warning['closed'])
         tquery = type(query)
         debugging = (not skip_debug) and (debug or pykx_qdebug)
         if issubclass(tquery, SymbolicFunction):
@@ -684,14 +693,14 @@ class QConnection(Q):
                 query = query.func
                 tquery = type(query)
         if not (issubclass(tquery, K) or isinstance(query, (str, bytes))):
-            raise ValueError('Cannot send object of passed type over IPC: ' + str(tquery))
+            raise ValueError(_ipc_err_warning['cannot_send'] + str(tquery))
         if debugging:
             if not issubclass(tquery, Function):
                 query = CharVector(query)
         start_time = monotonic_ns()
         timeout = self._connection_info['timeout']
         while True:
-            if timeout != 0.0 and monotonic_ns() - start_time >= (timeout * 1000000000):
+            if timeout > 0 and monotonic_ns() - start_time >= (timeout * 1000000000):
                 break
             events = self._writer.select(timeout)
             for key, _mask in events:
@@ -728,7 +737,7 @@ class QConnection(Q):
                    and not issubclass(a, Function)\
                    or issubclass(type(b), Function) and\
                         isinstance(b, Composition) and q('{.pykx.util.isw x}', b):
-                    raise ValueError('Cannot send object of passed type over IPC: '  + str(type(b)))
+                    raise ValueError(_ipc_err_warning['cannot_send']  + str(type(b)))
         return data
 
     def _send_sock(self,
@@ -794,9 +803,9 @@ class QConnection(Q):
             while True:
                 if fut is not None and fut.done():
                     return fut.result()
-                if timeout != 0.0 and monotonic_ns() - start_time >= (timeout * 1000000000):
+                if (timeout > 0) and monotonic_ns() - start_time >= (timeout * 1000000000):
                     self._timeouts += 1
-                    raise QError('Query timed out')
+                    raise QError(_ipc_err_warning['timeout'])
                 events = self._reader.select(timeout)
                 for key, _ in events:
                     callback = key.data
@@ -835,9 +844,9 @@ class QConnection(Q):
         start_time = monotonic_ns()
         with self._lock if self._lock is not None and not locked else nullcontext():
             while True:
-                if timeout != 0.0 and monotonic_ns() - start_time >= (timeout * 1000000000):
+                if timeout > 0 and monotonic_ns() - start_time >= (timeout * 1000000000):
                     self._timeouts += 1
-                    raise QError('Query timed out')
+                    raise QError(_ipc_err_warning['timeout'])
                 events = self._reader.select(timeout)
                 for key, _ in events:
                     callback = key.data
@@ -872,7 +881,7 @@ class QConnection(Q):
                     self.close()
             except BaseException:
                 self.close()
-            raise RuntimeError("Attempted to use a closed IPC connection")
+            raise RuntimeError(_ipc_err_warning['closed'])
         elif len(chunks) <8:
             try:
                 if self._connection_info['reconnection_attempts'] == -1:
@@ -933,7 +942,7 @@ class QConnection(Q):
                     self.close()
             except BaseException:
                 self.close()
-            raise RuntimeError("Attempted to use a closed IPC connection")
+            raise RuntimeError(_ipc_err_warning['closed'])
         elif len(chunks) <8:
             try:
                 if self._connection_info['reconnection_attempts'] == -1:
@@ -1348,7 +1357,7 @@ class SyncQConnection(QConnection):
             if isinstance(e, QError):
                 raise e
             if self._connection_info['reconnection_attempts'] != -1:
-                print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                print(_ipc_err_warning['reconnect_warn'], file=sys.stderr)
                 loops = self._connection_info['reconnection_attempts']
                 reconnection_delay = self._connection_info['reconnection_delay']
                 reconnection_function = self._connection_info['reconnection_function']
@@ -1372,12 +1381,12 @@ class SyncQConnection(QConnection):
                         )
                         if not isinstance(reconnection_delay, (int, float)):
                             raise TypeError(
-                                'reconnection_delay must be either int/float'
+                                _ipc_err_warning['delay_type']
                             )
                         sleep(reconnection_delay)
                         reconnection_delay = reconnection_function(reconnection_delay)
                         continue
-                    print('Connection successfully reestablished.', file=sys.stderr)
+                    print(_ipc_err_warning['reconnected'], file=sys.stderr)
                     return self._call(query, *args, wait=wait, debug=debug)
             else:
                 raise e
@@ -1554,7 +1563,7 @@ class AsyncQConnection(QConnection):
         0 1 2 3 4 5 6 7 8 9
         ```
         """
-        if timeout != 0.0:
+        if timeout > 0.0:
             warnings.warn('Timeout is not supported when using AsyncQConnection objects.')
         # TODO: Remove this once TLS support is fixed
         if tls:
@@ -1790,7 +1799,7 @@ class AsyncQConnection(QConnection):
                     raise e
                 if self._connection_info['reconnection_attempts'] != -1:
                     self._cancel_all_futures()
-                    print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                    print(_ipc_err_warning['reconnect_warn'], file=sys.stderr)
                     loops = self._connection_info['reconnection_attempts']
                     reconnection_delay = self._connection_info['reconnection_delay']
                     reconnection_function = self._connection_info['reconnection_function']
@@ -1814,12 +1823,12 @@ class AsyncQConnection(QConnection):
                             )
                             if not isinstance(reconnection_delay, (int, float)):
                                 raise TypeError(
-                                    'reconnection_delay must be either int/float'
+                                    _ipc_err_warning['delay_type']
                                 )
                             sleep(reconnection_delay)
                             reconnection_delay = reconnection_function(reconnection_delay)
                             continue
-                        print('Connection successfully reestablished.', file=sys.stderr)
+                        print(_ipc_err_warning['reconnected'], file=sys.stderr)
                         break
 
                     q_future = QFuture(self, self._connection_info['timeout'], debug)
@@ -1843,7 +1852,7 @@ class AsyncQConnection(QConnection):
                 raise e
             if self._connection_info['reconnection_attempts'] != -1:
                 self._cancel_all_futures()
-                print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                print(_ipc_err_warning['reconnect_warn'], file=sys.stderr)
                 loops = self._connection_info['reconnection_attempts']
                 reconnection_delay = self._connection_info['reconnection_delay']
                 reconnection_function = self._connection_info['reconnection_function']
@@ -1867,12 +1876,12 @@ class AsyncQConnection(QConnection):
                         )
                         if not isinstance(reconnection_delay, (int, float)):
                             raise TypeError(
-                                'reconnection_delay must be either int/float'
+                                _ipc_err_warning['delay_type']
                             )
                         sleep(reconnection_delay)
                         reconnection_delay = reconnection_function(reconnection_delay)
                         continue
-                    print('Connection successfully reestablished.', file=sys.stderr)
+                    print(_ipc_err_warning['reconnected'], file=sys.stderr)
                     break
             else:
                 raise e
@@ -2127,7 +2136,7 @@ class RawQConnection(QConnection):
         await pykx.RawQConnection(port=5001, unix=True)
         ```
         """
-        if timeout != 0.0:
+        if timeout > 0.0:
             warnings.warn('Timeout is not supported when using AsyncQConnection objects.')
         # TODO: Remove this once TLS support is fixed
         if tls:
@@ -2511,7 +2520,7 @@ class RawQConnection(QConnection):
                     count -= 1
                     if count > 1:
                         return
-        if (self._stored_args["conn_gc_time"] != 0.0
+        if (self._stored_args["conn_gc_time"] > 0.0
             and monotonic_ns() / 1000000000 - self._stored_args["last_gc"]
             > self._stored_args["conn_gc_time"]
         ):
@@ -2622,9 +2631,9 @@ class RawQConnection(QConnection):
                     return fut.result()
                 start_time = monotonic_ns()
                 with self._lock if self._lock is not None else nullcontext():
-                    if timeout != 0.0 and monotonic_ns() - start_time >= (timeout * 1000000000):
+                    if (timeout > 0.0) and monotonic_ns() - start_time >= (timeout * 1000000000):
                         self._timeouts += 1
-                        raise QError('Query timed out')
+                        raise QError(_ipc_err_warning['timeout'])
                     events = self._reader.select(timeout)
                     if len(events) != 0:
                         for key, _ in events:
@@ -2695,9 +2704,9 @@ class RawQConnection(QConnection):
             while count >= 0:
                 start_time = monotonic_ns()
                 with self._lock if self._lock is not None else nullcontext():
-                    if timeout != 0.0 and monotonic_ns() - start_time >= (timeout * 1000000000):
+                    if timeout > 0.0 and monotonic_ns() - start_time >= (timeout * 1000000000):
                         self._timeouts += 1
-                        raise QError('Query timed out')
+                        raise QError(_ipc_err_warning['timeout'])
                     events = self._reader.select(timeout)
                     if len(events) != 0:
                         for key, _ in events:
@@ -2977,10 +2986,10 @@ class SecureQConnection(QConnection):
         if wait is None:
             wait = self._connection_info['wait']
         if self.closed:
-            raise RuntimeError('Attempted to use a closed IPC connection')
+            raise RuntimeError(_ipc_err_warning['closed'])
         tquery = type(query)
         if not (issubclass(tquery, K) or isinstance(query, (str, bytes))):
-            raise ValueError('Cannot send object of passed type over IPC: '  + str(tquery))
+            raise ValueError(_ipc_err_warning['cannot_send']  + str(tquery))
         if not issubclass(tquery, Function):
             if isinstance(query, str):
                 query = query.encode()
@@ -3014,7 +3023,7 @@ class SecureQConnection(QConnection):
             if isinstance(e, QError) and 'snd handle' not in str(e) and 'write to handle' not in str(e) and 'close handle' not in str(e):
                 raise e
             if self._connection_info['reconnection_attempts'] != -1:
-                print('WARNING: Connection lost attempting to reconnect.', file=sys.stderr)
+                print(_ipc_err_warning['reconnect_warn'], file=sys.stderr)
                 loops = self._connection_info['reconnection_attempts']
                 reconnection_delay = self._connection_info['reconnection_delay']
                 reconnection_function = self._connection_info['reconnection_function']
@@ -3040,12 +3049,12 @@ class SecureQConnection(QConnection):
                         )
                         if not isinstance(reconnection_delay, (int, float)):
                             raise TypeError(
-                                'reconnection_delay must be either int/float'
+                                _ipc_err_warning['delay_type']
                             )
                         sleep(reconnection_delay)
                         reconnection_delay = reconnection_function(reconnection_delay)
                         continue
-                    print('Connection successfully reestablished.', file=sys.stderr)
+                    print(_ipc_err_warning['reconnected'], file=sys.stderr)
                     return self._call(query, *args, wait=wait, debug=debug)
             else:
                 raise e

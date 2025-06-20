@@ -61,7 +61,7 @@ Installation of PyKX via pip provides users with access to the library with limi
 
 The following steps outline the process by which a user can gain access to an install a kdb Insights license which provides access to PyKX
 
-1. Visit https://kx.com/kdb-insights-personal-edition-license-download/ and fill in the attached form following the instructions provided.
+1. Visit https://kx.com/kdb-insights-sdk-personal-edition-download/ and fill in the attached form following the instructions provided.
 2. On receipt of an email from KX providing access to your license download this file and save to a secure location on your computer.
 3. Set an environment variable on your computer pointing to the folder containing the license file (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
 	* Variable Name: `QLIC`
@@ -94,10 +94,10 @@ KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX 
 PyKX depends on the following third-party Python packages:
 
 - `pandas>=1.2, <2.0; python_version=='3.8'`
-- `pandas>=1.2, <=2.2.3; python_version>'3.8'`
+- `pandas>=1.2, <=2.3.0; python_version>'3.8'`
 - `numpy~=1.22; python_version<'3.11'`
-- `numpy~=1.23; python_version=='3.11'`
-- `numpy~=1.26; python_version>'3.11'`
+- `numpy~=1.23, <2.3.0; python_version=='3.11'`
+- `numpy~=1.26, <2.3.0; python_version>'3.11'`
 - `pytz>=2022.1`
 - `toml~=0.10.2`
 - `dill>=0.2.0`

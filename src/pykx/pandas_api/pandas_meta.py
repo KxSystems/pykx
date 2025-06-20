@@ -1,6 +1,8 @@
 from . import api_return
 from ..exceptions import QError
 
+import inspect
+
 
 def _init(_q):
     global q
@@ -373,14 +375,14 @@ class PandasMeta:
 
     def agg(self, func, axis=0, *args, **kwargs): # noqa: C901
         if 'KeyedTable' in str(type(self)):
-            raise NotImplementedError("'agg' method not presently supported for KeyedTable")
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() 'agg' method is not supported for KeyedTable.") # noqa: E501
         if 'GroupbyTable' not in str(type(self)):
             if 0 == len(self):
                 raise QError("Application of 'agg' method not supported for on tabular data with 0 rows") # noqa: E501
         keyname = q('()')
         data = q('()')
         if axis != 0:
-            raise NotImplementedError('axis parameter only presently supported for axis=0')
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() 'axis' parameter is only supported for axis=0.") # noqa: E501
         if isinstance(func, str):
             return getattr(self, func)()
         elif callable(func):
@@ -397,7 +399,7 @@ class PandasMeta:
                 return q('{x!y}', keyname, data)
         elif isinstance(func, dict):
             if 'GroupbyTable' in str(type(self)):
-                raise NotImplementedError('Dictionary input func not presently supported for GroupbyTable') # noqa: E501
+                raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() dictionary input '{func}' is not presently supported for GroupbyTable") # noqa: E501
             data = q('{(flip enlist[`function]!enlist ())!'
                      'flip ($[1~count x;enlist;]x)!'
                      '$[1~count x;enlist;]count[x]#()}', self.keys())
@@ -412,7 +414,7 @@ class PandasMeta:
                     keyname = q('{x, y}', keyname, valname)
                     exec_data = self[data_name].apply(value, *args, **kwargs)
                 else:
-                    raise NotImplementedError(f"Unsupported type '{type(value)}' supplied as dictionary value") # noqa: E501
+                    raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() unsupported type '{type(value)}' was supplied as dictionary value.") # noqa: E501
                 data = q('{[x;y;z;k]x upsert(enlist enlist[`function]!enlist[k])!enlist z}',
                          data,
                          self.keys(),
@@ -420,7 +422,7 @@ class PandasMeta:
                          valname)
             return data
         else:
-            raise NotImplementedError(f"func type: {type(func)} unsupported")
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() func type: {type(func)} is not supported.") # noqa: E501
         if 'GroupbyTable' in str(type(self)):
             return data
         else:

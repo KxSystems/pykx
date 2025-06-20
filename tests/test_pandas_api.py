@@ -1088,7 +1088,7 @@ def test_df_astype_value_errors(kx, q):
                        "Error casting LongVector to GUIDVector with q error: type"):
         raise df.astype({'c3': kx.GUIDVector})
     with pytest.raises(NotImplementedError,
-                       match=r"Currently only the default value of True is accepted for copy"):
+                       match=r"when copy is set to True"):
         raise df.astype({'c3': kx.ShortVector}, copy='False')
     with pytest.raises(ValueError,
                        match=r"Column name passed in dictionary not present in df table"):
@@ -1383,16 +1383,16 @@ def test_df_drop_duplicates(kx, q):
     rez2 = t.pd().drop_duplicates().reset_index(drop=True)
     assert(q('{x~y}', rez, rez2))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         t.drop_duplicates(subset=['x', 'x1'])
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         t.drop_duplicates(keep='last')
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         t.drop_duplicates(inplace=True)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         t.drop_duplicates(ignore_index=True)
 
 
@@ -1486,16 +1486,16 @@ def test_df_rename(kx, q):
     with pytest.raises(ValueError):
         t.rename(columns={'x': 'xXx'}, level=0)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         t.rename(columns={'x': 'xXx'}, copy=False)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         t.rename(columns={'x': 'xXx'}, inplace=True)
 
     with pytest.raises(ValueError):
         t.rename({5: 'foo'}, level=0)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         t.rename(columns={'x': 'xXx'}, errors='raise')
 
     with pytest.raises(NotImplementedError) as e:
@@ -2430,9 +2430,8 @@ def test_df_add_prefix(kx, q):
     q_add_prefix = kt.add_prefix("col_", axis=1)
     assert(q('~', q_add_prefix, kt.pd().add_prefix("col_")))
 
-    with pytest.raises(ValueError) as err:
+    with pytest.raises(NotImplementedError):
         t.set_index('x').add_prefix("col_", axis=0)
-        assert 'nyi' in str(err)
 
     with pytest.raises(ValueError) as err:
         t.add_prefix("col_", axis=3)
@@ -2451,9 +2450,8 @@ def test_df_add_suffix(kx, q):
     q_add_suffix = kt.add_suffix("_col", axis=1)
     assert(q('~', q_add_suffix, kt.pd().add_suffix("_col")))
 
-    with pytest.raises(ValueError) as err:
+    with pytest.raises(NotImplementedError):
         t.set_index('x').add_suffix("_col", axis=0)
-        assert 'nyi' in str(err)
 
     with pytest.raises(ValueError) as err:
         t.add_suffix("_col", axis=3)

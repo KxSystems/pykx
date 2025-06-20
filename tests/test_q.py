@@ -291,8 +291,16 @@ def test_load_spacefile(tmp_path):
 
 
 @pytest.mark.isolate
-def test_41_enabled():
+def test_41_not_enabled():
     os.environ['PYKX_4_1_ENABLED'] = 'JUNK'
     import pykx as kx
     assert kx.q('~', kx.q.z.K, 4.0).py()
+    os.unsetenv('PYKX_4_1_ENABLED')
+
+
+@pytest.mark.isolate
+def test_41_enabled():
+    os.environ['PYKX_4_1_ENABLED'] = 'True'
+    import pykx as kx
+    assert kx.q('~', kx.q.z.K, 4.1).py()
     os.unsetenv('PYKX_4_1_ENABLED')

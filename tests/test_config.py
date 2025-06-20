@@ -45,13 +45,12 @@ def test_boolean_config():
 
 
 @pytest.mark.isolate
-def test_valid_qlic():
+def test_invalid_qlic():
     os.environ['QLIC'] = 'invalid'
     with pytest.warns() as warnings:
-        import pykx as kx
+        import pykx as kx # noqa: F401
     assert len(warnings) == 1
     assert 'Configuration value QLIC set to non directory' in str(warnings[0].message)
-    assert 2 == kx.q('2').py()
 
 
 @pytest.mark.isolate
@@ -88,3 +87,11 @@ def test_suppress_warnings(recwarn):
         message = str(i.message)
         assert 'setting a port in this way' not in message
         assert 'Attempting to call numpy' not in message
+
+
+@pytest.mark.isolate
+def test_PYKX_GC_UNLICENSED():
+    os.environ['PYKX_GC']='True'
+    os.environ['PYKX_UNLICENSED']='True'
+    import pykx as kx # noqa: F401
+    assert True

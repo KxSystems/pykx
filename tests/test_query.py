@@ -532,7 +532,13 @@ def test_pythonic_query(kx):
     assert kx.q('~', table[1], table.select(where=kx.Column('x').isin('b')))
     assert kx.q('~', table[2], table.select(where=kx.Column('x').isin(kx.Variable('cvar'))))
     assert kx.q('~', table[0], table.select(where=kx.Column('x') == 'a'))
+    assert kx.q('~', table[0], table.select(
+        where=(kx.Column('x') == 'a') | kx.ParseTree(~ kx.Column('b'))))
     assert kx.q('~', table[0], table.select(where=kx.ParseTree(kx.q.parse(b'x=`a')).enlist()))
+    assert kx.q('~', table[0], table.select(where=[[kx.ParseTree(kx.Column('x')=='a')]]))
+    assert kx.q('~', table[0], table.select(
+        where=kx.ParseTree(kx.QueryPhrase(kx.Column('x')=='a'))))
+    assert kx.q('~', table[0], table.select(where=~ kx.Column('b')))
     assert kx.q('~', table[0], table.select(where=kx.QueryPhrase([kx.q.parse(b'x=`a')])))
     assert kx.q('~', table[0], table.select(where=kx.QueryPhrase(kx.Column('x') == 'a')))
     assert kx.q('~', table[0:2], table.select(where=(kx.Column('x') == 'a')
@@ -542,6 +548,11 @@ def test_pythonic_query(kx):
     assert kx.q('~', table[2], table.select(where=kx.QueryPhrase(kx.Column('x1')
                                                                  == kx.Column('x1').max())))
     assert kx.q('~', table[2], table.select(where=kx.Column('x11').msum(2) > 4))
+    assert kx.q('~', table[0], table.select(where=(kx.Column('x') == 'a')
+                                            ._and(kx.Column('x1') == 1)))
+    assert kx.q('~', table[0:2], table.select(where=(kx.Column('x') == 'a')
+                                              ._or(kx.Column('x1') == 2)))
+    assert kx.q('~', table[1:3], table.select(where=(kx.Column('x') == 'a')._not()))
     assert all(kx.q('{update x11msum2:2 msum x11 from x}', table)
                == table.update({'x11msum2': kx.Column('x11').msum(2)}))
     assert all(kx.q('{select by neg b from x}', table)
@@ -570,7 +581,7 @@ def test_pythonic_query(kx):
                 table.select(columns=kx.Column('b', name='maxB').max()))
     assert kx.q('~', kx.q('{select maxB:max b from x}', table),
                 table.select(columns={'maxB': kx.Column('b').max()}))
-    t= kx.q('([] c1:30?`a`b`c;c2:30?`d`e`f;c3:30?4;c4:30?4)')
+    t = kx.q('([] c1:30?`a`b`c;c2:30?`d`e`f;c3:30?4;c4:30?4)')
     a = kx.q('{select from x where c3=(max;c3) fby ([] c1;c4)}', t)
     b = t.select(where=kx.Column('c3') == [kx.q.fby, [kx.q.enlist, kx.q.max, 'c3'],
                                            kx.ParseTree.table(['c1', 'c4'])])
@@ -869,3 +880,28 @@ def test_fby_instance_call(kx):
     with pytest.raises(RuntimeError) as err:
         kx.Column('a').fby(['c1,c2'], 'sum', table)
         assert "Column object" in str(err)
+
+
+def test_no_inplace(kx):
+    a = kx.Column('a')
+    a.max()
+    assert a._value == 'a'
+    a.call('{x}')
+    assert a._value == 'a'
+    b = kx.Column('b')
+    a | b
+    assert a._value == 'a'
+    assert b._value == 'b'
+    a.name('aa')
+    assert a._value == 'a'
+    a & b
+    assert a._value == 'a'
+    assert b._value == 'b'
+    pt = kx.ParseTree(['a'])
+    pt.enlist()
+    assert pt._tree == ['a']
+    pt.first()
+    assert all(pt._tree == ['a'])
+    qp = kx.QueryPhrase(kx.Column('a'))
+    qp & b
+    assert qp._phrase == ['a']

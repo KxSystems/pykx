@@ -53,7 +53,8 @@ void k_free(Allocator* ctx, uintptr_t p, npy_uintp sz) {
         int should_dealloc = x->r == 0;
         if (should_dealloc) {
             if (gc_enabled == -1) {
-                gc_enabled = PyLong_AsLong(PyDict_GetItemString(PyModule_GetDict(PyImport_AddModule("pykx.config")), "k_gc"));
+                gc_enabled = PyLong_AsLong(PyDict_GetItemString(PyModule_GetDict(PyImport_AddModule("pykx.config")), "k_gc"))
+                    && PyLong_AsLong(PyDict_GetItemString(PyModule_GetDict(PyImport_AddModule("pykx.core")), "licensed"));
             }
             if (gc_enabled) {
                 k_ptr(0, ".Q.gc[]", NULL);

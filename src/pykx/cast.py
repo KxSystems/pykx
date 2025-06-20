@@ -31,6 +31,7 @@ _overflow_error_by_dtype = {
 
 
 def cast_numpy_ndarray_to_dtype(x, dtype):  # noqa
+    _serr_const = '%s of %s'
     try:
         if x.dtype.char == 'U' or x.dtype.char == 'S':
             if dtype.kind == 'i' or dtype.kind == 'u':
@@ -38,12 +39,12 @@ def cast_numpy_ndarray_to_dtype(x, dtype):  # noqa
             elif dtype.kind == 'f':
                 x = x.astype(float)
             else:
-                raise _cast_TypeError(x, '%s of %s' % (type(x).__name__, x.dtype), dtype)
+                raise _cast_TypeError(x, _serr_const % (type(x).__name__, x.dtype), dtype)
     except Exception as e:
         if type(e) is TypeError:
             raise e
         else:
-            raise _cast_TypeError(x, '%s of %s' % (type(x).__name__, x.dtype), dtype, e)
+            raise _cast_TypeError(x, _serr_const % (type(x).__name__, x.dtype), dtype, e)
 
     try:
         if dtype == np.int16:
@@ -56,12 +57,12 @@ def cast_numpy_ndarray_to_dtype(x, dtype):  # noqa
             if (x < NULL_INT64).any() or (x > INF_INT64).any():
                 raise _overflow_error_by_dtype[np.int64]
     except TypeError as e:
-        raise _cast_TypeError(x, '%s of %s' % (type(x).__name__, x.dtype), dtype, e)
+        raise _cast_TypeError(x, _serr_const % (type(x).__name__, x.dtype), dtype, e)
 
     try:
         casted = x.astype(dtype)
     except Exception as e:
-        raise _cast_TypeError(x, '%s of %s' % (type(x).__name__, x.dtype), dtype, e)
+        raise _cast_TypeError(x, _serr_const % (type(x).__name__, x.dtype), dtype, e)
 
     return casted
 

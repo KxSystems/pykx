@@ -56,7 +56,10 @@ class SystemCommands:
 
     @property
     def console_size(self):
-        """The maximum console size for the q process in the format rows, columns.
+        """
+        Note: console_size has been deprecated, use display_size instead.
+
+        The maximum console size for the q process in the format rows, columns.
 
         The size of the output for the q process before truncating the rest with `...`.
 
@@ -78,6 +81,9 @@ class SystemCommands:
         kx.q.system.console_size = [10, 10]
         ```
         """
+        warn('Warning: console_size has been deprecated. Use display_size instead.',
+             DeprecationWarning, stacklevel=2)
+
         return self._q._call('\\c', wait=True)
 
     @console_size.setter

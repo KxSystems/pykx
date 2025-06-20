@@ -21,8 +21,9 @@ There are five ways to create PyKX objects:
 - a. [Convert Python objects to PyKX objects](#1a-convert-python-objects-to-pykx-objects)
 - b. [Generate data using PyKX inbuilt functions](#1b-generate-data-using-pykx-inbuilt-functions)
 - c. [Evaluate q code using `#!python kx.q`](#1c-evaluate-q-code-using-python-kxq)
-- d. [Retrieve a named entity from q's memory](#1d-retrieve-a-named-entity-from-qs-memory)
-- e. [Query an external q session](#1e-query-an-external-q-session)
+- d. [Assign Python data to q's memory](#1d-assign-python-data-to-qs-memory)
+- e. [Retrieve a named entity from q's memory](#1e-retrieve-a-named-entity-from-qs-memory)
+- f. [Query an external q session](#1f-query-an-external-q-session)
 
 ### 1.a Convert Python objects to PyKX objects
 
@@ -278,7 +279,55 @@ pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
 
 Documentation guide on [how to use `kx.q`](evaluating.md).
 
-### 1.d Retrieve a named entity from q's memory
+### 1.d Assign Python data to q's memory
+
+Assignment of data from Python's memory space to q can take a number of forms:
+
+- Using Python `__setitem__` syntax on the `kx.q` method: (_Suggested_)
+
+	```python
+	>>> kx.q['data'] = np.array([10, 20, 30])
+	>>> kx.q['data']
+	pykx.LongVector(pykx.q('10 20 30'))
+	```
+
+- Setting data to q explicitly through set/assignment in q: (_Available_)
+
+	```python
+	>>> kx.q('{data::x}', np.array([15, 25, 35]))
+	pykx.Identity(pykx.q('::'))
+	>>> kx.q['data']
+	pykx.LongVector(pykx.q('15 25 35'))
+	>>> kx.q.set('data', np.array([20, 30, 40]))
+	pykx.SymbolAtom(pykx.q('`data'))
+	>>> kx.q['data']
+	pykx.LongVector(pykx.q('20 30 40'))
+	```
+
+- Using Python `__setattr__` syntax on the `kx.q` object: (_Discouraged_)
+
+	```python
+	>>> kx.q.data = np.array([30, 40, 50])
+	>>> kx.q.data
+	pykx.LongVector(pykx.q('30 40 50'))
+	```
+
+??? Note "Why `__setattr__` is discouraged"
+
+	Data retrieval using `__getattr__` on the `kx.q` object is designed for use with the PyKX [context interface](../../api/pykx-execution/ctx.md). To comply with round-trip retrieval the assignment completed with `__setattr__` syntax persists data to a name with a leading `.`.
+
+	To see the effect of this in practice we can look at the following example:
+
+	```python
+	>>> import pykx as kx
+	>>> kx.q.data = [100, 200, 300]
+	>>> kx.q['data']
+	QError: data
+	>>> kx.q['.data']
+	pykx.LongVector(pykx.q('100 200 300'))
+	```
+
+### 1.e Retrieve a named entity from q's memory
 
 As PyKX objects exist in a memory space accessed and controlled by interactions with q, the items created in q may not be immediately available as Python objects. For example, if you created a named variable in q as a side effect of a function call or just explicitly created it, you can retrieve it by its name:
 
@@ -301,7 +350,7 @@ x          x1
 pykx.FloatVector(pykx.q('0.3927524 0.5170911 0.5159796 0.4066642 0.1780839'))
 ```
 
-### 1.e Query an external q session
+### 1.f Query an external q session
 
 PyKX provides an IPC interface allowing users to query and retrieve data from a q server. If you have a q server with no username/password exposed on `#!python port 5000`, it's possible to run synchronous and asynchronous events against this server:
 

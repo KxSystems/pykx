@@ -1,4 +1,5 @@
 from libc.stdint cimport *
+from libc.string cimport memcpy
 
 from cpython.bytes cimport PyBytes_FromStringAndSize
 from cpython.ref cimport Py_INCREF
@@ -168,6 +169,67 @@ cpdef inline uintptr_t k_k(x):
 
 cpdef inline long long k_n(x):
     return (<core.K><uintptr_t>x._addr).n
+
+cpdef inline to_vec(x):
+    cdef core.K kx
+    if x.t == -1:
+        kx = core.ktn(1, 1)
+        (<unsigned char*>kx.G0)[0] = k_g(x)
+    elif x.t == -2:
+        kx = core.ktn(2, 1)
+        memcpy((<unsigned char*>kx.G0), (<unsigned char*>(<core.K><uintptr_t>x._addr).G0), 16)
+    elif x.t == -4:
+        kx = core.ktn(4, 1)
+        (<unsigned char*>kx.G0)[0] = k_g(x)
+    elif x.t == -5:
+        kx = core.ktn(5, 1)
+        (<short*>kx.G0)[0] = k_h(x)
+    elif x.t == -6:
+        kx = core.ktn(6, 1)
+        (<int*>kx.G0)[0] = k_i(x)
+    elif x.t == -7:
+        kx = core.ktn(7, 1)
+        (<long long*>kx.G0)[0] = k_j(x)
+    elif x.t == -8:
+        kx = core.ktn(8, 1)
+        (<float*>kx.G0)[0] = k_e(x)
+    elif x.t == -9:
+        kx = core.ktn(9, 1)
+        (<double*>kx.G0)[0] = k_f(x)
+    elif x.t == -10:
+        kx = core.ktn(10, 1)
+        (<unsigned char*>kx.G0)[0] = k_g(x)
+    elif x.t == -11:
+        kx = core.ktn(11, 1)
+        (<uintptr_t*>kx.G0)[0] = <uintptr_t>(<unsigned char*>(<core.K><uintptr_t>x._addr).s)
+    elif x.t == -12:
+        kx = core.ktn(12, 1)
+        (<long long*>kx.G0)[0] = k_j(x)
+    elif x.t == -13:
+        kx = core.ktn(13, 1)
+        (<int*>kx.G0)[0] = k_i(x)
+    elif x.t == -14:
+        kx = core.ktn(14, 1)
+        (<int*>kx.G0)[0] = k_i(x)
+    elif x.t == -15:
+        kx = core.ktn(15, 1)
+        (<double*>kx.G0)[0] = k_f(x)
+    elif x.t == -16:
+        kx = core.ktn(16, 1)
+        (<long long*>kx.G0)[0] = k_j(x)
+    elif x.t == -17:
+        kx = core.ktn(17, 1)
+        (<int*>kx.G0)[0] = k_i(x)
+    elif x.t == -18:
+        kx = core.ktn(18, 1)
+        (<int*>kx.G0)[0] = k_i(x)
+    elif x.t == -19:
+        kx = core.ktn(19, 1)
+        (<int*>kx.G0)[0] = k_i(x)
+    else:
+        raise QError(f'unsupported type {type(x)} passed to _to_vector')
+
+    return factory(<uintptr_t>kx, False)
 
 
 cdef inline core.K _k(x):

@@ -7,6 +7,7 @@ import shutil
 import site
 import subprocess
 import sys
+import platform
 
 # Do not import pykx here - use the `kx` fixture instead!
 import pytest
@@ -436,4 +437,43 @@ def test_error_attrs(kx):
         try:
             operator.attrgetter(i)(kx)
         except BaseException as err:
-            raise AssertionError(f"Exception {err} raised when retrieving atrribute {i}")
+            raise AssertionError(f"Exception {err} raised when retrieving attribute {i}")
+
+
+def test_kx_versions(kx):
+    test_os = platform.uname()[0]
+    test_arch = platform.uname()[4]
+    test_K = str(kx.q.z.K.py())
+    test_vars = (test_os, test_arch, test_K)
+    if test_vars == ('Linux',   'x86_64', '4.0'):
+        assert kx.q.z.k == kx.q('2025.02.18')
+    elif test_vars == ('Linux',   'x86_64', '4.1'):
+        assert kx.q.z.k == kx.q('2025.04.28')
+    # elif test_vars == ('Linux',   'x86_64', '4.2'):
+    #    assert kx.q.z.k == kx.q('?')
+    elif test_vars == ('Linux',   'aarch64',    '4.0'):
+        assert kx.q.z.k == kx.q('2025.02.18')
+    elif test_vars == ('Linux',   'aarch64',    '4.1'):
+        assert kx.q.z.k == kx.q('2025.04.28')
+    # elif test_vars == ('Linux',   'aarch64',    '4.2'):
+    #    assert kx.q.z.k == kx.q('?')
+    elif test_vars == ('Darwin',  'x86_64', '4.0'):
+        assert kx.q.z.k == kx.q('2025.02.18')
+    elif test_vars == ('Darwin',  'x86_64', '4.1'):
+        assert kx.q.z.k == kx.q('2025.04.28')
+    # elif test_vars == 'Darwin',  'x86_64', '4.2'):
+    #    assert kx.q.z.k == kx.q('?')
+    elif test_vars == ('Darwin',  'arm64',    '4.0'):
+        assert kx.q.z.k == kx.q('2025.02.18')
+    elif test_vars == ('Darwin',  'arm64',    '4.1'):
+        assert kx.q.z.k == kx.q('2025.04.28')
+    # elif test_vars == ('Darwin',  'arm',    '4.2'):
+    #    assert kx.q.z.k == kx.q('?')
+    elif test_vars == ('Windows', 'AMD64', '4.0'):
+        assert kx.q.z.k == kx.q('2025.02.18')
+    elif test_vars == ('Windows', 'AMD64', '4.1'):
+        assert kx.q.z.k == kx.q('2025.04.28')
+    # elif test_vars == ('Windows', 'AMD64', '4.2'):
+    #    assert kx.q.z.k == kx.q('?')
+    else:
+        raise AssertionError(f"Unexpected env: {test_vars}")

@@ -7,9 +7,12 @@ import pytest
 
 @pytest.mark.order(1)
 def test_creation(kx):
+    # Loading of a splayed table before kx.DB would pollute db.tables
+    kx.q('\\l tests/data/splay/')
+    assert kx.q.tables().py() == ['splayed']
     # Definition of qtab would break kx.DB prior to use of .Q.pt
     kx.q('qtab:([]100?1f;100?1f)')
-    db = kx.DB(path='splay_db')
+    db = kx.DB(path='../../../splay_db')
     tab = kx.Table(data={
         'date': kx.q('2015.01.01 2015.01.01 2015.01.02 2015.01.02'),
         'ti': kx.q('09:30:00 09:31:00 09:30:00 09:31:00'),
@@ -43,16 +46,16 @@ def test_load_1(kx):
     db.load('splay_db')
     assert db.tables == ['t']
     assert type(db.t) == kx.SplayedTable # noqa: E721
-    with pytest.raises(kx.QError) as err:
+    with pytest.raises(kx.DBError) as err:
         db.load('../splay_db')
     assert 'Attempting to reload existing' in str(err.value)
-    with pytest.raises(kx.QError) as err:
+    with pytest.raises(kx.DBError) as err:
         db.load('test')
     assert 'Only one kdb+ database' in str(err.value)
-    with pytest.raises(kx.QError) as err:
+    with pytest.raises(kx.DBError) as err:
         db.load('../pyproject.toml', overwrite=True)
     assert 'Provided path is a file' in str(err.value)
-    with pytest.raises(kx.QError) as err:
+    with pytest.raises(kx.DBError) as err:
         db.load('doesNotExist', overwrite=True)
     assert 'Unable to find object at specified path' in str(err.value)
 
@@ -219,6 +222,24 @@ def test_compress(kx):
     assert type(compress_info) == kx.Dictionary
     assert compress_info['algorithm'].py() == 2
     assert compress_info['zipLevel'].py() == 8
+
+
+def test_load_failure(kx):
+    with open('splay_db/.DS_Store', 'w') as f:
+        f.write('invalidfile')
+    with pytest.raises(kx.QError) as err:
+        kx.DB(path='splay_db')
+    assert 'Invalid MacOS metadata' in str(err.value)
+    os.chdir('..')
+    os.remove('splay_db/.DS_Store')
+
+    with open('splay_db/test.q', 'w') as f:
+        f.write('`e+1;')
+    with pytest.raises(kx.QError) as err:
+        kx.DB(path='splay_db')
+    assert 'type' in str(err.value)
+    os.chdir('..')
+    os.remove('splay_db/test.q')
 
 
 @pytest.mark.isolate

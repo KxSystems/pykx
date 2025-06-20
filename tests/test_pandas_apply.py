@@ -215,18 +215,18 @@ def test_error_callable(q):
     tab = q('([] til 10; 1)')
     with pytest.raises(RuntimeError) as errinfo:
         tab.apply(1)
-    assert "Provided value 'func' is not callable" in str(errinfo)
+    assert ("Provided value" in str(errinfo) and "is not callable" in str(errinfo))
 
 
 def test_error_result_type(q):
     tab = q('([] til 10; 1)')
     with pytest.raises(NotImplementedError) as errinfo:
         tab.apply(q('{x+1}'), result_type='broadcast')
-    assert "'result_type' parameter not implemented, please set to None" in str(errinfo)
+    assert "'result_type' parameter is set to None" in str(errinfo)
 
 
 def test_error_raw(q):
     tab = q('([] til 10; 1)')
     with pytest.raises(NotImplementedError) as errinfo:
         tab.apply(q('{x+1}'), raw=True)
-    assert "'raw' parameter not implemented, please set to None" in str(errinfo)
+    assert "'raw' parameter is set to None" in str(errinfo)

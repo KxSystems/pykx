@@ -1,6 +1,8 @@
 from ..wrappers import List
 from . import api_return
 
+import inspect
+
 
 def _init(_q):
     global q
@@ -12,11 +14,11 @@ class PandasApply:
     @api_return
     def apply(self, func, *args, axis: int = 0, raw=None, result_type=None, **kwargs):
         if raw is not None:
-            raise NotImplementedError("'raw' parameter not implemented, please set to None")
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only available for use when the 'raw' parameter is set to None") # noqa: E501
         if result_type is not None:
-            raise NotImplementedError("'result_type' parameter not implemented, please set to None")
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only available for use when the 'result_type' parameter is set to None") # noqa: E501
         if not callable(func):
-            raise RuntimeError("Provided value 'func' is not callable")
+            raise RuntimeError(f"Provided value '{func}' is not callable")
 
         if axis == 0:
             data = q.value(q.flip(self))

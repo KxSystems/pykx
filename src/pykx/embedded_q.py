@@ -155,7 +155,7 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
             code += '@[get;`.pykx.i.kxic.loadfailed;{()!()}]'
             kxic_loadfailed = self._call(code, skip_debug=True).py()
-            if (not platform.system() == "Linux") and (not no_qce) and ('--no-sql' not in qargs):
+            if (platform.system() != "Linux") and (not no_qce) and ('--no-sql' not in qargs):
                 sql = self._call('$[("insights.lib.sql" in " " vs .z.l 4)&not `s in key`; @[system; "l s.k_";{x}];::]', skip_debug=True).py()  # noqa: E501
                 if sql is not None:
                     kxic_loadfailed['s.k'] = sql

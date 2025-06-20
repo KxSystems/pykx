@@ -24,10 +24,18 @@ If you previously had `embedPy` installed pass:
 python -c "import pykx;pykx.install_into_QHOME(overwrite_embedpy=True)"
 ```
 
-If you cannot edit files in `QHOME` you can copy the files to your local folder and load `pykx.q` from there:
+If your environment does not have `QHOME` set or you wish to control where `pykx.q` is installed use `to_local_folder`.
+
+Passing `to_local_folder=True` will save the files in the current working directory:
 
 ```bash
 python -c "import pykx;pykx.install_into_QHOME(to_local_folder=True)"
+```
+
+Passing `to_local_folder='some/dir/path'` will save the files in the directory specified:
+
+```bash
+python -c "import pykx;pykx.install_into_QHOME(to_local_folder='some/dir/path')"
 ```
 
 Gain access to the `.pykx` namespace within the `q` session
@@ -864,7 +872,7 @@ name               | type   | description |
 
 type | description |
 -----|-------------|
-`::` | Returns generic null on successful execution and updates variable `.pykx.util.defaultConv`
+`::` | Returns generic null on successful execution and updates variable `.pykx.util.defaultConv` |
 
 ??? "Supported Options"
 
@@ -876,10 +884,9 @@ type | description |
     [Pandas](https://pandas.pydata.org/docs/user_guide/index.html) | `"pd", "pandas", "Pandas"`   |
     [Python](https://docs.python.org/3/library/datatypes.html)     | `"py", "python", "Python"`   |
     [PyArrow](https://arrow.apache.org/docs/python/index.html)     | `"pa", "pyarrow", "PyArrow"` |
-    [K](type_conversions.md)                                       | `"k", "q"`                   |
+    [K](../api/pykx-q-data/type_conversions.md)                    | `"k", "q"`                   |
     raw                                                            | `"raw"`                      |
     default                                                        | `"default"`                  |
-
 
 ```q
 // Default value on startup is "default"
