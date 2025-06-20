@@ -36,7 +36,7 @@ As such the range of times which can be directly converted should be considered:
 * Minimum value: `#!python 1707-09-22T00:12:43.145224194`
 * Maximum value: `#!python 2262-04-11T23:47:16.854775807`
 
-As mentioned on the [Nulls and infinites](nulls_and_infinities.md)page, most q data types have null, negative infinity, and infinity values.
+As mentioned on the [Nulls and infinites](nulls_and_infinities.md) page, most q data types have null, negative infinity, and infinity values.
 
 |                   | **q representation** | **datetime64[ns]**                  |
 |-------------------|------------------|---------------------------------|

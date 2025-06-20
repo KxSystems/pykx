@@ -86,6 +86,7 @@ from pykx._wrappers cimport factory
 import datetime
 from ctypes import CDLL
 from inspect import signature
+import inspect
 import math
 import os
 from pathlib import Path
@@ -391,7 +392,8 @@ def create_inf(ktype: KType):
         kx = core.ki(INF_INT32)
         kx.t = -19
     else:
-        raise NotImplementedError("Retrieval of infinite values not supported for this type")
+        type_as_string = re.compile(r"(?=.)[A-Za-z]+(?=')").search(str(ktype)).group(0)
+        raise NotImplementedError(f"pykx.{type_as_string}.{inspect.stack()[0][3]}, Retrieval of infinite values not supported for this type")
     return factory(<uintptr_t>kx, False)
 
 def create_neg_inf(ktype: KType):

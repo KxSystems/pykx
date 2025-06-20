@@ -55,7 +55,6 @@ util.loadfile:{[folder;file]
   $[res[0];'res[1];res[1]]
   }
 
-util.warnCache:{gx:getenv x;$[""~gx;"False";gx]}`PYKX_SUPPRESS_WARNINGS
 // @private
 // @desc Retrieval of PyKX initialization directory on first initialization
 if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
@@ -63,13 +62,12 @@ if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
   util.dirCommand:"-c \"import pykx; print('PYKX_DIR: ' + str(pykx.config.pykx_dir))\"";
   if[not count pykxDir:getenv`PYKX_DIR;
     util.dirSysCall:{ret:system x," ",util.dirCommand;util.whichPython:x;ret};
-    pykxDir:$[count util.whichPython;util.dirSysCall[util.whichPython];
-      @[util.dirSysCall;"python3";{util.dirSysCall["python"]}]
-      ];
-    pykxDir:ssr[;"\\";"/"]last vs["PYKX_DIR: "]last pykxDir
+    setenv[`PYKX_LIGHT_LOAD;"True"];
+    pykxDir:@[{(0b;$[count util.whichPython;util.dirSysCall[util.whichPython];@[util.dirSysCall;"python3";{util.dirSysCall["python"]}]])};`;{(1b;x)}];
+    setenv[`PYKX_LIGHT_LOAD;""];;
+    $[pykxDir[0];'pykxDir 1 ;pykxDir:pykxDir 1]; pykxDir:ssr[;"\\";"/"]last vs["PYKX_DIR: "]last pykxDir;
     ];
   ];
-setenv[`PYKX_SUPPRESS_WARNINGS;util.warnCache]
 
 // @private
 // @desc Allow a user to force PyKX to use the location of libpython
@@ -377,7 +375,7 @@ util.parseArgs:{
 //
 // !!! Warning
 //
-// 	This function will be set in the root `.q` namespace
+// This function will be set in the root `.q` namespace
 //
 // **Parameters:**
 //
@@ -933,13 +931,13 @@ setdefault:{
 //
 // // Convert a PyKX conversion object back to q
 // q).pykx.toq .pykx.topd ([]5?1f;5?`a`b`c)
-// 
+//
 // x         x1
 // ------------
-// 0.3017723 a 
-// 0.785033  a 
-// 0.5347096 c 
-// 0.7111716 b 
+// 0.3017723 a
+// 0.785033  a
+// 0.5347096 c
+// 0.7111716 b
 // 0.411597  c
 // ```
 py2q:toq:{
@@ -1650,7 +1648,7 @@ qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not con
 // For more information on the reimporter module which this functionality calls see
 //     https://code.kx.com/pykx/api/reimporting.html#pykx.reimporter.PyKXReimport
 //
-// 
+//
 //
 // **Parameters:**
 //
@@ -1684,7 +1682,7 @@ qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not con
 // q)\l pykx.q
 // q)system"q child.q"     // Failing execution
 // q)'2024.08.29T12:29:39.967 util.whichPython
-//   [5]  /usr/local/anaconda3/envs/qenv/q/pykx.q:123: 
+//   [5]  /usr/local/anaconda3/envs/qenv/q/pykx.q:123:
 //         (`os             ; util.os);
 //         (`whichPython    ; util.whichPython)
 //                            ^
@@ -1692,24 +1690,16 @@ qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not con
 //   [2]  /usr/projects/pykx/child.q:1: \l pykx.q
 //                                      ^
 // q).pykx.safeReimport {system"q child.q"}
-// "Hello World"                 
+// "Hello World"
 // ```
 safeReimport:{[x]
-  pyexec["pykx_internal_reimporter = pykx.PyKXReimport()"];
-  envlist:(`PYKX_DEFAULT_CONVERSION;
-    `PYKX_UNDER_Q;
-    `PYKX_SKIP_UNDERQ;
-    `PYKX_UNDER_PYTHON;
-    `PYKX_LOADED_UNDER_Q;
-    `PYKX_Q_LOADED_MARKER;
-    `PYKX_EXECUTABLE;
-    `PYKX_DIR);
+  reimporter:.pykx.import[`pykx][`:PyKXReimport][];
+  envlist:reimporter[`:envlist]`;
   envvals:getenv each envlist;
 
-  .pykx.eval["pykx_internal_reimporter.reset()"];
+  reimporter[`:reset][];
   r: @[{(0b;x y)}x;(::);{(1b;x)}];
 
-  pyexec["del pykx_internal_reimporter"];
   setenv'[envlist;envvals];
   $[r 0;{'x};::] r 1
   }
@@ -1848,7 +1838,18 @@ debugInfo:{
 // q).pykx.eval["a"]`
 // 0 1 2 3 4
 // ```
-console:{pyexec"from code import InteractiveConsole\n__pykx_console__ = InteractiveConsole(globals())\n__pykx_console__.push('import sys')\n__pykx_console__.push('quit = sys.exit')\n__pykx_console__.push('exit = sys.exit')\ntry:\n    line = __pykx_console__.interact(banner='', exitmsg='')\nexcept SystemExit:\n    pykx._pykx_helpers.clean_errors()"}
+console:{if[.z.o like "w*";'".pykx.console is not available on Windows"];
+ pyexec "\n" sv (
+  "from code import InteractiveConsole";
+  "__pykx_console__ = InteractiveConsole(globals())";
+  "__pykx_console__.push('import sys')";
+  "__pykx_console__.push('quit = sys.exit')";
+  "__pykx_console__.push('exit = sys.exit')";
+  "try:";
+  "    line = __pykx_console__.interact(banner='', exitmsg='')";
+  "except SystemExit:";
+  "    pykx._pykx_helpers.clean_errors()")
+ };
 
 // @private
 // @desc

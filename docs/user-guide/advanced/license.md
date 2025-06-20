@@ -59,8 +59,8 @@ There are three methods by which updating your license is possible with PyKX.
 	Captured output from initialization attempt:
 	    '2023.10.18T13:27:59.719 licence error: exp
 
-	License location used:
-	/usr/local/anaconda3/pykx/kc.lic
+	License used:
+	    /usr/local/anaconda3/pykx/kc.lic
 
 	Would you like to renew your license? [Y/n]: Y
 	

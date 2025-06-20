@@ -30,7 +30,7 @@ lower:{$[$[(~@x)&10h~@*x;&/10h=@:'x;0b];_x;~t&(77h>t)|99h<t:abs@@x;.z.s'x;19h<t;
 upper:{$[$[(~@x)&10h~@*x;&/10h=@:'x;0b];.Q.Aa x;~t&(77h>t)|99h<t:abs@@x;.z.s'x;19h<t;.z.s@. x;~t in 10 11h;'`type;$[11h=t;`$.Q.Aa@$x;.Q.Aa x]]}
 ssr:{,/@[x;1+2*!_.5*#x:(0,/(0,{n:x?"[";$[n=#x;n;n+.z.s$[(#x)=p:x?"]";'"unmatched ]";p]_x:(n+2+"^"=x n+1)_x]}y,"")+/:x ss y)_x;$[100h>@z;:[;z];z]]}
 
-/select insert update delete exec  / fkeys[&keys] should be eponymous, e.g. order.customer.nation
+/select insert update delete exec  / fkeys[&keys] should be eponymous, e.g. order.customer.nation   
 /{keys|cols}`t `f's{xasc|xdesc}`t n!`t xcol(prename) xcols(prearrange)  FT(xcol xasc xdesc)
 view:{$`. .`\:x};tables:{."\\a ",$$[^x;`;x]};views:{."\\b ",$$[^x;`;x]}
 cols:{$[.Q.qp x:.Q.v x;.Q.pf,!+x;98h=@x;!+x;11h=@!x;!x;!+0!x]} /cols:{!.Q.V x}
@@ -67,8 +67,8 @@ show:{1 .Q.s x;};csv:"," / ";"  also \z 1 for "D"$"dd/mm/yyyy"
 
 parse:{$["\\"=*x;(system;1_x);-5!x]};eval:-6!;reval:-24!
 \d .Q  /def[`a`b`c!(0;0#0;`)]`b`c!(("23";"24");,"qwe")
-k:4.0;K:0Nd;host:-12!;addr:-13!;gc:-20!;ts:{-34!(x;y)};gz:-35!;w:{`used`heap`peak`wmax`mmap`mphy`syms`symw!(."\\w"),."\\w 0"}  / used: dpft en par chk ind fs fu fc
-res:`abs`acos`asin`atan`avg`bin`binr`cor`cos`cov`delete`dev`div`do`enlist`exec`exit`exp`getenv`hopen`if`in`insert`last`like`log`max`min`prd`select`setenv`sin`sqrt`ss`sum`tan`update`var`wavg`while`within`wsum`xexp
+k:4.0;K:2025.02.18;host:-12!;addr:-13!;gc:-20!;ts:{-34!(x;y)};gz:-35!;w:{`used`heap`peak`wmax`mmap`mphy`syms`symw!(."\\w"),."\\w 0"}  / used: dpft en par chk ind fs fu fc
+res:`abs`acos`asin`atan`avg`bin`binr`cor`cos`cov`delete`dev`div`do`enlist`exec`exit`exp`getenv`hopen`if`in`insert`last`like`log`max`min`prd`select`setenv`sin`sqrt`ss`sum`tan`update`var`wavg`while`within`wsum`xexp`from`by
 addmonths:{("d"$m+y)+x-"d"$m:"m"$x}
 Xf:{y 1:0xfe20,("x"$77+@x$()),13#0x00;(`$($y),"#")1:0x};Cf:Xf`char
 f:{$[^y;"";y<0;"-",f[x;-y];y<1;1_f[x;10+y];9e15>j:"j"$y*prd x#10f;(x_j),".",(x:-x)#j:$j;$y]}
@@ -123,13 +123,14 @@ bv:{g:$[(::)~x;max;min];x:.Q.d;d:{`/:'x,'d@&(d:!x)like"[0-9]*"}'P:$[`par.txt in!
  .Q.vp:t!{(+(,.Q.pf)!,0#. .Q.pf),'+(-2!'.+x)#'+|0#x:?[x;();0b;()]}'d;.Q.pt,:{.[x;();:;+.q.except[!+.Q.vp x;.Q.pf]!x];x}'.q.except[t;.Q.pt];}
 
 pt:pm:();MAP:{{$[0>@a:.+0!. x;.q.set[x]@.`$-1_$a;]}'a@&~(a:."\\a")in pt;pm::();if[#pt;pm::pt!{(`u#pd,'pv)!p2[(x;();0b;())]'[pd;pv]}'pt]}
-dd:{`/:x,`$$y};d0:{dd[*|pd;*|pv]};p1:{$[#pm;pm[x](y;z);z in vt[y;x];vp x;+(!+. x)!`/:dd[y;z],x]};p2:{0!(?).@[x;0;p1[;y;z]]}
+pfc:{$[$[#pm;|/{|/0b,{f:{pf~*`\:x};|/$[-11h=t:@x;f x;(t&~11h~t)|2>#:x;0b;11h=t;f'x;.z.s'x]}'$[99h=@x;.:x;x]}'x 1 2 3;0];+((,pf)!,z),+y;y]}
+dd:{`/:x,`$$y};d0:{dd[*|pd;*|pv]};p1:{$[#pm;pm[x](y;z);z in vt[y;x];vp x;+(!+. x)!`/:dd[y;z],x]};p2:{0!(?).@[x;0;pfc[x;;z]p1[;y;z]@]}
 
 p:{$[~#D;p2[x;d]':y;(,/p2[x]'/':P[i](;)'y)@<,/y@:i:&0<#:'y:D{x@&x in y}\:y]}
 view:{pd::PD x:$[(::)~x;x;$[#x:&PV in x;x;'"invalid partition filter"]];u~:?u::..[pf;();:;pv::PV x];.[;();:;]'[pt;{+(x . y,`.d)!y}[x]':pt::!x:d0[]];pn::pt!(#pt)#()}
 
 jp:{$[$["w"~*$.z.o;u[$[(_u:$y)like"[a-z]:*";2;0]]in"\\/";("/"=*$y)|objp y];-1!y;`/:x,y]};rp:-500!
-L:{D::();f:{!:'?{-1!`$("/"/:3#"/"\:x),"/_"}'u&objp'u:1_'$x;x};f@,d::$[z;rp y;y];if[x~,`par.txt;if[~#x:,/D::{x@&~(x:!x)like"*$"}'P::f@jp[d]'`$0:`/:d,*x;'empty]];if[^*PV::x@:<x:(t:"DMJJ"i:10 7 4?#$*x)$$x;'`part];
+L:{D::();f:{!:'?{-1!`$("/"/:3#"/"\:x),"/_"}'u@&objp'u:1_'$x;x};f@,d::$[z;rp y;y];if[x~,`par.txt;if[~#x:,/D::{x@&~(x:!x)like"*$"}'P::f@jp[d]'`$0:`/:d,*x;'empty]];if[^*PV::x@:<x:(t:"DMJJ"i:10 7 4?#$*x)$$x;'`part];
  PD::$[#D::t$'$D;,/{P@&x in'D}'?PV;(#PV)#d];pf::`date`month`year`int i;view[];if[(0>."\\p")|."\\_";cn'.:'pt];}
 /L:{P::,`:.;D::,x;pf::`date;pt::!P[0]@**D;T::P!P{z!{x!(y . ,[;`]z,)'x}[x;y]'z}[pt]'D}
 

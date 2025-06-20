@@ -23,7 +23,7 @@ def test_set_index_multi(q):
 
 def test_set_index_drop(q):
     df = q('([] x: til 10; y: 10 - til 10; z: 10?`a`b`c)')
-    with pytest.raises(ValueError):
+    with pytest.raises(NotImplementedError):
         df.set_index('x', drop=False)
 
 

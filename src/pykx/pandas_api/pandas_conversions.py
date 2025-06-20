@@ -1,6 +1,8 @@
 from . import api_return
 from ..exceptions import QError
 
+import inspect
+
 type_number_to_pykx_k_type = {-128: 'QError',
                               -20: 'EnumAtom',
                               -19: 'TimeAtom',
@@ -72,8 +74,7 @@ class PandasConversions:
 
         try:
             if copy is not True:
-                raise NotImplementedError("Currently only the "
-                                          "default value of True is accepted for copy")
+                raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only implemented when copy is set to True") # noqa: E501
 
             # Check if input is scalar or str --> run q code per this input
             if isinstance(dtype, dict):
@@ -116,11 +117,11 @@ class PandasConversions:
                                             dictColTypes:value dict;
                                             nonStringToSymForNested:any
                                             (not dictColTypes=11h) & (tabColTypes=0h) &
-                                            all each tabColNestedTypes~\:\:10h;
+                                            all each tabColNestedTypes~\\:\\:10h;
                                             nonNestedString: any (tabColTypes=0h) &
-                                            not all each tabColNestedTypes~\:\:10h;
+                                            not all each tabColNestedTypes~\\:\\:10h;
                                             nonNestedString or nonStringToSymForNested
-                                            }''', self, dict_grab)  # noqa: W605
+                                            }''', self, dict_grab)
                 if check_mixed_columns:
                     raise ValueError("This method can only handle casting string complex "
                                      "columns to symbols.  Other complex column data or "
@@ -169,7 +170,7 @@ class PandasConversions:
                                       dCols4:dictCols where b4;
                                       f4:{(`$; x)}; c4:dCols4!(f4 each dCols4)];
                                     // Any matches that meet the vanilla case
-                                    // and don't have additonal needs --> not any (bools)
+                                    // and don't have additional needs --> not any (bools)
                                     b5:not any (b1;b2;b3;b4);
                                     .papi.errorList:();
                                     if[any b5;
@@ -192,8 +193,8 @@ class PandasConversions:
                                     $[count .papi.errorList;
                                     .papi.errorList;
                                     tableOutput]
-                                    }''', # noqa: W605
-                                 self, dict_grab, type_number_to_pykx_k_type)  # noqa: W605
+                                    }''',
+                                 self, dict_grab, type_number_to_pykx_k_type)
             else:
                 try:
                     dtype_val = abs(kx_type_to_type_number[next(x for x
@@ -209,13 +210,13 @@ class PandasConversions:
                                             tabColNestedTypes:value tabColTypesDict,distinct each
                                             type each\'flip #[;tab] where 0h=tabColTypesDict;
                                             nonNestedString:any (tabColTypes=0h) &
-                                                            not all each tabColNestedTypes~\:\:10h;
+                                                        not all each tabColNestedTypes~\\:\\:10h;
                                             nonStringToSymForNested:any (not dtype=11h) &
                                                                     (tabColTypes=0h) &
                                                                     all each
-                                                                    tabColNestedTypes~\:\:10h;
+                                                                    tabColNestedTypes~\\:\\:10h;
                                             nonNestedString or nonStringToSymForNested
-                                            }''', # noqa: W605
+                                            }''',
                                         self, dtype_val)
                 if check_mixed_columns:
                     raise ValueError("This method can only handle casting string complex"
@@ -280,7 +281,7 @@ class PandasConversions:
                                     .papi.errorList;
                                     tableOutput]
                                     }''',
-                                 self, dtype_val, type_number_to_pykx_k_type)  # noqa: W605
+                                 self, dtype_val, type_number_to_pykx_k_type)
 
             if return_value.t in [98, 99]:
                 return return_value

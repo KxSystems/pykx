@@ -5,6 +5,7 @@ but for PyKX and q specific issues custom exceptions are used.
 """
 
 __all__ = [
+    'DBError',
     'FutureCancelled',
     'LicenseException',
     'NoResults',
@@ -87,4 +88,9 @@ class QError(PyKXException):
 
     Refer to https://code.kx.com/q/basics/errors/ for clarification about error messages.
     """
+    pass
+
+
+class DBError(PyKXException):
+    """Exceptions that relate to errors in database usage unrelated to q execution"""
     pass

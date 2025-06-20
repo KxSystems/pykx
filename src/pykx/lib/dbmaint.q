@@ -26,12 +26,16 @@ allpaths:{[dbdir;table]
 copy1col:{[tabledir;oldcol;newcol]
  if[(oldcol in ac)and not newcol in ac:allcols tabledir;
   stdout"copying ",(string oldcol)," to ",(string newcol)," in `",string tabledir;
-  .os.cpy[(`)sv tabledir,oldcol;(`)sv tabledir,newcol];@[tabledir;`.d;,;newcol]]}
+  .os.cpy[(`)sv tabledir,oldcol;(`)sv tabledir,newcol];@[tabledir;`.d;,;newcol]];
+  if[type key ` sv tabledir,`$string[oldcol],"#"; .os.cpy[` sv tabledir,`$string[oldcol],"#";` sv tabledir,`$string[newcol],"#"]];
+  if[type key ` sv tabledir,`$string[oldcol],"##"; .os.cpy[` sv tabledir,`$string[oldcol],"##";` sv tabledir,`$string[newcol],"##"]];}
 
 delete1col:{[tabledir;col]
  if[col in ac:allcols tabledir;
   stdout"deleting column ",(string col)," from `",string tabledir;
-  .os.del[(`)sv tabledir,col];@[tabledir;`.d;:;ac except col]]}
+  .os.del[(`)sv tabledir,col];@[tabledir;`.d;:;ac except col]];
+  if[type key ` sv tabledir,`$string[col],"#"; .os.del[` sv tabledir,`$string[col],"#"]];
+  if[type key ` sv tabledir,`$string[col],"##"; .os.del[` sv tabledir,`$string[col],"##"]];}
 
 /
 enum:{[tabledir;val]
@@ -44,7 +48,7 @@ enum:{[tabledir;val]if[not 11=abs type val;:val];.Q.dd[tabledir;`sym]?val}
 
 find1col:{[tabledir;col]
  $[col in allcols tabledir;
-   [stdout"column ",string[col]," (type ",(string first"i"$read1((`)sv tabledir,col;8;1)),") in `",string tabledir;1b];
+   [stdout"column ",string[col]," in `",string tabledir;1b];
    [stdout"column ",string[col]," *NOT*FOUND* in `",string tabledir;0b]]}
 
 fix1table:{[tabledir;goodpartition;goodpartitioncols]
@@ -67,7 +71,10 @@ reordercols0:{[tabledir;neworder]
 rename1col:{[tabledir;oldname;newname]
  if[(oldname in ac)and not newname in ac:allcols tabledir;
   stdout"renaming ",(string oldname)," to ",(string newname)," in `",string tabledir;
-  .os.ren[` sv tabledir,oldname;` sv tabledir,newname];@[tabledir;`.d;:;.[ac;where ac=oldname;:;newname]]]}
+  .os.ren[` sv tabledir,oldname;` sv tabledir,newname];@[tabledir;`.d;:;.[ac;where ac=oldname;:;newname]]];
+  if[type key ` sv tabledir,`$string[oldname],"#"; .os.ren[` sv tabledir,`$string[oldname],"#";` sv tabledir,`$string[newname],"#"]];
+  if[type key ` sv tabledir,`$string[oldname],"##"; .os.ren[` sv tabledir,`$string[oldname],"##";` sv tabledir,`$string[newname],"##"]];
+ }
 
 ren1table:{[old;new]stdout"renaming ",(string old)," to ",string new;.os.ren[old;new];}
 

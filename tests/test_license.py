@@ -146,10 +146,10 @@ def test_licensed_signup_invalid_b64(tmp_path, monkeypatch):
     reason='Not supported with PYKX_THREADING'
 )
 def test_licensed_success_file(monkeypatch):
-    qhome_path = os.environ['QHOME']
+    qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    inputs = iter(['Y', 'n', '1', 'n', '1', qhome_path + '/kc.lic'])
+    inputs = iter(['Y', 'n', '1', 'n', '1', qlic_path + '/kc.lic'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
 
     import pykx as kx
@@ -166,10 +166,10 @@ def test_licensed_success_file(monkeypatch):
     reason='Not supported with PYKX_THREADING'
 )
 def test_licensed_success_b64(monkeypatch):
-    qhome_path = os.environ['QHOME']
+    qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    with open(qhome_path + '/kc.lic', 'rb') as f:
+    with open(qlic_path + '/kc.lic', 'rb') as f:
         license_content = base64.encodebytes(f.read())
     inputs = iter(['Y', 'n', '1', 'n', '2', str(license_content)])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
@@ -202,7 +202,7 @@ def test_invalid_licensed_available_type_input(tmp_path, monkeypatch):
 )
 def test_invalid_licensed_available_method_input(tmp_path, monkeypatch):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
-    inputs = iter(['Y', 'Y', '1', 'F'])
+    inputs = iter(['Y', 'Y', '2', 'F'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
     with pytest.raises(Exception) as e:
         import pykx as kx # noqa: F401
@@ -210,14 +210,31 @@ def test_invalid_licensed_available_method_input(tmp_path, monkeypatch):
 
 
 @pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_licensed_available_no_file(tmp_path, monkeypatch):
+    os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
+    inputs = iter(['Y', 'Y', '1', '/test/test.blah'])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+    with pytest.raises(Exception) as e:
+        import pykx as kx # noqa: F401
+        assert str(e) == "Download location provided /test/test.blah does not exist."
+
+
+@pytest.mark.skipif(
     os.getenv('PYKX_THREADING') is not None,
     reason='Not supported with PYKX_THREADING'
 )
 def test_licensed_available(monkeypatch):
-    qhome_path = os.environ['QHOME']
+    qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    inputs = iter(['Y', 'Y', '1', '1', qhome_path + '/kc.lic'])
+    inputs = iter(['Y', 'Y', '1', qlic_path + '/kc.lic'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
 
     import pykx as kx
@@ -230,12 +247,12 @@ def test_licensed_available(monkeypatch):
     reason='Not supported with PYKX_THREADING'
 )
 def test_licensed_available_b64(monkeypatch):
-    qhome_path = os.environ['QHOME']
+    qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    with open(qhome_path + '/kc.lic', 'rb') as f:
+    with open(qlic_path + '/kc.lic', 'rb') as f:
         license_content = base64.encodebytes(f.read())
-    inputs = iter(['Y', 'Y', '1', '2', str(license_content)])
+    inputs = iter(['Y', 'Y', '2', '1', str(license_content)])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
 
     import pykx as kx
@@ -248,10 +265,10 @@ def test_licensed_available_b64(monkeypatch):
     reason='License tests are being skipped'
 )
 def test_envvar_init():
-    qhome_path = os.environ['QHOME']
+    qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    with open(qhome_path + '/kc.lic', 'rb') as f:
+    with open(qlic_path + '/kc.lic', 'rb') as f:
         license_content = base64.encodebytes(f.read())
     os.environ['KDB_LICENSE_B64'] = license_content.decode('utf-8')
 
@@ -411,3 +428,154 @@ def test_string_conversions(kx):
     with pytest.raises(Exception) as err:
         kx.license.check(lic_contents, format='string', license_type='blah.lic')
         assert "License type" in str(err)
+
+
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+def test_install_from_directory(monkeypatch):
+    qlic_path = os.environ['QLIC']
+    os.unsetenv('QLIC')
+    os.unsetenv('QHOME')
+    inputs = iter(['Y', 'Y', '1', qlic_path])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+
+    import pykx as kx
+    assert kx.licensed
+
+
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+def test_install_from_directory_no_file(tmp_path, monkeypatch):
+    os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
+    qlic_path = os.environ['QLIC']
+    inputs = iter(['Y', 'Y', '1', qlic_path])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+    with pytest.raises(Exception) as err:
+        import pykx as kx
+        assert not kx.licensed
+        assert str(err) == "No license detected in given directory."
+
+
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+def test_license_invalid_lic_name(monkeypatch):
+    qlic_path = os.environ['QLIC']
+    os.unsetenv('QLIC')
+    os.unsetenv('QHOME')
+    inputs = iter(['Y', 'n', '1', 'n', '1', qlic_path + '/junk.lic'])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+
+    with pytest.raises(Exception) as e:
+        import pykx as kx # noqa: F401
+        assert "Supplied license file" in str(e)
+
+
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='KXI-63218 PYKX_THREADING licence path differs'
+)
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+@pytest.mark.skipif(
+    'KDB_LICENSE_EXPIRED' not in os.environ,
+    reason='Test required KDB_LICENSE_EXPIRED environment variable to be set'
+)
+# To run test manually first "export KDB_LICENSE_EXPIRED=`cat {expired_lic_location} | base64 -w 0`"
+def test_expired_license(monkeypatch):
+    exp_lic = os.environ['KDB_LICENSE_EXPIRED']
+    lic_folder = '/tmp/license'
+    os.makedirs(lic_folder, exist_ok=True)
+    with open(lic_folder + '/k4.lic', 'wb') as binary_file:
+        binary_file.write(base64.b64decode(exp_lic))
+    os.environ['QLIC'] = os.environ['QHOME'] = lic_folder
+    inputs = iter(['n', 'n'])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+
+    import pykx as kx
+    assert not kx.licensed
+
+
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+def test_mode_licensed_true():
+    os.environ['PYKX_LICENSED'] = 'True'
+    lic_folder = '/tmp/license'
+    os.makedirs(lic_folder, exist_ok=True)
+    with open(lic_folder + '/k4.lic', 'w') as f:
+        f.write("badfile")
+    os.environ['QLIC'] = os.environ['QHOME'] = lic_folder
+
+    with pytest.raises(Exception):
+        import pykx as kx
+        kx.licensed
+
+
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+def test_mode_monkeypatch_licensed_true(monkeypatch):
+    os.environ['PYKX_LICENSED'] = 'True'
+    lic_folder = '/tmp/license'
+    os.makedirs(lic_folder, exist_ok=True)
+    with open(lic_folder + '/k4.lic', 'w') as f:
+        f.write("badfile")
+    os.environ['QLIC'] = os.environ['QHOME'] = lic_folder
+
+    inputs = iter([])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+    with pytest.raises(Exception):
+        import pykx as kx
+        kx.licensed
+
+
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='KXI-63218 PYKX_THREADING licence path differs'
+)
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+def test_mode_monkeypatch_licensed_false(monkeypatch):
+    os.environ['PYKX_LICENSED'] = 'False'
+    lic_folder = '/tmp/license'
+    os.makedirs(lic_folder, exist_ok=True)
+    with open(lic_folder + '/k4.lic', 'w') as f:
+        f.write("badfile")
+    os.environ['QLIC'] = os.environ['QHOME'] = lic_folder
+
+    inputs = iter(['n', 'n'])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+
+    import pykx as kx
+    assert not kx.licensed
+
+
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='KXI-63218 PYKX_THREADING licence path differs'
+)
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+def test_bad_license():
+    lic_folder = '/tmp/license'
+    os.makedirs(lic_folder, exist_ok=True)
+    with open(lic_folder + '/k4.lic', 'w') as f:
+        f.write("badfile")
+    os.environ['QLIC'] = os.environ['QHOME'] = lic_folder
+
+    import pykx as kx
+    assert not kx.licensed

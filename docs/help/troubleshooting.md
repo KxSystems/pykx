@@ -8,7 +8,7 @@ The following section outlines practical information useful when dealing with ge
 
 A number of trial and enterprise type licenses exist for q/kdb+. Not all licenses for q/kdb+ however are valid for PyKX. In particular users require access to a license which contains the feature flags **pykx** and **embedq** which provide access to the PyKX functionality. The following locations can be used for the retrieval of evaluation/personal licenses
 
-- For non-commercial personal users you can access a 12 month kdb+ license with PyKX enabled [here](https://kx.com/kdb-insights-personal-edition-license-download).
+- For non-commercial personal users you can access a 12 month kdb+ license with PyKX enabled [here](https://kx.com/kdb-insights-sdk-personal-edition-download).
 - For commercial evaluation, contact your KX sales representative or sales@kx.com requesting a PyKX trial license. Alternately apply through https://kx.com/book-demo.
 
 For non-personal or non-commercial usage please contact sales@kx.com.
@@ -111,26 +111,30 @@ The following section outlines how a user can get access to a verbose set of env
 
 	```python
 	>>> kx.util.debug_environment()
-	missing q binary at '/usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib/m64/q'
 	**** PyKX information ****
 	pykx.args: ()
-	pykx.qhome: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib
-	pykx.qlic: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib
+	pykx.qhome: /usr/local/anaconda3/envs/qenv/q
+	pykx.qlic: /usr/local/anaconda3/envs/qenv/q
 	pykx.licensed: True
-	pykx.__version__: 1.5.3rc2.dev525+g41f008ad
-	pykx.file: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py
+	pykx.__version__: 3.1.3
+	pykx.file: /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pykx/util.py
 
 	**** Python information ****
-	sys.version: 3.8.3 (default, Jul  2 2020, 11:26:31) 
-	[Clang 10.0.0 ]
+	sys.version: 3.12.3 (v3.12.3:f6650f9ad7, Apr  9 2024, 08:18:48) [Clang 13.0.0 (clang-1300.0.29.30)]
 	pandas: 1.5.3
-	numpy: 1.24.4
-	pytz: 2022.7.1
-	which python: /usr/local/anaconda3/bin/python
-	which python3: /usr/local/anaconda3/bin/python3
+	numpy: 1.26.2
+	pytz: 2024.1
+	which python: /usr/local/bin/python
+	which python3: /Library/Frameworks/Python.framework/Versions/3.12/bin/python3
+	find_libpython: /Library/Frameworks/Python.framework/Versions/3.12/Python
 
 	**** Platform information ****
-	platform.platform: macOS-10.16-x86_64-i386-64bit
+	platform.platform: macOS-13.0.1-x86_64-i386-64bit
+
+	**** PyKX Configuration File ****
+	File location: /usr/local/.pykx-config
+	Used profile: default
+	Profile content: {'PYKX_Q_EXECUTABLE': '/usr/local/anaconda3/envs/qenv/q/m64/q'}
 
 	**** PyKX Configuration Variables ****
 	PYKX_IGNORE_QHOME: False
@@ -141,7 +145,7 @@ The following section outlines how a user can get access to a verbose set of env
 	PYKX_MAX_ERROR_LENGTH: 256
 	PYKX_NOQCE: False
 	PYKX_RELEASE_GIL: False
-	PYKX_Q_LIB_LOCATION: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib
+	PYKX_Q_LIB_LOCATION: /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pykx/lib
 	PYKX_Q_LOCK: False
 	PYKX_SKIP_UNDERQ: False
 	PYKX_Q_EXECUTABLE: /usr/local/anaconda3/envs/qenv/q/m64/q
@@ -149,22 +153,40 @@ The following section outlines how a user can get access to a verbose set of env
 	PYKX_4_1_ENABLED: False
 	PYKX_QDEBUG: False
 	PYKX_DEBUG_INSIGHTS_LIBRARIES: False
-	PYKX_DEFAULT_CONVERSION:
-	PYKX_EXECUTABLE: /usr/local/anaconda3/lib/python3.8/bin/python3.8
-	PYKX_PYTHON_LIB_PATH:
-	PYKX_PYTHON_BASE_PATH:
-	PYKX_PYTHON_HOME_PATH:
-	PYKX_DIR: /usr/local/anaconda3/lib/python3.8/site-packages/pykx
+	PYKX_CONFIGURATION_LOCATION: .
+	PYKX_NO_SIGNAL: False
+	PYKX_CONFIG_PROFILE: default
+	PYKX_BETA_FEATURES: True
+	PYKX_JUPYTERQ: False
+	PYKX_SUPPRESS_WARNINGS: False
+	PYKX_DEFAULT_CONVERSION: 
+	PYKX_EXECUTABLE: /Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12
+	PYKX_PYTHON_LIB_PATH: 
+	PYKX_PYTHON_BASE_PATH: 
+	PYKX_PYTHON_HOME_PATH: 
+	PYKX_DIR: /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pykx
+	PYKX_USE_FIND_LIBPYTHON: 
+	PYKX_UNLICENSED: 
+	PYKX_LICENSED: 
+    PYKX_4_1_ENABLED: 
+
+	**** q Environment Variables ****
+	QARGS: 
+	QHOME: /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pykx/lib
+	QLIC: /usr/local/anaconda3/envs/qenv/q
+	QINIT: 
 
 	**** License information ****
 	pykx.qlic directory: True
-	pykx.lic writable: True
-	pykx.qhome lics: ['kc.lic']
-	pykx.qlic lics: ['kc.lic']
+	pykx.qhome writable: True
+	pykx.qhome lics: ['k4.lic']
+	pykx.qlic lics: ['k4.lic']
 
 	**** q information ****
-	which q: /usr/local/anaconda3/bin/q
+	which q: /usr/local/bin/q
 	q info: 
+	(`m64;4.1;2024.10.16)
+	"insights.lib.embedq insights.lib.pykx insights.lib.sql insights.lib.qlog insights.lib.kurl insights.lib.objstore insights.lib.bigquery insights.lib.restserver insights.app.rt"
 	```
 
 ## Development issues

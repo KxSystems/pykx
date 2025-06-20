@@ -20,11 +20,12 @@ import requests
 import toml
 
 from .config import (
-    _executable, _get_qexecutable, _get_qhome, allocator, beta_features, ignore_qhome,
-    jupyterq, k_gc, keep_local_times, licensed, load_pyarrow_unsafe, max_error_length,
-    no_pykx_signal, no_qce, pykx_4_1, pykx_config_location, pykx_config_profile,
-    pykx_debug_insights, pykx_dir, pykx_lib_dir, pykx_qdebug, pykx_threading, q_executable, qargs,
-    qhome, qlic, release_gil, skip_under_q, suppress_warnings, use_q_lock)
+    _executable, _get_qexecutable, _get_qhome, _pykx_config_location, _pykx_profile_content,
+    allocator, beta_features, ignore_qhome, jupyterq, k_gc, keep_local_times,
+    load_pyarrow_unsafe, max_error_length, no_pykx_signal, no_qce, pykx_4_1,
+    pykx_config_location, pykx_config_profile, pykx_debug_insights, pykx_dir, pykx_lib_dir,
+    pykx_qdebug, pykx_threading, q_executable, qargs, qhome, qlic, release_gil,
+    skip_under_q, suppress_warnings, use_q_lock)
 from ._version import version as __version__
 from .exceptions import PyKXException
 from .reimporter import PyKXReimport
@@ -46,6 +47,7 @@ __all__ = [
     'cached_property',
     'class_or_instancemethod',
     'debug_environment',
+    'delete_q_variable',
     'df_from_arrays',
     'get_default_args',
     'normalize_to_bytes',
@@ -320,20 +322,25 @@ def debug_environment(detailed: bool = False, return_info: bool = False) -> Unio
     pykx.qhome: /usr/local/anaconda3/envs/qenv/q
     pykx.qlic: /usr/local/anaconda3/envs/qenv/q
     pykx.licensed: True
-    pykx.__version__: 2.5.3.dev646+gfe6232c7.d20241002
-    pykx.file: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py
+    pykx.__version__: 3.1.1
+    pykx.file: /Library/Versions/3.12/lib/python3.12/site-packages/pykx/util.py
 
     **** Python information ****
-    sys.version: 3.12.3 (v3.12.3:f6650f9ad7, Apr  9 2024, 08:18:48)
+    sys.version: 3.12.3 (v3.12.3:f6650f9ad7, Apr  9 2024, 08:18:48) ..
     pandas: 1.5.3
     numpy: 1.26.2
     pytz: 2024.1
     which python: /usr/local/bin/python
-    which python3: /Library/Frameworks/Python.framework/Versions/3.12/bin/python3
-    find_libpython: /Library/Frameworks/Python.framework/Versions/3.12/Python
+    which python3: /Library/Versions/3.12/bin/python3
+    find_libpython: /Library/Versions/3.12/Python
 
     **** Platform information ****
     platform.platform: macOS-13.0.1-x86_64-i386-64bit
+
+    **** PyKX Configuration File ****
+    File location: /usr/local/.pykx-config
+    Used profile: default
+    Profile content: {'PYKX_Q_EXECUTABLE': '/usr/local/anaconda3/envs/qenv/q/m64/q'}
 
     **** PyKX Configuration Variables ****
     PYKX_IGNORE_QHOME: False
@@ -344,7 +351,7 @@ def debug_environment(detailed: bool = False, return_info: bool = False) -> Unio
     PYKX_MAX_ERROR_LENGTH: 256
     PYKX_NOQCE: False
     PYKX_RELEASE_GIL: False
-    PYKX_Q_LIB_LOCATION: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib
+    PYKX_Q_LIB_LOCATION: /Library/Versions/3.12/lib/python3.12/site-packages/pykx/lib
     PYKX_Q_LOCK: False
     PYKX_SKIP_UNDERQ: False
     PYKX_Q_EXECUTABLE: /usr/local/anaconda3/envs/qenv/q/m64/q
@@ -352,16 +359,26 @@ def debug_environment(detailed: bool = False, return_info: bool = False) -> Unio
     PYKX_4_1_ENABLED: False
     PYKX_QDEBUG: False
     PYKX_DEBUG_INSIGHTS_LIBRARIES: False
+    PYKX_CONFIGURATION_LOCATION: .
+    PYKX_NO_SIGNAL: False
+    PYKX_CONFIG_PROFILE: default
+    PYKX_BETA_FEATURES: True
+    PYKX_JUPYTERQ: False
+    PYKX_SUPPRESS_WARNINGS: False
     PYKX_DEFAULT_CONVERSION:
-    PYKX_EXECUTABLE: /Library/Frameworks/Python.framework/Versions/3.12/bin/python3.12
+    PYKX_EXECUTABLE: /Library/Versions/3.12/bin/python3.12
     PYKX_PYTHON_LIB_PATH:
     PYKX_PYTHON_BASE_PATH:
     PYKX_PYTHON_HOME_PATH:
-    PYKX_DIR: /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pykx
+    PYKX_DIR: /Library/Versions/3.12/lib/python3.12/site-packages/pykx
+    PYKX_USE_FIND_LIBPYTHON:
+    PYKX_UNLICENSED:
+    PYKX_LICENSED:
+    PYKX_4_1_ENABLED:
 
     **** q Environment Variables ****
     QARGS:
-    QHOME: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib
+    QHOME: /Library/Versions/3.12/lib/python3.12/site-packages/pykx/lib
     QLIC: /usr/local/anaconda3/envs/qenv/q
     QINIT:
 
@@ -372,16 +389,24 @@ def debug_environment(detailed: bool = False, return_info: bool = False) -> Unio
     pykx.qlic lics: ['k4.lic']
 
     **** q information ****
-    which q: None
+    which q: /usr/local/bin/q
+    q info:
+    (`m64;4.1;2024.10.16)
+    "insights.lib.embedq insights.lib.pykx insights.lib.sql insights.lib.qlog insights.lib.kurl"
+
+    **** pykx startup information ****
+    secondary threads: 8
     ```
     """
     debug_info = ""
     debug_info += pykx_information()
     debug_info += python_information()
     debug_info += platform_information()
+    debug_info += config_information()
     debug_info += env_information()
     debug_info += lic_information(detailed=detailed)
     debug_info += q_information()
+    debug_info += pykx_startup_information()
     if return_info:
         return debug_info
     print(debug_info)
@@ -389,12 +414,13 @@ def debug_environment(detailed: bool = False, return_info: bool = False) -> Unio
 
 
 def pykx_information():
+    from .core import _is_licensed
     pykx_info = "**** PyKX information ****\n"
     pykx_info += f"pykx.args: {qargs}\n"
     pykx_info += f"pykx.qhome: {qhome}\n"
     pykx_info += f"pykx.qlic: {qlic}\n"
 
-    pykx_info += f"pykx.licensed: {licensed}\n"
+    pykx_info += f"pykx.licensed: {_is_licensed()}\n"
     pykx_info += f"pykx.__version__: {__version__}\n"
     pykx_info += f"pykx.file: {__file__}\n"
     return pykx_info
@@ -429,6 +455,14 @@ def platform_information():
     return platform_info
 
 
+def config_information():
+    config_info = '\n**** PyKX Configuration File ****\n'
+    config_info += f"File location: {_pykx_config_location}\n"
+    config_info += f"Used profile: {pykx_config_profile}\n"
+    config_info += f"Profile content: {_pykx_profile_content}\n"
+    return config_info
+
+
 def env_information():
     env_info = '\n**** PyKX Configuration Variables ****\n'
 
@@ -450,7 +484,8 @@ def env_information():
     env_only = ['PYKX_DEFAULT_CONVERSION',
                 'PYKX_EXECUTABLE', 'PYKX_PYTHON_LIB_PATH',
                 'PYKX_PYTHON_BASE_PATH', 'PYKX_PYTHON_HOME_PATH', 'PYKX_DIR',
-                'PYKX_USE_FIND_LIBPYTHON'
+                'PYKX_USE_FIND_LIBPYTHON', 'PYKX_UNLICENSED', 'PYKX_LICENSED',
+                'PYKX_4_1_ENABLED'
                 ]
 
     for k, v in global_config.items():
@@ -512,6 +547,18 @@ def q_information():
     except Exception as e:
         q_info += f"Failed to gather q information: {e}"
     return q_info
+
+
+def pykx_startup_information():
+    pykx_start_info = '\n**** pykx startup information ****\n'
+
+    from .core import _is_licensed
+    if _is_licensed():
+        sec_threads = q('string system"s"')
+        pykx_start_info += f"secondary threads: {sec_threads}\n"
+    else:
+        pykx_start_info += "Gathering PyKX startup information only available in licensed mode\n"
+    return pykx_start_info
 
 
 def _run_all_cell_with_magics(lines):
@@ -587,6 +634,8 @@ def add_to_config(config, folder='~'):
     for k, v in config.items():
         data[pykx_config_profile][k] = v
         print_config += f'\t- {k} = {v}\n'
+        if isinstance(v, (int, bool)):
+            v = str(v)
         os.environ[k] = v
     with open(fpath, 'w') as file:
         toml.dump(data, file)
@@ -601,17 +650,12 @@ _kdb_url = 'https://portal.dl.kx.com/assets/raw/kdb+/4.0'
 
 
 def install_q(location: str = '~/q',
-              overwrite_config: bool = False,
-              prompted: bool = False,
               date: str = '2024.07.08'):
     """
     Install q to a specified location.
 
     Parameters:
         location: The location to which q will be installed
-        overwrite_config: Should a configuration file in your HOME directory be overwritten?
-        prompted: Should a user be prompted for input requesting configuration overwrite
-            this is used specifically when other functions would be installing q
         date: The dated version of kdb+ 4.0 which is to be installed
     """
     global qhome
@@ -621,7 +665,7 @@ def install_q(location: str = '~/q',
     location = Path(os.path.expanduser(location))
     url = f'{_kdb_url}/{date}/{my_os}.zip'
     r = requests.get(url)
-    if not r.status_code == 200:
+    if r.status_code != 200:
         raise RuntimeError(f'Request for download of q unsuccessful with code: {r.status_code}')
     zf = ZipFile(io.BytesIO(r.content), 'r')
     zf.extractall(location)
@@ -643,19 +687,16 @@ def install_q(location: str = '~/q',
 def start_q_subprocess(port: int,
                        load_file: str = '',
                        init_args: list = None,
-                       process_logs: bool = True,
-                       return_server: bool = True,
-                       prompt: bool = True):
+                       process_logs: bool = True):
     """
     Initialize a q subprocess using a supplied path to an executable on a specified port
 
     Parameters:
         port: The port on which the q process will be started.
+        load_file: A file for the process to load
         init_args: A list denoting any arguments to be passed when starting
             the q process.
         process_logs: Should stdout/stderr be printed to in the parent process
-        prompt: Should a user be prompted for input relating to how/where install of q
-            should be completed if not originally available.
 
     Returns:
         The subprocess object which was generated on initialisation
@@ -757,3 +798,21 @@ def detect_bad_columns(table, return_cols: bool = False):
     if return_cols:
         return cols
     return False
+
+
+def delete_q_variable(variable: str, namespace: str = '', garbage_collect: bool = False):
+    """
+    Deletes a variable from q memory.
+
+    Parameters:
+        variable: The name of the variable to delete
+        namespace: The name of the namespace which the variable is in
+        garbage_collect: Control whether to run gargabeg collection after variable deletion
+
+    Returns:
+        None
+    """
+    ns = '.' + namespace
+    q('{![x;();0b;enlist y]}', ns, variable)
+    if garbage_collect:
+        q.Q.gc()

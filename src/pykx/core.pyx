@@ -10,7 +10,8 @@ import sys
 
 from . import beta_features
 from .util import add_to_config, num_available_cores
-from .config import tcore_path_location, _is_enabled, _license_install, pykx_threading, _get_config_value, pykx_lib_dir, ignore_qhome, lic_path
+from .config import (tcore_path_location, _is_enabled, _license_install, pykx_threading, _get_config_value, pykx_lib_dir,
+                     ignore_qhome, _pwd, lic_path, pykx_4_1, _pykx_force_licensed, _pykx_force_unlicensed)
 
 
 def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
@@ -92,7 +93,7 @@ from warnings import warn
 import subprocess
 import sys
 
-from .config import find_core_lib, k_gc, qargs, qhome, qlic, pykx_lib_dir, \
+from .config import find_core_lib, qargs, qhome, qlic, pykx_lib_dir, \
     release_gil, _set_licensed, under_q, use_q_lock, _qlic
 from .exceptions import PyKXException, PyKXWarning
 
@@ -100,8 +101,7 @@ final_qhome = str(qhome if ignore_qhome else pykx_lib_dir)
 
 if '--licensed' in qargs and '--unlicensed' in qargs:
     raise PyKXException("$QARGS includes mutually exclusive flags '--licensed' and '--unlicensed'")
-elif ('--unlicensed' in qargs or _is_enabled('PYKX_UNLICENSED', '--unlicensed')) & \
-     ('--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed')):
+elif _pykx_force_unlicensed and _pykx_force_licensed:
     raise PyKXException("User specified options for setting 'licensed' and 'unlicensed' behaviour "
                         "resulting in conflicts")
 
@@ -241,7 +241,7 @@ def _link_qhome():
                             warn('Unable to connect user QHOME to PyKX QHOME via symlinks.\n' # nocov
                                  'To permanently disable attempts to create symlinks you can\n' # nocov
                                  '\t1. Set the environment variable "PYKX_IGNORE_QHOME" = True.\n' # nocov
-                                 '\t2. Update the file ".pykx.config" using kx.util.add_to_config({\'PYKX_IGNORE_QHOME\': True})\n' # nocov
+                                 '\t2. Update the file ".pykx.config" using kx.util.add_to_config({\'PYKX_IGNORE_QHOME\': \'True\'})\n' # nocov
                                  f'Error: {ex}\n',     # nocov
                                  PyKXWarning) # nocov
                             return            # nocov
@@ -279,7 +279,7 @@ if not pykx_threading:
         licensed = True # nocov
     else:
         # To make Cython happy, we indirectly assign Python values to `_libq_path`
-        if '--unlicensed' in qargs or _is_enabled('PYKX_UNLICENSED', '--unlicensed'):
+        if _pykx_force_unlicensed:
             _libq_path_py = bytes(find_core_lib('e'))
             _libq_path = _libq_path_py
             _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
@@ -296,49 +296,57 @@ if not pykx_threading:
                 if _qinit_unsuccessful: # Fallback to unlicensed mode
                     if _qinit_output != '    ':
                         _capout_msg = f'Captured output from initialization attempt:\n{_qinit_output}'
-                        _paths_checked = f'    QLIC ({_qlic if _qlic else "Not Set"})\n'\
-                                         f'    QHOME ({qhome})'
-                        _lic_location = f'License location used:\n{lic_path}'
+                        _paths_checked = f'    .        {_pwd}\n'\
+                                         f'    QLIC     {_qlic if _qlic else "Not Set"}\n'\
+                                         f'    QHOME    {qhome if qhome else "Not Set"}'
+                        _lic_location = f'License used:\n    {lic_path}'
                     else:
                         _capout_msg = '' # nocov - this can only occur under extremely weird circumstances.
                         _lic_location = '' # nocov - this additional line is to ensure this code path is covered.
                         _paths_checked = '' # nocov - this additional line is to ensure this code path is covered.
-                    if hasattr(sys, 'ps1'):
-                        if re.compile('exp').search(_capout_msg):
+                    if (hasattr(sys, 'ps1') and not _pykx_force_licensed):
+                        if re.compile('licen[cs]e error: exp').search(_capout_msg):
                             _exp_license = 'Your PyKX license has now expired.\n\n'\
-                                           f'{_capout_msg}\n\n'\
-                                           f'{_lic_location}\n\n'\
-                                           'Would you like to renew your license? [Y/n]: '
+                                        f'{_capout_msg}\n\n'\
+                                        f'{_lic_location}\n\n'\
+                                        'Would you like to renew your license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
                             _license_message = _license_install(_exp_license, True, True, 'exp')
-                        elif re.compile('embedq').search(_capout_msg):
+                        elif re.compile('licen[cs]e error: embedq').search(_capout_msg):
                             _ce_license = 'You appear to be using a non kdb Insights license.\n\n'\
-                                          f'{_capout_msg}\n\n'\
-                                          f'{_lic_location}\n\n'\
-                                          'Running PyKX in the absence of a kdb Insights license '\
-                                          'has reduced functionality.\nWould you like to install '\
-                                          'a kdb Insights personal license? [Y/n]: '
+                                        f'{_capout_msg}\n\n'\
+                                        f'{_lic_location}\n\n'\
+                                        'Running PyKX in the absence of a kdb Insights license '\
+                                        'has reduced functionality.\nWould you like to install '\
+                                        'a kdb Insights personal license? [Y/n]: '
                             _license_message = _license_install(_ce_license, True)
-                        elif re.compile('upd').search(_capout_msg):
+                        elif re.compile('licen[cs]e error: upd').search(_capout_msg):
                             _upd_license = 'Your installed license is out of date for this version'\
-                                           ' of PyKX and must be updated.\n\n'\
-                                           f'{_capout_msg}\n\n'\
-                                           f'{_lic_location}\n\n'\
-                                           'Would you like to install an updated kdb '\
-                                           'Insights personal license? [Y/n]: '
+                                        ' of PyKX and must be updated.\n\n'\
+                                        f'{_capout_msg}\n\n'\
+                                        f'{_lic_location}\n\n'\
+                                        'Would you like to install an updated kdb '\
+                                        'Insights personal license? [Y/n]: '
                             _license_message = _license_install(_upd_license, True)
-                if (not _license_message) and _qinit_check_proc.returncode:
-                    if '--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed'):
-                        raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}\n\n{_lic_location}')
-                    else:
-                        warning = f'Failed to initialize PyKX successfully with the following error: {_capout_msg}\n\n'\
-                                  f'PyKX was unable to locate your license file in:\n{_paths_checked}\n'
-                        if _paths_checked and hasattr(sys, 'ps1'):
+                        elif re.compile('licen[cs]e error: k[xc4].lic').search(_capout_msg) or re.compile('licen[cs]e error: badmsg').search(_capout_msg):
+                            _k_license = '\nThe PyKX license found is corrupt or incompatible with'\
+                                        ' kdb+ ' + ('4.1' if pykx_4_1 else '4.0') + '.\n\n'\
+                                        f'{_capout_msg}\n\n'\
+                                        f'{_lic_location}\n\n'\
+                                        'Would you like to install a new license? [Y/n]: '
+                            _license_message = _license_install(_k_license, True)
+                        else:
+                            warning = f'Failed to initialize PyKX successfully with the following error: {_capout_msg}\n\n'
+                            if _lic_location == '':
+                                    warning = warning + f'PyKX was unable to locate a license file in:\n{_paths_checked}\n'
+                            else:
+                                    warning = warning + f'{_lic_location}\n'
                             warn(warning, PyKXWarning)
                             _missing_license = 'Running PyKX in unlicensed mode has reduced functionality.\n\n'\
-                                               'Would you like to install a license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
-                            _license_install(_missing_license, True)
-                        else:
-                            warn(warning + 'PyKX running in unlicensed mode', PyKXWarning)
+                                            'Would you like to install a license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
+                            _license_message = _license_install(_missing_license, True)
+                if (not _license_message) and _qinit_check_proc.returncode:
+                    if _pykx_force_licensed:
+                        raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}')
                     _libq_path_py = bytes(find_core_lib('e'))
                     _libq_path = _libq_path_py
                     _q_handle = dlopen(_libq_path, RTLD_NOW | RTLD_GLOBAL)
@@ -387,7 +395,7 @@ else:
         licensed = False     # nocov
         if qinit_return_code == 1: # nocov
             raise PyKXException( # nocov
-                f'qinit failed because of an invalid license file, please ensure you have a valid'
+                f'qinit failed because of an invalid license file, please ensure you have a valid '
                 'q license installed before using PYKX_THREADING.'
             ) # nocov
         else: # nocov
@@ -400,8 +408,8 @@ else:
 _set_licensed(licensed)
 
 
-if k_gc and not licensed:
-    raise PyKXException('Early garbage collection requires a valid q license.')
+def _is_licensed():
+    return licensed
 
 
 sym_name = lambda x: bytes('_' + x, 'utf-8') if pykx_threading else bytes(x, 'utf-8')

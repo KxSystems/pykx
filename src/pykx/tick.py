@@ -309,10 +309,9 @@ class STREAMING:
                 raise QError('Provided table name must be an "str"')
             if not isinstance(value, k.Table):
                 raise QError('Provided table schema must be an "kx.Table"')
-            if tick:
-                if not q('~', ['time', 'sym'], value.columns[:2]):
-                    raise QError("'time' and 'sym' must be first two columns "
-                                 f"in Table: {key}")
+            if tick and not q('~', ['time', 'sym'], value.columns[:2]):
+                raise QError("'time' and 'sym' must be first two columns "
+                             f"in Table: {key}")
             self._connection('.tick.set_tables', key, value)
 
 
@@ -1639,7 +1638,6 @@ class BASIC:
         self.tick = None
         self.rdb = None
         self.hdb = None
-        pass
 
     def start(self) -> None:
         """

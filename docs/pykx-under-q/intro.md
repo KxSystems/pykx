@@ -42,10 +42,18 @@ If you previously had `#!python embedPy` installed, pass:
 python -c "import pykx;pykx.install_into_QHOME(overwrite_embedpy=True)"
 ```
 
-If you cannot edit the files in `#!python QHOME`, copy them to your local folder and load `#!python pykx.q` from there:
+If your environment does not have `QHOME` set or you wish to control where `pykx.q` is installed use `to_local_folder`.
+
+Passing `to_local_folder=True` will save the files in the current working directory:
 
 ```bash
 python -c "import pykx;pykx.install_into_QHOME(to_local_folder=True)"
+```
+
+Passing `to_local_folder='some/dir/path'` will save the files in the directory specified:
+
+```bash
+python -c "import pykx;pykx.install_into_QHOME(to_local_folder='some/dir/path')"
 ```
 
 ### Initialize

@@ -57,16 +57,16 @@ def test_load_1(kx):
     db.load('db')
     assert db.tables == ['t']
     assert type(db.t) == kx.PartitionedTable # noqa: E721
-    with pytest.raises(kx.QError) as err:
+    with pytest.raises(kx.DBError) as err:
         db.load('../db')
     assert 'Attempting to reload existing' in str(err.value)
-    with pytest.raises(kx.QError) as err:
+    with pytest.raises(kx.DBError) as err:
         db.load('test')
     assert 'Only one kdb+ database' in str(err.value)
-    with pytest.raises(kx.QError) as err:
+    with pytest.raises(kx.DBError) as err:
         db.load('../pyproject.toml', overwrite=True)
     assert 'Provided path is a file' in str(err.value)
-    with pytest.raises(kx.QError) as err:
+    with pytest.raises(kx.DBError) as err:
         db.load('doesNotExist', overwrite=True)
     assert 'Unable to find object at specified path' in str(err.value)
 
@@ -112,19 +112,33 @@ def test_column_reorder(kx):
 def test_column_rename(kx):
     db = kx.DB()
     db.load('db')
+    db.add_column('t', 'anymap', kx.q('(`a`a;`b`b;`c`c)'))
+    assert ['vol', 'sym', 'sz', 'p', 'ti', 'anymap'] == db.list_columns('t')
     db.rename_column('t', 'p', 'price')
-    assert ['vol', 'sym', 'sz', 'price', 'ti'] == db.list_columns('t')
+    db.rename_column('t', 'sym', 'junk')
+    db.rename_column('t', 'anymap', 'something_else')
+    assert ['vol', 'junk', 'sz', 'price', 'ti', 'something_else'] == db.list_columns('t')
+    assert ['.d', 'junk', 'price', 'something_else', 'something_else#', 'something_else##', 'sz',
+            'ti', 'vol'] == kx.q('key .Q.dd[.Q.d;2015.01.01,`t]').py()
     with pytest.raises(kx.QError) as err:
         db.rename_column('t', 'no_col', 'upd')
     assert "Specified column 'no_col'" in str(err.value)
+
+    db.rename_column('t', 'junk', 'sym')
+    assert ['vol', 'sym', 'sz', 'price', 'ti', 'something_else'] == db.list_columns('t')
 
 
 @pytest.mark.order(9)
 def test_column_delete(kx):
     db = kx.DB()
     db.load('db')
+    assert ['vol', 'sym', 'sz', 'price', 'ti', 'something_else']== db.list_columns('t')
+    assert ['.d', 'price', 'something_else', 'something_else#', 'something_else##', 'sym', 'sz',
+            'ti', 'vol'] == kx.q('key .Q.dd[.Q.d;2015.01.01,`t]').py()
     db.delete_column('t', 'vol')
+    db.delete_column('t', 'something_else')
     assert ['sym', 'sz', 'price', 'ti']== db.list_columns('t')
+    assert ['.d', 'price', 'sym', 'sz', 'ti'] == kx.q('key .Q.dd[.Q.d;2015.01.01,`t]').py()
     with pytest.raises(kx.QError) as err:
         db.delete_column('t', 'no_col')
     assert "Specified column 'no_col'" in str(err.value)
@@ -183,13 +197,24 @@ def test_column_set_type(kx):
 def test_column_copy(kx):
     db = kx.DB()
     db.load('db')
-    assert ['sym', 'sz', 'price', 'ti'] == db.list_columns('t')
+    db.add_column('t', 'anymap', kx.q('(`a`a;`b`b;`c`c)'))
+    assert ['sym', 'sz', 'price', 'ti', 'anymap'] == db.list_columns('t')
+    assert ['.d', 'anymap', 'anymap#', 'anymap##', 'price', 'sym', 'sz',
+            'ti'] == kx.q('key .Q.dd[.Q.d;2015.01.01,`t]').py()
     db.copy_column('t', 'sz', 'size')
-    assert ['sym', 'sz', 'price', 'ti', 'size'] == db.list_columns('t')
+    db.copy_column('t', 'sym', 'sym2')
+    db.copy_column('t', 'anymap', 'anymap2')
+    assert ['.d', 'anymap', 'anymap#', 'anymap##', 'anymap2', 'anymap2#', 'anymap2##', 'price',
+            'size', 'sym', 'sym2', 'sz', 'ti'] == kx.q('key .Q.dd[.Q.d;2015.01.01,`t]').py()
+    assert ['sym', 'sz', 'price', 'ti', 'anymap', 'size', 'sym2', 'anymap2'] == db.list_columns('t')
     assert all(kx.q.qsql.select(db.t, 'sz')['sz'] == kx.q.qsql.select(db.t, 'size')['size']) # noqa: E501
     with pytest.raises(kx.QError) as err:
         db.copy_column('t', 'no_col', 'new_name')
     assert "Specified column 'no_col'" in str(err.value)
+    db.delete_column('t', 'anymap')
+    db.delete_column('t', 'anymap2')
+    db.delete_column('t', 'sym2')
+    assert ['sym', 'sz', 'price', 'ti', 'size'] == db.list_columns('t')
 
 
 @pytest.mark.order(15)
@@ -317,7 +342,7 @@ def test_q_lo_move_dir():
     os.environ['PYKX_4_1_ENABLED'] = 'True'
     curr_dir = os.getcwd()
     import pykx as kx
-    db = kx.DB(path='db') # noqa: F841
+    kx.DB(path='db')
     assert curr_dir != os.getcwd()
     os.unsetenv('PYKX_4_1_ENABLED')
     os.unsetenv('PYKX_BETA_FEATURES')
@@ -328,7 +353,7 @@ def test_q_lo_keep_dir():
     os.environ['PYKX_4_1_ENABLED'] = 'True'
     curr_dir = os.getcwd()
     import pykx as kx
-    db = kx.DB(path='db', change_dir=False) # noqa: F841
+    kx.DB(path='db', change_dir=False)
     assert curr_dir == os.getcwd()
     os.unsetenv('PYKX_4_1_ENABLED')
     os.unsetenv('PYKX_BETA_FEATURES')
@@ -362,6 +387,24 @@ def test_spaces_load(tmp_path):
     assert db.tables == ['t']
     db.load(path=test_location, overwrite=True)
     assert db.tables == ['t']
+
+
+def test_load_failure(kx):
+    with open('db/.DS_Store', 'w') as f:
+        f.write('invalidfile')
+    with pytest.raises(kx.QError) as err:
+        kx.DB(path='db')
+    assert 'Invalid MacOS metadata' in str(err.value)
+    os.chdir('..')
+    os.remove('db/.DS_Store')
+
+    with open('db/test.q', 'w') as f:
+        f.write('`e+1;')
+    with pytest.raises(kx.QError) as err:
+        kx.DB(path='db')
+    assert 'type' in str(err.value)
+    os.chdir('..')
+    os.remove('db/test.q')
 
 
 @pytest.mark.order(-1)

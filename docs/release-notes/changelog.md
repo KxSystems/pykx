@@ -4,6 +4,309 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+## PyKX 3.1.3
+
+#### Release Date
+
+2025-06-12
+
+### Additions
+
+- Addition of the utility function `kx.util.delete_q_variable` which can be used to delete a named variable stored q memory within a namespace or in the global namespace
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.q['a'] = kx.random.random(1000, 1000)
+    >>> kx.q['a']
+    pykx.LongVector(pykx.q('908 360 522..'))
+    >>> kx.util.delete_q_variable('a', garbage_collect=True)
+    >>> kx.q['a']
+    QError: a
+    >>> kx.q('.test.a:til 1000')
+    >>> kx.q('.test.a')
+    pykx.LongVector(pykx.q('0 1 2 3 ..'))
+    >>> kx.util.delete_q_variable('a', namespace='test')
+    >>> kx.q('.test.a')
+    QError: .test.a
+    ```
+
+- Added support for `numpy` ufuncs on `PyKX` atom types.
+
+    ```python
+    >>> np.add(kx.LongAtom(2), kx.LongAtom(3))
+    pykx.LongAtom(pykx.q('5'))
+    ```
+
+- Added support for `_and`, `_or` and `_not` commands when using the `#!python pykx.Column` class
+
+	=== "_and command"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.Table(data={
+		...     'a': [1, -1, 0],
+		...     'b': [1, 2, 3]
+		...     })
+		>>> tab.select(where=(kx.Column('a') > 0)._and(kx.Column('b') > 0))
+		pykx.Table(pykx.q('
+		a b
+		----
+		1 1
+		'))
+		```
+
+	=== "_or command"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.Table(data={
+		...     'a': [1, -1, 0],
+		...     'b': [1, 2, 3]
+		...     })
+		>>> tab.select(where=(kx.Column('a') > 0)._or(kx.Column('b') > 0))
+		pykx.Table(pykx.q('
+		a b
+		----
+		1 1
+		-1 2
+		0 3
+		'))
+		```
+
+	=== "_not command"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.Table(data={
+		...     'a': [1, -1, 0],
+		...     'b': [1, 2, 3]
+		...     })
+		>>> tab.select(where=(kx.Column('a') > 0)._not())
+		pykx.Table(pykx.q('
+		a  b
+		----
+		-1 2
+		0  3
+		'))
+		```
+
+- Addition of `~` operator on `Column` objects using `__invert__` magic which calls q `not` operator.
+
+    ```python
+    >>> tab = kx.Table(data={'a':[1,2,3,4], 'b':[True, False, False, True]})
+    >>> tab.select(where = ~ kx.Column('b'))
+    pykx.Table(pykx.q('
+    a b
+    ---
+    2 0
+    3 0
+    '))
+    ```
+
+- Added ability to input directory of PyKX license when installing.
+	```python
+	>>> import pykx as kx
+
+	Thank you for installing PyKX!
+
+	We have been unable to locate your license for PyKX. Running PyKX in unlicensed mode has reduced functionality.
+	Would you like to install a license? [Y/n]: Y
+
+	Do you have access to an existing license for PyKX that you would like to use? [N/y]: Y
+
+	Please select the method you wish to use to activate your license:
+		[1] Provide the location of your license
+		[2] Input the activation key
+	Enter your choice here [1/2]: 1
+
+	Provide the download location of your license (for example, ~/path/to/kc.lic) : ~/test_folder/
+
+	PyKX license successfully installed to: /home/user/q/kc.lic
+	```
+
+- Added the current number of secondary threads being used by q to `kx.util.debug_environment()` output
+- Added option to pass `str` or `Path` to `pykx.install_into_QHOME` keyword `to_local_folder`
+
+### Fixes and Improvements
+
+- Updated 4.0 to 2025.02.18 for all platforms.
+- Updated 4.1 to 2025.04.28 for all platforms.
+- Mac ARM builds reintroduced on PyPi.
+- Fix segfault when using kx.lic license file on Windows.
+- Pandas dependency has been raised to allow `<=2.3.0` for Python versions greater than 3.8
+- Removed in place modification side effect on following calls: `ParseTree.enlist`, `ParseTree.first`, `Column.call`, `Column.name`, `Column.__or__`, `QueryPhrase.__and__`. `Column.call` fix resolves the same issue for all [PyKX methods](../user-guide/fundamentals/query/pyquery.md#pykx-methods) off the `Column` object.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+        >>> a = kx.Column('a')
+        >>> a._value
+        'a'
+        >>> a.max()
+        pykx.Column(name='a', value=<class 'list'>)
+        >>> a._value
+        [pykx.UnaryPrimitive(pykx.q('max')), 'a']
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+        >>> a = kx.Column('a')
+        >>> a._value
+        'a'
+        >>> kx.Column('a').max()
+        pykx.Column(name='a', value=<class 'list'>)
+        >>> a._value
+        'a'
+		```
+- Improvement to error message on MacOS when hidden file `.DS_Store` is found when loading a database. This metadata file can commonly be placed by the system in directories during development without user knowledge.
+- Previously attempts to load a database which resulted in an error would ignore any raised `QError` exceptions raised during initial loading of the `kx.DB` class. Errors relating to issues with a supplied database path now raise an appropriate new error type `DBError` and errors in loading the database raise a `QError`.
+- Improved the installation steps for users activating an existing license
+- Updates to `pykx.util.debug_environment` to fix the following:
+	- Fix to retrieval of specified `pykx.licensed` value, previously this always returned `False`
+	- Addition of environment variable definitions for `PYKX_UNLICENSED` and `PYKX_LICENSED`
+        - Addition of information relating to the content of a `.pykx-config` file if one is used
+- Removal of type information when using `db.find_column`, previously the type information retrieved could be incorrect.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> db = kx.DB(path='database')
+		>>> db.find_column('minutely', 'high')
+		2025.02.17 17:15:06 column high (type 0) in `:/tmp/database/2019.01.01/minutely
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		>>> db = kx.DB(path='database')
+		>>> db.find_column('minutely', 'high')
+		2025.02.17 17:15:06 column high in `:/tmp/database/2019.01.01/minutely
+		```
+
+- Improved communication of `NotImplemenetedError` messaging.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> key_tab = kx.q('([idx:1 2 3] data: 2 3 4)')
+		>>> key_tab.rename({'idx':'index'}, inplace=True)
+		Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "/home/pykx/pandas_api/pandas_indexing.py", line 456, in rename
+			raise ValueError('nyi')
+		ValueError: nyi
+		```
+	
+	=== "Behavior post change"
+
+		```python
+		>>> key_tab = kx.q('([idx:1 2 3] data: 2 3 4)')
+		>>> key_tab.rename({'idx':'index'}, inplace=True)
+		Traceback (most recent call last):
+			File "<stdin>", line 1, in <module>
+			File "/home/andymc/work/KXI-57141/KXI-57141/lib/python3.10/site-packages/pykx/pandas_api/pandas_indexing.py", line 457, in rename
+				raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only implemented for copy=None, inplace=False, level=None, errors='ignore'.") # noqa: E501
+		NotImplementedError: pykx.KeyedTable.rename() is only implemented for copy=None, inplace=False, level=None, errors='ignore'.
+		```
+
+- Refactored `Vector.index()` from Python to q code to be more performant.
+- Fixed `PartitionedTable.rename_column()` operation on anymap columns. The `#` and `##` files were not renamed. Now all files are renamed.
+  
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx 
+		>>>N = 10000000
+		>>>trade = kx.Table(data={
+		...   	'date': kx.random.random(N, kx.DateAtom('today') - [1, 2, 3, 4]),
+		...	    'time': kx.q.asc(kx.random.random(N, kx.q('1D'))),
+		...	    'sym': kx.random.random(N, [b'AAPL', b'GOOG', b'MSFT']),
+		...	    'price': kx.random.random(N, 10.0)
+		... 	})
+		>>> db = kx.DB(path='/tmp/db')
+		>>> db.create(trade, 'trade', 'date')
+		>>> kx.q('-1 system"tree /tmp/db/";')
+		/tmp/db
+		├── 2025.03.25
+		│   └── trade
+		│       ├── price
+		│       ├── sym
+		│       ├── sym#
+		│       └── time
+		...
+		>>> db.rename_column('trade', 'sym', 'test')
+		>>> kx.q('-1 system"tree /tmp/db/";')
+		/tmp/db
+		├── 2025.03.25
+		│   └── trade
+		│       ├── price
+		│       ├── test
+		│       ├── sym#
+		│       └── time
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx 
+		>>>N = 10000000
+		>>>trade = kx.Table(data={
+		...   	'date': kx.random.random(N, kx.DateAtom('today') - [1, 2, 3, 4]),
+		...	    'time': kx.q.asc(kx.random.random(N, kx.q('1D'))),
+		...	    'sym': kx.random.random(N, [b'AAPL', b'GOOG', b'MSFT']),
+		...	    'price': kx.random.random(N, 10.0)
+		... 	})
+		>>> db = kx.DB(path='/tmp/db')
+		>>> db.create(trade, 'trade', 'date')
+		>>> kx.q('-1 system"tree /tmp/db/";')
+		/tmp/db
+		├── 2025.03.25
+		│   └── trade
+		│       ├── price
+		│       ├── sym
+		│       ├── sym#
+		│       └── time
+		...
+		>>> db.rename_column('trade', 'sym', 'test')
+		>>> kx.q('-1 system"tree /tmp/db/";')
+		/tmp/db
+		├── 2025.03.25
+		│   └── trade
+		│       ├── price
+		│       ├── test
+		│       ├── test#
+		│       └── time
+		```
+
+- Fixed behaviour for `PartitionedTable.copy_column()` operation on anymap columns. When copying `anymap` columns, the `#` and `##` files were not copied. Now all correct copying procedures are applied.
+- Fixed behaviour for `PartitionedTable.delete_column()` operation on anymap columns. When deleting `anymap` columns, the `#` and `##` files were left in. All relevant files are now deleted.
+- Fix creation of `ParseTree` objects from `QueryPhrase` or `Column` objects.
+- Fix or operator `|` for `Column | ParseTree` use cases.
+- Fixed an issue around the installation process when users attempted to set unlicensed mode after PyKX failed to load with a kdb+ license.
+- Improved flow when attempting to load an expired license.
+- Removed `Early garbage collection requires a valid q license.` error thrown on import when loading PyKX in unlicensed mode with `PYKX_GC`.
+- More helpful error messages in cases of missing/corrupt/incompatible licenses.
+- `pykx.util.add_to_config` now accepts `bool` and `int` values instead of only `str` objects.
+  
+	```python
+	>>> kx.util.add_to_config({'PYKX_GC': True, 'PYKX_MAX_ERROR_LENGTH': 1})
+	
+	Configuration updated at: /home/user/.pykx-config.
+	Profile updated: default.
+	Successfully added:
+			- PYKX_GC = True
+			- PYKX_MAX_ERROR_LENGTH = 1
+	```
+
+### Deprecations & Removals
+
+- Deprecated `kx.q.system.console_size`, use `kx.q.system.display_size` instead.
+
 ## PyKX 3.1.2
 
 #### Release Date
@@ -23,6 +326,35 @@
 ### Fixes and Improvements
 
 - Fixed issue whereby PyKX would prompt for user inputs if a license was not found in a non-interactive session, now correctly falls back to unlicensed mode.
+- Fixed issue whereby PyKX could list splayed tables loaded outside of initialization of the `kx.DB` module as being supported elements of the database
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> kx.q('\l splay_db')
+		>>> kx.q.tables().py()
+		['splayed']
+		>>> db = kx.DB(path='../db')
+		>>> kx.q.tables().py()
+		['splayed', 'dbsplay']
+		>>> db.tables()
+		['splayed', 'dbsplay']
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		>>> kx.q('\l splay_db')
+		>>> kx.q.tables().py()
+		['splayed']
+		>>> db = kx.DB(path='../db')
+		>>> kx.q.tables().py()
+		['splayed', 'dbsplay']
+		>>> db.tables()
+		['dbsplay']
+		```
 
 ## PyKX 3.1.0
 

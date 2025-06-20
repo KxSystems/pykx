@@ -134,6 +134,15 @@ def test_debug_environment_ret(kx):
     assert isinstance(kx.util.debug_environment(return_info=True), str)
 
 
+def test_debug_licensed(kx):
+    ret = kx.util.debug_environment(return_info=True).split('\n')
+    passed = False
+    for i in ret:
+        if i == 'pykx.licensed: True':
+            passed = True
+    assert passed
+
+
 @pytest.mark.unlicensed
 def test_install_q(kx):
     base_path = Path(os.path.expanduser('~'))
@@ -216,3 +225,19 @@ def test_detect_bad_columns(kx):
     assert isinstance(html_repr, str)
     assert "pykx.Part" in html_repr
     os.chdir('..')
+
+
+def test_config_add_type(kx):
+    fpath = Path(os.path.expanduser('~')) / '.pykx-config'
+    with open(fpath, 'w') as f:
+        f.write('[default]\n')
+
+    kx.util.add_to_config({'PYKX_GC': 'True', 'PYKX_MAX_ERROR_LENGTH': 1,
+                           'PYKX_BETA_FEATURES': True})
+
+    with open(fpath, "r") as f:
+        data = toml.load(f)
+    assert data['default']['PYKX_GC'] == 'True'
+    assert data['default']['PYKX_MAX_ERROR_LENGTH'] == 1
+    assert data['default']['PYKX_BETA_FEATURES']
+    os.remove(fpath)

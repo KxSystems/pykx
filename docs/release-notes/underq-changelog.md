@@ -6,6 +6,41 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 3.1.3
+
+#### Release Date
+
+2025-06-12
+
+### Fixes and Improvements
+
+- Dashboards integration now lists missing libraries by name.
+
+    === "Behavior prior to change"
+
+        ```q
+        q).pykx.dash.util.getFunction[""]
+        'Required libraries for PyKX Dashboards integration not found
+            [0]  .pykx.dash.util.getFunction[""]
+                ^
+        ```
+
+    === "Behavior post change"
+
+        ```q
+        q).pykx.dash.util.getFunction[""]
+        'Required libraries for PyKX Dashboards integration not found: ast2json
+            [0]  .pykx.dash.util.getFunction[""]
+                ^ 
+        ```
+
+- Resolved `double free or corruption (out)` error when `pykx.q` was loaded in `QINIT` or `q.q`.
+- `pykx.q` load time has been roughly halved.
+
+### Deprecations & Removals
+
+- `.pykx.console[]` has been removed on Windows due to incompatibility. Will now error with `'.pykx.console is not available on Windows` if called.
+
 ## PyKX 3.1.1
 
 #### Release Date
@@ -29,7 +64,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 		q).pykx.safeReimport {1+`this}
 		'type
 		  [2]  /home/user/q/pykx.q:1714: .pykx.safeReimport@:{'x}
-                                                                      ^
+                                                              ^
  		  [1]  /home/user/q/pykx.q:1714: .pykx.safeReimport:
  		  setenv'[envlist;envvals];
  		  $[r 0;{'x};::] r 1

@@ -340,7 +340,7 @@ def test_py_file_execution(kx):
         with pytest.raises(kx.QError) as err:
             q.file_execute('./tests/qscripts/pyfile.py', return_all=True)
         assert "PyKX must be loaded on remote server" == str(err.value)
-        q('\l pykx.q')
+        q('\\l pykx.q')
         q.file_execute('./tests/qscripts/pyfile.py')
         assert q('.pykx.get[`pyfunc;<][2;3]') == 6
     proc.kill()

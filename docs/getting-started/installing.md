@@ -141,7 +141,7 @@ Follow the steps below to install a kdb Insights license for PyKX from Python:
 	=== "Personal license"
 
 		```bash
-		To apply for a PyKX license, navigate to https://kx.com/kdb-insights-personal-edition-license-download
+		To apply for a PyKX license, navigate to https://kx.com/kdb-insights-sdk-personal-edition-download
 		Shortly after you submit your license application, you will receive a welcome email containing your license information.
 		Would you like to open this page? [Y/n]:
 		```
@@ -208,7 +208,7 @@ For environment-specific flexibility, there are two ways to install your license
 
 	=== "Using a file"
 
-		1. For personal usage, navigate to the [personal license](https://kx.com/kdb-insights-personal-edition-license-download/) and complete the form. For commercial usage, contact your KX sales representative or sales@kx.com or apply through https://kx.com/book-demo.
+		1. For personal usage, navigate to the [personal license](https://kx.com/kdb-insights-sdk-personal-edition-download/) and complete the form. For commercial usage, contact your KX sales representative or sales@kx.com or apply through https://kx.com/book-demo.
 
 		2. On receipt of an email from KX, download and save the license file to a secure location on your computer.
 
@@ -218,7 +218,7 @@ For environment-specific flexibility, there are two ways to install your license
 
 	=== "Using text"
 
-		1. For personal usage, navigate to the [personal license](https://kx.com/kdb-insights-personal-edition-license-download/) and complete the form. For commercial usage, contact your KX sales representative or sales@kx.com or apply through https://kx.com/book-demo.
+		1. For personal usage, navigate to the [personal license](https://kx.com/kdb-insights-sdk-personal-edition-download/) and complete the form. For commercial usage, contact your KX sales representative or sales@kx.com or apply through https://kx.com/book-demo.
 
 		2. On receipt of an email from KX, copy the `#!bash base64` encoded contents of your license provided in plain-text within the email.
 
@@ -267,10 +267,10 @@ This command should display the installed version of PyKX.
 		PyKX depends on the following third-party Python packages:
 
       - `pandas>=1.2, <2.0; python_version=='3.8'`
-      - `pandas>=1.2, <=2.2.3; python_version>'3.8'`
+      - `pandas>=1.2, <=2.3.0; python_version>'3.8'`
       - `numpy~=1.22; python_version<'3.11'`
-      - `numpy~=1.23; python_version=='3.11'`
-      - `numpy~=1.26; python_version>='3.12'`
+      - `numpy~=1.23, <2.3.0; python_version=='3.11'`
+      - `numpy~=1.26, <2.3.0; python_version>='3.12'`
       - `pytz>=2022.1`
       - `toml~=0.10.2`
       - `dill>=0.2.0`
@@ -321,6 +321,26 @@ This command should display the installed version of PyKX.
 	   - Ask a question on the KX community at [learninghub.kx.com](https://learninghub.kx.com/forums/forum/pykx/).
        - Use Stack Overflow and tag [`pykx`](https://stackoverflow.com/questions/tagged/pykx) or [`kdb`](https://stackoverflow.com/questions/tagged/kdb) depending on the subject.
 	   - Go to [support](../help/support.md).
+
+## Asset Information
+
+| Platform  | Mode       | File        | Version    |
+| --------- | ---------- | ----------- | ---------- |
+| Linux ARM | kdb+ 4.0   | libq.so     | 2025.02.18 |
+| Linux x86 | kdb+ 4.0   | libq.so     | 2025.02.18 |
+| Mac ARM   | kdb+ 4.0   | libq.dylib  | 2025.02.18 |
+| Mac x86   | kdb+ 4.0   | libq.dylib  | 2025.02.18 |
+| Windows   | kdb+ 4.0   | q.dll/q.lib | 2025.02.18 |
+| Linux ARM | kdb+ 4.1   | libq.so     | 2025.04.28 |
+| Linux x86 | kdb+ 4.1   | libq.so     | 2025.04.28 |
+| Mac ARM   | kdb+ 4.1   | libq.dylib  | 2025.04.28 |
+| Mac x86   | kdb+ 4.1   | libq.dylib  | 2025.04.28 |
+| Windows   | kdb+ 4.1   | q.dll/q.lib | 2025.04.28 |
+| Linux ARM | Unlicensed | libe.so     | 2023.11.22 |
+| Linux x86 | Unlicensed | libe.so     | 2023.11.22 |
+| Mac ARM   | Unlicensed | libe.so     | 2023.11.22 |
+| Mac x86   | Unlicensed | libe.so     | 2023.11.22 |
+| Windows   | Unlicensed | e.dll/e.lib | 2024.08.21 |
 
 ## Optional: Installing a q executable
 

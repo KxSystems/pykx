@@ -222,9 +222,9 @@ If PyKX fails to find a script an `#!python AttributeError` will be raised, the 
 
 ## Use functions retrieved with the Context Interface
 
-Functions returned by the context interface are provided as [`pykx.SymbolicFunction`][] instances.
+Functions returned by the context interface are provided as [`pykx.SymbolicFunction`][pykx.SymbolicFunction] instances.
 
-These objects are symbol atoms whose symbol is a named function (with a fully-qualified name). They can be called like regular [`pykx.Function`][] objects, but unlike regular [`pykx.Function`][] objects, they will execute in the `pykx.Q` instance (also known as its "execution context") in which it was defined.
+These objects are symbol atoms whose symbol is a named function (with a fully-qualified name). They can be called like regular [`pykx.Function`][pykx.Function] objects, but unlike regular [`pykx.Function`][pykx.Function] objects, they will execute in the `pykx.Q` instance (also known as its "execution context") in which it was defined.
 
 The following shows an example of the retrieval of a function from a context vs defining the function itself:
 

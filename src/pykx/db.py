@@ -2,7 +2,7 @@
 _This page documents the API for managing kdb+ databases using PyKX._
 """
 
-from .exceptions import QError
+from .exceptions import DBError, QError
 from . import wrappers as k
 from .config import pykx_4_1
 from .compress_encrypt import Compress, Encrypt
@@ -29,9 +29,8 @@ def __dir__():
 def _check_loading(cls, table, err_msg):
     if not cls.loaded:
         raise QError("No database referenced/loaded")
-    if table is not None:
-        if table not in cls.tables:
-            raise QError(err_msg + " not possible as specified table not available")
+    if (table is not None) and (table not in cls.tables):
+        raise QError(err_msg + " not possible as specified table not available")
 
 
 def _get_type(cls, table):
@@ -162,9 +161,8 @@ class DB(_TABLES):
         if path is not None:
             try:
                 self.load(path, change_dir=self._change_dir, load_scripts=self._load_scripts)
-            except BaseException:
+            except DBError:
                 self.path = Path(os.path.abspath(path))
-        pass
 
     def create(self,
                table: k.Table,
@@ -322,7 +320,7 @@ class DB(_TABLES):
                 table = q.Q.en(save_dir, table)
                 q('{.Q.dd[x;`] set y}', save_dir/table_name, table)
             else:
-                if type(partition) == str:
+                if isinstance(partition, str):
                     if partition not in table.columns:
                         raise QError(f'Partition column {partition} not in supplied table')
                     if type(table[partition]).t not in [5, 6, 7, 13, 14]:
@@ -450,17 +448,17 @@ class DB(_TABLES):
         """
         load_path = Path(os.path.abspath(path))
         if not overwrite and self.path == load_path:
-            raise QError("Attempting to reload existing database. Please pass "
-                         "the keyword overwrite=True to complete database reload")
+            raise DBError("Attempting to reload existing database. Please pass "
+                          "the keyword overwrite=True to complete database reload")
         if not overwrite and self.loaded:
-            raise QError("Only one kdb+ database can be loaded within a process. "
-                         "Please use the 'overwrite' keyword to load a new database.")
+            raise DBError("Only one kdb+ database can be loaded within a process. "
+                          "Please use the 'overwrite' keyword to load a new database.")
         if not load_path.is_dir():
             if load_path.is_file():
                 err_info = 'Provided path is a file'
             else:
                 err_info = 'Unable to find object at specified path'
-            raise QError('Loading of kdb+ databases can only be completed on folders: ' + err_info)
+            raise DBError('Loading of kdb+ databases can only be completed on folders: ' + err_info)
         if encrypt is not None:
             if not isinstance(encrypt, Encrypt):
                 raise ValueError('Supplied encrypt object not an instance of pykx.Encrypt')
@@ -471,7 +469,11 @@ class DB(_TABLES):
               {[path;cd;ld]
                 .[.Q.lo;
                   (`$1_string path;cd;ld);
-                  {'"Failed to load Database with error: ",x}
+                  {x:$[x like "*.DS_Store";
+                       "Invalid MacOS metadata file '.DS_Store' stored in Database";
+                       x];
+                   '"Failed to load Database with error: ",x
+                  }
                   ]
                 }
               ''', load_path, change_dir, load_scripts)
@@ -486,13 +488,17 @@ class DB(_TABLES):
               {[dbpath;dbname]
                 .[.pykx.util.loadfile;
                   (1_string dbpath;string dbname);
-                  {'"Failed to load Database with error: ",x}
+                  {x:$[x like "*.DS_Store";
+                       "Invalid MacOS metadata file '.DS_Store' stored in Database";
+                       x];
+                   '"Failed to load Database with error: ",x
+                  }
                   ]
                 }
               ''', db_path, db_name)
         self.path = load_path
         self.loaded = True
-        self.tables = q('{x where {-1h=type .Q.qp get x}each x}', q.tables()).py()
+        self.tables = q('{x where {$[-1h=type t:.Q.qp tab:get x;$[t;1b;in[`$last vs["/";-1_string value flip tab]; key y]];0b]}[;y]each x}', q.tables(), load_path).py() # noqa: E501
         for i in self.tables:
             if i in self._dir_cache:
                 warn(f'A database table "{i}" would overwrite one of the pykx.DB() methods, please access your table via the table attribute') # noqa: E501

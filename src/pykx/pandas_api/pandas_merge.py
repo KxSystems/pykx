@@ -1,6 +1,8 @@
 from ..wrappers import K, SymbolVector
 from . import api_return
 
+import inspect
+
 
 def _init(_q):
     global q
@@ -392,7 +394,8 @@ class PandasMerge:
                     'https://code.kx.com/pykx/api/q/q.html#xasc).'
                 )
             else:
-                raise ValueError('nyi')
+                raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() only implemented for direction='backward', \
+                                            allow_exact_matches=True, tolerance=None, by=None, left_by=None, right_by=None.") # noqa: E501
         (left, right, on, added_idx) = _parse_input(
             self,
             right,
@@ -444,17 +447,13 @@ class PandasGroupBy:
         dropna=True
     ):
         if observed:
-            raise NotImplementedError("'observed' parameter not implemented, please set to False")
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() 'observed' parameter is not implemented, please set to False.") # noqa: E501
         if axis != 0:
-            raise NotImplementedError(
-                "A non 0 value for the 'axis' parameter is not implemented, please set to 0"
-            )
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() non 0 value for the 'axis' parameter is not implemented, please set to 0.") # noqa: E501
         if not group_keys:
-            raise NotImplementedError("'group_keys' parameter not implemented, please set to True")
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() 'group_keys' parameter is not implemented, please set to True.") # noqa: E501
         if callable(by):
-            raise NotImplementedError(
-                "Using a callable function for the 'by' parameter not implemented"
-            )
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() using a callable function for the 'by' parameter is not implemented.") # noqa: E501
         if by is not None and level is not None:
             raise RuntimeError('Cannot use both by and level keyword arguments.')
         pre_keys = q('keys', self)

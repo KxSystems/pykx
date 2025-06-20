@@ -21,9 +21,10 @@ feature .pykx.safeReimport
             PYKX_UNDER_Q:getenv`PYKX_UNDER_Q;
             .pykx.safeReimport {1+1};
             .qu.compare[PYKX_UNDER_Q;getenv`PYKX_UNDER_Q];
-        expect signal error and reset env vars on failure
-            PYKX_UNDER_Q:getenv`PYKX_UNDER_Q;
+        expect signal error
             err:@[.pykx.safeReimport;{1+`};{x}];
             .qu.compare["type";err];
+        expect reset env vars on failure
+            PYKX_UNDER_Q:getenv`PYKX_UNDER_Q;
+            @[.pykx.safeReimport;{1+`};{x}];
             .qu.compare[PYKX_UNDER_Q;getenv`PYKX_UNDER_Q];
-

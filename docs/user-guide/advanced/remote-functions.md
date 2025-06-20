@@ -39,7 +39,7 @@ This walkthrough demonstrates the following steps:
 
 This step ensures you have a q process running with PyKX under q, as well as having a kdb+ table available to query. If you have this already, proceed to the next step.
 
-Ensure that you have q installed. If you do not have this installed please follow the guide provided [here](https://code.kx.com/q/learn/install/), retrieving your license following the instructions provided [here](https://kx.com/kdb-insights-personal-edition-license-download).
+Ensure that you have q installed. If you do not have this installed please follow the guide provided [here](https://code.kx.com/q/learn/install/), retrieving your license following the instructions provided [here](https://kx.com/kdb-insights-sdk-personal-edition-download).
 
 Install PyKX under q using the following command.
 

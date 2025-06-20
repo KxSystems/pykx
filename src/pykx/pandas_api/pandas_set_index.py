@@ -1,6 +1,7 @@
 from ..wrappers import BooleanVector, IntVector, List, LongVector, ShortVector, SymbolAtom, SymbolVector # noqa
 from . import api_return
 
+import inspect
 
 import pandas as pd
 
@@ -18,7 +19,7 @@ class PandasSetIndex:
            all(x is None for x in keys.names)):
             keys = q('{flip x!flip y}', list(keys.names), keys.values)
         if(not drop):
-            raise ValueError('nyi')
+            raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only implemented for 'drop=True'") # noqa: E501
         self = q('''{[tab;kys;drop;append;verify_integrity]
                     keyed:99h~type tab;
                     if[-11h~type kys;kys:enlist kys];

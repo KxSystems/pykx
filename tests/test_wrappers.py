@@ -532,7 +532,7 @@ class Test_Atom:
         for i in qtypes:
             with pytest.raises(NotImplementedError) as err:
                 getattr(i, 'null') # noqa: B009
-            assert 'Retrieval of null values' in str(err)
+            assert 'retrieval of null values' in str(err)
 
     @pytest.mark.unlicensed()
     def test_inf_fail(self, kx):
@@ -1556,10 +1556,54 @@ class Test_Vector:
         v = q('til 100')
         assert v.index(22) == 22
         assert v.index(88) == 88
+        assert v.index(15, end=-5) == 15
+
         with pytest.raises(ValueError):
             v.index(-1)
         with pytest.raises(ValueError):
             v.index(100)
+
+        assert v.index(22, start=15, end=25) == 22
+        with pytest.raises(ValueError) as err:
+            v.index(10, start=25)
+            assert "selected slice" in str(err)
+        with pytest.raises(ValueError) as err:
+            v.index(25, end=10)
+            assert "selected slice" in str(err)
+        with pytest.raises(ValueError) as err:
+            v.index(15, start=200)
+            assert "not in list" in str(err)
+
+    def test_index_iter(self, q):
+        index_list = [-2, -1, None, 0, 1, 2, 3, 4, 5, 6]
+        to_find_list = [9, 3, 0, 4, 3]
+        list_of_lists = [to_find_list, index_list, index_list]
+        combo_list = list(itertools.product(*list_of_lists))
+
+        test_vector = q('0 1 2 3 3 4')
+        for i in combo_list:
+            kx_res = py_res = None
+            kx_err = py_err = None
+            try:
+                kx_res = test_vector.index(i[0], start=i[1], end=i[2])
+            except Exception as e:
+                kx_err = str(e)
+            try:
+                if i[1] is not None and i[2] is not None:
+                    py_res = test_vector.py().index(i[0], i[1], i[2])
+                elif i[1] is None and i[2] is not None:
+                    py_res = test_vector.py().index(i[0], 0, i[2])
+                elif i[1] is not None and i[2] is None:
+                    py_res = test_vector.py().index(i[0], i[1])
+                else:
+                    py_res = test_vector.py().index(i[0])
+            except Exception as e:
+                py_err = str(e)
+            if kx_err is not None or py_err is not None:
+                assert "is not in" in kx_err
+                assert "is not in" in py_err
+            else:
+                assert kx_res == py_res
 
     def test_dunder_ops(self, q):
         assert all(q('1 10 100') + [1, 2, 3] == [2, 12, 103])
@@ -5568,3 +5612,40 @@ def test_cleanup(kx):
     shutil.rmtree('singleColSplay', ignore_errors=True)
     shutil.rmtree('multiColSplay', ignore_errors=True)
     assert True
+
+
+@pytest.mark.unlicensed
+def test_to_vec(kx):
+    atoms = [
+        kx.BooleanAtom(True),
+        kx.GUIDAtom.null,
+        kx.ByteAtom(1),
+        kx.ShortAtom(1),
+        kx.IntAtom(1),
+        kx.LongAtom(1),
+        kx.RealAtom(1.0),
+        kx.FloatAtom(1.0),
+        kx.CharAtom('a'),
+        kx.SymbolAtom('a'),
+        kx.TimestampAtom(np.datetime64('1')),
+        kx.MonthAtom(np.datetime64('1')),
+        kx.DateAtom(np.datetime64('1')),
+        kx.TimespanAtom(timedelta(1)),
+        kx.MinuteAtom(timedelta(1)),
+        kx.SecondAtom(timedelta(1)),
+        kx.TimeAtom(timedelta(1)),
+    ]
+
+    for atom in atoms:
+        assert atom.py() == kx._wrappers.to_vec(atom)._unlicensed_getitem(0).py()
+        assert atom.py() == atom._to_vector()._unlicensed_getitem(0).py()
+        assert atom.py() == atom._to_vector()._to_vector()._unlicensed_getitem(0).py()
+
+    with pytest.raises(kx.QError):
+        kx._wrappers.to_vec(kx.List([]))
+
+
+@pytest.mark.unlicensed
+def test_atom_ufunc(kx):
+    assert 5 == np.add(kx.LongAtom(2), kx.LongAtom(3)).py()
+    assert 2 == np.floor(kx.FloatAtom(2.5)).py()

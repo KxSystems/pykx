@@ -128,6 +128,10 @@ PYKX_PYTHON_LIB_PATH:
 PYKX_PYTHON_BASE_PATH:
 PYKX_PYTHON_HOME_PATH:
 PYKX_DIR: /usr/local/anaconda3/lib/python3.8/site-packages/pykx
+PYKX_USE_FIND_LIBPYTHON:
+PYKX_UNLICENSED:
+PYKX_LICENSED:
+PYKX_4_1_ENABLED:
 
 **** q Environment Variables ****
 QARGS: 

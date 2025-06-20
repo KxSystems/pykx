@@ -69,7 +69,7 @@ This round-trip-lossiness can be prevented in 2 ways:
 2. Conversions from Python to q can be controlled by specifying the desired type. Using `pykx.K` as
    a constructor forces it to chose what q type the data should be converted to (using the same
    mechanism as [`pykx.toq`][pykx.toq]), but by using the class of the desired q type directly,
-   e.g. [`pykx.SecondAtom`][], one can override the defaults.
+   e.g. [`pykx.SecondAtom`][pykx.SecondAtom], one can override the defaults.
 
 So to avoid the loss of type information from the previous example, we could run
 `pykx.SecondAtom(datetime.timedelta(seconds=14896))` instead of
@@ -168,6 +168,7 @@ import copy
 from datetime import datetime, timedelta
 import importlib
 from inspect import signature
+import inspect
 import math
 from numbers import Integral, Number, Real
 import operator
@@ -187,7 +188,7 @@ from .core import keval as _keval
 from .constants import INF_INT16, INF_INT32, INF_INT64, INF_NEG_INT16, INF_NEG_INT32, INF_NEG_INT64
 from .constants import NULL_INT16, NULL_INT32, NULL_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
-from .util import cached_property, class_or_instancemethod, classproperty, detect_bad_columns, df_from_arrays, slice_to_range # noqa E501
+from .util import cached_property, class_or_instancemethod, classproperty, detect_bad_columns, df_from_arrays # noqa E501
 
 import importlib.util
 _torch_unavailable = importlib.util.find_spec('torch') is None
@@ -223,11 +224,15 @@ def _idx_to_k(key, n):
     return K(key)
 
 
-def _key_preprocess(key, n, slice=False):
+def _get_type_char(val):
+    return ' bg xhijefcspmdznuvts'[abs(val.t)]
+
+
+def _key_preprocess(key, n, slice=False, ignore_error=False):
     if key is not None:
         if key < 0:
             key = n + key
-        if (key >= n or key < 0) and not slice:
+        if (key >= n or key < 0) and not slice and not ignore_error:
             raise IndexError('index out of range')
         elif slice:
             if key < 0:
@@ -254,7 +259,7 @@ class K:
     """Base type for all q objects.
 
     Parameters:
-        x (Any): An object that will be converted into a `pykx.K` object via [`pykx.toq`][].
+        x (Any): An object that will be converted into a `pykx.K` object via [`pykx.toq`][pykx.toq].
     """
     def __new__(cls, x: Any, *args, cast: bool = None, **kwargs):
         return toq(x, ktype=None if cls is K else cls, cast=cast) # TODO: 'strict' and 'cast' flags
@@ -498,12 +503,15 @@ class K:
             return flat.np().reshape(shape)
         return self.np()
 
+    def _to_vector(self):
+        return self
+
 
 class Atom(K):
     """Base type for all q atoms, including singular basic values, and functions.
 
     See Also:
-        [`pykx.Collection`][]
+        [`pykx.Collection`][pykx.Collection]
     """
     @property
     def is_null(self) -> bool:
@@ -514,7 +522,7 @@ class Atom(K):
         if self.t in {-1, -2, -4, -10, -11}:
             return False
         try:
-            type_char = ' bg xhijefcspmdznuvts'[abs(self.t)]
+            type_char = _get_type_char(self)
         except IndexError:
             return False
         return q(f'{{any -0W 0W{type_char}~\\:x}}')(self).py()
@@ -524,7 +532,7 @@ class Atom(K):
         if self.t in {-1, -2, -4, -10, -11}:
             return False
         try:
-            type_char = ' bg xhijefcspmdznuvts'[abs(self.t)]
+            type_char = _get_type_char(self)
         except IndexError:
             return False
         return q(f'{{0W{type_char}~x}}')(self).py()
@@ -534,7 +542,7 @@ class Atom(K):
         if self.t in {-1, -2, -4, -10, -11}:
             return False
         try:
-            type_char = ' bg xhijefcspmdznuvts'[abs(self.t)]
+            type_char = _get_type_char(self)
         except IndexError:
             return False
         return q(f'{{-0W{type_char}~x}}')(self).py()
@@ -574,6 +582,21 @@ class Atom(K):
 
     def __rxor__(self, other):
         return other ^ self.py()
+
+    def _to_vector(self):
+        return _wrappers.to_vec(self)
+
+    def __array_ufunc__(self, ufunc, method, *inputs, **kwargs):
+        res = self._to_vector().__array_ufunc__(
+            ufunc,
+            method,
+            *[x._to_vector() if isinstance(x, K) else x for x in inputs],
+            **kwargs
+        )
+
+        if res.t >= 0:
+            res = res._unlicensed_getitem(0)
+        return res
 
 
 class EnumAtom(Atom):
@@ -636,6 +659,7 @@ class TemporalSpanAtom(TemporalAtom):
         )
 
     def np(self,
+           *,
            raw: bool = False,
            has_nulls: Optional[bool] = None,
     ) -> Union[np.timedelta64, int]:
@@ -706,9 +730,8 @@ class TimeAtom(TemporalSpanAtom):
     _np_dtype = 'timedelta64[ms]'
 
     def __new__(cls, x: Any, *, cast: bool = None, **kwargs):
-        if (type(x) == str) and x == 'now': # noqa: E721
-            if licensed:
-                return q('.z.T')
+        if licensed and isinstance(x, str) and x == 'now': # noqa: E721
+            return q('.z.T')
         return toq(x, ktype=None if cls is K else cls, cast=cast) # TODO: 'strict' and 'cast' flags
 
     def _prototype(self=None):
@@ -832,10 +855,9 @@ class TimespanAtom(TemporalSpanAtom):
     _np_dtype = 'timedelta64[ns]'
 
     def __new__(cls, x: Any, *args, cast: bool = None, **kwargs):
-        if (type(x) == str) and x == 'now': # noqa: E721
-            if licensed:
-                return q('.z.N')
-        if type(x) == int:
+        if licensed and isinstance(x, str) and x == 'now': # noqa: E721
+            return q('.z.N')
+        if isinstance(x, int):
             if not licensed:
                 raise LicenseException('Cannot create object from numerical values, convert from "datetime.timedelta"') # noqa: E501
             if not all(isinstance(i, int) for i in args):
@@ -926,17 +948,14 @@ class DatetimeAtom(TemporalFixedAtom):
         warn('The q datetime type is deprecated', DeprecationWarning)
         super().__init__(*args, **kwargs)
 
-    def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
-        if raw:
-            return _wrappers.k_f(self)
-        raise TypeError('The q datetime type is deprecated, and can only be accessed with '
-                        'the keyword argument `raw=True` in Python or `.pykx.toRaw` in q')
-
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         if raw:
             return _wrappers.k_f(self)
         raise TypeError('The q datetime type is deprecated, and can only be accessed with '
                         'the keyword argument `raw=True` in Python or `.pykx.toRaw` in q')
+
+    def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
+        return self.py(raw=raw)
 
 
 class DateAtom(TemporalFixedAtom):
@@ -949,11 +968,9 @@ class DateAtom(TemporalFixedAtom):
     _np_dtype = 'datetime64[D]'
 
     def __new__(cls, x: Any, *args, cast: bool = None, **kwargs):
-        if type(x) == str:
-            if x == 'today':
-                if licensed:
-                    return q('.z.D')
-        if type(x) == int:
+        if licensed and isinstance(x, str) and (x == 'today'):
+            return q('.z.D')
+        if isinstance(x, int):
             if not licensed:
                 raise LicenseException('Cannot create object from numerical values, convert from "datetime.date"') # noqa: E501
             if not all(isinstance(i, int) for i in args):
@@ -1050,10 +1067,9 @@ class TimestampAtom(TemporalFixedAtom):
     _np_dtype = 'datetime64[ns]'
 
     def __new__(cls, x: Any, *args, cast: bool = None, **kwargs):
-        if (type(x) == str) and x == 'now': # noqa: E721
-            if licensed:
-                return q('.z.P')
-        if type(x) == int:
+        if licensed and isinstance(x, str) and x == 'now': # noqa: E721
+            return q('.z.P')
+        if isinstance(x, int):
             if not licensed:
                 raise LicenseException('Cannot create object from numerical values, convert from "datetime.datetime"') # noqa: E501
             if not all(isinstance(i, int) for i in args):
@@ -1172,7 +1188,7 @@ class SymbolAtom(Atom):
         generated over time (e.g. random symbols) as memory usage will continually increase.
 
     See Also:
-        [`pykx.CharVector`][]
+        [`pykx.CharVector`][pykx.CharVector]
     """
     t = -11
     _null = '`'
@@ -1613,7 +1629,7 @@ class ByteAtom(IntegralNumericAtom):
 
     @classproperty
     def null(cls): # noqa: B902
-        raise NotImplementedError('Retrieval of null values not supported for this type')
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() retrieval of null values not supported for this type") # noqa: E501
 
     @classproperty
     def inf(cls): # noqa: B902
@@ -1700,7 +1716,7 @@ class BooleanAtom(IntegralNumericAtom):
 
     @classproperty
     def null(cls): # noqa: B902
-        raise NotImplementedError('Retrieval of null values not supported for this type')
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() retrieval of null values not supported for this type") # noqa: E501
 
     @classproperty
     def inf(cls): # noqa: B902
@@ -1736,7 +1752,7 @@ class Collection(K):
     """Base type for all q collections (i.e. non-atoms), including vectors, and mappings.
 
     See Also:
-        [`pykx.Collection`][]
+        [`pykx.Collection`][pykx.Collection]
     """
     @property
     def is_atom(self):
@@ -1827,7 +1843,7 @@ class Vector(Collection, abc.Sequence):
         if self.t in {1, 2, 4, 10, 11}:
             return False
         try:
-            type_char = ' bg xhijefcspmdznuvts'[self.t]
+            type_char = _get_type_char(self)
         except IndexError:
             return False
         return q(f'{{any -0W 0W{type_char}=\\:x}}')(self).py()
@@ -1884,7 +1900,7 @@ class Vector(Collection, abc.Sequence):
                 if isinstance(self._unlicensed_getitem(i), IntegralNumericAtom)\
                         and self._unlicensed_getitem(i).is_null:
                     null_inds.append(i)
-            if not 0 == len(null_inds):
+            if 0 != len(null_inds):
                 res[null_inds] = pd.NA
         if as_arrow:
             if not pandas_2:
@@ -1909,7 +1925,7 @@ class Vector(Collection, abc.Sequence):
                     if isinstance(self._unlicensed_getitem(i), IntegralNumericAtom)\
                             and self._unlicensed_getitem(i).is_null:
                         null_inds.append(i)
-                if not 0 == len(null_inds):
+                if 0 != len(null_inds):
                     np_array[null_inds] = None
             return pa.array(np_array)
         except (pa.lib.ArrowNotImplementedError, pa.lib.ArrowInvalid) as err:
@@ -2034,10 +2050,9 @@ class Vector(Collection, abc.Sequence):
         '))
         ```
         """
-        if not isinstance(self, List):
-            if not q('{(0>type[y])& type[x]=abs type y}', self, data):
-                raise QError(f'Appending data of type: {type(K(data))} '
-                             f'to vector of type: {type(self)} not supported')
+        if (not isinstance(self, List)) and (not q('{(0>type[y])& type[x]=abs type y}', self, data)): # noqa: E501
+            raise QError(f'Appending data of type: {type(K(data))} '
+                         f'to vector of type: {type(self)} not supported')
         append_vec = q('{[orig;app]orig,$[0<=type app;enlist;]app}', self, data)
         self.__dict__.update(append_vec.__dict__)
 
@@ -2124,10 +2139,23 @@ class Vector(Collection, abc.Sequence):
         self.__dict__.update(extend_vec.__dict__)
 
     def index(self, x, start=None, end=None):
-        for i in slice_to_range(slice(start, end), _wrappers.k_n(self)):
-            if self[i] == x:
-                return i
-        raise ValueError(f'{x!r} is not in {self!r}')
+        start = _key_preprocess(start, len(self), ignore_error=True)
+        end = _key_preprocess(end, len(self), ignore_error=True)
+        if start is None and end is None:
+            i = q('{[v;x] i:v?x;$[i<count[v];i;(::)]}', self, x)
+        elif start is not None and end is None:
+            i = q('{[v;x;s] l:s _ v;i:l?x;$[i<count[l];s+i;(::)]}', self, x, start)
+        elif start is None and end is not None:
+            i = q('{[v;x;e] l:sublist[e;v];i:l?x;$[i<count[l];i;(::)]}', self, x, end)
+        else:
+            if end<=start:
+                raise ValueError(f'{x!r} is not in {self!r}')
+            i = q('{[v;x;s;e] l:v s+til e-s;i:l?x;$[i<count[l];s+i;(::)]}',
+                  self, x, start, end)
+        if i != None: # noqa: E711
+            return i
+        else:
+            raise ValueError(f'{x!r} is not in {self!r}')
 
     def count(self, x):
         return sum((x == v) or (x is v) for v in self)
@@ -2323,12 +2351,12 @@ class List(Vector):
     """Wrapper for q lists, which are vectors of K objects of any type.
 
     Note: The memory layout of a q list is special.
-        All other vector types (see: subclasses of [`pykx.Vector`][]) are structured in-memory as a
-        K object which contains metadata, followed immediately by the data in the vector. By
-        contrast, q lists are a a vector of pointers to K objects, so they are structured in-memory
-        as a K object containing metadata, followed immediately by pointers. As a result, the base
-        data "contained" by the list is located elsewhere in memory. This has performance and
-        ownership implications in q, which carry over to PyKX.
+        All other vector types (see: subclasses of [`pykx.Vector`][pykx.Vector]) are structured
+        in-memory as a K object which contains metadata, followed immediately by the data in the
+        vector. By contrast, q lists are a a vector of pointers to K objects, so they are structured
+        in-memory as a K object containing metadata, followed immediately by pointers. As a result,
+        the base data "contained" by the list is located elsewhere in memory. This has performance
+        and ownership implications in q, which carry over to PyKX.
     """
     t = 0
     _np_dtype = object
@@ -2507,7 +2535,7 @@ class PandasUUIDArray(pd.api.extensions.ExtensionArray):
 
     @classmethod
     def _from_factorized(cls, fac):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented. This function doesn't support PyKX UUID objects") # noqa: E501
 
     def __getitem__(self, key):
         return self.array[key]
@@ -2538,7 +2566,7 @@ class PandasUUIDArray(pd.api.extensions.ExtensionArray):
         return PandasUUIDArray(np.array(self).copy())
 
     def _concat_same_type(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented. This function doesn't support PyKX UUID objects") # noqa: E501
 
 
 if pa is not None:
@@ -2722,7 +2750,7 @@ class CharVector(Vector):
     """Wrapper for q char (i.e. 8 bit ASCII value) vectors.
 
     See Also:
-        [`pykx.SymbolAtom`][]
+        [`pykx.SymbolAtom`][pykx.SymbolAtom]
     """
     t = 10
     _np_dtype = '|S1'
@@ -2767,7 +2795,7 @@ class SymbolVector(Vector):
     def _unlicensed_getitem(self, index: int):
         return _wrappers.symbol_vector_unlicensed_getitem(self, index)
 
-    def py(self, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
+    def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         return _wrappers.get_symbol_list(self, raw)
 
     def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
@@ -2807,8 +2835,6 @@ class TemporalVector(Vector):
             array = array.view(self._np_type)
         else:
             array = array.astype(self._np_type, copy=False)
-        if raw:
-            has_nulls = False
         if has_nulls is None or has_nulls:
             nulls = base_array == self._base_null_value
             if has_nulls is None:
@@ -3185,8 +3211,8 @@ class Table(PandasAPI, Mapping):
     Note: Despite the name, [keyed tables][pykx.KeyedTable] are actually dictionaries.
 
     See Also:
-        - [`pykx.SplayedTable`][]
-        - [`pykx.PartitionedTable`][]
+        - [`pykx.SplayedTable`][pykx.SplayedTable]
+        - [`pykx.PartitionedTable`][pykx.PartitionedTable]
     """
     t = 98
 
@@ -3222,7 +3248,7 @@ class Table(PandasAPI, Mapping):
     def prototype(self={}): # noqa
         _map = {}
         for k, v in self.items():
-            _map[k] = v._prototype() if (type(v) == type or type(v) == ABCMeta) else v
+            _map[k] = v._prototype() if (isinstance(v, type) or isinstance(v, ABCMeta)) else v
         return Table(Dictionary(_map))
 
     def __len__(self):
@@ -3474,8 +3500,8 @@ class Table(PandasAPI, Mapping):
             by: A dictionary mapping the names to be assigned to the produced columns and the
                 columns whose results are used to construct the groups of the by clause.
             inplace: Whether the result of an update is to be persisted. This operates for tables
-                referenced by name in q memory or general table objects
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+                referenced by name in q memory or general table objects.
+                See [here](https://code.kx.com/q/basics/qsql/#result-and-side-effects).
 
         Examples:
 
@@ -3604,8 +3630,8 @@ class Table(PandasAPI, Mapping):
             by: A dictionary mapping the names to be assigned to the produced columns and the
                 columns whose results are used to construct the groups of the by clause.
             inplace: Whether the result of an update is to be persisted. This operates for tables
-                referenced by name in q memory or general table objects
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+                referenced by name in q memory or general table objects.
+                See [here](https://code.kx.com/q/basics/qsql/#result-and-side-effects).
 
         Examples:
 
@@ -3668,8 +3694,8 @@ class Table(PandasAPI, Mapping):
             where: Conditional filtering used to select subsets of the data which are to be
                 deleted from the table.
             inplace: Whether the result of an update is to be persisted. This operates for tables
-                referenced by name in q memory or general table objects
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+                referenced by name in q memory or general table objects.
+                See [here](https://code.kx.com/q/basics/qsql/#result-and-side-effects).
 
         Examples:
 
@@ -3723,8 +3749,8 @@ class Table(PandasAPI, Mapping):
         Parameters:
             cols: The column(s) which will be used to reorder the columns of the table
             inplace: Whether the result of an update is to be persisted. This operates for tables
-                referenced by name in q memory or general table objects
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+                referenced by name in q memory or general table objects.
+                See [here](https://code.kx.com/q/basics/qsql/#result-and-side-effects).
 
         Returns:
             The resulting table after the columns have been rearranged.
@@ -3979,32 +4005,32 @@ class SplayedTable(Table):
         self._values = None
 
     def __getitem__(self, key):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def __reduce__(self):
         raise TypeError('Unable to serialize pykx.SplayedTable objects')
 
     def any(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def all(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def items(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def values(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     @property
     def flip(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def _repr_html_(self):
         if not licensed:
@@ -4126,26 +4152,26 @@ class PartitionedTable(SplayedTable):
         super().__init__(*args, **kwargs)
 
     def __getitem__(self, key):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def __reduce__(self):
         raise TypeError('Unable to serialize pykx.PartitionedTable objects')
 
     def items(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def values(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     @property
     def flip(self):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def pd(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def _repr_html_(self):
         if not licensed:
@@ -4277,7 +4303,7 @@ class Dictionary(Mapping):
 
     def __setitem__(self, key, val):
         if isinstance(key, tuple):
-            raise NotImplementedError("pykx.Dictionary objects do not support tuple key assignment")
+            raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented, .pykx.Dictionary objects do not support tuple key assignment") # noqa: E501
         self.__dict__.update(q('{x,((),y)!((),z)}', self, key, val).__dict__)
 
     def _repr_html_(self):
@@ -4514,7 +4540,7 @@ class KeyedTable(Dictionary, PandasAPI):
     def pa(self):
         if pa is None:
             raise PyArrowUnavailable # nocov
-        raise NotImplementedError
+        raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented.") # noqa: E501
 
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         vkp = self._values._keys.py()
@@ -4750,8 +4776,8 @@ class KeyedTable(Dictionary, PandasAPI):
             by: A dictionary mapping the names to be assigned to the produced columns and the
                 columns whose results are used to construct the groups of the by clause.
             inplace: Whether the result of an update is to be persisted. This operates for tables
-                referenced by name in q memory or general table objects
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+                referenced by name in q memory or general table objects.
+                See [here](https://code.kx.com/q/basics/qsql/#result-and-side-effects).
 
         Examples:
 
@@ -4881,8 +4907,8 @@ class KeyedTable(Dictionary, PandasAPI):
             by: A dictionary mapping the names to be assigned to the produced columns and the
                 columns whose results are used to construct the groups of the by clause.
             inplace: Whether the result of an update is to be persisted. This operates for tables
-                referenced by name in q memory or general table objects
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+                referenced by name in q memory or general table objects.
+                See [here](https://code.kx.com/q/basics/qsql/#result-and-side-effects).
 
         Examples:
 
@@ -4946,8 +4972,8 @@ class KeyedTable(Dictionary, PandasAPI):
             where: Conditional filtering used to select subsets of the data which are to be
                 deleted from the table.
             inplace: Whether the result of an update is to be persisted. This operates for tables
-                referenced by name in q memory or general table objects
-                https://code.kx.com/q/basics/qsql/#result-and-side-effects.
+                referenced by name in q memory or general table objects.
+                See [here](https://code.kx.com/q/basics/qsql/#result-and-side-effects).
 
         Examples:
 
@@ -5065,7 +5091,8 @@ class Function(Atom):
     """Base type for all q functions.
 
     `Function` objects can be called as if they were Python functions. All provided arguments will
-    be converted to q using [`pykx.toq`][], and the execution of the function will happen in q.
+    be converted to q using [`pykx.toq`][pykx.toq], and the execution of the function will happen
+    in q.
 
     `...` can be used to omit an argument, resulting in a [function projection][pykx.Projection].
 
@@ -5165,10 +5192,10 @@ class Lambda(Function):
 
     Lambda's are the most basic kind of function in q. They can take between 0 and 8 parameters
     (inclusive), which all must be q objects themselves. If the provided parameters are not
-    [`pykx.K`][] objects, they will be converted into them using [`pykx.toq`][].
+    [`pykx.K`][pykx.K] objects, they will be converted into them using [`pykx.toq`][pykx.toq].
 
-    Unlike other [`pykx.Function`][] subclasses, `Lambda` objects can be called with keyword
-    arguments, using the names of the parameters from q.
+    Unlike other [`pykx.Function`][pykx.Function] subclasses, `Lambda` objects can be called with
+    keyword arguments, using the names of the parameters from q.
     """
     t = 100
     _name = ''
@@ -5212,7 +5239,7 @@ class UnaryPrimitive(Function):
     cannot be defined by a user through any normal means.
 
     See Also:
-        [`pykx.Identity`][]
+        [`pykx.Identity`][pykx.Identity]
     """
     t = 101
     _name = ''
@@ -5308,7 +5335,7 @@ class Operator(Function):
     """Wrapper for q operator functions.
 
     Operators include `@`, `*`, `+`, `!`, `:`, `^`, and many more. They are documented on the q
-    reference page: https://code.kx.com/q/ref/#operators
+    reference page: [here](https://code.kx.com/q/ref/#operators).
     """
     t = 102
     _name = ''
@@ -5344,7 +5371,7 @@ class Iterator(Function):
 
     Iterators include the mapping iterators (`'`, `':`, `/:`, and `\\:`), and the accumulating
     iterators (`/`, and `\\`). They are documented on the q reference page:
-    https://code.kx.com/q/ref/#iterators
+    [here](https://code.kx.com/q/ref/#iterators)
     """
     t = 103
 
@@ -5362,7 +5389,8 @@ class Iterator(Function):
 class Projection(Function):
     """Wrapper for q function projections.
 
-    Similar to [`functools.partial`][], q functions can have some of their parameters fixed in
+    Similar to [`functools.partial`](https://docs.python.org/3/library/functools.html),
+     q functions can have some of their parameters fixed in
     advance, resulting in a new function, which is a projection. When this projection is called,
     the fixed parameters are no longer required, and cannot be provided.
 
@@ -5370,7 +5398,7 @@ class Projection(Function):
     be a function (projection) that has `m` parameters.
 
     In PyKX, the special Python singleton `...` is used to represent
-    [projection null][`pykx.ProjectionNull`]
+    [projection null][pykx.ProjectionNull]
     """
     t = 104
     _name = ''
@@ -5528,8 +5556,9 @@ class AppliedIterator(Function):
 
     Iterators, also known as adverbs, are like Python decorators, in that they are functions which
     take a function as their argument, and return a modified version of it. The iterators
-    themselves are of the type [`pykx.Iterator`][], but when applied to a function a new type
-    (which is a subclass of `AppliedIterator`) is created depending on what iterator was used.
+    themselves are of the type [`pykx.Iterator`][pykx.Iterator], but when applied to a function a
+    new type (which is a subclass of `AppliedIterator`) is created depending on what iterator was
+    used.
     """
     _name = ''
 
@@ -5726,8 +5755,10 @@ class ParseTree:
     def __init__(self, tree):
         if isinstance(tree, str):
             tree = q.parse(CharVector(tree))
-        elif isinstance(tree, (QueryPhrase, Column)):
-            tree = tree.phrase
+        elif isinstance(tree, Column):
+            tree = tree._value
+        elif isinstance(tree, QueryPhrase):
+            tree = tree._phrase
         elif isinstance(tree, Variable):
             tree = tree._name
         self._tree = tree
@@ -5737,15 +5768,17 @@ class ParseTree:
         return f"{preamble}({self._tree.__repr__()})"
 
     def enlist(self):
+        cpy = copy.deepcopy(self)
         if isinstance(self._tree, K):
-            self._tree = q.enlist(self._tree)
+            cpy._tree = q.enlist(self._tree)
         else:
-            self._tree = [self._tree]
-        return self
+            cpy._tree = [self._tree]
+        return cpy
 
     def first(self):
+        cpy = copy.deepcopy(self)
         self._tree = q.first(self._tree)
-        return self
+        return cpy
 
     def eval(self):
         return q.eval(self._tree)
@@ -5896,10 +5929,10 @@ class Column:
             elif iterator in ["':", "'"]:
                 i = [[ParseTree.value(iterator, eval=True), cmd[0]]]
                 i.extend(cmd[1:])
-            elif iterator in ['/:', '\:', '/', '\\']:
+            elif iterator in ['/:', '\\:', '/', '\\']:
                 i = [[ParseTree.value(id[iterator], eval=True), cmd[0]]]
                 i.extend(cmd[1:])
-            elif iterator in ['/:\:', '\:/:']:
+            elif iterator in ['/:\\:', '\\:/:']:
                 iterator = id[iterator]
                 i = [[ParseTree.value(iterator[1], eval=True),
                      [ParseTree.value(iterator[0], eval=True), cmd[0]]]]
@@ -5908,8 +5941,9 @@ class Column:
                 i = iterator
                 i.extend(cmd)
             cmd = i
-        self._value = cmd
-        return self
+        cpy = copy.deepcopy(self)
+        cpy._value = cmd
+        return cpy
 
     def __add__(self, other, iterator=None, col_arg_ind=0, project_args=None):
         return self.call('+', other, iterator=iterator, col_arg_ind=col_arg_ind,
@@ -5993,6 +6027,9 @@ class Column:
     def __ceil__(self, iterator=None):
         return self.call('ceiling', iterator=iterator)
 
+    def __invert__(self, iterator=None):
+        return self.call('not', iterator=iterator)
+
     def __and__(self, other):
         wp = QueryPhrase(self)
         if isinstance(other, Column):
@@ -6010,9 +6047,10 @@ class Column:
         elif isinstance(other, QueryPhrase):
             raise TypeError("Cannot | off a Column with a QueryPhrase")
         elif isinstance(other, ParseTree):
-            other = other.tree
-        self._value = [q(b'or'), self._value, other]
-        return self
+            other = other._tree
+        cpy = copy.deepcopy(self)
+        cpy._value = [q(b'or'), self._value, other]
+        return cpy
 
     def abs(self, iterator=None):
         """
@@ -6091,6 +6129,43 @@ class Column:
         ```
         """
         return self.call('acos', iterator=iterator)
+
+    def _and(self, other, iterator=None, col_arg_ind=0, project_args=None):
+        """
+        Return the lesser of the underlying boolean values between two columns.
+        This should only be used in specific needed use cases
+        as it can come at a performance penalty.
+        Use `&` or `[]` in general to build queries.
+
+        Parameters:
+            other: The second column or variable (Python/q) to be used
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Examples:
+
+        Return the rows from the table where both conditions are satisfied :
+
+        ```python
+        >>> import pykx as kx
+        >>> tab = kx.Table(data={
+        ...     'a': [1, -1, 0],
+        ...     'b': [1, 2, 3]
+        ...     })
+        >>> tab.select(where=(kx.Column('a') > 0)._and(kx.Column('b') > 0))
+        pykx.Table(pykx.q('
+        a b
+        ----
+        1 1
+        '))
+        ```
+        """
+        return self.call('and', other, iterator=iterator,
+                         col_arg_ind=col_arg_ind, project_args=project_args)
 
     def asc(self, iterator=None):
         """
@@ -8206,6 +8281,71 @@ class Column:
         """
         return self.call('neg', iterator=iterator)
 
+    def _not(self, iterator=None):
+        """
+        Return rows where the condition does not evaluate to True.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`
+
+        Examples:
+
+        Return the rows that do not satisfy the condition
+
+        ```python
+        >>> import pykx as kx
+        >>> tab = kx.Table(data={
+        ...     'a': [1, -1, 0],
+        ...     'b': [1, 2, 3]
+        ...     })
+        >>> tab.select(where=(kx.Column('a') > 0)._not())
+        pykx.Table(pykx.q('
+        a  b
+        ----
+        -1 2
+        0  3
+        '))
+        ```
+        """
+        return self.call('not', iterator=iterator)
+
+    def _or(self, other, iterator=None, col_arg_ind=0, project_args=None):
+        """
+        Return the larger of the underlying boolean values between two columns:
+
+        Parameters:
+            other: The second column or variable (Python/q) to be used
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Examples:
+
+        Return the rows from the table where either condition is True:
+
+        ```python
+        >>> import pykx as kx
+        >>> tab = kx.Table(data={
+        ...     'a': [1, -1, 0],
+        ...     'b': [1, 2, 3]
+        ...     })
+        >>> tab.select(where=(kx.Column('a') > 0)._or(kx.Column('b') > 0))
+        pykx.Table(pykx.q('
+        a b
+        ----
+        1 1
+        -1 2
+        0 3
+        '))
+        ```
+        """
+        return self.call('or', other, iterator=iterator,
+                         col_arg_ind=col_arg_ind, project_args=project_args)
+
     def prd(self, iterator=None):
         """
         Calculate the product of all values in a column or rows of a column
@@ -9741,8 +9881,9 @@ class Column:
         '))
         ```
         """
-        self._name = name
-        return self
+        cpy = copy.deepcopy(self)
+        cpy._name = name
+        return cpy
 
     def average(self, iterator=None):
         """
@@ -9797,7 +9938,7 @@ class Column:
         Parameters:
             other: The name of the type to which your column should be cast
                 or the lower case letter used to define it in q, for more information
-                see https://code.kx.com/q/ref/cast/
+                see [here](https://code.kx.com/q/ref/cast/).
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -10885,14 +11026,15 @@ class QueryPhrase:
         return dict(map(lambda i, j: (i, j), self._names, self._phrase))
 
     def __and__(self, other):
+        cpy = copy.deepcopy(self)
         if isinstance(other, Column):
-            self.append(other)
+            cpy.append(other)
         elif isinstance(other, QueryPhrase):
-            self.extend(other)
+            cpy.extend(other)
         else:
             raise TypeError(
                 f"Supplied object type '{type(other)}' cannot `&` off a `pykx.QueryPhrase`.")
-        return self
+        return cpy
 
 
 def _internal_k_list_wrapper(addr: int, incref: bool):
