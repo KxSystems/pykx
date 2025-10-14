@@ -126,6 +126,7 @@ test = [
     "pytest-randomly==3.11.0",
     "pytest-xdist==2.5.0",
     "pytest-order==1.1.0",
+    "pytest-rerunfailures==10.3",
     "psutil>=5.0.0",
     "pytest-timeout>=2.0.0",
     "IPython",

@@ -214,7 +214,7 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             query: The code to run in the q instance.
             *args: Arguments to the q query. Each argument is converted into a
                 `#!python pykx.K` object. This parameter supports up to 8 args (the maximum amount
-                supported by q functions), providing more causesw an error.
+                supported by q functions), providing more causes an error.
             wait: A keyword to allow users to call any `#!python pykx.EmbeddedQ` or
                 `#!python pykx.QConnection` instance the same way. All queries executed by this
                 function are synchronous on the embedded q instance. Using a `#!python False`

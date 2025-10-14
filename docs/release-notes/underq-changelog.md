@@ -6,6 +6,37 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 3.1.4
+
+#### Release Date
+
+2025-07-17
+
+### Fixes and Improvements
+
+- Resolved `object has no attribute 't'` error for certain conversions
+
+	=== "Behaviour prior to change"
+
+		```python
+		q).pykx.setdefault (),"k"; 
+		q).pykx.import[`numpy.random][`:choice][01b; 10]
+		'AttributeError("'numpy.int64' object has no attribute 't'")
+			[2]  /home/user/q/pykx.q:241: .pykx.util.pykx:
+					];
+				wrap pyfunc[f] . x];
+					       ^
+				":"~first a0:string x0;
+		```
+
+	=== "Behaviour post change"
+
+		```python
+		q).pykx.setdefault (),"k"; 
+		q).pykx.import[`numpy.random][`:choice][01b; 10]
+		1011111110b
+		```
+
 ## PyKX 3.1.3
 
 #### Release Date

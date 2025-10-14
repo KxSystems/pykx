@@ -1782,7 +1782,7 @@ def from_pandas_index(x: pd.Index,
         index_dict = from_dict(d)
         return factory(<uintptr_t>core.xT(core.r1(_k(index_dict))), False)
     elif isinstance(x, _supported_pandas_index_types_via_numpy):
-        return from_numpy_ndarray(x.to_numpy(), cast=cast, handle_nulls=handle_nulls)
+        return from_numpy_ndarray(x.to_numpy().copy(), cast=cast, handle_nulls=handle_nulls)
     else:
         raise _conversion_TypeError(x, 'Pandas index', ktype)
 

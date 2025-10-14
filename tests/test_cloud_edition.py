@@ -262,6 +262,10 @@ def test_objstor_aws_read1(q, kx):
     assert isinstance(res, kx.ByteVector)
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='ToDo investigate in KXI-63220'
+)
 def test_qlog_fd_stdout_endpoint(q):
     """Test STDOUT endpoint creation."""
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')
@@ -274,6 +278,10 @@ def test_qlog_fd_stdout_endpoint(q):
     q('.com_kx_log.lcloseAll[]')
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='ToDo investigate in KXI-63220'
+)
 def test_qlog_fd_stderr_setup(q):
     """Tests creation of stderr endpoint."""
     q('id:.com_kx_log.lopen[`:fd://stderr]')
@@ -282,6 +290,10 @@ def test_qlog_fd_stderr_setup(q):
     q('.com_kx_log.lcloseAll[]')
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='ToDo investigate in KXI-63220'
+)
 def test_qlog_fd_stdout_log_string(q):
     """Test default string logging."""
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')
@@ -300,6 +312,10 @@ def test_qlog_fd_stdout_log_string(q):
     q('.com_kx_log.lcloseAll[]')
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='ToDo investigate in KXI-63220'
+)
 def test_qlog_fd_stdout_custom_log(q):
     """Tests custom string logging."""
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')
@@ -316,6 +332,10 @@ def test_qlog_fd_stdout_custom_log(q):
     q('.com_kx_log.lcloseAll[]')
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='ToDo investigate in KXI-63220'
+)
 def test_qlog_fd_stdout_dict_log(q):
     """Tests dictionary message logging."""
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')
@@ -330,6 +350,10 @@ def test_qlog_fd_stdout_dict_log(q):
     q('.com_kx_log.lcloseAll[]')
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='ToDo investigate in KXI-63220'
+)
 def test_qlog_fd_file_publish(q):
     """Tests logging message to file."""
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')

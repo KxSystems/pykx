@@ -4,6 +4,17 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+## PyKX 3.1.4
+
+#### Release Date
+
+2025-07-17
+
+### Fixes and Improvements
+
+- Resolved error on import when `PYKX_THREADING` was set.
+- Fixed an issue where data could be corrupted in keyed columns of PyArrow backed Pandas dataframes.
+
 ## PyKX 3.1.3
 
 #### Release Date
