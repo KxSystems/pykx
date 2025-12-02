@@ -241,7 +241,7 @@ def _link_qhome():
                             warn('Unable to connect user QHOME to PyKX QHOME via symlinks.\n' # nocov
                                  'To permanently disable attempts to create symlinks you can\n' # nocov
                                  '\t1. Set the environment variable "PYKX_IGNORE_QHOME" = True.\n' # nocov
-                                 '\t2. Update the file ".pykx.config" using kx.util.add_to_config({\'PYKX_IGNORE_QHOME\': \'True\'})\n' # nocov
+                                 '\t2. Update the file ".pykx-config" using kx.util.add_to_config({\'PYKX_IGNORE_QHOME\': \'True\'})\n' # nocov
                                  f'Error: {ex}\n',     # nocov
                                  PyKXWarning) # nocov
                             return            # nocov

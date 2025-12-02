@@ -594,7 +594,7 @@ class Atom(K):
             **kwargs
         )
 
-        if res.t >= 0:
+        if isinstance(res, K) and res.t >= 0:
             res = res._unlicensed_getitem(0)
         return res
 

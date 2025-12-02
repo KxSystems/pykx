@@ -188,7 +188,7 @@ def write_to_q_file(_q, locked, path, code):
     if locked:
         output_file = Path(path[:-1])
         _q('0:', output_file, [kx.CharVector(code)])
-        _q('\_ ' + path[:-1])
+        _q('\\_ ' + path[:-1])
         _q('hdel', output_file)
     else:
         output_file = Path(path)

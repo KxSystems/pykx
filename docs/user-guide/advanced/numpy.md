@@ -11,7 +11,7 @@ _This page explains how to integrate PyKX with NumPy._
 
 PyKX is designed for advanced integration with NumPy. This integration is built on three pillars: 
 
-- [NEP-49](https://numpy.org/neps/nep-0049.html)
+- [NEP-49](https://numpy.org/neps/nep-0049-data-allocation-strategies.html)
 - the NumPy [array interface](https://numpy.org/doc/stable/reference/arrays.interface.html)
 - [universal functions](https://numpy.org/doc/stable/reference/ufuncs.html) 
 

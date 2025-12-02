@@ -17,3 +17,10 @@ feature .pykx.import
             @[{.pykx.import x; 0b};
                 "a";
                 {x like "Module to be imported must be a symbol"}]
+
+    should allow generation of random objects
+        expect generation without errors
+            def:.pykx.setdefault (),"k"; 
+            imp:.pykx.import[`numpy.random][`:choice][01b; 10]`;
+            10 = count imp
+            
