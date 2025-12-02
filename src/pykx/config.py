@@ -31,7 +31,7 @@ tcore_path_location = bytes(Path(__file__).parent.resolve(strict=True) / '_tcore
 
 # Profile information for user defined config
 # If PYKX_CONFIGURATION_LOCATION is not set it will search '.'
-pykx_config_location = Path(os.getenv('PYKX_CONFIGURATION_LOCATION', ''))
+pykx_config_location = Path(os.path.expanduser(os.getenv('PYKX_CONFIGURATION_LOCATION', '')))
 pykx_config_profile = os.getenv('PYKX_PROFILE', 'default')
 
 

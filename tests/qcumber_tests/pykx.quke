@@ -1,4 +1,6 @@
 feature .pykx.eval
+    before
+        .pykx.pyexec"import pandas as pd"
     should return the correct types
         expect to return a wrapped object
             .qu.compare[105h; type .pykx.eval["1 + 1"]]
@@ -20,6 +22,11 @@ feature .pykx.eval
 
         expect the wrapped object to contain a foreign
             .qu.compare[112h; type .pykx.eval["1 + 1"]`.]
+
+        expect that a file with a nested array can be converted
+            df: .pykx.pyeval"pd.read_parquet('tests/nestedFloats.parquet')";
+            .pykx.toq .pykx.noalloc df;
+            1b
 
     should allow Path objects to be used as inputs to functions
         expect a function taking a single argument to allow Path objects as function parameter

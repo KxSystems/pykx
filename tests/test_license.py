@@ -149,7 +149,7 @@ def test_licensed_success_file(monkeypatch):
     qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    inputs = iter(['Y', 'n', '1', 'n', '1', qlic_path + '/kc.lic'])
+    inputs = iter(['Y', 'n', '1', 'n', '1', qlic_path])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
 
     import pykx as kx
@@ -169,7 +169,7 @@ def test_licensed_success_b64(monkeypatch):
     qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    with open(qlic_path + '/kc.lic', 'rb') as f:
+    with open(qlic_path + '/k4.lic', 'rb') as f:
         license_content = base64.encodebytes(f.read())
     inputs = iter(['Y', 'n', '1', 'n', '2', str(license_content)])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
@@ -234,7 +234,7 @@ def test_licensed_available(monkeypatch):
     qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    inputs = iter(['Y', 'Y', '1', qlic_path + '/kc.lic'])
+    inputs = iter(['Y', 'Y', '1', qlic_path + '/k4.lic'])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
 
     import pykx as kx
@@ -250,7 +250,7 @@ def test_licensed_available_b64(monkeypatch):
     qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    with open(qlic_path + '/kc.lic', 'rb') as f:
+    with open(qlic_path + '/k4.lic', 'rb') as f:
         license_content = base64.encodebytes(f.read())
     inputs = iter(['Y', 'Y', '2', '1', str(license_content)])
     monkeypatch.setattr('builtins.input', lambda _: next(inputs))
@@ -268,7 +268,7 @@ def test_envvar_init():
     qlic_path = os.environ['QLIC']
     os.unsetenv('QLIC')
     os.unsetenv('QHOME')
-    with open(qlic_path + '/kc.lic', 'rb') as f:
+    with open(qlic_path + '/k4.lic', 'rb') as f:
         license_content = base64.encodebytes(f.read())
     os.environ['KDB_LICENSE_B64'] = license_content.decode('utf-8')
 
@@ -323,10 +323,10 @@ def test_check_license_invalid_file(kx):
     reason='License tests are being skipped'
 )
 def test_check_license_no_qlic(kx):
-    err_msg = f'Unable to find an installed license: k4.lic at location: {str(kx.qlic)}.\n'\
+    err_msg = f'Unable to find an installed license: kc.lic at location: {str(kx.qlic)}.\n'\
               'Please consider installing your license again using pykx.license.install\n'
     with patch('sys.stdout', new=StringIO()) as test_out:
-        kx.license.check('/test/test.blah', license_type='k4.lic')
+        kx.license.check('/test/test.blah', license_type='kc.lic')
     assert err_msg == test_out.getvalue()
     assert hasattr(kx.license, 'install')
 
@@ -350,7 +350,7 @@ def test_check_license_format(kx):
     reason='Not supported with PYKX_THREADING'
 )
 def test_check_license_success_file(kx):
-    assert kx.license.check(os.environ['QLIC'] + '/kc.lic')
+    assert kx.license.check(os.environ['QLIC'] + '/k4.lic')
 
 
 @pytest.mark.skipif(
@@ -362,7 +362,7 @@ def test_check_license_success_file(kx):
     reason='Not supported with PYKX_THREADING'
 )
 def test_check_license_success_b64(kx):
-    with open(os.environ['QLIC'] + '/kc.lic', 'rb') as f:
+    with open(os.environ['QLIC'] + '/k4.lic', 'rb') as f:
         license = base64.encodebytes(f.read())
     license = license.decode()
     license = license.replace('\n', '')
@@ -386,9 +386,9 @@ def test_check_license_invalid(kx):
     reason='License tests are being skipped'
 )
 def test_install_license_exists(kx):
-    pattern = re.compile("Installed license: kc.lic at location:*")
+    pattern = re.compile("Installed license: k4.lic at location:*")
     with pytest.raises(Exception) as e:
-        kx.license.install('test', format='STRING')
+        kx.license.install('test', format='STRING', license_type='k4.lic')
         assert pattern.match(str(e))
 
 

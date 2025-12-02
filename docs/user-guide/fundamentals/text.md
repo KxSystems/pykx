@@ -61,7 +61,7 @@ pykx.CharVector(pykx.q('"string"'))
 pykx.SymbolAtom(pykx.q('`bytes'))
 ```
 
-The `#!python pykx.toq` conversion is used by default when passing Python data to PyKXfunctions, for example:
+The `#!python pykx.toq` conversion is used by default when passing Python data to PyKX functions, for example:
 
 ```python
 >>> import pykx as kx
@@ -72,11 +72,88 @@ pykx.List(pykx.q('
 '))
 ```
 
+The `strings_as_chars` parameter can be set to `True` to force the conversion of strings to `CharVectors` instead of `SymbolAtoms`:
+
+```python
+>>> kx.toq('test', strings_as_char=False)
+pykx.SymbolAtom(pykx.q('`test'))
+>>> kx.toq('test', strings_as_char=True)
+pykx.CharVector(pykx.q('"test"'))
+```
+
+## PyKX Under q
+
+For more information on executing Python code in a q process see [evaluate and execute python](../../pykx-under-q/intro.html#evaluate-and-execute-python)
+
+Using text conversion under q we can convert PyKX text objects into q. This function call converts the Python `str` into a `SymbolAtom`
+
+```q
+q)\l pykx.q
+q)s:.pykx.eval["'testtest'"]
+q).pykx.toq s
+`testtest
+q)type .pykx.toq s
+-11h
+```
+
+Calling `.pykx.toq` on this `tuple` returns a `SymbolVector`
+
+```q
+q)\l pykx.q
+q)s:.pykx.eval["('test1', 'test2')"]
+q).pykx.toq s
+`testtest`test2
+q)type .pykx.toq s
+11h
+```
+
+If you explicitly want to convert a `str` into a `CharVector` you can use the function `.pykx.toq[;1b]`
+
+```q
+q)\l pykx.q
+q)s:.pykx.eval["'testtest'"]
+q).pykx.toq0[;1b] s
+"testtest"
+q)type .pykx.toq0[;1b] s
+10h
+```
+
+Calling `.pykx.toq0[;1b]` on the `tuple` below returns a list of `CharVectors`
+
+```q
+q)\l pykx.q
+q)s:.pykx.eval["('test1', 'test2')"]
+q).pykx.toq0[;1b] s
+"testtest"
+"test2"
+q)type .pykx.toq0[;1b] s
+0h
+q)x:.pykx.toq0[;1b] s;type x[1]
+10h
+```
+
+When using `.pykx.qeval` for text conversions the default `.pykx.toq` logic is applied
+
+```q
+q).pykx.qeval"'testtest'"
+q)`testtest
+```
+
+A backtick `` ` ``  can be used to convert a PyKX object to q. This uses the same underlying logic as .pykx.toq:
+
+```q
+q)s:.pykx.eval["('test1', 'test2')"]
+q)s`
+`test1`test2
+```
+
+For more detail on text conversion under q see our page on [.pykx.toq0](../../pykx-under-q/api.md#pykxtoq0).
+
 ## Differences between `Symbol` and `Char` data objects
 
 While there may appear to be limited differences between `#!python Symbol` and `#!python Char` representations of objects, the choice of underlying representation can have an impact on the performance and memory profile of many applications of PyKX. This section will describe a number of these differences and their impact in various scenarios.
 
-Although `#!python Symbol` and `#!python Char`representations of objects might seem similar, the choice between them can significantly affect the performance and memory usage of many PyKX applications. This section exploreS the impact of these differences in various scenarios.
+Although `#!python Symbol` and `#!python Char` representations of objects might seem similar, the choice between them can significantly affect the performance and memory usage of many PyKX applications. This section exploreS the impact of these differences in various scenarios.
 
 
 ### Text access and mutability

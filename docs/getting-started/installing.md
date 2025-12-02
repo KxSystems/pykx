@@ -40,7 +40,7 @@ We provide assistance to user-built installations of PyKX only on a best-effort 
 
 You can install PyKX from three sources:
 
-!!! Note "Installing in air-capped environments"
+!!! Note "Installing in air-gapped environments"
 
         If you are installing in a location without internet connection you may find [this section](#installing-in-an-air-gapped-environment) useful.
 
@@ -87,7 +87,7 @@ You can install PyKX from three sources:
 
 	```
 
-At this point you have [partial access to PyKX](../user-guide/advanced/modes.md#operating-in-the-absence-of-a-kx-license). To gain access to all PyKX features, follow the steps in the next section, otherwise go straight to [3. Verify PyKX Installation](#3-verify-pykx-installation).
+At this point you have [partial access to PyKX](../user-guide/advanced/modes.md#1a-running-in-unlicensed-mode). To gain access to all PyKX features, follow the steps in the next section, otherwise go straight to [3. Verify PyKX Installation](#3-verify-pykx-installation).
 
 ## 2. Install a kdb Insights license
 

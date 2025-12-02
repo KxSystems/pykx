@@ -172,14 +172,14 @@ class PandasConversions:
                                     // Any matches that meet the vanilla case
                                     // and don't have additional needs --> not any (bools)
                                     b5:not any (b1;b2;b3;b4);
-                                    .papi.errorList:();
+                                    .pykx.i.errorList:();
                                     if[any b5;
                                     dCols5:dictCols where b5;
                                     dictColTypes5:dictColTypes where b5;
                                     f5:{[c;t;tvd]
                                         ({[cl;t;tvd]
                                             @[t$;cl;
-                                            {[cl;ty;tvd;err].papi.errorList,:enlist
+                                            {[cl;ty;tvd;err].pykx.i.errorList,:enlist
                                              "Not supported: Error casting ",
                                              string[tvd 7h$type cl],
                                              " to ", string[tvd 7h$ty],
@@ -190,8 +190,8 @@ class PandasConversions:
                                     // Grab all cols
                                     c:c1,c2,c3,c4,c5;
                                     tableOutput:tabColsOrig xcols ![tab;();0b;c];
-                                    $[count .papi.errorList;
-                                    .papi.errorList;
+                                    $[count .pykx.i.errorList;
+                                    .pykx.i.errorList;
                                     tableOutput]
                                     }''',
                                  self, dict_grab, type_number_to_pykx_k_type)
@@ -260,14 +260,14 @@ class PandasConversions:
                                     ];
                                     // Any other combination not matching b1-4
                                     b5:not any (b1;b2;b3;b4);
-                                    .papi.errorList:();
+                                    .pykx.i.errorList:();
                                     c5:()!();
                                     if[any b5;
                                     tCols5: tabCols where b5;
                                     f5:{[c;t;tvd]
                                         ({[cl;t;tvd]
                                         @[t$;cl;
-                                            {[cl;ty;tvd;err].papi.errorList,:enlist
+                                            {[cl;ty;tvd;err].pykx.i.errorList,:enlist
                                             "Not supported: Error casting ",
                                             string[tvd 7h$type cl], " to ",
                                             string[tvd 7h$ty], " with q error: ",
@@ -277,8 +277,8 @@ class PandasConversions:
                                     ];
                                     c:c1,c2,c3,c4,c5;
                                     tableOutput:tabCols xcols ![tab;();0b;c];
-                                    $[count .papi.errorList;
-                                    .papi.errorList;
+                                    $[count .pykx.i.errorList;
+                                    .pykx.i.errorList;
                                     tableOutput]
                                     }''',
                                  self, dtype_val, type_number_to_pykx_k_type)

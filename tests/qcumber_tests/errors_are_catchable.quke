@@ -4,17 +4,17 @@ feature .pykx errors are all catchable
     should be possible to catch raised errors
         expect pyeval to be caught
             `ERROR~@[.pykx.pyeval;"1+'test'";{`ERROR}]
-        expect eval to be caugt
+        expect eval to be caught
             `ERROR~@[.pykx.eval;"1+'test'";{`ERROR}]
-        expect p to be caugt
+        expect p to be caught
             `ERROR~@[value;"p)1+'test'";{`ERROR}]
-        expect pyexec to be caugt
+        expect pyexec to be caught
             `ERROR~@[.pykx.pyexec;"1+'test'";{`ERROR}]
-        expect qeval to be caugt
+        expect qeval to be caught
             `ERROR~@[.pykx.qeval;"1+'test'";{`ERROR}]
-        expect get to be caugt
+        expect get to be caught
             `ERROR~@[.pykx.get;`foobarbaz;{`ERROR}]
-        expect getattr to be caugt
+        expect getattr to be caught
             `ERROR~.[.pykx.getattr;(arr;`foobarbaz);{`ERROR}]
-        expect setattr to be caugt
+        expect setattr to be caught
             `ERROR~.[.pykx.setattr;(arr;`test;5);{`ERROR}]

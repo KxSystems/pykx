@@ -398,7 +398,7 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
 }
 
 
-EXPORT K foreign_to_q(K f, K b) {
+EXPORT K foreign_to_q(K f, K b, K a) {
     if (f->t != 112)
         return raise_k_error("Expected foreign object for call to .pykx.toq");
     if (!check_py_foreign(f))
@@ -415,6 +415,7 @@ EXPORT K foreign_to_q(K f, K b) {
 
     P _kwargs = PyDict_New();
     PyDict_SetItemString(_kwargs, "strings_as_char", PyBool_FromLong((long)b->g));
+    PyDict_SetItemString(_kwargs, "no_allocator", PyBool_FromLong((long)a->g));
 
     P qpy_val = PyObject_Call(toq, toq_args, _kwargs);
     if ((k = k_py_error())) {
@@ -431,6 +432,7 @@ EXPORT K foreign_to_q(K f, K b) {
         PyGILState_Release(gstate);
         return k;
     }
+
     long long _addr = PyLong_AsLongLong(k_addr);
     K res = (K)(uintptr_t)_addr;
     r1(res);

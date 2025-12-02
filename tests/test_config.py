@@ -49,6 +49,7 @@ def test_invalid_qlic():
     os.environ['QLIC'] = 'invalid'
     with pytest.warns() as warnings:
         import pykx as kx # noqa: F401
+    warnings = [x for x in warnings if "pykx/config.py" in x.filename]
     assert len(warnings) == 1
     assert 'Configuration value QLIC set to non directory' in str(warnings[0].message)
 
@@ -58,6 +59,7 @@ def test_qargs_single():
     os.environ['QARGS'] = '-p 5050'
     with pytest.warns() as warnings:
         import pykx as kx
+    warnings = [x for x in warnings if "pykx/config.py" in x.filename]
     assert len(warnings) == 1
     assert 'setting a port in this way' in str(warnings[0].message)
     assert 2 == kx.q('2').py()
@@ -68,6 +70,7 @@ def test_qargs_multi():
     os.environ['QARGS'] = '-p 5050 -t 1000'
     with pytest.warns() as warnings:
         import pykx as kx
+    warnings = [x for x in warnings if "pykx/config.py" in x.filename]
     assert len(warnings) == 2
     assert 'setting a port in this way' in str(warnings[0].message)
     assert 'setting timers in this way' in str(warnings[1].message)

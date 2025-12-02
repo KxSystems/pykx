@@ -112,7 +112,7 @@ class QWriter:
 
         Parameters:
             path: The path to the CSV file.
-            delimiter: A single character representing the delimeter between values.
+            delimiter: A single character representing the delimiter between values.
             table: A table like object to be written as a csv file.
 
         Returns:
@@ -124,7 +124,7 @@ class QWriter:
         Examples:
 
         Write a pandas `DataFrame` to disk as a csv file in the current directory using a
-        comma as a seperator between values.
+        comma as a separator between values.
 
         ```python
         df = q('([] a: til 5; b: 2 * til 5)').pd()
@@ -132,7 +132,7 @@ class QWriter:
         ```
 
         Write a `pykx.Table` to disk as a csv file in the current directory using a tab as a
-        seperator between values.
+        separator between values.
 
         ```python
         table = q('([] a: 10 20 30 40; b: 114 113 98 121)')

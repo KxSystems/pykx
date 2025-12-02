@@ -41,30 +41,37 @@ x    y
 
 **Parameters:**
 
-+---------------+---------------------------+---------------------------------------+-------------+
-| **Name**      | **Type**                  | **Description**                       | **Default** |
-+===============+===========================+=======================================+=============+
-| `x`           | `Any`                     | A Python object which is to be        | *required*  |
-|               |                           | converted into a `pykx.K` object.     |             |
-+---------------+---------------------------+---------------------------------------+-------------+
-| `ktype`       | `Optional[Union[pykx.K,`  | Desired `pykx.K` subclass (or type    | `None`      |
-|               |     `int, dict]]`         | number) for the returned value. If    |             |
-|               |                           | `None`, the type is inferred from     |             |
-|               |                           | `x`. If specified as a dictionary     |             |
-|               |                           | will convert tabular data based on    |             |
-|               |                           | mapping of column name to type. Note  |             |
-|               |                           | that dictionary based conversion is   |             |
-|               |                           | only supported when operating in      |             |
-|               |                           | licensed mode.                        |             |
-+---------------+---------------------------+---------------------------------------+-------------+
-| `cast`        | `bool`                    | Cast the input Python object to the   | `False`     |
-|               |                           | closest conforming Python type before |             |
-|               |                           | converting to a `pykx.K` object.      |             |
-+---------------+---------------------------+---------------------------------------+-------------+
-| `handle_nulls | `bool`                    | Convert `pd.NaT` to corresponding q   | `False`     |
-|               |                           | null values in Pandas dataframes and  |             |
-|               |                           | Numpy arrays.                         |             |
-+---------------+---------------------------+---------------------------------------+-------------+
++------------------+---------------------------+---------------------------------------+-------------+
+| **Name**         | **Type**                  | **Description**                       | **Default** |
++==================+===========================+=======================================+=============+
+| `x`              | `Any`                     | A Python object which is to be        | *required*  |
+|                  |                           | converted into a `pykx.K` object.     |             |
++------------------+---------------------------+---------------------------------------+-------------+
+| `ktype`          | `Optional[Union[pykx.K,`  | Desired `pykx.K` subclass (or type    | `None`      |
+|                  |     `int, dict]]`         | number) for the returned value. If    |             |
+|                  |                           | `None`, the type is inferred from     |             |
+|                  |                           | `x`. If specified as a dictionary     |             |
+|                  |                           | will convert tabular data based on    |             |
+|                  |                           | mapping of column name to type. Note  |             |
+|                  |                           | that dictionary based conversion is   |             |
+|                  |                           | only supported when operating in      |             |
+|                  |                           | licensed mode.                        |             |
++------------------+---------------------------+---------------------------------------+-------------+
+| `cast`           | `bool`                    | Cast the input Python object to the   | `False`     |
+|                  |                           | closest conforming Python type before |             |
+|                  |                           | converting to a `pykx.K` object.      |             |
++------------------+---------------------------+---------------------------------------+-------------+
+| `handle_nulls    | `bool`                    | Convert `pd.NaT` to corresponding q   | `False`     |
+|                  |                           | null values in Pandas dataframes and  |             |
+|                  |                           | Numpy arrays.                         |             |
++------------------+---------------------------+---------------------------------------+-------------+
+| `no_allocator    | `bool`                    | When used the conversion will not use | `False`     |
+|                  |                           | the `PYKX_ALLOCATOR` behaviour.       |             |
++------------------+---------------------------+---------------------------------------+-------------+
+| `strings_as_char | `bool`                    | When used all Python `str` objects    | `False`     |
+|                  |                           | are converted to `pykx.CharVector`    |             |
+|                  |                           | objects.                              |             |
++------------------+---------------------------+---------------------------------------+-------------+
 
 **Returns:**
 
@@ -270,9 +277,9 @@ def _resolve_k_type(ktype: KType) -> Optional[k.K]:
     raise TypeError(f'ktype {ktype!r} unrecognized')
 
 
-def _default_converter(x, ktype: Optional[KType] = None, *, cast: bool = False, handle_nulls: bool = False, strings_as_char: bool = False):
+def _default_converter(x, ktype: Optional[KType] = None, *, cast: bool = False, handle_nulls: bool = False, strings_as_char: bool = False, **kwargs):
     if os.environ.get('PYKX_UNDER_Q', '').lower() == "true":
-        return from_pyobject(x, ktype, cast, handle_nulls, strings_as_char=strings_as_char)
+        return from_pyobject(x, ktype, cast, handle_nulls, strings_as_char=strings_as_char, **kwargs)
     raise _conversion_TypeError(x, type(x), ktype)
 
 
@@ -282,6 +289,7 @@ def from_none(x: None,
               cast: bool = False,
               handle_nulls: bool = False,
               strings_as_char: bool = False,
+              no_allocator: bool = False,
 ) -> k.Identity:
     """Converts `None` into a `pykx.Identity` object.
 
@@ -489,6 +497,7 @@ def from_pykx_k(x: k.K,
                 cast: bool = False,
                 handle_nulls: bool = False,
                 strings_as_char: bool = False,
+                no_allocator: bool = False,
 ) -> k.K:
     """Converts a `pykx.K` object into a `pykx.K` object.
 
@@ -618,6 +627,7 @@ def from_int(x: Any,
              cast: bool = False,
              handle_nulls: bool = False,
              strings_as_char: bool = False,
+             no_allocator: bool = False,
 ) -> k.IntegralNumericAtom:
     """Converts an `int` into an instance of a subclass of `pykx.IntegralNumericAtom`.
 
@@ -704,6 +714,7 @@ def from_float(x: Any,
                cast: bool = False,
                handle_nulls: bool = False,
                strings_as_char: bool = False,
+               no_allocator: bool = False,
 ) -> k.NonIntegralNumericAtom:
     """Converts a `float` into an instance of a subclass of `pykx.NonIntegralNumericAtom`.
 
@@ -753,6 +764,7 @@ def from_str(x: str,
              cast: bool = False,
              handle_nulls: bool = False,
              strings_as_char: bool = False,
+             no_allocator: bool = False,
 ) -> Union[k.CharAtom, k.CharVector, k.SymbolAtom]:
     """Converts a `str` into an instance of a string-like subclass of `pykx.K`.
 
@@ -808,6 +820,7 @@ def from_bytes(x: bytes,
                cast: bool = False,
                handle_nulls: bool = False,
                strings_as_char: bool = False,
+               no_allocator: bool = False,
 ) -> Union[k.SymbolAtom, k.SymbolVector, k.CharAtom]:
     """Converts a `bytes` object into an instance of a string-like subclass of `pykx.K`.
 
@@ -860,6 +873,7 @@ def from_uuid_UUID(x: UUID,
                    cast: bool = False,
                    handle_nulls: bool = False,
                    strings_as_char: bool = False,
+                   no_allocator: bool = False,
 ) -> k.GUIDAtom:
     """Converts a `uuid.UUID` into a `pykx.GUIDAtom`.
 
@@ -901,6 +915,7 @@ def from_list(x: list,
               cast: bool = False,
               handle_nulls: bool = False,
               strings_as_char: bool = False,
+              no_allocator: bool = False,
 ) -> k.Vector:
     """Converts a `list` into an instance of a subclass of `pykx.Vector`.
 
@@ -960,13 +975,13 @@ def from_list(x: list,
             if ktype is k.TimestampVector and config.keep_local_times:
 
                 x = [y.replace(tzinfo=None) for y in x]
-            return from_numpy_ndarray(np.array(x, dtype=np_type), ktype, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char)
+            return from_numpy_ndarray(np.array(x, dtype=np_type), ktype, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
         except TypeError as ex:
             raise _conversion_TypeError(x, 'Python list', ktype) from ex
     cdef core.K kx = core.ktn(0, len(x))
     for i, item in enumerate(x):
         # No good way to specify the ktype for nested types
-        kk = toq(item, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char)
+        kk = toq(item, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
         (<core.K*>kx.G0)[i] = core.r1(_k(kk))
     res = factory(<uintptr_t>kx, False)
     if licensed:
@@ -985,6 +1000,7 @@ def from_tuple(x: tuple,
                cast: bool = False,
                handle_nulls: bool = False,
                strings_as_char: bool = False,
+               no_allocator: bool = False,
 ) -> k.Vector:
     """Converts a `tuple` into an instance of a subclass of `pykx.Vector`.
 
@@ -1038,7 +1054,7 @@ def from_tuple(x: tuple,
     """
     if ktype is not None and not issubclass(ktype, k.Vector):
         raise _conversion_TypeError(x, 'Python tuple', ktype)
-    return from_list(list(x), ktype=ktype, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char)
+    return from_list(list(x), ktype=ktype, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
 
 
 def from_dict(x: dict,
@@ -1047,6 +1063,7 @@ def from_dict(x: dict,
               cast: bool = False,
               handle_nulls: bool = False,
               strings_as_char: bool = False,
+              no_allocator: bool = False,
 ) -> k.Dictionary:
     """Converts a `dict` into a `pykx.Dictionary`.
 
@@ -1081,10 +1098,10 @@ def from_dict(x: dict,
         k_keys = from_list([])
     elif all(isinstance(key, (str, k.SymbolAtom)) for key in x.keys()):
         k_keys = from_numpy_ndarray(np.array([str(key) for key in x.keys()], dtype='U'),
-                                    cast=cast, handle_nulls=handle_nulls)
+                                    cast=cast, handle_nulls=handle_nulls, no_allocator=no_allocator )
     else:
-        k_keys = from_list(list(x.keys()), cast=cast, handle_nulls=handle_nulls)
-    k_values = from_list(list(x.values()), cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char)
+        k_keys = from_list(list(x.keys()), cast=cast, handle_nulls=handle_nulls, no_allocator=no_allocator)
+    k_values = from_list(list(x.values()), cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
     kx = core.xD(core.r1(_k(k_keys)), core.r1(_k(k_values)))
     return factory(<uintptr_t>kx, False)
 
@@ -1186,6 +1203,7 @@ def from_numpy_ndarray(x: np.ndarray,
                        cast: bool = False,
                        handle_nulls: bool = False,
                        strings_as_char: bool = False,
+                       no_allocator: bool = False,
 ) -> k.Vector:
     """Converts a `numpy.ndarray` into a `pykx.Vector`.
 
@@ -1296,7 +1314,7 @@ def from_numpy_ndarray(x: np.ndarray,
             | `pykx.BooleanVector`   | The Numpy array as a vector of q booleans, which each take |
             |                        | up 8 bits in memory.                                       |
             +------------------------+------------------------------------------------------------+
-            | `pykx.ByteVector`      | The Numpy array as a vector of q unsigned 8 bit intergers. |
+            | `pykx.ByteVector`      | The Numpy array as a vector of q unsigned 8 bit integers.  |
             +------------------------+------------------------------------------------------------+
             | `pykx.GUIDVector`      | The Numpy array as a vector of q GUIDs, which each take up |
             |                        | 128 bits in memory.                                        |
@@ -1326,13 +1344,13 @@ def from_numpy_ndarray(x: np.ndarray,
             |                        | (`1970-01-01T00:00:00.000000000`) to the q epoch.          |
             +------------------------+------------------------------------------------------------+
             | `pykx.MonthVector`     | The Numpy array as a vector of q months, i.e. signed 32    |
-            |                        | bit intergers which represent the number of months since   |
+            |                        | bit integers which represent the number of months since    |
             |                        | the q epoch: `2000-01`. The data from the Numpy array will |
             |                        | be incremented to adjust its epoch from the standard epoch |
             |                        | (`1970-01`) to the q epoch.                                |
             +------------------------+------------------------------------------------------------+
             | `pykx.DateVector`      | The Numpy array as a vector of q dates, i.e. signed 32 bit |
-            |                        | intergers which represent the number of days since the q   |
+            |                        | integers which represent the number of days since the q    |
             |                        | epoch: `2000-01-01`. The data from the Numpy array will be |
             |                        | incremented to adjust its epoch from the standard epoch    |
             |                        | (`1970-01-01`) to the q epoch.                             |
@@ -1362,6 +1380,11 @@ def from_numpy_ndarray(x: np.ndarray,
     Returns:
         An instance of a subclass of `pykx.Vector`.
     """
+    owndata = False
+    writeable = False
+    if hasattr(x, 'flags'):
+        owndata = x.flags.owndata
+        writeable = x.flags.writeable
     if str(x.dtype) == "pykx.uuid":
         x = x.array
 
@@ -1382,7 +1405,7 @@ def from_numpy_ndarray(x: np.ndarray,
 
     # q doesn't support n-dimensional vectors, so we treat them as lists to preserve the shape
     if len(x.shape) > 1:
-        return from_list(_listify(x), ktype=k.List, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char)
+        return from_list(_listify(x), ktype=k.List, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
 
     elif isinstance(x, np.ma.MaskedArray):
         if x.dtype.kind != 'i':
@@ -1392,7 +1415,7 @@ def from_numpy_ndarray(x: np.ndarray,
         x = np.ma.MaskedArray(x, copy=False, fill_value=-2 ** (x.itemsize * 8 - 1)).filled()
 
     elif ktype is k.List:
-        return from_list(x.tolist(), ktype=k.List, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char)
+        return from_list(x.tolist(), ktype=k.List, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
 
     elif ktype is k.CharVector:
         if str(x.dtype).endswith('U1'):
@@ -1400,7 +1423,7 @@ def from_numpy_ndarray(x: np.ndarray,
         elif str(x.dtype).endswith('S1'):
             return from_bytes(b''.join(x))
         elif 'S' == x.dtype.char:
-            return from_list(x.tolist(), ktype=k.List, cast=None, handle_nulls=None, strings_as_char=strings_as_char)
+            return from_list(x.tolist(), ktype=k.List, cast=None, handle_nulls=None, strings_as_char=strings_as_char, no_allocator=no_allocator)
         raise _conversion_TypeError(x, repr('numpy.ndarray'), ktype)
 
     cdef long long n = x.size
@@ -1421,7 +1444,7 @@ def from_numpy_ndarray(x: np.ndarray,
 
     elif ktype is k.SymbolVector:
         if strings_as_char:
-            return from_list(x.tolist(), ktype=k.List, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char)
+            return from_list(x.tolist(), ktype=k.List, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
         kx = core.ktn(ktype.t, n)
         for i in range(n):
             if x[i] is None:
@@ -1461,7 +1484,7 @@ def from_numpy_ndarray(x: np.ndarray,
                 core.r0(kx)
                 raise TypeError('Item size mismatch when converting Numpy ndarray to q: q item size '
                                 f'({itemsize}) != Numpy item size ({x.itemsize})')
-            if not k_allocator:
+            if not k_allocator or no_allocator or not owndata or not writeable:
                 kx = core.ktn(ktype.t, n)
                 data = x.__array_interface__['data'][0]
                 memcpy(<void *> kx.G0, <void *> data, n * itemsize)
@@ -1512,12 +1535,12 @@ def from_numpy_ndarray(x: np.ndarray,
             core.r0(kx)
             raise TypeError('Item size mismatch when converting Numpy ndarray to q: q item size '
                             f'({itemsize}) != Numpy item size ({x.itemsize})')
-        if not k_allocator:
+        if not k_allocator or no_allocator or not owndata or not writeable:
             kx = core.ktn(ktype.t, n)
             data = x.__array_interface__['data'][0]
             memcpy(<void *> kx.G0, <void *> data, n * itemsize)
             return factory(<uintptr_t>kx, False)
-    if not k_allocator:
+    if not k_allocator or no_allocator or not owndata or not writeable:
         return factory(<uintptr_t>kx, False) # nocov
     Py_INCREF(x)
     data = x.__array_interface__['data'][0]
@@ -1592,6 +1615,7 @@ def from_pandas_dataframe(x: pd.DataFrame,
                           cast: bool = False,
                           handle_nulls: bool = False,
                           strings_as_char: bool = False,
+                          no_allocator: bool = False,
 ) -> Union[k.Table, k.KeyedTable]:
     """Converts a `pandas.DataFrame` into a `pykx.Table` or `pykx.KeyedTable` as appropriate.
 
@@ -1660,7 +1684,8 @@ def from_pandas_dataframe(x: pd.DataFrame,
             {k: _to_numpy_or_categorical(x[k], k, x) for k in x.columns},
             cast=cast,
             handle_nulls=handle_nulls,
-            strings_as_char=strings_as_char
+            strings_as_char=strings_as_char,
+            no_allocator=no_allocator
         )
         kx = core.xT(core.r1(_k(kk)))
         if kx == NULL:
@@ -1672,8 +1697,8 @@ def from_pandas_dataframe(x: pd.DataFrame,
         else:
             # The trick below helps create a pd.MultiIndex from another base Index
             idx = pd.DataFrame(index=[x.index]).index
-        k_keys = from_pandas_index(idx, cast=cast, handle_nulls=handle_nulls)
-        k_values = from_pandas_dataframe(x.reset_index(drop=True), cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char)
+        k_keys = from_pandas_index(idx, cast=cast, handle_nulls=handle_nulls, no_allocator=no_allocator)
+        k_values = from_pandas_dataframe(x.reset_index(drop=True), cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
         kx = core.xD(core.r1(_k(k_keys)), core.r1(_k(k_values)))
         if kx == NULL:
             raise PyKXException('Failed to create k dictionary (keyed table)')
@@ -1690,6 +1715,7 @@ def from_pandas_series(x: pd.Series,
                        cast: bool = False,
                        handle_nulls: bool = False,
                        strings_as_char: bool = False,
+                       no_allocator: bool = False,
 ) -> k.Vector:
     """Converts a `pandas.Series` into an instance of a subclass of `pykx.Vector`.
 
@@ -1716,7 +1742,7 @@ def from_pandas_series(x: pd.Series,
     """
     arr = _to_numpy_or_categorical(x)
     if isinstance(arr, np.ndarray):
-        return toq(arr[0] if (1,) == arr.shape else arr, ktype=ktype, strings_as_char=strings_as_char)
+        return toq(arr[0] if (1,) == arr.shape else arr, ktype=ktype, strings_as_char=strings_as_char, no_allocator=no_allocator)
     else:
         return arr
 
@@ -1740,6 +1766,7 @@ def from_pandas_index(x: pd.Index,
                       cast: bool = False,
                       handle_nulls: bool = False,
                       strings_as_char: bool = False,
+                      no_allocator: bool = False,
 ) -> Union[k.Vector, k.Table]:
     """Converts a `pandas.Index` into a `pykx.Vector` or `pykx.Table` as appropriate.
 
@@ -1775,14 +1802,14 @@ def from_pandas_index(x: pd.Index,
         An instance of `pykx.Vector` or `pykx.Table`.
     """
     if isinstance(x, pd.CategoricalIndex):
-        return from_pandas_categorical(x.values, ktype, x.name)
+        return from_pandas_categorical(x.values, ktype, x.name, no_allocator=no_allocator)
     elif isinstance(x, pd.MultiIndex):
         d = {(level.name if level.name else str(i)): level[x.codes[i]]
              for i, level in enumerate(x.levels)}
-        index_dict = from_dict(d)
+        index_dict = from_dict(d, no_allocator=no_allocator)
         return factory(<uintptr_t>core.xT(core.r1(_k(index_dict))), False)
     elif isinstance(x, _supported_pandas_index_types_via_numpy):
-        return from_numpy_ndarray(x.to_numpy().copy(), cast=cast, handle_nulls=handle_nulls)
+        return from_numpy_ndarray(x.to_numpy().copy(), cast=cast, handle_nulls=handle_nulls, no_allocator=no_allocator)
     else:
         raise _conversion_TypeError(x, 'Pandas index', ktype)
 
@@ -1797,6 +1824,7 @@ def from_pandas_categorical(x: pd.Categorical,
                             cast: bool = False,
                             handle_nulls: bool = False,
                             strings_as_char: bool = False,
+                            no_allocator: bool = False,
 ) -> k.Vector:
     """Converts a `pandas.Categorical` into a `pykx.EnumVector`.
 
@@ -1839,6 +1867,7 @@ def from_pandas_nat(x: type(pd.NaT),
                     cast: bool = False,
                     handle_nulls: bool = False,
                     strings_as_char: bool = False,
+                    no_allocator: bool = False,
 ) -> k.TemporalAtom:
     """Converts a `pandas.NaT` into an instance of a subclass of `pykx.TemporalAtom`.
 
@@ -1903,6 +1932,7 @@ def from_pandas_timedelta(
     cast: bool = False,
     handle_nulls: bool = False,
     strings_as_char: bool = False,
+    no_allocator: bool = False,
 ) -> k.K:
     x = x.to_numpy()
     if ktype is None:
@@ -1916,6 +1946,7 @@ def from_arrow(x: Union['pa.Array', 'pa.Table'],
                cast: bool = False,
                handle_nulls: bool = False,
                strings_as_char: bool = False,
+               no_allocator: bool = False,
 ) -> Union[k.Vector, k.Table]:
     """Converts PyArrow arrays/tables into PyKX vectors/tables, respectively.
 
@@ -1963,6 +1994,7 @@ def from_arrow_py(x,
                cast: bool = False,
                handle_nulls: bool = False,
                strings_as_char: bool = False,
+                  no_allocator: bool = False,
 ) -> Union[k.Vector, k.Table]:
     """Converts PyArrow scalars into PyKX objects.
 
@@ -1990,6 +2022,7 @@ def from_datetime_date(x: Any,
                        cast: bool = False,
                        handle_nulls: bool = False,
                        strings_as_char: bool = False,
+                       no_allocator: bool = False,
 ) -> k.TemporalFixedAtom:
     """Converts a `datetime.date` into an instance of a subclass of `pykx.TemporalFixedAtom`.
 
@@ -2043,6 +2076,7 @@ def from_datetime_time(x: Any,
                            cast: bool = False,
                            handle_nulls: bool = False,
                            strings_as_char: bool = False,
+                       no_allocator: bool = False,
 ) -> k.TemporalFixedAtom:
     if (cast is None or cast) and type(x) is not datetime.time:
         x = cast_to_python_time(x)
@@ -2056,12 +2090,13 @@ def from_datetime_datetime(x: Any,
                            cast: bool = False,
                            handle_nulls: bool = False,
                            strings_as_char: bool = False,
+                           no_allocator: bool = False,
 ) -> k.TemporalFixedAtom:
     """Converts a `datetime.datetime` into an instance of a subclass of `pykx.TemporalFixedAtom`.
 
     Note: Setting environment variable `PYKX_KEEP_LOCAL_TIMES` will result in the use of local time zones not UTC time.
         By default this function will convert any `datetime.datetime` objects with time zone
-        information to UTC before converting it to `q`. If you set the environment vairable to 1,
+        information to UTC before converting it to `q`. If you set the environment variable to 1,
         true or True, then the objects with time zone information will not be converted to UTC and
         instead will be converted to `q` with no changes.
 
@@ -2133,6 +2168,7 @@ def from_datetime_timedelta(x: Any,
                             cast: bool = False,
                             handle_nulls: bool = False,
                             strings_as_char: bool = False,
+                            no_allocator: bool = False,
 ) -> k.TemporalSpanAtom:
     """Converts a `datetime.timedelta` into an instance of a subclass of `pykx.TemporalSpanAtom`.
 
@@ -2196,6 +2232,7 @@ def from_numpy_datetime64(x: np.datetime64,
                           cast: bool = False,
                           handle_nulls: bool = False,
                           strings_as_char: bool = False,
+                          no_allocator: bool = False,
 ) -> k.TemporalFixedAtom:
     """Converts a `numpy.datetime64` into an instance of a subclass of `pykx.TemporalFixedAtom`.
 
@@ -2255,6 +2292,7 @@ def from_numpy_timedelta64(x: np.timedelta64,
                            cast: bool = False,
                            handle_nulls: bool = False,
                            strings_as_char: bool = False,
+                           no_allocator: bool = False,
 ) -> k.TemporalSpanAtom:
     """Converts a `numpy.timedelta64` into an instance of a subclass of `pykx.TemporalSpanAtom`.
 
@@ -2311,6 +2349,7 @@ def from_datetime(x: Any,
                   cast: bool = False,
                   handle_nulls: bool = False,
                   strings_as_char: bool = False,
+                  no_allocator: bool = False,
 ) -> k.TemporalFixedAtom:
     """Helper function to handle `np.datetime64` by calling the correct conversion functions.
 
@@ -2342,6 +2381,7 @@ def from_slice(x: slice,
                cast: bool = False,
                handle_nulls: bool = False,
                strings_as_char: bool = False,
+               no_allocator: bool = False,
 ) -> k.IntegralNumericVector:
     """Converts a `slice` into an instance of a subclass of `pykx.IntegralNumericVector`.
 
@@ -2401,6 +2441,7 @@ def from_range(x: range,
                cast: bool = False,
                handle_nulls: bool = False,
                strings_as_char: bool = False,
+               no_allocator: bool = False,
 ) -> k.IntegralNumericVector:
     """Converts a `range` into an instance of a subclass of `pykx.IntegralNumericVector`.
 
@@ -2454,6 +2495,7 @@ def from_pathlib_path(x: Path,
                       cast: bool = False,
                       handle_nulls: bool = False,
                       strings_as_char: bool = False,
+                      no_allocator: bool = False,
 ) -> k.SymbolAtom:
     """Converts a `pathlib.Path` into a q handle symbol.
 
@@ -2495,6 +2537,7 @@ def from_ellipsis(x: Ellipsis,
                   cast: bool = False,
                   handle_nulls: bool = False,
                   strings_as_char: bool = False,
+                  no_allocator: bool = False,
 ) -> k.ProjectionNull:
     """Converts an `Ellipsis` (`...`) into a q projection null.
 
@@ -2553,6 +2596,7 @@ def from_fileno(x: Any,
                 cast: bool = False,
                 handle_nulls: bool = False,
                 strings_as_char: bool = False,
+                no_allocator: bool = False,
 ) -> k.IntAtom:
     """Converts an object with a `fileno` attribute to a `pykx.IntAtom`.
 
@@ -2600,6 +2644,7 @@ def from_callable(x: Callable,
                   cast: bool = False,
                   handle_nulls: bool = False,
                   strings_as_char: bool = False,
+                  no_allocator: bool = False,
 ) -> k.Composition:
     """Converts a callable object into a q composition.
 
@@ -2664,6 +2709,7 @@ def from_torch_tensor(x: pt.Tensor,
                   cast: bool = False,
                   handle_nulls: bool = False,
                   strings_as_char: bool = False,
+                      no_allocator: bool = False,
 ) -> k.List:
     if not beta_features:
         raise QError('Conversions to PyTorch objects only supported as a beta feature')
@@ -2683,6 +2729,7 @@ cpdef from_pyobject(p: object,
                     cast: bool = False,
                     handle_nulls: bool = False,
                     strings_as_char: bool = False,
+                    no_allocator: bool = False,
 ):
     # q foreign objects internally are a 2 value list, where the type number has been set to 112
     # The first value is a destructor function to be called when q drops the object
@@ -2699,6 +2746,7 @@ def _from_iterable(x: Any,
                    cast: bool = False,
                    handle_nulls: bool = False,
                    strings_as_char: bool = False,
+                   no_allocator: bool = False,
                    ):
     if not isinstance(cast, (bool, type(None))):
         raise TypeError("Cast must be of type Boolean")
@@ -2748,6 +2796,7 @@ def _from_str_like(x: Any,
                    cast: bool = False,
                    handle_nulls: bool = False,
                    strings_as_char: bool = False,
+                   no_allocator: bool = False,
                    ):
     if type(x) is str:
         return from_str(x, ktype, strings_as_char=strings_as_char)
@@ -2888,7 +2937,16 @@ if not pandas_2:
 _converter_from_python_type[pd._libs.tslibs.timedeltas.Timedelta] = from_pandas_timedelta
 
 class ToqModule(ModuleType):
-    def __call__(self, x: Any, ktype: Optional[KType] = None, *, cast: bool = None, handle_nulls: bool = False, strings_as_char: bool = False) -> k.K:
+    def __call__(
+        self,
+        x: Any,
+        ktype: Optional[KType] = None,
+        *,
+        cast: bool = None,
+        handle_nulls: bool = False,
+        strings_as_char: bool = False,
+        no_allocator: bool = False,
+) -> k.K:
         ktype = _resolve_k_type(ktype)
         check_ktype = False
         try:
@@ -2963,7 +3021,7 @@ class ToqModule(ModuleType):
             else:
                 if not type(x) == pd.DataFrame:
                     raise TypeError(f"'ktype' not supported as dictionary for {type(x)}")
-        return converter(x, ktype, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char)
+        return converter(x, ktype, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
 
 
 # Set the module type for this module to `ToqModule` so that it can be called via `__call__`.

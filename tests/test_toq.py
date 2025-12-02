@@ -1311,7 +1311,7 @@ def test_toq_dict_error(q, kx, pa):
         kx.toq(pydict, {'x': kx.LongVector})
 
 
-# TODO: Add this mark back once this test is consitently passing again, adding more calls to it
+# TODO: Add this mark back once this test is consistently passing again, adding more calls to it
 # each test pass just increases the chance of the tests failing.
 @pytest.mark.nep49
 @pytest.mark.xfail(reason="KXI-11980", strict=False)
@@ -1738,3 +1738,18 @@ def test_cast_setting(kx):
 
     nparray = np.array([1, 2, 3])
     assert (kx.toq(nparray, kx.FloatVector, cast=True) == kx.FloatVector(kx.q('1 2 3f'))).all()
+
+
+def test_2d_array_from_file(kx):
+    df = pd.read_parquet('tests/nestedFloats.parquet')
+    kx.toq(df, no_allocator=True)
+
+
+def test_2d_array_from_file_no_allocator(kx):
+    df = pd.read_parquet('tests/nestedFloats.parquet')
+    kx.toq(df, no_allocator=True)
+
+
+def test_embedding_segfault(kx):
+    df=pd.DataFrame(dict(embeddings=list(np.random.ranf((500, 10)).astype(np.float32))))
+    kx.toq(df)

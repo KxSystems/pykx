@@ -13,6 +13,11 @@ use_directory_urls: false
 repo_url: 'https://github.com/kxsystems/pykx'
 edit_uri: 'edit/main/docs/'
 
+validation:
+  omitted_files: warn
+  unrecognized_links: warn
+  anchors: warn  # New in MkDocs 1.6
+
 extra_css:
   - https://code.kx.com/assets/stylesheets/main.b941530a.min.css
   # - https://code.kx.com/stylesheets/2021.css
@@ -278,10 +283,12 @@ nav:
       - PyKX as a server: examples/server/server.md
       - Real-time streaming: examples/streaming/index.md
       - Multithreaded execution: examples/threaded_execution/threading.md
+      - Asyncronous Queries: examples/AsynchronousQueries/async_querying.md
     - Releases:
       - Release notes:
         - PyKX: release-notes/changelog.md
         - PyKX under q: release-notes/underq-changelog.md
+        - Deprecations: release-notes/deprecations.md
       - 2.x -> 3.x Upgrade : upgrades/2030.md
       - Roadmap: roadmap.md
       - Beta features:

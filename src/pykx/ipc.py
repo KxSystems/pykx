@@ -84,7 +84,7 @@ class QFuture(asyncio.Future):
     `#!python AsyncQConnection` call.
 
     ```python
-    async with pykx.AsyncQConnection('localhost', 5001) as q:
+    async with await pykx.AsyncQConnection('localhost', 5001) as q:
         q_future = q('til 10') # returns a QFuture object
         q_result = await q_future
     ```
@@ -373,7 +373,7 @@ class QFuture(asyncio.Future):
         """Get the exception of the `#!python QFuture`.
 
         Returns:
-            The excpetion of the `#!python QFuture` object.
+            The exception of the `#!python QFuture` object.
         """
         if self._cancelled:
             return FutureCancelled(self._cancelled_message)
@@ -997,7 +997,7 @@ class QConnection(Q):
                 err_msg = err_msg[:max_error_length]
             return QError(''.join(err_msg))
         except BaseException:
-            return QError('An unknown exception occured.')
+            return QError('An unknown exception occurred.')
 
     def _create_result(self, buff):
         if isinstance(self, SyncQConnection) or\
@@ -1323,7 +1323,7 @@ class SyncQConnection(QConnection):
         q(kx.q.sum, [1, 2, 3])
         ```
 
-        Call a PyKX Keyword function with supplied paramters
+        Call a PyKX Keyword function with supplied parameters
 
         ```python
         q(kx.q.floor, [5.2, 10.4])
@@ -1695,8 +1695,8 @@ class AsyncQConnection(QConnection):
                 `#!python AsyncQConnection` instance.
             async_response: When using `reuse=False` and `wait=False` if an asynchronous response is
                 expected you can use this argument to keep the connection alive until an
-                asynchronous response has been received. Awaiting the inital returned future object
-                will return a second future that you can await upon to recieve the asynchronous
+                asynchronous response has been received. Awaiting the initial returned future object
+                will return a second future that you can await upon to receive the asynchronous
                 response.
 
         Returns:
@@ -1751,7 +1751,7 @@ class AsyncQConnection(QConnection):
         await q(kx.q.sum, [1, 2, 3])
         ```
 
-        Call a PyKX Keyword function with supplied paramters
+        Call a PyKX Keyword function with supplied parameters
         
         ```python
         await q(kx.q.floor, [5.2, 10.4])
@@ -1907,7 +1907,7 @@ class AsyncQConnection(QConnection):
         Using this class with a with-statement should be preferred:
 
         ```python
-        async with pykx.AsyncQConnection('localhost', 5001) as q:
+        async with await pykx.AsyncQConnection('localhost', 5001) as q:
             # do stuff with q
             pass
         # q is closed automatically
@@ -2109,7 +2109,7 @@ class RawQConnection(QConnection):
 
         Note: 3.1 Upgrade considerations
             As of PyKX version 3.1 all QFuture objects returned from calls to `RawQConnection`
-            objects must be awaited to recieve their results. Previously you could use just
+            objects must be awaited to receive their results. Previously you could use just
             `conn.poll_recv()` and then directly get the result with `future.result()`.
 
         Raises:
@@ -2506,7 +2506,7 @@ class RawQConnection(QConnection):
                         else:
                             raise RuntimeError('MessageType unknown')
                         if isinstance(handler, Composition) and q('{.pykx.util.isw x}', handler):
-                            # if handler was overriden to use a python func we must enlist the
+                            # if handler was overridden to use a python func we must enlist the
                             # query or it will be passed through as CharAtom's
                             res = q('enlist', res)
                         res = handler(res)
@@ -2574,7 +2574,7 @@ class RawQConnection(QConnection):
         return q_future
 
     async def poll_recv2(self, amount: int = 1, fut: Optional[QFuture] = None):
-        """Recieve queries from the process connected to over IPC.
+        """Receive queries from the process connected to over IPC.
 
         Parameters:
             amount: The number of receive requests to handle, defaults to one, if 0 is used then
@@ -2651,7 +2651,7 @@ class RawQConnection(QConnection):
             return last
 
     def poll_recv(self, amount: int = 1):
-        """Recieve queries from the process connected to over IPC.
+        """Receive queries from the process connected to over IPC.
 
         Parameters:
             amount: The number of receive requests to handle, defaults to one, if 0 is used then
@@ -2955,7 +2955,7 @@ class SecureQConnection(QConnection):
         q(kx.q.sum, [1, 2, 3])
         ```
 
-        Call a PyKX Keyword function with supplied paramters
+        Call a PyKX Keyword function with supplied parameters
         
         ```python
         q(kx.q.floor, [5.2, 10.4])

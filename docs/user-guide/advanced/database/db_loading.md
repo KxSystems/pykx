@@ -47,4 +47,4 @@ In the below example, we are loading a new database `#!python /tmp/newdb` which 
 
 - [Modify the contents of your database](db_mgmt.md).
 - [Query your database with Python](../../fundamentals/query/pyquery.md).
-- [Compress/encrypt data](../compress-encrypt.md#persisting-database-partitions-with-various-configurations) for persisting database partitions.
+- [Compress/encrypt data](../compress-encrypt.md#persist-database-partitions-with-various-configurations) for persisting database partitions.

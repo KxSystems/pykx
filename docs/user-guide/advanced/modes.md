@@ -55,7 +55,7 @@ This mode cannot run q embedded within it. Also, it lacks the ability to run q c
 
 ### 1.b Running in Licensed mode
 
-Licensed mode is the standard way to operate PyKX, wherein it's running under a Python process [with a valid q license](../../getting-started/installing.md#licensing-code-execution-for-pykx). This modality aims to replace PyQ as the Python-first library for KX. All PyKX features are available in this mode.
+Licensed mode is the standard way to operate PyKX, wherein it's running under a Python process [with a valid q license](../../getting-started/installing.md#2-install-a-kdb-insights-license). This modality aims to replace PyQ as the Python-first library for KX. All PyKX features are available in this mode.
 
 The differences provided through operating with a valid kdb Insights license are:
 
@@ -146,6 +146,31 @@ The differences provided through operating with a valid kdb Insights license are
 7. All types can be disambiguated, generic null can be discerned from a projection null, and similar for regular vs splayed tables.
 8. Numpy list object conversion is optimized only in licensed mode.
 9. Only licensed mode grants users access to the `#!python is_null`, `#!python is_inf`, `#!python has_nulls`, and `#!python has_infs` methods of `#!python K` objects.
+10. Only licensed mode allows users to use the updated query API.
+
+	=== "Licensed Mode"
+
+		```python
+		>>> qtab.select(where=kx.Column('col2')>40)
+		pykx.Table(pykx.q('
+		col1 col2
+		---------
+		a    76
+		a    81
+		a    75
+		```
+	
+	=== "Unlicensed Mode"
+
+		```python
+		>>> qtab.select(qtab, where='col2>40')
+		pykx.Table(pykx.q('
+		col1 col2
+		---------
+		a    76
+		a    81
+		a    75
+		```
 
 ### How to choose between Licensed and Unlicensed
 

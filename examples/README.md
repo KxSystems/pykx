@@ -6,7 +6,7 @@ This `README.md` is intended to act as a guide for the contents within each of t
 
 **Note:**
 
-The `archive` folder contains a number of currently unsupported examples which had previously been demonstratable within the interface. As such until such time as these have been updated in line with the new interface these are not intended to be run.
+The `archive` folder contains a number of currently unsupported examples which had previously been demonstrable within the interface. As such until such time as these have been updated in line with the new interface these are not intended to be run.
 
 ## quickdemo.txt
 

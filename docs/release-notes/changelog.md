@@ -4,6 +4,91 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+## PyKX 3.1.5
+
+#### Release Date
+
+2025-10-21
+
+### Fixes and Improvements
+
+- Availability for Intel Macs on PyPI has been restored.
+- Paths starting with '~' will now have it expanded to users home path in `PYKX_CONFIGURATION_LOCATION`, `Encrypt`, `DB`, and `system.load` functionality (using `os.path.expanduser`).
+- More strict listing of which tables to include in `db.tables`.
+- Users will be warned when they attempt to create more than one `DB` object.
+
+    ```python
+    >>> import pykx as kx
+    >>> db = kx.DB(path="tmp/db1")
+    >>> db2 = kx.DB(path="tmp/db2")
+    PyKXWarning: Only one DB object exists at a time within a process. Use overwrite=True to overwrite your existing DB object. This warning will error in future releases.
+    >>> db3 = kx.DB(path="tmp/db3", overwrite=True)
+    >>> 
+    ```
+
+- Use of `Table.astype()` was creating a `.papi.errorList` variable, this has been moved inside the `.pykx` namespace as `.pykx.i.errorList`.
+- Added `no_allocator` keyword argument to `pykx.toq` that allows one time disabling of the PyKX allocator during a conversion. See [here](../help/issues.md#known-issues) for details.
+- Fixed an issue when converting dataframes with embeddings arrays.
+
+	=== "Behaviour prior to change"
+
+        ```Python
+        >>> df=pd.DataFrame(dict(embeddings=list(np.random.ranf((500, 10)).astype(np.float32))))
+        >>> pykx.toq(df)
+        segfault
+        ```
+
+	=== "Behaviour post change"
+
+        ```Python
+        >>> df=pd.DataFrame(dict(embeddings=list(np.random.ranf((500, 10)).astype(np.float32))))
+        >>> pykx.toq(df)
+        ```
+
+- Addition of `__array__` method to Atom classes. Enables `np.asarray` to created typed arrays.
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> np.asarray(kx.FloatAtom(3.65)).dtype
+		dtype('O')
+		>>> np.asarray(kx.BooleanAtom(1)).dtype
+		dtype('O')
+		>>> np.asarray(kx.DateAtom(datetime.datetime(2003, 4, 5))).dtype
+		dtype('O')
+		```
+	
+	=== "Behaviour post change"
+
+		```python
+		>>> np.asarray(kx.FloatAtom(3.65)).dtype
+		dtype('float64')
+		>>> np.asarray(kx.BooleanAtom(1)).dtype
+		dtype('bool')
+		>>> np.asarray(kx.DateAtom(datetime.datetime(2003, 4, 5))).dtype
+		dtype('<M8[D]')
+		```
+
+- Fixed the returned type of an `exec` query with a single renamed column.
+
+	=== "Behaviour prior to change"
+
+		```python
+		>>> type(kx.q.qsql.exec(qtab, {'symcol': 'col1'}))
+		pykx.wrappers.Dictionary
+		>>> type(qtab.exec(kx.Column('col1').name('symcol')))
+		pykx.wrappers.SymbolVector
+		```
+	
+	=== "Behaviour after change"
+
+		```python
+		>>> type(kx.q.qsql.exec(qtab, {'symcol': 'col1'}))
+		pykx.wrappers.Dictionary
+		>>> type(qtab.exec(kx.Column('col1').name('symcol')))
+		pykx.wrappers.Dictionary
+		```
+
 ## PyKX 3.1.4
 
 #### Release Date
@@ -142,7 +227,7 @@
 
 - Updated 4.0 to 2025.02.18 for all platforms.
 - Updated 4.1 to 2025.04.28 for all platforms.
-- Mac ARM builds reintroduced on PyPi.
+- Mac ARM builds reintroduced on PyPI.
 - Fix segfault when using kx.lic license file on Windows.
 - Pandas dependency has been raised to allow `<=2.3.0` for Python versions greater than 3.8
 - Removed in place modification side effect on following calls: `ParseTree.enlist`, `ParseTree.first`, `Column.call`, `Column.name`, `Column.__or__`, `QueryPhrase.__and__`. `Column.call` fix resolves the same issue for all [PyKX methods](../user-guide/fundamentals/query/pyquery.md#pykx-methods) off the `Column` object.
@@ -199,7 +284,7 @@
 		2025.02.17 17:15:06 column high in `:/tmp/database/2019.01.01/minutely
 		```
 
-- Improved communication of `NotImplemenetedError` messaging.
+- Improved communication of `NotImplementedError` messaging.
 
 	=== "Behavior prior to change"
 
@@ -612,7 +697,7 @@
 
 !!! Note
 
-        All QFuture objects returned from calls to `RawQConnection` objects must be awaited to recieve their results. Previously you could use just `conn.poll_recv()` and then directly get the result with `future.result()`.
+        All QFuture objects returned from calls to `RawQConnection` objects must be awaited to receive their results. Previously you could use just `conn.poll_recv()` and then directly get the result with `future.result()`.
 
 - Fixed error when attempting to convert `numpy.datetime64` variables to `kx.TimestampAtom` objects directly using the `kx.TimestampAtom` constructor method.
 
@@ -1917,7 +2002,7 @@
 
 ### Version Support Changes
 
-- Version 2.5.4 marks the removal of support for releases to PyPi/Anaconda of Python 3.7 supported versions of PyKX
+- Version 2.5.4 marks the removal of support for releases to PyPI/Anaconda of Python 3.7 supported versions of PyKX
 
 
 ## PyKX 2.5.2
@@ -2673,7 +2758,7 @@
 
 ### Upgrade considerations
 
- - Since 2.1.0 when using Pandas >= 2.0 dataframe columns of type `datetime64[s]` converted to `DateVector` under `toq`. Now correctly converts to `TimestampVector`. See [conversion condsideratons](../user-guide/fundamentals/conversion_considerations.md#temporal-types) for further details.
+ - Since 2.1.0 when using Pandas >= 2.0 dataframe columns of type `datetime64[s]` converted to `DateVector` under `toq`. Now correctly converts to `TimestampVector`. See [conversion condsideratons](../user-guide/fundamentals/conversion_considerations.md#temporal-data-types) for further details.
 
 	=== "Behavior prior to change"
 
@@ -4365,7 +4450,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Added helper functions for inserting and upserting to `k.Table` instances. These functions provide new keyword arguments to run a test insert against the table or to enforce that the schema of the new row matches the existing table.
 - Added environment variable `PYKX_NOQCE=1` to skip the loading of q Cloud Edition in order to speed up the import of PyKX.
 - Added environment variable `PYKX_LOAD_PYARROW_UNSAFE=1` to import PyArrow without the "subprocess safety net" which is here to prevent some hard crashes (but is slower than a simple import).
-- Addition of method `file_execute` to `kx.QConnection` objects which allows the execution of a local `.q` script on a server instance as outlined [here](../user-guide/advanced/ipc.md#file_execution).
+- Addition of method `file_execute` to `kx.QConnection` objects which allows the execution of a local `.q` script on a server instance as outlined [here](../user-guide/advanced/ipc.md#execute-a-file-on-a-server).
 - Added `kx.RawQConnection` which extends `kx.AsyncQConnection` with extra functions that allow a user to directly poll the send and receive selectors.
 - Added environment variable `PYKX_RELEASE_GIL=1` to drop the [`Python GIL`](https://wiki.python.org/moin/GlobalInterpreterLock) on calls into embedded q.
 - Added environment variable `PYKX_Q_LOCK=1` to enable a Mutex Lock around calls into q, setting this environment variable to a number greater than 0 will set the max length in time to block before raising an error, a value of '-1' will block indefinitely and will not error, any other value will cause an error to be raised immediately if the lock cannot be acquired.

@@ -38,8 +38,8 @@ class STREAMING:
     """
     The `STREAMING` class acts as a base parent class for the TICK, RTP, HDB and GATEWAY
     class objects. Each of these child classes inherit and may modify the logic of this parent.
-    In all cases the functions [`libraries`](#pykx.tick.STREAMING.libraries) and
-    [`register_api`](#pykx.tick.STREAMING.register_api) for example have the same definition
+    class objects. Each of these child classes inherit and may modify the logic of this parent.
+    In all cases the functions `libraries` and `register_api` for example have the same definition
     and are available to all process types.
 
     Unless provided with a separate definition as is the case for `start` in all class types
@@ -258,7 +258,7 @@ class STREAMING:
                              bytes(src, 'UTF-8'),
                              function.__name__,
                              api_name)
-        print(f"Successfully registed callable function '{api_name}' on port {self._port}")
+        print(f"Successfully registered callable function '{api_name}' on port {self._port}")
 
     def set_timer(self, timer: int = 1000) -> None:
         """
@@ -316,7 +316,16 @@ class STREAMING:
 
 
 class TICK(STREAMING):
-    """
+    def __init__(self,
+                 port: int = 5010,
+                 *,
+                 process_logs: Union[bool, str] = True,
+                 tables: dict = None,
+                 log_directory: str = None,
+                 hard_reset: bool = False,
+                 chained: bool = False,
+                 init_args: list = None) -> None:
+        """
     Initialise a tickerplant subprocess establishing a communication connection.
     This can either be a process which publishes data to subscribing processes only
     (chained) or a process which logs incoming messages for replay and triggers
@@ -381,15 +390,6 @@ class TICK(STREAMING):
     Tickerplant process successfully started on port: 5031
     ```
     """
-    def __init__(self,
-                 port: int = 5010,
-                 *,
-                 process_logs: Union[bool, str] = True,
-                 tables: dict = None,
-                 log_directory: str = None,
-                 hard_reset: bool = False,
-                 chained: bool = False,
-                 init_args: list = None) -> None:
         self._chained = chained
         self._tables=tables
         self._name = 'Tickerplant'
@@ -575,7 +575,19 @@ class TICK(STREAMING):
 # The below is named real-time processing to allow for a distinction between an RDB and RTE
 # to not be required at initialisation ... naming is hard
 class RTP(STREAMING):
-    """
+    def __init__(self,
+                 port: int = 5011,
+                 *,
+                 process_logs: Union[bool, str] = True,
+                 libraries: dict = None,
+                 subscriptions: str = None,
+                 apis: dict = None,
+                 vanilla: bool = True,
+                 pre_processor: Callable = None,
+                 post_processor: Callable = None,
+                 init_args: list = None,
+                 tables: dict = None) -> None:
+        """
     Initialise a Real-Time Processor (RTP), establishing a communication connection to this
     process. An RTP at it's most fundamental level comprises the following actions and is
     known as a 'vanilla' RTP:
@@ -604,7 +616,7 @@ class RTP(STREAMING):
             defined API to the callable Python functions or PyKX lambdas/projections
             which will be called.
         vanilla: In the case that the RTP is defined as 'vanilla' data received
-            from a downstream tickerplant will be inserted into an in-memory table.
+            from an upstream tickerplant will be inserted into an in-memory table.
             If vanilla is False then a 'pre_processor' and 'post_processor' function
             can be defined using the below parameters to modify data prior to and post
             insert.
@@ -674,7 +686,7 @@ class RTP(STREAMING):
     ...     )
     Initialising Real-time processor on port: 5032
     Registering callable function 'custom_query' on port 5032
-    Successfully registed callable function 'custom_query' on port 5032
+    Successfully registered callable function 'custom_query' on port 5032
     Real-time processor initialised successfully on port: 5032
     >>> rdb.start({'tickerplant': 'localhost:5030'})
     Starting Real-time processing on port: 5032
@@ -723,18 +735,6 @@ class RTP(STREAMING):
     >>> rte.start({'tickerplant': 'localhost:5030'})
     ```
     """
-    def __init__(self,
-                 port: int = 5011,
-                 *,
-                 process_logs: Union[bool, str] = True,
-                 libraries: dict = None,
-                 subscriptions: str = None,
-                 apis: dict = None,
-                 vanilla: bool = True,
-                 pre_processor: Callable = None,
-                 post_processor: Callable = None,
-                 init_args: list = None,
-                 tables: dict = None) -> None:
         self._subscriptions=subscriptions
         self._pre_processor=pre_processor
         self._post_processor=post_processor
@@ -848,7 +848,7 @@ class RTP(STREAMING):
         ...     )
         Initialising Real-time processor on port: 5032
         Registering callable function 'custom_query' on port 5032
-        Successfully registed callable function 'custom_query' on port 5032
+        Successfully registered callable function 'custom_query' on port 5032
         Real-time processor initialised successfully on port: 5032
         >>> rdb.start({'tickerplant': 'localhost:5030'})
         Starting Real-time processing on port: 5032
@@ -861,7 +861,7 @@ class RTP(STREAMING):
 
         Initialising Real-time processor on port: 5032
         Registering callable function 'custom_query' on port 5032
-        Successfully registed callable function 'custom_query' on port 5032
+        Successfully registered callable function 'custom_query' on port 5032
         Real-time processor initialised successfully on port: 5032
 
         Starting Real-time processing on port: 5032
@@ -1063,7 +1063,15 @@ class RTP(STREAMING):
 
 
 class HDB(STREAMING):
-    """
+    def __init__(self,
+                 port: int = 5012,
+                 *,
+                 process_logs: Union[str, bool] = True,
+                 libraries: dict = None,
+                 apis: dict = None,
+                 init_args: list = None,
+                 tables: dict = None):
+        """
     Initialise a Historical Database (HDB) subprocess establishing a communication connection.
     This process may contain a loaded database and APIs used for analytic transformations on
     historical data
@@ -1113,20 +1121,12 @@ class HDB(STREAMING):
     ...     )
     Initialising HDB process on port: 5035
     Registering callable function 'hdb_query' on port 5035
-    Successfully registed callable function 'hdb_query' on port 5035
+    Successfully registered callable function 'hdb_query' on port 5035
     HDB initialised successfully on port: 5035
     >>> hdb('hdb_query', '1+1')
     pykx.LongAtom(pykx.q('2'))
     ```
     """
-    def __init__(self,
-                 port: int = 5012,
-                 *,
-                 process_logs: Union[str, bool] = True,
-                 libraries: dict = None,
-                 apis: dict = None,
-                 init_args: list = None,
-                 tables: dict = None):
         self._name = 'HDB'
         self._libraries = libraries
         self._apis = apis
@@ -1201,7 +1201,7 @@ class HDB(STREAMING):
         ...     apis={'custom_api': gateway_api})
         Initialising HDB process on port: 5035
         Registering callable function 'custom_api' on port 5035
-        Successfully registed callable function 'custom_api' on port 5035
+        Successfully registered callable function 'custom_api' on port 5035
         HDB process initialised successfully on port: 5035
         >>> hdb('custom_api', '1+1')
         pykx.LongAtom(pykx.q('2'))
@@ -1213,7 +1213,7 @@ class HDB(STREAMING):
 
         Initialising HDB process on port: 5035
         Registering callable function 'custom_api' on port 5035
-        Successfully registed callable function 'custom_api' on port 5035
+        Successfully registered callable function 'custom_api' on port 5035
         HDB process initialised successfully on port: 5035
 
         HDB process on port 5035 successfully restarted
@@ -1268,7 +1268,16 @@ class HDB(STREAMING):
 
 
 class GATEWAY(STREAMING):
-    """
+    def __init__(self,
+                 port: int = 5010,
+                 *,
+                 process_logs: Union[str, bool] = False,
+                 libraries: dict = None,
+                 apis: dict = None,
+                 connections: dict = None,
+                 connection_validator: Callable = None,
+                 init_args: list = None) -> None:
+        """
     Initialise a Gateway subprocess establishing a communication connection.
     A gateway provides a central location for external users to query named
     API's within a streaming infrastructure which retrieves data from multiple
@@ -1337,15 +1346,6 @@ class GATEWAY(STREAMING):
     ...     print(q('custom_api', 2))
     ```
     """
-    def __init__(self,
-                 port: int = 5010,
-                 *,
-                 process_logs: Union[str, bool] = False,
-                 libraries: dict = None,
-                 apis: dict = None,
-                 connections: dict = None,
-                 connection_validator: Callable = None,
-                 init_args: list = None) -> None:
         self._name = 'Gateway'
         self._connections=connections
         self._connection_validator=connection_validator
@@ -1460,7 +1460,7 @@ class GATEWAY(STREAMING):
         ...     apis={'custom_api': gateway_api})
         Initialising Gateway process on port: 5035
         Registering callable function 'custom_function' on port 5035
-        Successfully registed callable function 'custom_function' on port 5035
+        Successfully registered callable function 'custom_function' on port 5035
         Gateway process initialised successfully on port: 5035
         >>> gateway.start()
         >>> gateway('gateway_api', '1+1')
@@ -1473,7 +1473,7 @@ class GATEWAY(STREAMING):
 
         Initialising Gateway process on port: 5035
         Registering callable function 'custom_function' on port 5035
-        Successfully registed callable function 'custom_function' on port 5035
+        Successfully registered callable function 'custom_function' on port 5035
         Gateway process initialised successfully on port: 5035
 
         Gateway process on port 5035 successfully restarted
@@ -1547,7 +1547,15 @@ _default_ports = {'tickerplant': 5010,
 
 
 class BASIC:
-    """
+    def __init__(
+            self,
+            tables,
+            *,
+            log_directory='.',
+            hard_reset=False,
+            database=None,
+            ports=_default_ports):
+        """
     Initialise a configuration for a basic PyKX streaming workflow.
 
     This configuration will be used to (by default) start the following processes:
@@ -1622,14 +1630,6 @@ class BASIC:
     ...     ports={'tickerplant': 5030, 'rdb': 5031, 'hdb': 5032}
     ```
     """
-    def __init__(
-            self,
-            tables,
-            *,
-            log_directory='.',
-            hard_reset=False,
-            database=None,
-            ports=_default_ports):
         self._ports = ports
         self._tables = tables
         self._log_directory = log_directory,

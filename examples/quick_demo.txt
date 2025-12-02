@@ -111,13 +111,13 @@ help(kx.q.qsql)
 kx.q.qsql.select(qtab)
 kx.q.qsql.select('qtab')
 
-kx.q.qsql.select(qtab, where = 'col1=`a')
+qtab.select(where = kx.Column('col1')=='a')
 kx.q.qsql.select(qtab, columns = {'col1':'col1', 'newname_col2':'col2'})
 kx.q.qsql.select(qtab, columns={'maxCol2':'max col2'}, by={'groupcol':'col1'})
 kx.q.qsql.select(qtab, columns={'minCol2': 'min col2',
                      'col3': 'max col3'},
             by={'col1': 'col1'},
-            where=['col3<0.5', 'col2>0.7'])
+            where=[kx.Column('col3')<0.5, kx.Column('col2')>0.7])
 
 # The following are equivalent w.r.t delete functionality
 kx.q.qsql.delete(qtab)
@@ -126,13 +126,13 @@ kx.q.qsql.delete('qtab')
 # The following will envoke non persistent deletion on the table
 # i.e. the original table is not modified
 kx.q.qsql.delete(qtab, 'col1')
-kx.q.qsql.delete(qtab, where='col1=`a')
+kx.q.qsql.delete(qtab, where=kx.Column('col1')=='a')
 kx.q.qsql.delete(qtab, ['col2','col3'])
 
 # In the case that the table is named in the q memory space, for example
-# added via q['qtab']=qtab then the table can be perminently modified
+# added via q['qtab']=qtab then the table can be permanently modified
 # using the following
-kx.q.qsql.delete('qtab', where='col1=`b', modify = True)
+kx.q.qsql.delete('qtab', where=kx.Column('col1')=='b', modify = True)
 
 
 # IPC interfacing

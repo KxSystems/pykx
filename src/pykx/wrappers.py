@@ -598,6 +598,9 @@ class Atom(K):
             res = res._unlicensed_getitem(0)
         return res
 
+    def __array__(self, dtype=None):
+        return np.asarray(self.np(), dtype=dtype)
+
 
 class EnumAtom(Atom):
     """Wrapper for q enum atoms.
@@ -3525,20 +3528,20 @@ class Table(PandasAPI, Mapping):
         Filter table based on various where conditions
 
         ```python
-        >>> qtab.select(where='col2<0.5')
+        >>> qtab.select(where=kx.Column('col2')<0.5)
         ```
 
         Retrieve statistics by grouping data on symbol columns
 
         ```python
-        >>> qtab.select(columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
-        >>> qtab.select(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'})
+        >>> qtab.select(columns=kx.Column('col2').max().name('maxCol2'), by=kx.Column('col1'))
+        >>> qtab.select(columns=[kx.Column('col2').avg().name('avgCol2'), kx.Column('col4').min().name('minCol4')], by=kx.Column('col1'))
         ```
 
         Retrieve grouped statistics with restrictive where condition
 
         ```python
-        >>> qtab.select(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'}, where='col3=0b')
+        >>> qtab.select(columns=[kx.Column('col2').avg().name('avgCol2'), kx.Column('col4').min().name('minCol4')], by=kx.Column('col1'), where=kx.Column('col3')==False)
         ```
         """ # noqa: E501
         return q.qsql.select(self, columns, where, by, inplace)
@@ -3588,28 +3591,28 @@ class Table(PandasAPI, Mapping):
 
         ```python
         qtab.exec({'symcol': 'col1'})
-        qtab.exec({'symcol': 'col1', 'boolcol': 'col3'})
+        qtab.exec(columns=[kx.Column('col1').name('symcol'), kx.Column('col3').name('boolcol')])
         ```
 
         Filter columns from a table based on various where conditions
 
         ```python
-        qtab.exec('col3', where='col1=`a')
-        qtab.exec({'symcol': 'col1', 'maxcol4': 'max col4'}, where=['col1=`a', 'col2<0.3'])
+        qtab.exec('col3', where=kx.Column('col1')=='a')
+        qtab.exec(columns=[kx.Column('col1').name('symcol'), kx.Column('col4').max().name('maxcol4')], where=[kx.Column('col1')=='a', kx.Column('col2')<0.3])
         ```
 
         Retrieve data grouping by data on symbol columns
 
         ```python
-        qtab.exec('col2', by={'col1': 'col1'})
-        qtab.exec(columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
-        qtab.exec(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'})
+        qtab.exec('col2', by=kx.Column('col1'))
+        qtab.exec(columns=kx.Column('col2').max().name('maxCol2'), by=kx.Column('col1').name('col1'))
+        qtab.exec(columns=[kx.Column('col2').max().name('maxCol2'), kx.Column('col4').min().name('minCol4')], by=kx.Column('col1').name('col1'))
         ```
 
         Retrieve grouped statistics with restrictive where condition
 
         ```python
-        qtab.exec(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'}, where='col3=0b')
+        qtab.exec(columns=[kx.Column('col2').avg().name('avgCol2'), kx.Column('col4').min().name('minCol4')], by=kx.Column('col1'), where=kx.Column('col3')==False)
         ```
         """ # noqa: E501
         return q.qsql.exec(self, columns, where, by)
@@ -3655,7 +3658,7 @@ class Table(PandasAPI, Mapping):
         Update the content of a column restricting scope using a where clause
 
         ```python
-        qtab.update({'eye': ['blue']}, where='hair=`fair')
+        qtab.update({'eye': ['blue']}, where=kx.Column('hair')=='fair')
         ```
 
         Define a q table suitable for by clause example
@@ -3671,13 +3674,13 @@ class Table(PandasAPI, Mapping):
         Apply an update grouping based on a by phrase
 
         ```python
-        bytab.update({'weight': 'avg weight'}, by={'city': 'city'})
+        bytab.update(columns={'weight': 'avg weight'}, by=kx.Column('city'))
         ```
 
         Apply an update grouping based on a by phrase and persist the result using the inplace keyword
 
         ```python
-        bytab.update(columns={'weight': 'avg weight'}, by={'city': 'city'}, inplace=True)
+        bytab.update(columns={'weight': 'avg weight'}, by=kx.Column('city'), inplace=True)
         ```
         """ # noqa: E501
         return q.qsql.update(self, columns, where, by, inplace)
@@ -3719,22 +3722,22 @@ class Table(PandasAPI, Mapping):
         Delete single and multiple columns from the table
 
         ```python
-        >>> qtab.delete('age')
-        >>> qtab.delete(['age', 'eye'])
+        >>> qtab.delete(kx.Column('age'))
+        >>> qtab.delete([kx.Column('age'), kx.Column('eye')])
         ```
 
         Delete rows of the dataset based on where condition
 
         ```python
-        >>> qtab.delete(where='hair=`fair')
-        >>> qtab.delete(where=['hair=`fair', 'age=28'])
+        >>> qtab.delete(where=kx.Column('hair')=='fair')
+        >>> qtab.delete(where=[kx.Column('hair')=='fair', kx.Column('age')==28])
         ```
 
         Delete a column from the dataset named in q memory and persist the result using the
         inplace keyword
 
         ```python
-        >>> qtab.delete('age', inplace=True)
+        >>> qtab.delete(kx.Column('age'), inplace=True)
         ```
         """ # noqa: E501
         return q.qsql.delete(self, columns, where, inplace)
@@ -4802,20 +4805,20 @@ class KeyedTable(Dictionary, PandasAPI):
         Filter table based on various where conditions
 
         ```python
-        >>> qtab.select(where='col2<0.5')
+        >>> qtab.select(where=kx.Column('col2')<0.5)
         ```
 
         Retrieve statistics by grouping data on symbol columns
 
         ```python
-        >>> qtab.select(columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
-        >>> qtab.select(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'})
+        >>> qtab.select(columns=kx.Column('col2').max().name('maxCol2'), by=kx.Column('col1'))
+        >>> qtab.select(columns=[kx.Column('col2').avg().name('avgCol2'), kx.Column('col4').min().name('minCol4')], by=kx.Column('col1'))
         ```
 
         Retrieve grouped statistics with restrictive where condition
 
         ```python
-        >>> qtab.select(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'}, where='col3=0b')
+        >>> qtab.select(columns=[kx.Column('col2').avg().name('avgCol2'), kx.Column('col4').min().name('minCol4')], by=kx.Column('col1'), where=kx.Column('col3')==False)
         ```
         """ # noqa: E501
         return q.qsql.select(self, columns, where, by, inplace)
@@ -4864,29 +4867,29 @@ class KeyedTable(Dictionary, PandasAPI):
         Retrieve a set of columns from a table as a dictionary
 
         ```python
-        qtab.exec({'symcol': 'col1'})
-        qtab.exec({'symcol': 'col1', 'boolcol': 'col3'})
+        qtab.exec(kx.Column('col1').name('symcol'))
+        qtab.exec(columns=[kx.Column('col1').name('symcol'), kx.Column('col3').name('boolcol')])
         ```
 
         Filter columns from a table based on various where conditions
 
         ```python
-        qtab.exec('col3', where='col1=`a')
-        qtab.exec({'symcol': 'col1', 'maxcol4': 'max col4'}, where=['col1=`a', 'col2<0.3'])
+        qtab.exec(kx.Column('col3'), where=kx.Column('col1')=='a')
+        qtab.exec(columns=[kx.Column('col1').name('symcol'), kx.Column('col4').max().name('maxCol4')], where=[kx.Column('col1')=='a', kx.Column('col2')<0.3])
         ```
 
         Retrieve data grouping by data on symbol columns
 
         ```python
-        qtab.exec('col2', by={'col1': 'col1'})
-        qtab.exec(columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
-        qtab.exec(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'})
+        qtab.exec(columns=kx.Column('col2'), by=kx.Column('col1'))
+        qtab.exec(columns=kx.Column('col2').max().name('maxCol2'), by=kx.Column('col1'))
+        qtab.exec(columns=[kx.Column('col2').avg().name('avgCol2'), kx.Column('col4').min().name('minCol4')], by=kx.Column('col1'))
         ```
 
         Retrieve grouped statistics with restrictive where condition
 
         ```python
-        qtab.exec(columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'}, where='col3=0b')
+        qtab.exec(columns=[kx.Column('col2').avg().name('avgCol2'), kx.Column('col4').min().name('minCol4')], by=kx.Column('col1'), where=kx.Column('col3')==False)
         ```
         """ # noqa: E501
         return q.qsql.exec(self, columns, where, by)
@@ -4932,7 +4935,7 @@ class KeyedTable(Dictionary, PandasAPI):
         Update the content of a column restricting scope using a where clause
 
         ```python
-        >>> qtab.update({'eye': ['blue']}, where='hair=`fair')
+        >>> qtab.update({'eye': ['blue']}, where=kx.Column('hair')=='fair')
         ```
 
         Define a q table suitable for by clause example
@@ -4997,22 +5000,22 @@ class KeyedTable(Dictionary, PandasAPI):
         Delete single and multiple columns from the table
 
         ```python
-        >>> qtab.delete('age')
+        >>> qtab.delete(kx.Column('age'))
         >>> qtab.delete(['age', 'eye'])
         ```
 
         Delete rows of the dataset based on where condition
 
         ```python
-        >>> qtab.delete(where='hair=`fair')
-        >>> qtab.delete(where=['hair=`fair', 'age=28'])
+        >>> qtab.delete(where=kx.Column('hair')=='fair')
+        >>> qtab.delete(where=[kx.Column('hair')=='fair', kx.Column('age')==28])
         ```
 
         Delete a column from the dataset named in q memory and persist the result using the
         inplace keyword
 
         ```python
-        >>> qtab.delete('age', inplace=True)
+        >>> qtab.delete(kx.Column('age'), inplace=True)
         ```
         """ # noqa: E501
         return q.qsql.delete(self, columns, where, inplace)
@@ -5871,8 +5874,10 @@ class Column:
             raise LicenseException("use kx.Column objects")
         if name is not None:
             self._name = name
+            self._renamed = True
         else:
             self._name = column
+            self._renamed = False
         if value is not None:
             self._value = value
         else:
@@ -8154,7 +8159,7 @@ class Column:
 
     def mmin(self, other, iterator=None, col_arg_ind=1, project_args=None):
         """
-        Calculate the moving minumum for items in a column over a specified
+        Calculate the moving minimum for items in a column over a specified
             window length. The first 'other' items of the result are the minimum
             of items so far, thereafter the result is the moving minimum
 
@@ -8591,7 +8596,7 @@ class Column:
             by the parameter other.
 
         Parameters:
-            other: An integer denoting the number of elements left(positve) or right(negative)
+            other: An integer denoting the number of elements left(positive) or right(negative)
                 which the column list will be shifted
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -9331,7 +9336,7 @@ class Column:
     def within(self, lower, upper, iterator=None, col_arg_ind=0, project_args=None):
         """
         Return a boolean list indicating whether the items of a column are within bounds
-            of an lower and upper limite.
+            of an lower and upper limit.
 
         Parameters:
             lower: A sortable item defining the lower limit
@@ -9841,7 +9846,7 @@ class Column:
         ...     'a': kx.q.asc(kx.random.random(100, 10.0)),
         ...     'b': kx.q.desc(kx.random.random(100, 10.0))
         ...     })
-        >>> tab.select(kx.Column('a').add([3, 4], iterator='/:\:'))
+        >>> tab.select(kx.Column('a').add([3, 4], iterator='/:\\:'))
         pykx.Table(pykx.q('
         a
         -----------------
@@ -9883,6 +9888,7 @@ class Column:
         """
         cpy = copy.deepcopy(self)
         cpy._name = name
+        cpy._renamed = True
         return cpy
 
     def average(self, iterator=None):
@@ -10182,7 +10188,7 @@ class Column:
         ...     'a': kx.q.asc(kx.random.random(100, 10.0)),
         ...     'b': kx.q.desc(kx.random.random(100, 10.0))
         ...     })
-        >>> tab.select(kx.Column('a').divide([3, 4], iterator='/:\:'))
+        >>> tab.select(kx.Column('a').divide([3, 4], iterator='/:\\:'))
         pykx.Table(pykx.q('
         a
         ---------------------
@@ -10523,7 +10529,7 @@ class Column:
         ...     'a': kx.q.asc(kx.random.random(100, 10.0)),
         ...     'b': kx.q.desc(kx.random.random(100, 10.0))
         ...     })
-        >>> tab.select(kx.Column('a').multiply([3, 4], iterator='/:\:'))
+        >>> tab.select(kx.Column('a').multiply([3, 4], iterator='/:\\:'))
         pykx.Table(pykx.q('
         a
         ---------------------
@@ -10801,7 +10807,7 @@ class Column:
         '))
         ```
 
-        Substract 3 from each element of a column.
+        Subtract 3 from each element of a column.
 
         ```python
         >>> import pykx as kx
@@ -10830,7 +10836,7 @@ class Column:
         ...     'a': kx.q.asc(kx.random.random(100, 10.0)),
         ...     'b': kx.q.desc(kx.random.random(100, 10.0))
         ...     })
-        >>> tab.select(kx.Column('a').subtract([3, 4], iterator='/:\:'))
+        >>> tab.select(kx.Column('a').subtract([3, 4], iterator='/:\\:'))
         pykx.Table(pykx.q('
         a
         -------------------
