@@ -97,19 +97,25 @@ class DB(_TABLES):
                 *,
                 path: Optional[Union[str, Path]] = None,
                 change_dir: Optional[bool] = True,
-                load_scripts: Optional[bool] = True
+                load_scripts: Optional[bool] = True,
+                overwrite: Optional[bool] = False
     ) -> None:
         if cls._dir_cache is None:
             cls._dir_cache = dir(cls)
         if cls._instance is None:
             cls._instance = super(DB, cls).__new__(cls)
+        elif not overwrite:
+            print("PyKXWarning: Only one DB object exists at a time within a process. "
+                  +"Use overwrite=True to overwrite your existing DB object. "
+                  +"This warning will error in future releases.")
         return cls._instance
 
     def __init__(self,
                  *,
                  path: Optional[Union[str, Path]] = None,
                  change_dir: Optional[bool] = True,
-                 load_scripts: Optional[bool] = True
+                 load_scripts: Optional[bool] = True,
+                 overwrite: Optional[bool] = False
     ) -> None:
         """
         Initialize a database class used within your process. This is a singleton class from
@@ -162,7 +168,7 @@ class DB(_TABLES):
             try:
                 self.load(path, change_dir=self._change_dir, load_scripts=self._load_scripts)
             except DBError:
-                self.path = Path(os.path.abspath(path))
+                self.path = Path(os.path.abspath(os.path.expanduser(path)))
 
     def create(self,
                table: k.Table,
@@ -446,7 +452,7 @@ class DB(_TABLES):
         '))
         ```
         """
-        load_path = Path(os.path.abspath(path))
+        load_path = Path(os.path.abspath(os.path.expanduser(path)))
         if not overwrite and self.path == load_path:
             raise DBError("Attempting to reload existing database. Please pass "
                           "the keyword overwrite=True to complete database reload")
@@ -498,7 +504,7 @@ class DB(_TABLES):
               ''', db_path, db_name)
         self.path = load_path
         self.loaded = True
-        self.tables = q('{x where {$[-1h=type t:.Q.qp tab:get x;$[t;1b;in[`$last vs["/";-1_string value flip tab]; key y]];0b]}[;y]each x}', q.tables(), load_path).py() # noqa: E501
+        self.tables = q('{x where {$[-1h=type t:.Q.qp tab:get x;$[t;x in .Q.pt;in[`$last vs["/";-1_string value flip tab]; key y]];0b]}[;y]each x}', q.tables(), load_path).py() # noqa: E501
         for i in self.tables:
             if i in self._dir_cache:
                 warn(f'A database table "{i}" would overwrite one of the pykx.DB() methods, please access your table via the table attribute') # noqa: E501
@@ -1156,7 +1162,7 @@ class DB(_TABLES):
 
         Returns:
             A `#!python pykx.Dictionary` object showing the count of data in each table within
-                the presently loaded partioned database.
+                the presently loaded partitioned database.
 
         !!! Warning
 
@@ -1315,7 +1321,7 @@ class DB(_TABLES):
         pykx.EnumVector(pykx.q('`mysym$`a`b`a`c`b..'))
         ```
         """
-        load_path = Path(os.path.abspath(self.path))
+        load_path = Path(os.path.abspath(os.path.expanduser(self.path)))
         if sym_file is None:
             return q.Q.en(load_path, table)
         else:

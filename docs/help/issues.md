@@ -26,6 +26,18 @@ pykx.LongAtom(pykx.q('2'))
 >>> kx.q('func', kx.q('::'))
 pykx.LongAtom(pykx.q('2'))
 ```
+* If any issues occur when converting objects using `PYKX_ALLOCATOR=True` then the `no_allocator=True` keyword argument can be used to selectively turn off the use of the allocator.
+
+```python
+>>> df = pd.read_parquet('nested_arrs.parquet')
+>>> kx.toq(df, no_allocator=True)
+```
+
+Or for PyKX under q you can use.
+```q
+q) df: .pykx.pyeval"pd.read_parquet('nested_arrs.parquet')";
+q) .pykx.toq .pykx.noalloc df;
+```
 
 ### Limitations
 Embedding q in a Python process imposes some restrictions on functionality. The embedded q process does not run the main loop that it would when running natively, hence it is limited in usage of q IPC and q timers.

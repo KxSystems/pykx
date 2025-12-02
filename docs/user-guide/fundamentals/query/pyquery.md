@@ -61,7 +61,7 @@ table.select(columns=None, where=None, by=None, inplace=False)
 
 [exec()](../../../api/query.md#pykx.query.QSQL.exec) builds on qSQL [exec](https://code.kx.com/q/ref/exec/).
 
-Exec is used to query tables but unlike Select it does not return tables. Instead this query type will return [pykx.Vector](../../../api/pykx-q-data/wrappers.md##pykx.wrappers.Vector), [pykx.Atom](../../../api/pykx-q-data/wrappers.md##pykx.wrappers.Atom), or [pykx.Dictionary](../../../api/pykx-q-data/wrappers.md##pykx.wrappers.Dictionary) will be returned depending on the query parameters.
+Exec is used to query tables but unlike Select it does not return tables. Instead this query type will return [pykx.Vector](../../../api/pykx-q-data/wrappers.md#pykx.wrappers.Vector), [pykx.Atom](../../../api/pykx-q-data/wrappers.md#pykx.wrappers.Atom), or [pykx.Dictionary](../../../api/pykx-q-data/wrappers.md#pykx.wrappers.Dictionary) will be returned depending on the query parameters.
 
 For example if querying for data in a single column a vector will be returned, multiple columns will result in a dictionary mapping column name to value and when performing aggregations on a single column you may return an atom.
 

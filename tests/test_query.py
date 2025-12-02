@@ -205,6 +205,34 @@ def test_exec(q):
         q.qsql.exec([1, 2, 3]).py()
 
 
+def test_exec_licensed(kx):
+    qtab = kx.q('([]col1:100?`a`b`c;col2:100?1f;col3:100?5)')
+    kx.q['qtab']=qtab
+    assert (kx.q.qsql.exec(qtab, {'col5': 'col1'}) == qtab.exec(
+            kx.Column('col1').name('col5'))).all()
+    assert (kx.q('exec col5:col1 from qtab') == qtab.exec(kx.Column('col1').name('col5'))).all()
+    assert (kx.q.qsql.exec(qtab, {'col5': 'col1'}) == qtab.exec(
+            kx.Column('col1', name='col5'))).all()
+    assert (kx.q.qsql.exec(qtab, 'col1') == qtab.exec(
+            kx.Column('col1'))).all()
+
+    assert (kx.q.qsql.exec(qtab, {'maxCol2': 'max col2'}) == qtab.exec(
+            kx.Column('col2').max().name('maxCol2'))).all()
+    assert (kx.q('exec maxCol2:max col2 from qtab') == qtab.exec(
+            kx.Column('col2').max().name('maxCol2'))).all()
+    assert (kx.q('exec col1, col2 from qtab') == qtab.exec(
+            columns=[kx.Column('col1'), kx.Column('col2')])).all()
+
+    assert type(qtab.exec(columns=kx.Column('col1'),
+           by=kx.Column('col2'))) == type(kx.q('exec col1 by col2 from qtab')) # noqa E721
+    assert type(qtab.exec(columns=kx.Column('col1').name('col1'),
+           by=kx.Column('col2'))) == type(kx.q('exec col1:col1 by col2 from qtab')) # noqa E721
+    assert type(qtab.exec(columns=kx.Column('col1'),
+           by=kx.Column('col2').name('col2'))) == type(kx.q('exec col1 by col2:col2 from qtab')) # noqa E721
+    assert type(qtab.exec(columns=kx.Column('col1').name('col1'),
+        by=kx.Column('col2').name('col2'))) == type(kx.q('exec col1:col1 by col2:col2 from qtab')) # noqa E721
+
+
 @pytest.mark.asyncio
 @pytest.mark.unlicensed
 async def test_exec_async(kx, q_port):

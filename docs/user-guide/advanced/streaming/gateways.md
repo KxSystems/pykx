@@ -56,7 +56,7 @@ gateway.add_connections({'rtp': 'localhost:5014'})
     The following bullet-points provide links to the various functions used within the above section
 
     - [`kx.tick.GATEWAY`](../../../api/tick.md#pykx.tick.GATEWAY)
-    - [`gateway.add_connections`](../../../api/tick.md#pykx.tick.GATEWAY.add_connections)
+    - [`gateway.add_connections`](../../../api/tick.md#pykx.tick.GATEWAY.add_connection)
 
 ### Add a custom username/password check
 

@@ -160,7 +160,7 @@ class SystemCommands:
         kx.q.system.namespace()
         ```
 
-        Change the current namespace to `.foo`, note the leading `.` may be ommited.
+        Change the current namespace to `.foo`, note the leading `.` may be omitted.
 
         ```python
         kx.q.system.namespace('foo')
@@ -262,10 +262,10 @@ class SystemCommands:
                 path = path[1:]
         elif isinstance(path, Path):
             path = str(path)
+        path = os.path.expanduser(path)
         if ' ' not in path:
             if path[-1] == '/':
                 path = path[:-1]
-            print(path)
             return self._q._call(f'\\l {path}', wait=True)
         if not suppress_warnings:
             warn('Detected a space in supplied path\n'

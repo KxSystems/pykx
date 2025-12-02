@@ -42,7 +42,7 @@ MSFT 2022.01.02 724.9456
 '))
 ```
 
-Query a [pykx.Table](../../../api/pykx-q-data/wrappers.md#pykx.wrappers.Table) [passing it as an argument](../../../user-guide/fundamentals/evaluating.md#application-of-functions-taking-multiple-arguments):
+Query a [pykx.Table](../../../api/pykx-q-data/wrappers.md#pykx.wrappers.Table) [passing it as an argument](../../../user-guide/fundamentals/evaluating.md#a2-application-of-functions-taking-multiple-arguments):
 
 ```q
 >>> kx.q('{select from x}', trades)

@@ -91,4 +91,4 @@ set the `#!python conn_gc_time` to `#!python 10.0` then this clean-up happens ev
 
 !!! Note
 
-    [reval](../../api/pykx-execution/q.md#reval) will not impose read only exection on a PyKX server as Python manages the sockets rather than `q`.
+    [reval](../../api/pykx-execution/q.md#reval) will not impose read only execution on a PyKX server as Python manages the sockets rather than `q`.

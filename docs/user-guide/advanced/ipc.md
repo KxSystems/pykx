@@ -364,9 +364,9 @@ pykx.Identity(pykx.q('::'))
 
 ### Integrate with Python Async libraries
 
-To make integrate with Python's async libraries such as `#!python asyncio` with `#!python PyKX`, you must use a [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection). When calling an instance of an [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection), the query is sent to the `#!python q` server and control is immediately handed back to the running Python program. The `#!python __call__` function returns a [`kx.QFuture`](../../api/ipc.md##pykx.ipc.QFuture) instance that can later be awaited on to block until it receives a result.
+To make integrate with Python's async libraries such as `#!python asyncio` with `#!python PyKX`, you must use a [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection). When calling an instance of an [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection), the query is sent to the `#!python q` server and control is immediately handed back to the running Python program. The `#!python __call__` function returns a [`kx.QFuture`](../../api/ipc.md#pykx.ipc.QFuture) instance that can later be awaited on to block until it receives a result.
 
-If you're using a third-party library that runs an eventloop to manage asynchronous calls, ensure you use the `#!python event_loop` keyword argument to pass the event loop into the [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection) instance. This allows the eventloop to properly manage the returned [`kx.QFuture`](../../api/ipc.md##pykx.ipc.QFuture) objects and its lifecycle.
+If you're using a third-party library that runs an eventloop to manage asynchronous calls, ensure you use the `#!python event_loop` keyword argument to pass the event loop into the [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection) instance. This allows the eventloop to properly manage the returned [`kx.QFuture`](../../api/ipc.md#pykx.ipc.QFuture) objects and its lifecycle.
 
 ```python
 async with kx.AsyncQConnection('localhost', 5001, event_loop=asyncio.get_event_loop()) as q:

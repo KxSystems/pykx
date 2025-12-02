@@ -20,7 +20,7 @@ There are five ways to create PyKX objects:
 
 - a. [Convert Python objects to PyKX objects](#1a-convert-python-objects-to-pykx-objects)
 - b. [Generate data using PyKX inbuilt functions](#1b-generate-data-using-pykx-inbuilt-functions)
-- c. [Evaluate q code using `#!python kx.q`](#1c-evaluate-q-code-using-python-kxq)
+- c. [Evaluate q code using `#!python kx.q`](#1c-evaluate-q-code-using-kxq)
 - d. [Assign Python data to q's memory](#1d-assign-python-data-to-qs-memory)
 - e. [Retrieve a named entity from q's memory](#1e-retrieve-a-named-entity-from-qs-memory)
 - f. [Query an external q session](#1f-query-an-external-q-session)
@@ -476,4 +476,4 @@ Once the data is ready for use in Python, it may be more appropriate to convert 
 	pykx.TimestampAtom(pykx.q('2024.01.05D03:16:23.736627000'))
 	```
 
-	See our [Conversion considerations for temporal types](../fundamentals/conversion_considerations.md#temporal-types) section for further details.
+	See our [Conversion considerations for temporal types](../fundamentals/conversion_considerations.md#temporal-data-types) section for further details.

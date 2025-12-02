@@ -23,13 +23,13 @@ A breakdown of each of the `pykx.K` types and their analogous `Python`, `NumPy`,
 	| [Timespan](#pykxtimespanatom)   | timedelta   | timedelta64[ns] | DurationArray  |
 	| [Minute](#pykxminuteatom)       | timedelta   | timedelta64[m]  | Not Supported  |
 	| [Second](#pykxsecondatom)       | timedelta   | timedelta64[s]  | DurationArray  |
-	| [Time](#TimeAtom)               | timedelta   | timedelta64[ms] | DurationArray  |
+	| [Time](#pykxtimeatom)           | timedelta   | timedelta64[ms] | DurationArray  |
 	| [Dictionary](#pykxdictionary)   | dict        | Not Supported   | Not Supported  |
 	| [Table](#pykxtable)             | dict        | records         | Table          |
 
 ??? "Cheat Sheet: `Pandas 1.*`, `Pandas 2.*`, `Pandas 2.* PyArrow backed`"
 
-	**Note:** Creating PyArrow backed Pandas objects uses `as_arrow=True` using NumPy arrays as an intermediate data format. 
+	**Note:** Creating PyArrow backed Pandas objects uses `as_arrow=True` using NumPy arrays as an intermediate data format.
 
 	| PyKX type                       | Pandas 1.\* dtype | Pandas 2.\* dtype | Pandas 2.\* as_arrow=True dtype |
 	| ------------------------------- | ----------------- | ----------------- | ------------------------------- |
@@ -50,7 +50,7 @@ A breakdown of each of the `pykx.K` types and their analogous `Python`, `NumPy`,
 	| [Timespan](#pykxtimespanatom)   | timedelta64[ns]   | timedelta64[ns]   | duration[ns][pyarrow]           |
 	| [Minute](#pykxminuteatom)       | timedelta64[ns]   | timedelta64[s]    | duration[s][pyarrow]            |
 	| [Second](#pykxsecondatom)       | timedelta64[ns]   | timedelta64[s]    | duration[s][pyarrow]            |
-	| [Time](#TimeAtom)               | timedelta64[ns]   | timedelta64[ms]   | duration[ms][pyarrow]           |
+	| [Time](#pykxtimeatom)           | timedelta64[ns]   | timedelta64[ms]   | duration[ms][pyarrow]           |
 	| [Dictionary](#pykxdictionary)   | Not Supported     | Not Supported     | Not Supported                   |
 	| [Table](#pykxtable)             | DataFrame         | DataFrame         | DataFrame                       |
 

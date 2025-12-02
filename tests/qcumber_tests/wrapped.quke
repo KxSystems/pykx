@@ -115,7 +115,7 @@ feature .pykx wrapped objects
         expect arglist to be usable for passing arguments
             .qu.compare[5; kwlambda[pyarglist (2 3)]`];
 
-        expect to fail with helpful error message when a symobl atom is not used with pykwargs
+        expect to fail with helpful error message when a symbol atom is not used with pykwargs
             @[{kwlambda[1; x]; 0b};
                 pykwargs (enlist "z")!(enlist 2);
                 {x like "Expected Symbol Atom for keyword argument name"}]
@@ -135,7 +135,7 @@ feature .pykx wrapped objects
                 1;
                 {x like "Expected only unique key names for keyword arguments in function call"}]
 
-        expect to fail with helpful error message when a symobl atom is not used with pykw
+        expect to fail with helpful error message when a symbol atom is not used with pykw
             @[{kwlambda[1; x]; 0b};
                 "z" pykw 2;
                 {x like "Expected Symbol Atom for keyword argument name"}]

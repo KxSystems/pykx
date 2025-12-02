@@ -1191,6 +1191,7 @@ q).pykx.toq0 b
 2
 ```
 
+```q
 // Convert a Python string to q symbol or string
 
 q).pykx.toq0[.pykx.eval"\"test\""]
@@ -1198,9 +1199,9 @@ q).pykx.toq0[.pykx.eval"\"test\""]
 
 q).pykx.toq0[.pykx.eval"\"test\"";1b]
 "test"
+```
 
 ## `.pykx.toraw`
-
 
 _Tag a q object to be indicate a raw conversion when called in Python_
 

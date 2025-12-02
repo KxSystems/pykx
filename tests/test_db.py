@@ -411,3 +411,25 @@ def test_load_failure(kx):
 def test_cleanup(kx):
     shutil.rmtree('db')
     assert True
+
+
+def test_list_tabs_warn_multiple(kx, capsys):
+    from datetime import date
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+
+        db = kx.DB(path=temp_dir + '/db1')
+        db.create(kx.Table(data={"date": [date(2025, 1, 5), date(2025, 1, 6)],
+                                 "col1": [1.0, 2.0]}), "table1", "date")
+        assert db.tables == ['table1']
+        db2 = kx.DB(path=temp_dir + '/db2')
+        db2.create(kx.Table(data={"date":  [date(2025, 1, 5), date(2025, 1, 6)],
+                                  "col2": [2.0, 3.0]}), "table2", "date")
+        assert db2.tables == ['table2']
+        db3 = kx.DB(path=temp_dir + '/db3', overwrite=True)
+        db3.create(kx.Table(data={"date": [date(2025, 1, 5), date(2025, 1, 6)],
+                                  "col2": [2.0, 3.0]}), "table3", "date")
+        assert db3.tables == ['table3']
+        captured = capsys.readouterr()
+        assert 'PyKXWarning: Only one DB object exists at a time within a process. Use overwrite=True to overwrite your existing DB object. This warning will error in future releases.'in captured.out # noqa: E501

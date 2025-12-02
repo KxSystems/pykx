@@ -1068,6 +1068,82 @@ class Test_Atom:
             assert not q(f'0N{type_char}')
             assert q(f'0W{type_char}')
 
+    @pytest.mark.unlicensed
+    def test_arr(self, kx, q):
+        assert np.asarray(kx.BooleanAtom(1)).dtype == "bool"
+        assert np.asarray(kx.ByteAtom(1)).dtype == "uint8"
+        assert np.asarray(kx.ShortAtom(1)).dtype == "int16"
+        assert np.asarray(kx.IntAtom(3)).dtype == "int32"
+        assert np.asarray(kx.LongAtom(1)).dtype == "int64"
+        assert np.asarray(kx.RealAtom(3.65)).dtype == "float32"
+        assert np.asarray(kx.FloatAtom(3.65)).dtype == "float64"
+        assert np.asarray(kx.CharAtom('a')).dtype == "S1"
+        assert np.asarray(kx.SymbolAtom('a')).dtype == "<U1"
+        assert np.asarray(kx.MonthAtom(datetime(2003, 4, 5))).dtype == "<M8[M]"
+        assert np.asarray(kx.DateAtom(datetime(2003, 4, 5))).dtype == "<M8[D]"
+        assert np.asarray(kx.TimespanAtom(timedelta(3))).dtype == "<m8[ns]"
+
+    @pytest.mark.unlicensed
+    def test_arr_nulls(self, kx, q):
+        assert np.asarray(kx.ShortAtom(None)).dtype == "int16"
+        assert np.asarray(kx.IntAtom(None)).dtype == "int32"
+        assert np.asarray(kx.LongAtom(None)).dtype == "int64"
+        assert np.asarray(kx.RealAtom(None)).dtype == "float32"
+        assert np.asarray(kx.FloatAtom(None)).dtype == "float64"
+        assert np.asarray(kx.CharAtom(None)).dtype == "S1"
+        assert np.asarray(kx.SymbolAtom(None)).dtype == "<U1"
+        assert np.asarray(kx.TimestampAtom(None)).dtype == "<M8"
+        assert np.asarray(kx.MonthAtom(None)).dtype == "<M8"
+        assert np.asarray(kx.DateAtom(None)).dtype == "<M8"
+        assert np.asarray(kx.TimespanAtom(None)).dtype == "<m8"
+        assert np.asarray(kx.MinuteAtom(None)).dtype == "<m8"
+        assert np.asarray(kx.SecondAtom(None)).dtype == "<m8"
+        assert np.asarray(kx.TimeAtom(None)).dtype == "<m8"
+
+    @pytest.mark.unlicensed
+    def test_arr_inf_pos(self, kx, q):
+        assert np.asarray(kx.ShortAtom.inf).dtype == "int16"
+        assert np.asarray(kx.IntAtom.inf).dtype == "int32"
+        assert np.asarray(kx.LongAtom.inf).dtype == "int64"
+        assert np.asarray(kx.RealAtom.inf).dtype == "float32"
+        assert np.asarray(kx.FloatAtom.inf).dtype == "float64"
+        assert np.asarray(kx.TimestampAtom.inf).dtype == "datetime64[ns]"
+        assert np.asarray(kx.MonthAtom.inf).dtype == "datetime64[M]"
+        assert np.asarray(kx.DateAtom.inf).dtype == "datetime64[D]"
+        assert np.asarray(kx.TimespanAtom.inf).dtype == "timedelta64[ns]"
+        assert np.asarray(kx.MinuteAtom.inf).dtype == "timedelta64[m]"
+        assert np.asarray(kx.SecondAtom.inf).dtype == "timedelta64[s]"
+        assert np.asarray(kx.TimeAtom.inf).dtype == "timedelta64[ms]"
+
+    @pytest.mark.unlicensed
+    def test_arr_inf_neg(self, kx, q):
+        assert np.asarray(kx.ShortAtom.inf).dtype == "int16"
+        assert np.asarray(kx.IntAtom.inf).dtype == "int32"
+        assert np.asarray(kx.LongAtom.inf).dtype == "int64"
+        assert np.asarray(kx.RealAtom.inf).dtype == "float32"
+        assert np.asarray(kx.FloatAtom.inf).dtype == "float64"
+        assert np.asarray(kx.TimestampAtom.inf).dtype == "datetime64[ns]"
+        assert np.asarray(kx.MonthAtom.inf).dtype == "datetime64[M]"
+        assert np.asarray(kx.DateAtom.inf).dtype == "datetime64[D]"
+        assert np.asarray(kx.TimespanAtom.inf).dtype == "timedelta64[ns]"
+        assert np.asarray(kx.MinuteAtom.inf).dtype == "timedelta64[m]"
+        assert np.asarray(kx.SecondAtom.inf).dtype == "timedelta64[s]"
+        assert np.asarray(kx.TimeAtom.inf).dtype == "timedelta64[ms]"
+
+    def test_arr_atom_eq_vec(self, kx, q):
+        assert np.asarray(kx.q('1h')) == np.asarray(kx.q('enlist 1h'))
+        assert np.asarray(kx.q('1b')) == np.asarray(kx.q('enlist 1b'))
+        assert np.asarray(kx.q('1j')) == np.asarray(kx.q('enlist 1j'))
+        assert np.asarray(kx.q('1i')) == np.asarray(kx.q('enlist 1i'))
+        assert np.asarray(kx.q('1e')) == np.asarray(kx.q('enlist 1e'))
+        assert np.asarray(kx.q('1f')) == np.asarray(kx.q('enlist 1f'))
+        assert np.asarray(kx.q('1c')) == np.asarray(kx.q('enlist 1c'))
+        assert np.asarray(kx.q('1p')) == np.asarray(kx.q('enlist 1p'))
+        assert np.asarray(kx.q('1n')) == np.asarray(kx.q('enlist 1n'))
+        assert np.asarray(kx.q('1u')) == np.asarray(kx.q('enlist 1u'))
+        assert np.asarray(kx.q('1v')) == np.asarray(kx.q('enlist 1v'))
+        assert np.asarray(kx.q('1t')) == np.asarray(kx.q('enlist 1t'))
+
 
 class Test_EnumAtom:
     def test_py(self, q):

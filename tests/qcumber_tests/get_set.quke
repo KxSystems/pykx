@@ -30,7 +30,7 @@ feature .pykx global set and get
             .pykx.set[`b; til 10];
             .qu.compare[`$"<class 'numpy.ndarray'>"; .pykx.eval["str(type(b))"]`];
 
-    should provide useful error messages when set it used incorreclty
+    should provide useful error messages when set it used incorrectly
         expect to fail with helpful error message
             @[{.pykx.set[x; til 10]; 0b};
                 "x";
@@ -87,7 +87,7 @@ feature .pykx object get and set attribute
             .pykx.setattr[a`.;`x;.pykx.tok til 10];
             .qu.compare[`$"<class 'pykx.wrappers.LongVector'>"; .pykx.eval["str(type(aclass.x))"]`];
 
-    should provide useful error messages when setattr is used incorreclty
+    should provide useful error messages when setattr is used incorrectly
         expect to fail with helpful error message for foreign
             @[{.pykx.setattr[x; `x; til 10]; 0b};
                 "x";

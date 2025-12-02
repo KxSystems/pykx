@@ -130,14 +130,14 @@ class QReader:
 
         Examples:
 
-        Read a comma seperated CSV file into a `pykx.Table` guessing the datatypes of each
+        Read a comma separated CSV file into a `pykx.Table` guessing the datatypes of each
         column.
 
         ```python
         table = q.read.csv('example.csv')
         ```
 
-        Read a tab seperated CSV file into a `pykx.Table` while specifying the columns
+        Read a tab separated CSV file into a `pykx.Table` while specifying the columns
         datatypes to be a `pykx.SymbolVector` followed by two `pykx.LongVector` columns.
 
         ```python

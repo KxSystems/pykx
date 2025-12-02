@@ -221,8 +221,7 @@ class Q(metaclass=ABCMeta):
                 assigned name of the context is set to the name of the file without filetype
                 extension.
             path: Path to the script to load. If no argument is provided this function
-                [searches for a file matching the given name](#script-search-logic),
-                loading it if found.
+                searches for a file matching the given name, loading it if found.
 
         Returns:
             The attribute name for the newly loaded module.
@@ -468,7 +467,11 @@ def activate_numpy_allocator() -> None:
 import numpy as np
 if k_allocator:
     _pykx_numpy_cext.init_numpy_ctx(core._r0_ptr, core._k_ptr, core._ktn_ptr)
-    if np.core.multiarray.get_handler_name() == 'default_allocator':
+    if np.__version__[0] == '1':
+        handler = np.core.multiarray.get_handler_name()
+    else:
+        handler = np._core.multiarray.get_handler_name()
+    if handler == 'default_allocator':
         activate_numpy_allocator()
 
 

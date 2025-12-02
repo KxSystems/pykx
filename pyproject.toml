@@ -81,6 +81,7 @@ doc = [
     "mkdocs-render-swagger-plugin==0.0.3",
     "mkdocs-spellcheck==0.2.0",
     "mkdocstrings[python]==0.18.0",
+    "plotly==6.3.0",
     "pygments~=2.12",
     "pymdown-extensions>=9.3",
     "matplotlib",
@@ -112,17 +113,15 @@ streamlit = [
     "streamlit~=1.28; python_version>'3.7'"
 ]
 torch = [
-    "torch>2.1"
+    "torch>2.1; sys_platform != 'darwin' or platform_machine != 'x86_64' or python_version <= '3.12'"
 ]
 test = [
     "coverage[toml]==6.3.2",
     "Cython~=3.0.0",
-    "plotly==5.10.0",
     "pytest==7.1.2",
     "pytest-asyncio==0.18.3",
     "pytest-benchmark==3.4.1",
     "pytest-cov==3.0.0",
-    "pytest-monitor==1.6.5; sys_platform!='darwin'",
     "pytest-randomly==3.11.0",
     "pytest-xdist==2.5.0",
     "pytest-order==1.1.0",
@@ -140,8 +139,8 @@ help = [
 [project.urls]
 homepage = "https://code.kx.com/pykx"
 documentation = "https://code.kx.com/pykx"
-repository = "https://code.kx.com/pykx"
-changelog = "https://code.kx.com/pykx/changelog.html"
+repository = "https://github.com/KxSystems/pykx"
+changelog = "https://code.kx.com/pykx/release-notes/changelog.html"
 
 
 [build-system]
@@ -234,7 +233,6 @@ ignore = [
     "I100", # import statements are in the wrong order
     "I202", # additional newline in a group of imports (We use three 3: built-in, third-party, local)
     "W503", # deprecated warning - goes against PEP8
-    "W605", # Invalid escape character in comments causing issue with q examples
 ]
 
 

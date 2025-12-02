@@ -6,6 +6,16 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
 
+## PyKX 3.1.5
+
+#### Release Date
+
+2025-10-21
+
+### Fixes and Improvements
+
+- Added `.pykx.noalloc` which can be used to wrap a foreign object. When used with `.pykx.toq` the conversion will not use the `PYKX_ALLOCATOR`. See [here](../help/issues.md#known-issues) for details.
+
 ## PyKX 3.1.4
 
 #### Release Date

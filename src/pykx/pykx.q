@@ -140,7 +140,7 @@ util.CFunctions:flip `qname`cname`args!flip (
     (`util.pyForeign ;`k_to_py_foreign;3);
     (`util.isf       ;`k_check_python ;1);
     (`util.pyrun     ;`k_pyrun        ;4);
-    (`util.foreignToq;`foreign_to_q   ;2);
+    (`util.foreignToq;`foreign_to_q   ;3);
     (`util.callFunc  ;`call_func      ;4);
     (`pyimport       ;`import         ;1);
     (`util.setGlobal ;`set_global     ;2);
@@ -175,6 +175,7 @@ util.ispa  :util.isch[`..pyarrow]
 util.isk   :util.isch[`..k]
 util.israw :util.isch[`..raw]
 util.ispt  :util.isch[`..torch]
+util.isalloc  :util.isch[`..noalloc]
 
 // @private
 // @desc
@@ -487,6 +488,34 @@ util.parseArgs:{
 // "<class 'list'>"
 // ```
 topy:{x y}(`..python;;)
+
+// @name .pykx.noalloc
+// @category api
+// @overview
+// _Tag a q object to be indicate conversion should not use the PYKX_ALLOCATOR_
+//
+// ```q
+// .pykx.noalloc[qObject]
+// ```
+//
+// **Parameters:**
+//
+// name      | type    | description |
+// ----------|---------|-------------|
+// `qObject` | `any`   | A q object which will not use PYKX_ALLOCATOR. |
+//
+// **Return:**
+//
+// type         | description
+// -------------|------------
+// `projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a Python type object. |
+//
+// ```q
+// // Denote that a q object once passed to Python should be managed as a Python object
+// q).pykx.noalloc til 10
+// enlist[`..noalloc;;][0 1 2 3 4 5 6 7 8 9]
+// ```
+noalloc:{x y}(`..noalloc;;)
 
 // @name .pykx.tonp
 // @category api
@@ -943,7 +972,10 @@ setdefault:{
 py2q:toq:{
  x:{$[util.isconv x;last value::;]x}/[x];
  if[type[x]in 104 105 112h;x:unwrap x];
- $[type[x]=112h;util.foreignToq[unwrap x;0b];x]
+ $[util.isalloc x;
+  {[x] y: unwrap last value x; util.foreignToq[y;0b;1b]}[x];
+  $[type[x]=112h;util.foreignToq[unwrap x;0b;0b];x]
+ ]
  }
 
 // @kind function
@@ -998,7 +1030,7 @@ toq0:ce {
     [fn:x 0;conv:0b]];
   fn:{$[util.isconv x;last value::;]x}/[fn];
   if[type[fn]in 104 105 112h;fn:unwrap fn];
-  $[type[fn]=112h;util.foreignToq[fn;conv];fn]
+  $[type[fn]=112h;util.foreignToq[fn;conv;0b];fn]
   }
 
 // @private

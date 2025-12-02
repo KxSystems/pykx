@@ -184,7 +184,7 @@ def ext(name: str,
         numpy: bool = False,
         cython: bool = True,
 ) -> Extension:
-    nix_extra_compile_args = (
+    nix_extra_compile_args = [
         '-O3',
         '-Wall',
         '-Wextra',
@@ -195,7 +195,10 @@ def ext(name: str,
         # unused variables are created. This clutters the compiler output, which could hide
         # important warnings.
         '-Wno-unused-variable',
-    )
+    ]
+    if os.getenv('PYKX_BUILD_INTEL') is not None:
+        nix_extra_compile_args.extend(['-arch', 'x86_64'])
+    nix_extra_compile_args = tuple(nix_extra_compile_args)
     return Extension(
         name=f'pykx.{name}',
         sources=[str(Path(f'pykx/{name}.pyx' if cython else f'src/pykx/{name}.c'))],

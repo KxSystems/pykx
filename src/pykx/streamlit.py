@@ -71,10 +71,10 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
         authorization. Refer to [ssl documentation](https://code.kx.com/q/kb/ssl/) for more
         information.
 
-    Note: The `timeout` argument may not always be enforced when making succesive querys.
+    Note: The `timeout` argument may not always be enforced when making successive queries.
         When making successive queries if one query times out the next query will wait until a
-        response has been recieved from the previous query before starting the timer for its own
-        timeout. This can be avioded by using a seperate `SyncQConnection` instance for each
+        response has been received from the previous query before starting the timer for its own
+        timeout. This can be avoided by using a separate `SyncQConnection` instance for each
         query.
 
     Examples:
@@ -201,7 +201,7 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
         >>> import pykx as kx
         >>> conn = st.connection('pykx', type=kx.streamlit.PyKXConnection,
         ...                      host = 'localhost', port = 5050)
-        >>> df = conn.query('tab', where='x>0.5', format='qsql').pd()
+        >>> df = conn.query('tab', where=kx.Column('x')>0.5, format='qsql').pd()
         >>> st.dataframe(df)
         ```
 

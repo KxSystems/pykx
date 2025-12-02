@@ -87,7 +87,14 @@ def py_toq(py_type: Any,
     if not overwrite and py_type in _converter_from_python_type:
         raise Exception("Attempting to overwrite already defined type :" + str(py_type))
 
-    def wrap_conversion(data, ktype=None, cast=False, handle_nulls=False, strings_as_char=False):
+    def wrap_conversion(
+        data,
+        ktype=None,
+        cast=False,
+        handle_nulls=False,
+        strings_as_char=False,
+        **kwargs
+    ):
         return conversion_function(data)
 
     _converter_from_python_type.update({py_type: wrap_conversion})

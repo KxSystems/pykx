@@ -61,7 +61,7 @@ Additional Pythonic practices exist concerning the Python type system. Some of t
   - When type checking is required, check against the standard [abstract base classes](https://docs.python.org/3/library/collections.abc.html) where applicable. These implement what's known as "virtual subclasses" by hooking into the mechanism behind `issubclass` to make classes which do not inherit them still match against them. For example, for any class `x` which implements `__contains__`, `__iter__`, and `__len__`, `issubclass(x, collections.abc.Collection) is True`.
   - When delegating the methods (particularly the `__init__` method) to the super-class, have the method accept and pass on arbitrary arguments to ensure future changes to the signature of the method do not break the delegation chain. This can be accomplished by having `*args` and `**kwargs` in the parameter list, and then calling the super-class method with `*args` and `**kwargs`.
 
-Other miscellaneous Pythonic tips include: 
+Other miscellaneous Pythonic tips include:
   - Prefer `try` over `if` blocks where reasonable. See [EAFP](https://docs.python.org/3/glossary.html#term-eafp). For example, instead of checking if a key in a dictionary is present with an `if` statement prior to accessing it, one should access the dictionary within a `try` block, and handle the `KeyError` should it arise.
   - Avoid extracting a sequence from an iterator without good reason. Iterators can produce infinite sequences (which will freeze the process). Additionally it can be a waste of memory to extract a sequence, as it's common for less than the entire output of an iterator to be consumed.
   - Do not rely on CPython-specific behavior, such as the builtin function `id` returning the address of the object in memory.

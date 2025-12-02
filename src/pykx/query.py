@@ -38,7 +38,7 @@ class QSQL:
 
         ```python
         qtable = pykx.q('([]1 2 3;4 5 6)')
-        pykx.q.qsql.update(qtable, {'x': [10, 20, 30]})
+        qtable.update(pykx.Column('x', value=[10, 20, 30]))
         ```
 
     3. Development and maintenance of this interface is easier with regard to the different
@@ -96,21 +96,21 @@ class QSQL:
         Filter table based on various where conditions
 
         ```python
-        pykx.q.qsql.select(qtab, where='col2<0.5')
-        pykx.q.qsql.select(qtab, where=['col1=`a', 'col2<0.3'])
+        qtab.select(where=pykx.Column('col2')<0.5)
+        qtab.select(where=[pykx.Column('col1')=='a', pykx.Column('col2')<0.3])
         ```
 
         Retrieve statistics by grouping data on symbol columns
 
         ```python
-        pykx.q.qsql.select(qtab, columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
-        pykx.q.qsql.select(qtab, columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'})
+        qtab.select(columns=pykx.Column('col2').max().name('maxCol2'), by=pykx.Column('col1'))
+        qtab.select(columns=[pykx.Column('col2').avg().name('avgCol2'), pykx.Column('col4').min().name('minCol4')], by=pykx.Column('col1'))
         ```
 
         Retrieve grouped statistics with restrictive where condition
 
         ```python
-        pykx.q.qsql.select(qtab, columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'}, where='col3=0b')
+        qtab.select(columns=[pykx.Column('col2').avg().name('avgCol2'), pykx.Column('col4').min().name('minCol4')], by=pykx.Column('col1'), where=pykx.Column('col3')==False)
         ```
         """ # noqa: E501
         return self._seud(table, 'select', columns, where, by, inplace=inplace)
@@ -164,35 +164,35 @@ class QSQL:
         Retrieve a column from the table as a list
 
         ```python
-        pykx.q.qsql.exec(qtab, 'col3')
+        qtab.exec(pykx.Column('col3'))
         ```
 
         Retrieve a set of columns from a table as a dictionary
 
         ```python
         pykx.q.qsql.exec(qtab, {'symcol': 'col1'})
-        pykx.q.qsql.exec(qtab, {'symcol': 'col1', 'boolcol': 'col3'})
+        qtab.exec(columns=[pykx.Column('col1').name('symcol'), pykx.Column('col3').name('boolcol')])
         ```
 
         Filter columns from a table based on various where conditions
 
         ```python
-        pykx.q.qsql.exec(qtab, 'col3', where='col1=`a')
-        pykx.q.qsql.exec(qtab, {'symcol': 'col1', 'maxcol4': 'max col4'}, where=['col1=`a', 'col2<0.3'])
+        qtab.exec('col3', where=pykx.Column('col1')=='a')
+        qtab.exec(columns=[pykx.Column('col1').name('symcol'), pykx.Column('col4').max().name('maxCol4')], where=[pykx.Column('col1')=='a', pykx.Column('col2')<0.3])
         ```
 
         Retrieve data grouping by data on symbol columns
 
         ```python
-        pykx.q.qsql.exec(qtab, 'col2', by={'col1': 'col1'})
-        pykx.q.qsql.exec(qtab, columns={'maxCol2': 'max col2'}, by={'col1': 'col1'})
-        pykx.q.qsql.exec(qtab, columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'})
+        qtab.exec(columns=pykx.Column('col2'), by=pykx.Column('col1'))
+        qtab.exec(columns=pykx.Column('col2').max().name('maxCol2'), by=pykx.Column('col1'))
+        qtab.exec(columns=[pykx.Column('col2').avg().name('avgCol2'), pykx.Column('col4').min().name('minCol4')], by=pykx.Column('col1'))
         ```
 
         Retrieve grouped statistics with restrictive where condition
 
         ```python
-        pykx.q.qsql.exec(qtab, columns={'avgCol2': 'avg col2', 'minCol4': 'min col4'}, by={'col1': 'col1'}, where='col3=0b')
+        qtab.exec(columns=[pykx.Column('col2').avg().name('avgCol2'), pykx.Column('col4').min().name('minCol4')], by=pykx.Column('col1'), where=pykx.Column('col3')==False)
         ```
         """ # noqa: E501
         return self._seud(table, 'exec', columns, where, by)
@@ -245,14 +245,14 @@ class QSQL:
         Update all the contents of a column
 
         ```python
-        pykx.q.qsql.update(qtab, {'eye': '`blue`brown`green'})
-        pykx.q.qsql.update(qtab, {'age': [25, 30, 31]})
+        qtab.update({'eye': '`blue`brown`green'})
+        qtab.update(pykx.Column('age', value=[25, 30, 31]))
         ```
 
         Update the content of a column restricting scope using a where clause
 
         ```python
-        pykx.q.qsql.update(qtab, {'eye': ['blue']}, where='hair=`fair')
+        qtab.update(pykx.Column('age', value=['blue']), where=pykx.Column('hair')=='fair')
         ```
 
         Define a q table suitable for by clause example
@@ -265,13 +265,13 @@ class QSQL:
         Apply an update grouping based on a by phrase
 
         ```python
-        pykx.q.qsql.update(byqtab, {'weight': 'avg weight'}, by={'city': 'city'})
+        byqtab.update(pykx.Column('weight').avg(), by=pykx.Column('city'))
         ```
 
         Apply an update grouping based on a by phrase and persist the result using the inplace keyword
 
         ```python
-        pykx.q.qsql.update('byqtab', columns={'weight': 'avg weight'}, by={'city': 'city'}, inplace=True)
+        byqtab.update(pykx.Column('weight').avg(), by=pykx.Column('city'), inplace=True)
         pykx.q['byqtab']
             ```
         """ # noqa: E501
@@ -314,22 +314,22 @@ class QSQL:
         Delete all the contents of the table
 
         ```python
-        pykx.q.qsql.delete(qtab)
+        qtab.delete()
         pykx.q.qsql.delete('qtab')
         ```
 
         Delete single and multiple columns from the table
 
         ```python
-        pykx.q.qsql.delete(qtab, 'age')
-        pykx.q.qsql.delete('qtab', ['age', 'eye'])
+        qtab.delete(pykx.Column('age'))
+        qtab.delete(['age', 'eye'])
         ```
 
         Delete rows of the dataset based on where condition
 
         ```python
-        pykx.q.qsql.delete(qtab, where='hair=`fair')
-        pykx.q.qsql.delete('qtab', where=['hair=`fair', 'age=28'])
+        qtab.delete(where=pykx.Column('hair')=='fair')
+        qtab.delete(where=[pykx.Column('hair')=='fair', pykx.Column('age')==28])
         ```
 
         Delete a column from the dataset named in q memory and persist the result using the
@@ -352,6 +352,10 @@ class QSQL:
         if isinstance(table, (k.SplayedTable, k.PartitionedTable)) and inplace:
             raise QError("Application of 'inplace' updates not "
                          "supported for splayed/partitioned tables")
+        if isinstance(columns, k.Column) and columns._renamed:
+            columns=k.QueryPhrase(columns)
+        if isinstance(by, k.Column) and by._renamed:
+            by=k.QueryPhrase(by)
         select_clause = self._generate_clause(columns, 'columns', query_type)
         by_clause = self._generate_clause(by, 'by', query_type)
         where_clause = self._generate_clause(where, 'where', query_type)

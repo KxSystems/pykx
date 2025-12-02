@@ -154,11 +154,11 @@ kx.util.kill_q_process(5010)
 ??? "API documentation"
     Links to the functions used in this section:
 
-    - [`rtp.stop`](../../../api/tick.md#pykx.tick.RTP.stop)
-    - [`kx.tick.BASIC.stop`](../../../api/tick.md#pykx.tick.BASIC.stop)
-    - [`kx.tick.TICK.stop`](../../../api/tick.md#pykx.tick.TICK.stop)
-    - [`kx.tick.HDB.stop`](../../../api/tick.md#pykx.tick.HDB.stop)
-    - [`kx.tick.GATEWAY.stop`](../../../api/tick.md#pykx.tick.GATEWAY.stop)
+    - [`kx.tick.BASIC`](../../../api/tick.md#pykx.tick.BASIC)
+    - [`kx.tick.TICK`](../../../api/tick.md#pykx.tick.TICK)
+    - [`kx.tick.RTP`](../../../api/tick.md#pykx.tick.RTP)
+    - [`kx.tick.HDB`](../../../api/tick.md#pykx.tick.HDB)
+    - [`kx.tick.GATEWAY`](../../../api/tick.md#pykx.tick.GATEWAY)
     - [`kx.util.kill_q_process`](../../../api/util.md#pykxutildebug_environment)
 
 ## Next steps

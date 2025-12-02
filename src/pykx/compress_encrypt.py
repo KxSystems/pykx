@@ -73,7 +73,7 @@ class Encrypt():
         ```
         """
         self.loaded = False
-        path = Path(os.path.abspath(path))
+        path = Path(os.path.abspath(os.path.expanduser(path)))
         if not os.path.isfile(path):
             raise ValueError("Provided 'path' does not exist")
         self.path = path
@@ -85,7 +85,7 @@ class Encrypt():
 
     def load_key(self) -> None:
         """
-        Load the encyption key from the file given during class initialization.
+        Load the encryption key from the file given during class initialization.
         This overwrites the master key in the embedded q process. See
         [here](https://code.kx.com/q/basics/internal/#-36-load-master-key) for details.
 

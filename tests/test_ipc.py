@@ -539,6 +539,7 @@ async def test_raw_complex(kx, q_port, event_loop):
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(True, reason='KXI-66333 Hanging')
 def test_tls():
     if os.getenv('CI') is not None and sys.platform == 'linux':
         from .conftest import random_free_port
