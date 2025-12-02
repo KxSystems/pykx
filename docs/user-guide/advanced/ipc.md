@@ -92,7 +92,7 @@ In the below examples you can connect to a process on port 5050 and run a query.
 
 	```python
 	>>> conn = await kx.AsyncQConnection('localhost', 5050)
-	>>> print(await conn('til 10').py())
+	>>> print((await conn('til 10')).py())
 	[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 	>>> conn.close()
 	```

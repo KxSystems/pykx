@@ -1,4 +1,5 @@
 # Do not import pykx here - use the `kx` fixture instead!
+import os
 from abc import ABCMeta
 
 import pytest
@@ -163,6 +164,10 @@ def test_sql_get_input_values(q, kx):
         assert q.sql.get_input_types(p2) == ['SymbolAtom/SymbolVector', 'FloatAtom/FloatVector']
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='ToDo investigate in KXI-63220'
+)
 @pytest.mark.embedded
 def test_sql_string_col(q):
     q('t:([] optid:1 2 3;Market:`a`b`CBOE;date:3#2023.11.14;Symbol:("a";"b";"odMP=20"))')

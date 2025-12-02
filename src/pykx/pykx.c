@@ -217,7 +217,7 @@ static PyObject* k_to_py_list(K x) {
 EXPORT K k_to_py_foreign(K x, K typenum, K israw) {
     K k;
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("pyForeign is not supported when using PYKX_THREADING");
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     PyObject* p = k_to_py_cast(x, typenum, israw);
@@ -291,7 +291,7 @@ void construct_args_kwargs(PyObject* params, PyObject** args, PyObject** kwargs,
 EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
 
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("pyrun is not supported when using PYKX_THREADING");
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     K k;
@@ -435,7 +435,7 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
 
 EXPORT K foreign_to_q(K f, K b) {
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("foreignToq is not supported when using PYKX_THREADING");
     if (f->t != 112)
         return raise_k_error("Expected foreign object for call to .pykx.toq");
     if (!check_py_foreign(f))
@@ -483,7 +483,7 @@ EXPORT K foreign_to_q(K f, K b) {
 
 EXPORT K repr(K as_repr, K f) {
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("repr is not supported when using PYKX_THREADING");
     K k;
     if (f->t != 112) {
         if (as_repr->g){
@@ -526,7 +526,7 @@ EXPORT K repr(K as_repr, K f) {
 
 EXPORT K get_attr(K f, K attr) {
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("getattr is not supported when using PYKX_THREADING");
     K k;
     if (f->t != 112) {
         if (f->t == 105) {
@@ -555,7 +555,7 @@ EXPORT K get_attr(K f, K attr) {
 
 EXPORT K get_global(K attr) {
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("getGlobal is not supported when using PYKX_THREADING");
     K k;
     if (attr->t != -11) {
         return raise_k_error("Expected a SymbolAtom for the attribute to get in .pykx.get");
@@ -582,7 +582,7 @@ EXPORT K get_global(K attr) {
 
 EXPORT K set_global(K attr, K val) {
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("setGlobal is not supported when using PYKX_THREADING");
     K k;
     int gstate = PyGILState_Ensure();
 
@@ -608,7 +608,7 @@ EXPORT K set_global(K attr, K val) {
 
 EXPORT K set_attr(K f, K attr, K val) {
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("setattr is not supported when using PYKX_THREADING");
     if (f->t != 112) {
         if (f->t == 105) {
             return raise_k_error("Expected foreign object for call to .pykx.setattr, try unwrapping the foreign object with `.");
@@ -638,7 +638,7 @@ EXPORT K set_attr(K f, K attr, K val) {
 
 EXPORT K import(K module) {
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("import is not supported when using PYKX_THREADING");
     K k;
     K res;
     if (module->t != -11)
@@ -660,7 +660,7 @@ EXPORT K import(K module) {
 EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
 
     if (pykx_threading)
-        return raise_k_error("pykx.q is not supported when using PYKX_THREADING");
+        return raise_k_error("import is not supported when using PYKX_THREADING");
     K k;
     PyObject* pyf = NULL;
 
