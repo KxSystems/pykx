@@ -28,7 +28,8 @@ requirements:
     - numpy==1.20.*  # [py==37]
     - tomli>=2.0.1
     - wheel>=0.36
-    - sysroot_linux-64 # [linux64]
+    - sysroot_linux-64 2.17 # [linux64]
+    - kernel-headers_linux-64 3.10.0 # [linux64]
 
   run:
     - python

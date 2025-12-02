@@ -102,7 +102,7 @@ final_qhome = str(qhome if ignore_qhome else pykx_lib_dir)
 if '--licensed' in qargs and '--unlicensed' in qargs:
     raise PyKXException("$QARGS includes mutually exclusive flags '--licensed' and '--unlicensed'")
 elif _pykx_force_unlicensed and _pykx_force_licensed:
-    raise PyKXException("User specified options for setting 'licensed' and 'unlicensed' behaviour "
+    raise PyKXException("User specified options for setting 'licensed' and 'unlicensed' behavior "
                         "resulting in conflicts")
 
 class QLock:

@@ -38,7 +38,6 @@ class STREAMING:
     """
     The `STREAMING` class acts as a base parent class for the TICK, RTP, HDB and GATEWAY
     class objects. Each of these child classes inherit and may modify the logic of this parent.
-    class objects. Each of these child classes inherit and may modify the logic of this parent.
     In all cases the functions `libraries` and `register_api` for example have the same definition
     and are available to all process types.
 

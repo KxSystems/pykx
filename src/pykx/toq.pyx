@@ -66,7 +66,7 @@ x    y
 |                  |                           | Numpy arrays.                         |             |
 +------------------+---------------------------+---------------------------------------+-------------+
 | `no_allocator    | `bool`                    | When used the conversion will not use | `False`     |
-|                  |                           | the `PYKX_ALLOCATOR` behaviour.       |             |
+|                  |                           | the `PYKX_ALLOCATOR` behavior.        |             |
 +------------------+---------------------------+---------------------------------------+-------------+
 | `strings_as_char | `bool`                    | When used all Python `str` objects    | `False`     |
 |                  |                           | are converted to `pykx.CharVector`    |             |

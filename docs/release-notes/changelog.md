@@ -4,6 +4,49 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+## PyKX 3.1.6
+
+#### Release Date
+
+2025-12-01
+
+### Fixes and Improvements
+
+- Updated 4.1 to 2025.11.25 for all platforms.
+- Fixed issue where setting `sort=True` when calling `merge` on two `kx.Tables` ignored the supplied `on` parameter.
+
+	=== "Behavior prior to change"
+
+        ```Python
+        >>> da = kx.q.z.D
+		>>> a = kx.toq(pd.DataFrame({'r':[2,3,4],'date':[da-2, da, da-1], 'k':[10, 11, 12]}))
+		>>> b = kx.toq(pd.DataFrame({'r':[5,6,7],'date':[da-2, da-1, da], 'k':[13, 14, 15]}))
+        >>> a.merge(b, on='date', sort=True)
+		pykx.Table(pykx.q('
+		r_x date       k_x r_y k_y
+		--------------------------
+		2   2025.11.25 10  5   13
+		3   2025.11.27 11  7   15
+		4   2025.11.26 12  6   14
+		'))
+        ```
+
+	=== "Behavior post change"
+
+        ```Python
+        >>> da = kx.q.z.D
+		>>> a = kx.toq(pd.DataFrame({'r':[2,3,4],'date':[da-2, da, da-1], 'k':[10, 11, 12]}))
+		>>> b = kx.toq(pd.DataFrame({'r':[5,6,7],'date':[da-2, da-1, da], 'k':[13, 14, 15]}))
+		>>> a.merge(b, on='date', sort=True)
+		pykx.Table(pykx.q('
+		r_x date       k_x r_y k_y
+		--------------------------
+		2   2025.11.25 10  5   13 
+		4   2025.11.26 12  6   14 
+		3   2025.11.27 11  7   15 
+		'))
+        ```
+
 ## PyKX 3.1.5
 
 #### Release Date
@@ -30,24 +73,24 @@
 - Added `no_allocator` keyword argument to `pykx.toq` that allows one time disabling of the PyKX allocator during a conversion. See [here](../help/issues.md#known-issues) for details.
 - Fixed an issue when converting dataframes with embeddings arrays.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
         ```Python
         >>> df=pd.DataFrame(dict(embeddings=list(np.random.ranf((500, 10)).astype(np.float32))))
-        >>> pykx.toq(df)
+        >>> kx.toq(df)
         segfault
         ```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
         ```Python
         >>> df=pd.DataFrame(dict(embeddings=list(np.random.ranf((500, 10)).astype(np.float32))))
-        >>> pykx.toq(df)
+        >>> kx.toq(df)
         ```
 
-- Addition of `__array__` method to Atom classes. Enables `np.asarray` to created typed arrays.
+- Addition of `__array__` method to Atom classes. Enables `np.asarray` to create typed arrays.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> np.asarray(kx.FloatAtom(3.65)).dtype
@@ -58,7 +101,7 @@
 		dtype('O')
 		```
 	
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		>>> np.asarray(kx.FloatAtom(3.65)).dtype
@@ -71,7 +114,7 @@
 
 - Fixed the returned type of an `exec` query with a single renamed column.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		>>> type(kx.q.qsql.exec(qtab, {'symcol': 'col1'}))
@@ -80,7 +123,7 @@
 		pykx.wrappers.SymbolVector
 		```
 	
-	=== "Behaviour after change"
+	=== "Behavior after change"
 
 		```python
 		>>> type(kx.q.qsql.exec(qtab, {'symcol': 'col1'}))
@@ -88,6 +131,10 @@
 		>>> type(qtab.exec(kx.Column('col1').name('symcol')))
 		pykx.wrappers.Dictionary
 		```
+
+### Deprecations & Removals
+
+- Creating more than one `DB` instance without specifying `overwrite=True`
 
 ## PyKX 3.1.4
 
@@ -379,8 +426,8 @@
 		│       └── time
 		```
 
-- Fixed behaviour for `PartitionedTable.copy_column()` operation on anymap columns. When copying `anymap` columns, the `#` and `##` files were not copied. Now all correct copying procedures are applied.
-- Fixed behaviour for `PartitionedTable.delete_column()` operation on anymap columns. When deleting `anymap` columns, the `#` and `##` files were left in. All relevant files are now deleted.
+- Fixed behavior for `PartitionedTable.copy_column()` operation on anymap columns. When copying `anymap` columns, the `#` and `##` files were not copied. Now all correct copying procedures are applied.
+- Fixed behavior for `PartitionedTable.delete_column()` operation on anymap columns. When deleting `anymap` columns, the `#` and `##` files were left in. All relevant files are now deleted.
 - Fix creation of `ParseTree` objects from `QueryPhrase` or `Column` objects.
 - Fix or operator `|` for `Column | ParseTree` use cases.
 - Fixed an issue around the installation process when users attempted to set unlicensed mode after PyKX failed to load with a kdb+ license.

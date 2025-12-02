@@ -352,10 +352,10 @@ class PandasMerge:
             res = _merge_tables(left, right, on, how, added_idx, left_index, right_index, distinct)
         res = _clean_result(self, res, how, left_index, right_index, added_idx, left, right)
         if sort and not added_idx:
-            if 'Keyed' in str(type(res)):
-                res = q('1!', q.asc(q('0!', res)))
-            else:
+            if on is None:
                 res = q.asc(res)
+            else:
+                res = q.xasc(on, res)
         if not copy:
             replace_self = self.replace_self
             self.__dict__.update(res.__dict__)

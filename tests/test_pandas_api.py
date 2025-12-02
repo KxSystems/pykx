@@ -935,6 +935,25 @@ def test_table_outer_merge(kx, q):
         assert df_res.equals(res)
 
 
+def test_merge_sort(kx, q):
+    d = kx.q.z.D
+    a = kx.toq(pd.DataFrame({'r': [2, 3, 4], 'date': [d, d-3, d-1]}))
+    b = kx.toq(pd.DataFrame({'r': [5, 6, 7], 'date': [d-1, d, d-3]}))
+    res = a.merge(b, how="outer", on="date", sort=True)
+    assert all(res[0]['date'] == kx.q('enlist', d-3))
+
+
+def test_merge_sort_single_key(kx, q):
+    d = kx.q.z.D
+    a = kx.toq(pd.DataFrame({'r': [2, 3, 4], 'date': [d, d-3, d-1]}))
+    b = kx.toq(pd.DataFrame({'r': [5, 6, 7], 'date': [d-1, d, d-3]}))
+    a = kx.q.xkey('date', a)
+    res = a.merge(b, how="outer", on="date", sort=True)
+    assert all(res.keys().columns == ['date'])
+    res = kx.q('0!', res)
+    assert all(res[0]['date'] == kx.q('enlist', d-3))
+
+
 def test_cross_merge(kx, q):
     df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
     df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})

@@ -138,6 +138,7 @@ class build_ext(default_build_ext):
         self.build_q_c_extension(compiler, 'pykxq', lib_ext)
         if system != 'Windows':
             self.build_q_c_extension(compiler, '_tcore', lib_ext, library=['pthread'])
+            self.build_q_c_extension(compiler, 'pykxq_m', lib_ext, library=['pthread'])
 
 
 def cythonize_extensions(extensions: List[Extension]) -> List[Extension]:

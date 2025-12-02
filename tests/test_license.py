@@ -304,7 +304,7 @@ def test_use_both_licensed_and_unlicensed_flags(QARGS):
 def test_env_combination():
     os.environ['QARGS'] = '--licensed'
     os.environ['PYKX_UNLICENSED'] = 'true'
-    with pytest.raises(Exception, match="(?i)'licensed' and 'unlicensed' behaviour"):
+    with pytest.raises(Exception, match="(?i)'licensed' and 'unlicensed' behavior"):
         import pykx # noqa: F401
 
 

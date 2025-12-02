@@ -2,8 +2,9 @@
 
 A list of deprecated behaviors and the version in which they were removed.
 
-| Feature                                           | Alternative               | Deprecated    | Removed |
+| Feature                                           | Alternative               | Deprecated    | Removed    |
 |---------------------------------------------------|---------------------------|---------------|------------|
+| Creating more than one DB object                  | `overwrite=True`          | 3.1.5         |            |
 | `kx.q.system.console_size`                        | `kx.q.system.display_size`| 3.1.3         |            |
 | `.pykx.console[]` on Windows                      |                           | 3.1.3         | 3.1.3      |
 | `labels` keyword for `rename` method              | `mapper`                  | 2.5.0         | 3.1.0      |
@@ -20,6 +21,22 @@ A list of deprecated behaviors and the version in which they were removed.
 | `PYKX_ENABLE_PANDAS_API`                          |                           | 3.0.0         | 3.0.0      |
 | `.pd(raw_guids)`                                  |                           | 2.5.0         | 2.5.0      |
 
+## PyKX 3.1.5
+
+Release Date: 2025-10-21
+
+### Fixes and Improvements
+
+- Users will be warned when they attempt to create more than one `DB` object.
+
+    ```python
+    >>> import pykx as kx
+    >>> db = kx.DB(path="tmp/db1")
+    >>> db2 = kx.DB(path="tmp/db2")
+    PyKXWarning: Only one DB object exists at a time within a process. Use overwrite=True to overwrite your existing DB object. This warning will error in future releases.
+    >>> db3 = kx.DB(path="tmp/db3", overwrite=True)
+    >>> 
+    ```
 
 ## PyKX 3.1.3
 

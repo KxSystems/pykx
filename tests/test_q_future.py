@@ -27,7 +27,7 @@ async def test_internal_await(kx, q_port, event_loop):
 @pytest.mark.asyncio
 @pytest.mark.unlicensed
 @pytest.mark.xfail(
-    reason="Super flaky with all the different behaviours of futures between asyncio versions."
+    reason="Super flaky with all the different behaviors of futures between asyncio versions."
 )
 async def test_q_future_callbacks(kx, q_port):
     def _callback(x):
@@ -59,7 +59,7 @@ async def test_q_future_callbacks(kx, q_port):
 @pytest.mark.asyncio
 @pytest.mark.unlicensed
 @pytest.mark.xfail(
-    reason="Super flaky with all the different behaviours of futures between asyncio versions."
+    reason="Super flaky with all the different behaviors of futures between asyncio versions."
 )
 async def test_q_future_errors(kx, q_port):
     def foo():

@@ -28,7 +28,7 @@ Handling and converting [text in PyKX](./text.md) requires consideration as ther
 
 ## Nulls and Infinites
 
-Most q datatypes have the concepts of null, negative infinity, and infinity. Python does not have the concept of infinites and it's null behaviour differs in implementation. The page [handling nulls and infinities](./nulls_and_infinities.md) details the needed considerations when dealing with these special values.
+Most q datatypes have the concepts of null, negative infinity, and infinity. Python does not have the concept of infinites and it's null behavior differs in implementation. The page [handling nulls and infinities](./nulls_and_infinities.md) details the needed considerations when dealing with these special values.
 
 ## Temporal data types
 

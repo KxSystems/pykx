@@ -2108,7 +2108,7 @@ class RawQConnection(QConnection):
         Note: When querying KX Insights the `#!python no_ctx=True` keyword argument must be used.
 
         Note: 3.1 Upgrade considerations
-            As of PyKX version 3.1 all QFuture objects returned from calls to `RawQConnection`
+            As of `pykx` version 3.1 all QFuture objects returned from calls to `RawQConnection`
             objects must be awaited to receive their results. Previously you could use just
             `conn.poll_recv()` and then directly get the result with `future.result()`.
 
