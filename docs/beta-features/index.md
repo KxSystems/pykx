@@ -11,7 +11,7 @@ _This page provides an overview of PyKX Beta Features, including what they are, 
 
 ## What is a Beta Feature?
 
-As used commonly within software development "Beta Features" within PyKX describe features which have completed an initial development process phase and are being released in an opt-in manner to users of PyKX wishing to test these features. These features are not intended to be for production use while in beta and are subject to change prior to release as full features. Usage of these features will not effect the default behaviour of the library outside of the scope of the new functionality being added.
+As used commonly within software development "Beta Features" within PyKX describe features which have completed an initial development process phase and are being released in an opt-in manner to users of PyKX wishing to test these features. These features are not intended to be for production use while in beta and are subject to change prior to release as full features. Usage of these features will not effect the default behavior of the library outside of the scope of the new functionality being added.
 
 Feedback on Beta Feature development is incredibly helpful and helps to determine when these features are promoted to fully supported production features. If you run into any issues while making use of these features please raise an issue on the PyKX Github [here](https://github.com/KxSystems/pykx/issues).
 

@@ -34,7 +34,7 @@ To begin your journey with PyKX, follow the sections below:
 
 !!! home-page "[Releases](./release-notes/changelog.md)"
 
-    Stay updated with the latest release notes and roadmap details. You’ll find information on the latest releases/fixes, previous versions, and upcoming features.
+    Stay updated with the latest release notes. You’ll find information on the latest releases/fixes, and previous versions.
 
 !!! home-page "[Help and Support](./help/troubleshooting.md)"
 

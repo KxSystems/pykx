@@ -138,7 +138,7 @@ See also the page with specifics on [temporal](./temporal.md) conversions.
 
 !!! note "Note"
 
-    PyKX null conversion behaviour changed in version 3.0.0. The below table outlines the before and after conversions.
+    PyKX null conversion behavior changed in version 3.0.0. The below table outlines the before and after conversions.
 
     === ".py()"
 
@@ -307,7 +307,7 @@ x
 --   2   3
 ```
 
-However, when displaying with multi-index columns, the mask behaviour is not adhered to:
+However, when displaying with multi-index columns, the mask behavior is not adhered to:
 
 ```python
 >>> keytab = kx.q.xkey(['x', 'x1'],
@@ -417,7 +417,7 @@ See also the page with specifics on [temporal](./temporal.md) conversions to exp
 
 !!! note "Note"
 
-    PyKX infinite conversion behaviour changed in version 3.0.0. The below tables outline the before and after conversions.
+    PyKX infinite conversion behavior changed in version 3.0.0. The below tables outline the before and after conversions.
 
     #### Positive Infinity conversions
 

@@ -310,14 +310,16 @@ util.parseArgs:{
   kwargs: kwargs,kwdict;
   if[not count kwargs;kwargs:()!()];
   kwargs:(key kwargs)!{[kwargs; x] unwrap util.convertArg util.toDefault kwargs[x]}[kwargs;] each key kwargs;
-  arglist:{unwrap util.convertArg util.toDefault x} each (x where not util.isarg each x),
+  arglist: enlist[::];
+  do[5; if[enlist[::]~arglist; 
+    arglist:{unwrap util.convertArg util.toDefault x} each (x where not util.isarg each x),
     $[0<count x where util.isargl each x;
       $[not 1<count x where util.isargl each x;
         (x where util.isargl each x)[0][::]1;
         '"Expected only one arg list to be using in function call"
         ];
       x where util.isargl each x
-      ];
+      ]]];
   (hasargs; arglist; kwargs)
   };
 

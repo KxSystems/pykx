@@ -290,7 +290,6 @@ nav:
         - PyKX under q: release-notes/underq-changelog.md
         - Deprecations: release-notes/deprecations.md
       - 2.x -> 3.x Upgrade : upgrades/2030.md
-      - Roadmap: roadmap.md
       - Beta features:
         - Introduction: beta-features/index.md
         - PyTorch Conversions: beta-features/torch.md

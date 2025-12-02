@@ -3927,7 +3927,7 @@ class Table(PandasAPI, Mapping):
 
     def window_join(self, table, windows, cols, aggs):
         """
-        Window joins provide the ability to analyse the behaviour of data
+        Window joins provide the ability to analyse the behavior of data
         in one table in the neighborhood of another.
 
         Parameters:

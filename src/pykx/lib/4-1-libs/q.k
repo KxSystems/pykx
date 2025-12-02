@@ -95,7 +95,7 @@ unm:{$[x~?x;x;@[x;j;:;(`$($x),'$i)j:&0<i:@[,/i;i;:;(!#:)'i:.=x]]]}
 id:{$[0h>@x;`${$[(*x)in n,"_ ";"a",x;x]}x@&(x:$x)in an;ft[{$[98h=@x;+.z.s[+x];[s[i]:`$($s i:&((s:id'!x) in`i,res,!`.q)),'"1";({unm[x]}/s)!. x]]}]x]}
 j10:64/:b6?;x10:b6@0x40\: /base64 J from char10
 j12:36/:nA?;x12:nA@0x24\: /base36 J from char12(cusip)
-btoa:-32!;sha1:-33!;prf0:+`name`file`line`col`text`pos!*-37!
+btoa:-32!;atob:-44!;sha1:-33!;prf0:+`name`file`line`col`text`pos!*-37!
 objp:{x like"[mgs][s3]://*"};
 lo:{if[$[1>@d:!f:-1!x;1;`.d~*d];:.[$[qt d;*|`\:f;99=@d;`.;'`type];();:;d:. f]];d@:&~d like"*$";p:(d=`par.txt)|d like"[0-9]*";
  if[y;if[objp x;'"no cd to object storage"];."\\cd ",$x;f:`:.];{.q.set[*|`\:x]$[0h>@!x;. x;x`]}'`/:'f,'d@&~(d=`html)|(d like"*#")|p|s:d like"*.?";if[|/p;L[d@&p;f;~y|objp x]];if[z&~`.=x;(."\\l ",$:)'`/:'f,'d@&s&~p];}
@@ -121,7 +121,7 @@ bvfp:{g:$[(::)~x;max;min];x:.Q.d;d:{$[y~pv;`/:'x,'d@&(d:!x)in`$$y;u@&{11h=@!x}'u
  t:?,/!:'vt:{(&#:'x)(=,/. x)}'{({("DMJJ"`date`month`year`int?pf)$$last@`\:x}'x)!!:':x}'d;
  if[#nt:(exc:.q.except)[t;!vp];d:{`/:'x[(. y)[;0]],'(`$$(. y)[;1]),'!y}[P]@{i:y@&:x=y x:@[x;&x~\:();:;*0#pv];(i;x i)}[;g]'+:nt#/:g''nt#/:vt;.Q.vp,:nt!{(+(,pf)!,0#pv),'+(-2!'.+x)#'+|0#x:?[x;();0b;()]}':d;.Q.vt:.Q.vt,\:nt!(#nt)#,exc[?pv;y]];.Q.vt:(.Q.vt,''P!exc[y]''vt)exc''vt:(nt,!vp)#/:vt;{.[x;();:;+.q.except[!+vp x;pf]!x]}'exc[!vp;pt];pt::.q.asc@!vp;vpv::?pv;}
 bvi:{$[(`vpv in !.Q);bvfp[x;?.q.except[pv;vpv]];bv x]}
-bv:{vt::(,`)!,()!();vp::(0#`)!();vpv::0#pv;bvfp[x;pv]}
+bv:{vt::(,`)!,()!();vp::(0#`)!();vpv::0#pv;bvfp[x;?pv]}
 
 sp:{$[0>."\\s";x'y;x':y]}
 pt:pm:();MAP:{{$[0>@a:.+0!. x;.q.set[x]@.`$-1_$a;]}'a@&~(a:."\\a")in pt;pm::();if[#pt;pm::pt!sp[{(`u#pd,'pv)!sp[p2[(x;();0b;())]/;+(pd;pv)]}]pt]}
@@ -224,7 +224,7 @@ sc:"$-.+!*'(),",.Q.an;hug:{,/@["%",'$"x"$!256;x;:;x]@};hu:hug sc /rfc1738 safe
 ty:{(`$*x)!*|x:+" "\:'x}("htm text/html";"html text/html";"csv text/comma-separated-values";"txt text/plain";"xml text/plain";"xls application/msexcel"
  "gif image/gif";"jpg image/jpeg";"png image/png";"bmp image/bmp";"ico image/x-icon";"svg image/svg+xml";"pdf application/pdf";"css text/css"
  "zip application/x-compressed";"js application/x-javascript";"doc application/msword";"swf application/x-shockwave-flash";"json application/json")
-hnz:{[a;b;c;d]"HTTP/1.1 ",a,$[b;"\r\nContent-Encoding: gzip";""],"\r\nContent-Type: ",$[#t:ty c;t;"application/octet-stream"],"\r\nConnection: close\r\nContent-Length: ",($#d),"\r\n\r\n",d:$[b:(-35!)[]&b&2000<#d;-35!(6;d);d]}
+hnz:{[a;b;c;d]"HTTP/1.1 ",a,$[b;"\r\nContent-Encoding: gzip";""],"\r\nContent-Type: ",$[#t:ty c;t;"application/octet-stream"],"\r\nConnection: close\r\nContent-Length: ",($#d),"\r\n\r\n",d:10h$$[b:(-35!)[]&b&2000<#d;-35!(6;d);d]}
 hn:hnz[;0];HOME:"html";hy:hn"200 OK";hp:hy[`htm]html pre@;he:hn["400 Bad Request";`txt]"'",   /GET /[r.{txt|csv|xml|xsl}]?..  or ?[J
 val:.:;
 .z.ph:{gz:#ss[x[1]`$"Accept-Encoding";"gzip"];x:uh$[@x;x;*x];tf:$[2=."\\e";{.Q.trp[y;z;{he y,"\n",.Q.sbt@(-x)_z}x]};{x;@[y;z;he]}];$[~#x;hy[`htm]fram[$.z.f;x]("?";"?",*x@<x:$(."\\v"),."\\b")

@@ -26,7 +26,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 - Resolved `object has no attribute 't'` error for certain conversions
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```python
 		q).pykx.setdefault (),"k"; 
@@ -39,7 +39,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 				":"~first a0:string x0;
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```python
 		q).pykx.setdefault (),"k"; 
@@ -137,14 +137,14 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 - Using `.pykx.toq`/`.pykx.toq0` now return the q representation of an object when passed a wrapped type conversion object
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```q
 		q).pykx.toq .pykx.topd ([] a:1 2 3)
 		enlist[`..pandas;;][...
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```q
 		q).pykx.toq .pykx.topd[([] a:1 2 3)]
@@ -157,14 +157,14 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 - When using `.pykx.toq`/`.pykx.toq0`, passing compositions such as `any` now returns the data as the appropriate object
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```q
 		q).pykx.toq any
 		'Expected foreign object for call to .pykx.toq
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```q
 		q).pykx.toq any
@@ -173,14 +173,14 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 - When failing to find a file loaded with `.pykx.loadPy` the name of the file which was loaded is now included in the error message
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```q
 		q).pykx.loadPy "file.py"
 		'FileNotFoundError(2, 'No such file or directory')
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```q
 		q).pykx.loadPy "file.py"
@@ -233,7 +233,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ### Fixes and Improvements
 
-- Addition of function `.pykx.toq0` to support conversion of Python strings to q strings rather than q symbols as is the default behaviour
+- Addition of function `.pykx.toq0` to support conversion of Python strings to q strings rather than q symbols as is the default behavior
 
 	```q
 	q)pystr:.pykx.eval["\"test\""]
@@ -245,7 +245,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 - Fix for `install_into_QHOME` with `overwrite_embedpy=True`. Previously loading PyKX through use of `p)` would fail.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```q
 		q)p)print(1+1)
@@ -253,14 +253,14 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 		  [3]  /home/user/q/p.k:1: \l pykx.q
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```q
 		q)p)print(1+1)
 		2
 		```
 
-- Fix to minor memory leak when accessing attributes or retrieving global variables from Python objects. The following operations would lead to this behaviour
+- Fix to minor memory leak when accessing attributes or retrieving global variables from Python objects. The following operations would lead to this behavior
 
 	```q
 	q)np:.pykx.import[`numpy]
@@ -273,7 +273,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 - When loading on Linux loading of `qlog` no longer loads the logging functionality into the `.pykx` namespace and instead loads it to the `.com_kx_log` namespace as expected under default conditions.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```q
 		q)@[{get x;1b};`.pykx.configure;0b]
@@ -282,7 +282,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 		0b
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```q
 		q)@[{get x;1b};`.pykx.configure;0b]
@@ -311,7 +311,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 - Previously PyKX conversions of generic lists (type 0h) would convert this data to it's `raw` representation rather than it's `python` representation as documented. This had the effect of restricting the usability of some types within PyKX under q in non-trivial use-cases. With the `2.5.2` changes to more accurately represent `raw` data at depth this became more obvious as an issue.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```q
 		q).pykx.version[]
@@ -320,7 +320,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 		[b'test', None, 49577290277400616]
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```q
 		q).pykx.print .pykx.eval["lambda x:x"]
@@ -586,7 +586,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 - Update to default conversion logic for q objects passed to PyKX functions to more closely match embedPy based conversion expectations.For version <=2.0 conversions of KX lists would produce N Dimensional Numpy arrays of singular type. This results in issues when applying to many analytic libraries which rely on lists of lists rather than singular N Dimensional arrays. Additionally q tables and keyed tables would be converted to Numpy recarrays, these are now converted to Pandas DataFrames. To maintain previous behavior please set the following environment variable `PYKX_DEFAULT_CONVERSION="np"`.
 
-	=== "Behaviour prior to change"
+	=== "Behavior prior to change"
 
 		```q
 		q).pykx.eval["lambda x:print(type(x))"](10?1f;10?1f)
@@ -595,7 +595,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 		<class 'numpy.recarray'>
 		```
 
-	=== "Behaviour post change"
+	=== "Behavior post change"
 
 		```q
 		q).pykx.eval["lambda x:print(type(x))"](10?1f;10?1f)

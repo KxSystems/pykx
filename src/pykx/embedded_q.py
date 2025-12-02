@@ -151,8 +151,11 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                 code += f'2:[`$"{pykx_qlib_path}";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
             else:
-                code += f'2:[`$"{pykx_qlib_path}q";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
-                code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
+                suffix = ""
+                if os.getenv("PYKXQ_THREADING") is not None:
+                    suffix = "_m"
+                code += f'2:[`$"{pykx_qlib_path}q{suffix}";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
+                code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q{suffix}") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
             code += '@[get;`.pykx.i.kxic.loadfailed;{()!()}]'
             kxic_loadfailed = self._call(code, skip_debug=True).py()
             if (platform.system() != "Linux") and (not no_qce) and ('--no-sql' not in qargs):
