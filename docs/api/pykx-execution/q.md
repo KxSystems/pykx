@@ -2821,7 +2821,7 @@ See https://code.kx.com/q/ref/tok/ for more information on accepted lists for ca
 >>> kx.q.tok(b'F', b'3.14')
 pykx.FloatAtom(pykx.q('3.14'))
 >>> float_int = kx.toq(-9, kx.ShortAtom)
->>> kx.qkx.toq(int(1), kx.ShortAtom)
+>>> kx.toq(int(1), kx.ShortAtom)
 ```
 
 ### [compose](https://code.kx.com/q/ref/compose/)
