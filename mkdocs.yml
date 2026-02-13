@@ -283,7 +283,7 @@ nav:
       - PyKX as a server: examples/server/server.md
       - Real-time streaming: examples/streaming/index.md
       - Multithreaded execution: examples/threaded_execution/threading.md
-      - Asyncronous Queries: examples/AsynchronousQueries/async_querying.md
+      - Asynchronous Queries: examples/AsynchronousQueries/async_querying.md
     - Releases:
       - Release notes:
         - PyKX: release-notes/changelog.md
