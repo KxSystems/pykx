@@ -4,11 +4,22 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
-# PyKX 3.1.7
+# PyKX 3.1.8
 
 #### Release Date
 
-2026-02-09
+2026-02-18
+
+### Additions
+
+- Added `connection_timeout` keyword argument to `AsyncQConnection` objects allowing the specification of a timeout for the initial connection to a `q` server.
+- Added the usage of `.q.Q.ens` for `sym_enum` argument in `DB` objects.
+
+## PyKX 3.1.7
+
+#### Release Date
+
+2026-02-10
 
 ### Additions
 
