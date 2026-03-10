@@ -448,31 +448,31 @@ def test_kx_versions(kx):
     if test_vars == ('Linux',   'x86_64', '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Linux',   'x86_64', '4.1'):
-        assert kx.q.z.k == kx.q('2025.11.25')
+        assert kx.q.z.k == kx.q('2026.01.23')
     # elif test_vars == ('Linux',   'x86_64', '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     elif test_vars == ('Linux',   'aarch64',    '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Linux',   'aarch64',    '4.1'):
-        assert kx.q.z.k == kx.q('2025.11.25')
+        assert kx.q.z.k == kx.q('2026.01.23')
     # elif test_vars == ('Linux',   'aarch64',    '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     elif test_vars == ('Darwin',  'x86_64', '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Darwin',  'x86_64', '4.1'):
-        assert kx.q.z.k == kx.q('2025.11.25')
+        assert kx.q.z.k == kx.q('2026.01.23')
     # elif test_vars == 'Darwin',  'x86_64', '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     elif test_vars == ('Darwin',  'arm64',    '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Darwin',  'arm64',    '4.1'):
-        assert kx.q.z.k == kx.q('2025.11.25')
+        assert kx.q.z.k == kx.q('2026.01.23')
     # elif test_vars == ('Darwin',  'arm',    '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     elif test_vars == ('Windows', 'AMD64', '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Windows', 'AMD64', '4.1'):
-        assert kx.q.z.k == kx.q('2025.11.25')
+        assert kx.q.z.k == kx.q('2026.01.23')
     # elif test_vars == ('Windows', 'AMD64', '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     else:

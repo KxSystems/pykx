@@ -3,6 +3,7 @@ from functools import partial
 import math
 import os
 from pathlib import Path
+from platform import system
 from sys import getrefcount
 from uuid import UUID, uuid4
 
@@ -1741,12 +1742,18 @@ def test_cast_setting(kx):
 
 
 def test_2d_array_from_file(kx):
-    df = pd.read_parquet('tests/nestedFloats.parquet')
+    basePath = Path(__file__).parent.parent.parent
+    file = 'nestedFloats.parquet'
+    testFilePath = (basePath/file) if system() == 'Windows' else 'tests/' + file
+    df = pd.read_parquet(testFilePath)
     kx.toq(df, no_allocator=True)
 
 
 def test_2d_array_from_file_no_allocator(kx):
-    df = pd.read_parquet('tests/nestedFloats.parquet')
+    basePath = Path(__file__).parent.parent.parent
+    file = 'nestedFloats.parquet'
+    testFilePath = (basePath/file) if system() == 'Windows' else 'tests/' + file
+    df = pd.read_parquet(testFilePath)
     kx.toq(df, no_allocator=True)
 
 

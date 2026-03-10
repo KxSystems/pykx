@@ -593,6 +593,8 @@ def test_pythonic_query(kx):
     assert all(kx.q('{select negb:neg b from x}', table)
                == table.select(columns=kx.Column('b', name='negb').call('neg')))
     assert all(kx.q('{select negb:neg b from x}', table)
+               == table.select(columns=kx.Column(name='negb', data=[kx.q('neg'), 'b'])))
+    assert all(kx.q('{select negb:neg b from x}', table)
                == table.select(columns=kx.Column(name='negb', value=[kx.q('neg'), 'b'])))
     assert all(kx.q('{exec neg b from x}', table)
                == table.exec(columns=kx.Column('b').call('neg')))
@@ -756,6 +758,8 @@ def test_pythonic_query_ipc(kx, q_port):
              q.qsql.select('table', columns=kx.Column('b', name='negb').call('neg')))
     assert q('{y~select negb:neg b from table}',
              q.qsql.select('table', columns=kx.Column(name='negb', value=[q('neg'), 'b'])))
+    assert q('{y~select negb:neg b from table}',
+             q.qsql.select('table', columns=kx.Column(name='negb', data=[q('neg'), 'b'])))
     assert q('{y~exec neg b from table}', q.qsql.exec('table', columns=kx.Column('b').call('neg')))
     assert ({'asA': 'a', 'negB': [q('neg'), 'b']}
             == (kx.Column('a', name='asA')& kx.Column('b', name='negB').call('neg')).to_dict())
@@ -903,28 +907,28 @@ def test_column_licensed(kx):
 
 def test_fby_instance_call(kx):
     table = kx.q('([] x:`a`b`c;x1:1 2 3;x2:`a`e`g;x11:0 3 3;b:011b)')
-    assert kx.Column.fby(['c1,c2'], 'sum', table)._name == ['c1,c2']
+    assert kx.Column.fby('c1', 'sum', table)._name == 'c1'
 
     with pytest.raises(RuntimeError) as err:
-        kx.Column('a').fby(['c1,c2'], 'sum', table)
+        kx.Column('a').fby('c1', 'sum', table)
         assert "Column object" in str(err)
 
 
 def test_no_inplace(kx):
     a = kx.Column('a')
     a.max()
-    assert a._value == 'a'
+    assert a._data == 'a'
     a.call('{x}')
-    assert a._value == 'a'
+    assert a._data == 'a'
     b = kx.Column('b')
     a | b
-    assert a._value == 'a'
-    assert b._value == 'b'
+    assert a._data == 'a'
+    assert b._data == 'b'
     a.name('aa')
-    assert a._value == 'a'
+    assert a._data == 'a'
     a & b
-    assert a._value == 'a'
-    assert b._value == 'b'
+    assert a._data == 'a'
+    assert b._data == 'b'
     pt = kx.ParseTree(['a'])
     pt.enlist()
     assert pt._tree == ['a']

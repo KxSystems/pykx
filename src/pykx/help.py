@@ -1,9 +1,14 @@
-import importlib.util
-import warnings
 import os
+import re
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
 
 __all__ = ["help"]
-_filepath = os.path.join(os.path.dirname(__file__), 'docs', 'api', 'pykx-execution', 'q.md')
+_filepath = os.path.join(
+    os.path.dirname(__file__), '..', '..', 'docs', 'api',
+    'pykx-execution', 'q.md'
+)
+_base_url = "https://code.kx.com/pykx/4.0/api/pykx-execution/q.html"
 
 
 def __dir__():
@@ -15,101 +20,195 @@ def _init(_q):
     q = _q
 
 
+def _fetch_web_documentation(keyword):
+    """Fetch documentation from the PyKX website."""
+    url = _base_url
+    try:
+        req = Request(url, headers={'User-Agent': 'PyKX/help'})
+        with urlopen(req, timeout=5) as response:
+            html = response.read().decode('utf-8')
+
+            # Extract the article content
+            article_match = re.search(
+                r'<article[^>]*class="[^"]*md-content__inner[^"]*"[^>]*>'
+                r'(.*?)</article>',
+                html, re.DOTALL
+            )
+            if not article_match:
+                return None
+
+            article_html = article_match.group(1)
+
+            # Find the h3 section for this keyword
+            # Pattern: <h3 id="keyword">...</h3> ... content ... <h3 id="next">
+            pattern = rf'<h3[^>]*id="{keyword}"[^>]*>.*?</h3>(.*?)(?=<h3[^>]*id="|$)'
+            section_match = re.search(pattern, article_html, re.DOTALL)
+
+            if not section_match:
+                return None
+
+            section_html = section_match.group(1)
+            text = f" • {keyword}\n\n"
+
+            # Extract paragraphs
+            for para_match in re.finditer(r'<p(?:\s[^>]*)?>(.*?)</p>', section_html, re.DOTALL):
+                para_text = re.sub(r'<[^>]+>', '', para_match.group(1))
+                para_text = _decode_html_entities(para_text).strip()
+                if para_text:
+                    text += para_text + "\n\n"
+
+            # Extract code blocks
+            for code_match in re.finditer(r'<pre[^>]*><code[^>]*>(.*?)</code></pre>',
+                                          section_html, re.DOTALL):
+                code_text = _decode_html_entities(code_match.group(1)).strip()
+                if code_text:
+                    text += "\n"
+                    for line in code_text.split("\n"):
+                        text += "    " + line + "\n"
+                    text += "\n"
+
+            return text
+
+    except (URLError, HTTPError, TimeoutError):
+        return None
+    except Exception:
+        return None
+
+
+def _decode_html_entities(text):
+    """Decode common HTML entities."""
+    return (text.replace('&lt;', '<')
+            .replace('&gt;', '>')
+            .replace('&amp;', '&')
+            .replace('&quot;', '"')
+            .replace('&#39;', "'")
+            .replace('&nbsp;', ' ')
+            .replace('&para;', '')  # Remove paragraph symbols
+            .replace('&middot;', '·'))
+
+
 def _load_markdown_section(keyword, file_path=_filepath):
-    with open(file_path, 'r') as f:
-        lines = f.readlines()
+    """Load and parse markdown section for a keyword."""
+    try:
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
 
-    # Extract the specific section
-    in_section = False
-    section_lines = []
-    for line in lines:
-        if line.startswith(f'### [{keyword}]'):
-            in_section = True
-            section_lines.append(line)
-        elif line.startswith('###') and in_section:
-            break
-        elif in_section:
-            section_lines.append(line)
+        in_section = False
+        section_lines = []
+        for line in lines:
+            if line.startswith(f'### [{keyword}]'):
+                in_section = True
+                section_lines.append(line)
+            elif line.startswith('###') and in_section:
+                break
+            elif in_section:
+                section_lines.append(line)
 
-    if not section_lines:
-        return "No description available for this function."
+        if not section_lines:
+            return None
 
-    # Convert the section to HTML
-    section_markdown = ''.join(section_lines)
-
-    md2_spec = importlib.util.find_spec("markdown2")
-    if md2_spec is None:
-        warnings.warn("The 'markdown2' package is required to use the 'qhelp' function.")
-        return ""
-    else:
-        import markdown2
-    section_html = markdown2.markdown(section_markdown, extras=["fenced-code-blocks"])
-
-    return section_html
+        return section_lines
+    except IOError:
+        return None
 
 
 def qhelp(keyword):
     """Parse and format the documentation for a given keyword."""
-    bs4_spec = importlib.util.find_spec("bs4")
-    if bs4_spec is None:
-        warnings.warn("The 'bs4' package is required to use the 'qhelp' function.")
-        return ""
-    else:
-        from bs4 import BeautifulSoup
+    markdown_lines = _load_markdown_section(keyword)
+    if markdown_lines:
+        text = f" • {keyword}\n\n"
 
-    html_content = _load_markdown_section(keyword)
-    if html_content:
-        soup = BeautifulSoup(html_content, "html.parser")
-        tag = soup.find("h3", string=keyword)
+        in_code_block = False
+        table_lines = []
+        in_table = False
 
-        if tag is None:
-            return None
+        for i, line in enumerate(markdown_lines):
+            if i == 0:
+                continue
 
-        text = " • " + tag.text + "\n\n"
-        for x in tag.findAllNext():
-            if x.name == "h2":
-                break
+            if line.strip().startswith('```'):
+                if in_code_block:
+                    in_code_block = False
+                    text += "\n"
+                else:
+                    in_code_block = True
+                    text += "\n"
+                continue
 
-            elif x.name == "h3":
-                break
+            if in_code_block:
+                text += "    " + line.rstrip() + "\n"
+                continue
 
-            elif x.name == "p":
-                only_link = True
-                for w in x:
-                    if w.name != "a":
-                        only_link = False
-                if not only_link:
-                    text += x.text + "\n"
+            if '|' in line and not line.strip().startswith('#'):
+                if not in_table:
+                    in_table = True
+                    table_lines = []
+                table_lines.append(line)
+                continue
+            elif in_table:
+                if table_lines:
+                    text += _parse_markdown_table(table_lines)
+                in_table = False
+                table_lines = []
 
-            elif x.name == "pre":
+            if line.strip() == '':
+                if text.endswith('\n\n'):
+                    continue
                 text += "\n"
-                for line in x.text.split("\n"):
-                    text += "    " + line + "\n"
+                continue
 
-            elif x.name == "li":
-                text += "  - " + x.text + "\n"
+            if line.strip().startswith('- ') or line.strip().startswith('* '):
+                list_text = line.strip()[2:]
+                list_text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', list_text)
+                text += "  - " + list_text + "\n"
+                continue
 
-            elif x.name == "thead":
-                table = []
-                tmp = []
-                for cell in x.text.split("\n"):
-                    if cell != "":
-                        tmp += [cell]
-                table += [tmp]
+            if not line.startswith('#'):
+                line_text = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', line.strip())
+                line_text = re.sub(r'`([^`]+)`', r'\1', line_text)
+                if line_text:
+                    text += line_text + "\n"
 
-            elif x.name == "tbody":
-                for row in x.text.split("\n\n\n"):
-                    tmp = []
-                    for cell in row.split("\n"):
-                        if cell != "":
-                            tmp += [cell]
-                    table += [tmp]
-                text += __ascii_table(table[1:], border=True, header=table[0]) + "\n"
+        if in_table and table_lines:
+            text += _parse_markdown_table(table_lines)
 
         return text
-    else:
-        print("html error")
-        return None
+
+    # Fallback to web scraping if local file fails
+    web_result = _fetch_web_documentation(keyword)
+    if web_result:
+        return web_result
+
+    # If both local and web sources fail
+    return (f" • {keyword}\n\n"
+            f"Documentation not available. Please check your internet connection\n"
+            f"or visit {_base_url}#{keyword} for documentation.")
+
+
+def _parse_markdown_table(lines):
+    """Parse markdown table into ASCII table format."""
+    if not lines:
+        return ""
+
+    rows = []
+    header = None
+
+    for line in lines:
+        if re.match(r'^\s*\|[\s\-:|]+\|\s*$', line):
+            continue
+
+        cells = [cell.strip() for cell in line.split('|')]
+        cells = [c for c in cells if c]
+
+        if cells:
+            if header is None:
+                header = cells
+            else:
+                rows.append(cells)
+
+    if header and rows:
+        return __ascii_table(rows, border=True, header=header) + "\n"
+    return ""
 
 
 def __ascii_table(table: list, header: list = None, align='left', border=False):

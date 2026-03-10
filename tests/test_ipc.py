@@ -945,6 +945,7 @@ async def test_debug_kwarg_async_global(q_port):
         q('.Q.sbt:.pykx_test.cache_sbt')
 
 
+@pytest.mark.asyncio
 @pytest.mark.embedded
 async def test_debug_kwarg_embedded(kx, q):
     assert q('til 10', debug=True).py() == list(range(10))

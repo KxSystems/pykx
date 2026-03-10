@@ -26,6 +26,12 @@ To access PyKX, import it within your Python code using the following syntax:
 ```
 !!! Info "The use of the shortened name `#!python kx` is optional and provides a terse convention for interacting with methods and objects from the PyKX library."
 
+Many examples in this guide make use of NumPy so we import this:
+
+```python
+>>> import numpy as np
+```
+
 ## 2. Generate PyKX objects
 
 You can generate PyKX objects in three ways. Click on the tabs below to follow the instructions:
@@ -64,7 +70,6 @@ You can generate PyKX objects in three ways. Click on the tabs below to follow t
     >>> qlist
     pykx.LongVector(pykx.q('10 20 30'))
 
-    >>> import numpy as np
     >>> nplist = np.arange(0, 10, 2)
     >>> qlist = kx.toq(nplist)
     >>> qlist
@@ -204,7 +209,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
 
     ```python
     >>> qfunction = kx.q('{x+til 10}')
-    >>> qfunction(kx.toq([random() for _ in range(10)], kx.FloatVector))
+    >>> qfunction(kx.FloatVector([np.random.random() for _ in range(10)]))
     pykx.FloatVector(pykx.q('0.3992327 1.726329 2.488636 3.653597 4.028107 5.444905 6.542917 7.00628 8.152..'))
     ```
 
@@ -218,7 +223,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
     pykx.LongVector(pykx.q('5 8 3 3 10 5 3 1 9 1'))
     ```
 
-* Pass PyKX arrays of objects to Numpy functions:
+* Pass PyKX arrays of objects to NumPy functions:
 
     ```python
     >>> qarray1 = kx.random.random(10, 1.0)
@@ -242,7 +247,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
     >>> N = 100
     >>> qtable = kx.Table(
         data={
-            'x': kx.random.random(N, ['a', 'b', 'c'],
+            'x': kx.random.random(N, ['a', 'b', 'c']),
             'x1': kx.random.random(N, 1.0),
             'x2': 5 * kx.random.random(N, 1.0),
         }
@@ -268,7 +273,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
     a 0.6212161 3.97236
     ..
     '))
-    >>> qtable.select(where=kx.Column('col1')=='a')
+    >>> qtable.select(where=kx.Column('x')=='a')
     pykx.Table(pykx.q('
     x x1        x2
     ---------------------
@@ -320,7 +325,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
 
 ## 4. Convert PyKX objects to Python types
 
-To convert the objects generated via the PyKX library to the corresponding `#!python Python`, `#!python Numpy`, `#!python Pandas`, and `#!python PyArrow` types, use `#!python py`, `#!python np`, `#!python pd`, and `#!python pa` methods. Click on the tabs below to go through the examples:
+To convert the objects generated via the PyKX library to the corresponding `#!python Python`, `#!python NumPy`, `#!python Pandas`, and `#!python PyArrow` types, use `#!python py`, `#!python np`, `#!python pd`, and `#!python pa` methods. Click on the tabs below to go through the examples:
 
 === "Convert to Python"
 
@@ -334,22 +339,18 @@ To convert the objects generated via the PyKX library to the corresponding `#!py
     '))
     >>> qdictionary.py()
     {'a': 5, 'b': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], 'c': [0.014509072760120034, 0.9131434387527406, 0.5745006683282554, 0.9619080068077892, 0.7609488749876618]}
-    >>>
     >>> qvec = kx.toq(np.random.randint(5, size=10))
     >>> qvec.py()
     [0, 2, 4, 1, 2, 1, 0, 1, 0, 1]
     ```
 
-=== "Convert to Numpy"
+=== "Convert to NumPy"
 
     ```python
-    >>> import numpy as np
-    >>> random = np.random.random
-    >>> randint = np.random.randint
     >>> qvec = kx.q('10?5')
     >>> qvec.np()
     array([0, 2, 4, 1, 2, 1, 0, 1, 0, 1])
-    >>> qtab = kx.Table([[random(), randint(0, 5)] for _ in range(5)])
+    >>> qtab = kx.Table([[np.random.random(), np.random.randint(0, 5)] for _ in range(5)])
     >>> qtab
     pykx.Table(pykx.q('
     x         x1
@@ -382,7 +383,7 @@ To convert the objects generated via the PyKX library to the corresponding `#!py
     8    0
     9    1
     dtype: int64
-    >>> df = pd.DataFrame(data={'x': [random() for _ in range(5)], 'x1': [randint(0, 4) for _ in range(5)]})
+    >>> df = pd.DataFrame(data={'x': [np.random.random() for _ in range(5)], 'x1': [np.random.randint(0, 4) for _ in range(5)]})
     >>> qtab = kx.toq(df)
     >>> qtab.pd()
             x  x1
@@ -410,7 +411,7 @@ To convert the objects generated via the PyKX library to the corresponding `#!py
     8    2
     9    0
     dtype: int64[pyarrow]
-    >>> df = pd.DataFrame(data={'x': [random() for _ in range(5)], 'x1': [randint(0, 4) for _ in range(5)]})
+    >>> df = pd.DataFrame(data={'x': [np.random.random() for _ in range(5)], 'x1': [np.random.randint(0, 4) for _ in range(5)]})
     >>> qtab = kx.toq(df)
     >>> qtab.pd(as_arrow=True)
             x  x1
@@ -443,7 +444,7 @@ To convert the objects generated via the PyKX library to the corresponding `#!py
         0,
         1
     ]
-    >>> df = pd.DataFrame(data={'x': [random() for _ in range(5)], 'x1': [randint(0, 4) for _ in range(5)]})
+    >>> df = pd.DataFrame(data={'x': [np.random.random() for _ in range(5)], 'x1': [np.random.randint(0, 4) for _ in range(5)]})
     >>> qtab = kx.toq(df)
     >>> qtab.pa()
     pyarrow.Table

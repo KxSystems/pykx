@@ -94,10 +94,10 @@ KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX 
 PyKX depends on the following third-party Python packages:
 
 - `pandas>=1.2, <2.0; python_version=='3.8'`
-- `pandas>=1.2, <=2.3.0; python_version>'3.8'`
-- `numpy~=1.22; python_version<'3.11'`
-- `numpy~=1.23, <2.3.0; python_version=='3.11'`
-- `numpy~=1.26, <2.3.0; python_version>'3.11'`
+- `pandas>=1.2, <3.0; python_version>'3.8'`
+- `numpy>=1.22; python_version<'3.11'`
+- `numpy>=1.23; python_version=='3.11'`
+- `numpy>=1.26; python_version>'3.11'`
 - `pytz>=2022.1`
 - `toml~=0.10.2`
 - `dill>=0.2.0`
@@ -105,7 +105,7 @@ PyKX depends on the following third-party Python packages:
 
 They are installed automatically by `pip` when PyKX is installed.
 
-PyKX also has an optional Python dependency of `pyarrow>=3.0.0, <19.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`
+PyKX also has an optional Python dependency of `pyarrow>=3.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`
 
 When using PyKX with KX Dashboards users will be required to install `ast2json~=0.3` this can be installed using the `dashboards` extra, e.g. `pip install pykx[dashboards]`
 

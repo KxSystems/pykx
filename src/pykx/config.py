@@ -326,7 +326,7 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
                 except BaseException:
                     raise Exception('Unable to open web browser')
 
-            install_type = input('\nPlease select the method you wish to use to activate your'
+            install_type = input('\nPlease select the method you wish to use to activate your '
                                  'license:\n  [1] Download the license file provided in your '
                                  'welcome email and input the file path (Default)'
                                  '\n  [2] Input the activation key (base64 encoded string) '
