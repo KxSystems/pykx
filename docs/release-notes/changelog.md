@@ -4,6 +4,70 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
+# PyKX 3.1.7
+
+#### Release Date
+
+2026-02-09
+
+### Additions
+
+- Added support for Python 3.14.
+
+### Fixes and Improvements
+
+- Updated 4.1 to 2026.01.23 for all platforms.
+- Added more strict type checks for naming `Column` objects, allowing only `str` and `SymbolAtom` values.
+  
+  	=== "Behavior prior to change"
+	
+		```python
+		>>> kx.Column(name=0, value=[1,2,3])
+		pykx.Column(name='0', value=<class 'list'>)
+
+		>>> kx.Column(name='a', value=(1,2,3))
+		pykx.Column(name='a', value=<class 'tuple'>)
+		```
+	
+	=== "Behavior after change"
+
+		```python
+		>>> kx.Column(name=0, value=[1,2,3])
+		TypeError: Column 'name' can only be of type Str and pykx.SymbolAtom
+		
+		>>> kx.Column(name='a', value=(1,2,3))
+		pykx.Column(name='a', data=<class 'tuple'>)
+		```
+- Changed Pandas dependency restriction from `<= 2.3.0` to `<3.0`.
+- Removed NumPy dependency restriction `<2.3.0`.
+- Removed BeautifulSoup dependency from PyKX. The help system now uses native Python libraries (`urllib` and `re`) for web scraping.
+- Added `.time` to `Column` objects to allow for the extraction of time information from temporal columns.
+
+	```python
+	>>> import pykx as kx
+	>>> tab = kx.Table(data={'time': kx.random.random(3, kx.TimestampAtom.inf)})
+	>>> tab
+	pykx.Table(pykx.q('
+	time                         
+	-----------------------------
+	2118.11.10D05:05:45.270444032
+	2052.01.18D19:21:15.973214208
+	2088.03.13D18:56:07.388233728
+	'))
+	>>> tab.select(kx.Column('time').time)
+	pykx.Table(pykx.q('
+	time        
+	------------
+	05:05:45.270
+	19:21:15.973
+	18:56:07.388
+	'))
+	```
+
+### Deprecations & Removals
+
+- Deprecated the `value` keyword when creating `kx.Column` objects, use `data` instead.
+
 ## PyKX 3.1.6
 
 #### Release Date
@@ -41,9 +105,9 @@
 		pykx.Table(pykx.q('
 		r_x date       k_x r_y k_y
 		--------------------------
-		2   2025.11.25 10  5   13 
-		4   2025.11.26 12  6   14 
-		3   2025.11.27 11  7   15 
+		2   2025.11.25 10  5   13
+		4   2025.11.26 12  6   14
+		3   2025.11.27 11  7   15
 		'))
         ```
 
@@ -66,7 +130,7 @@
     >>> db2 = kx.DB(path="tmp/db2")
     PyKXWarning: Only one DB object exists at a time within a process. Use overwrite=True to overwrite your existing DB object. This warning will error in future releases.
     >>> db3 = kx.DB(path="tmp/db3", overwrite=True)
-    >>> 
+    >>>
     ```
 
 - Use of `Table.astype()` was creating a `.papi.errorList` variable, this has been moved inside the `.pykx` namespace as `.pykx.i.errorList`.
@@ -100,7 +164,7 @@
 		>>> np.asarray(kx.DateAtom(datetime.datetime(2003, 4, 5))).dtype
 		dtype('O')
 		```
-	
+
 	=== "Behavior post change"
 
 		```python
@@ -122,7 +186,7 @@
 		>>> type(qtab.exec(kx.Column('col1').name('symcol')))
 		pykx.wrappers.SymbolVector
 		```
-	
+
 	=== "Behavior after change"
 
 		```python
@@ -344,7 +408,7 @@
 			raise ValueError('nyi')
 		ValueError: nyi
 		```
-	
+
 	=== "Behavior post change"
 
 		```python
@@ -359,11 +423,11 @@
 
 - Refactored `Vector.index()` from Python to q code to be more performant.
 - Fixed `PartitionedTable.rename_column()` operation on anymap columns. The `#` and `##` files were not renamed. Now all files are renamed.
-  
+
 	=== "Behavior prior to change"
 
 		```python
-		>>> import pykx as kx 
+		>>> import pykx as kx
 		>>>N = 10000000
 		>>>trade = kx.Table(data={
 		...   	'date': kx.random.random(N, kx.DateAtom('today') - [1, 2, 3, 4]),
@@ -396,7 +460,7 @@
 	=== "Behavior post change"
 
 		```python
-		>>> import pykx as kx 
+		>>> import pykx as kx
 		>>>N = 10000000
 		>>>trade = kx.Table(data={
 		...   	'date': kx.random.random(N, kx.DateAtom('today') - [1, 2, 3, 4]),
@@ -435,10 +499,10 @@
 - Removed `Early garbage collection requires a valid q license.` error thrown on import when loading PyKX in unlicensed mode with `PYKX_GC`.
 - More helpful error messages in cases of missing/corrupt/incompatible licenses.
 - `pykx.util.add_to_config` now accepts `bool` and `int` values instead of only `str` objects.
-  
+
 	```python
 	>>> kx.util.add_to_config({'PYKX_GC': True, 'PYKX_MAX_ERROR_LENGTH': 1})
-	
+
 	Configuration updated at: /home/user/.pykx-config.
 	Profile updated: default.
 	Successfully added:
@@ -693,7 +757,7 @@
 
 - Attempting to create a partitioned databases/add a partition to a database with a `sym_enum` keyword but no `by_field` would result in a `KeyError`.
 - Improved output when a licence file cannot be found, full paths checked for a license file are now shown and default license installation process is offered to user.
-- Users are now given the option to input a base64 encoded string when activating an existing license 
+- Users are now given the option to input a base64 encoded string when activating an existing license
 - Using `math.inf` or `-math.inf` when creating numeric values now creates equivalent PyKX types
 
 	```python
@@ -769,7 +833,7 @@
 		>>> kx.TimestampAtom(x)
 		pykx.TimestampAtom(pykx.q('2025.01.28D09:43:06.000000000'))
 		```
- 
+
 - Fixed error when attempting to convert a `pandas.Categorical` to an existing `pykx.EnumVector` via `pykx.toq`. If the `pandas.Categorical` data contained a value outside of the `pykx.EnumVector` an error was thrown.
 
 	=== "Behavior prior to change"
@@ -846,7 +910,7 @@
 
 - Addition of `.replace()` function to `kx.Vector` and `kx.List` objects to search for and replace items in each collection, retaining typing where appropriate.
 
-	```python 
+	```python
 	>>> l = kx.q('("a";3;1.3;`b)')
 	>>> l.replace(1.3, "junk")
 	pykx.List(pykx.q('
@@ -872,7 +936,7 @@
 ### Fixes and Improvements
 
 - Added warning to `kx.q.system.load` and context registration when attempting to load path with a space. Can be suppressed by enabling `PYKX_SUPPRESS_WARNINGS`.
-- Changed `%%python` heading to `%%py` when calling Python code during `jupyter_qfirst` mode so as not to conflict with inbuilt Jupyter cell magics. 
+- Changed `%%python` heading to `%%py` when calling Python code during `jupyter_qfirst` mode so as not to conflict with inbuilt Jupyter cell magics.
 - Fixed `kx.license.check(format='string')` to remove newline characters during comparison.
 - Configuration file `.pykx-config` now supports use of boolean toml configuration
 
@@ -914,7 +978,7 @@
 	columns datatypes
 	---------------------
 	a       "kx.LongAtom"
-	b       "kx.IntAtom" 
+	b       "kx.IntAtom"
 	'))
 	```
 
@@ -954,7 +1018,7 @@
 	...     'sym': kx.random.random(100, ['AAPL', 'GOOG', 'MSFT']),
 	...     'date': kx.random.random(100, kx.q('2022.01.01') + [0,1,2]),
 	...     'price': kx.random.random(100, 1000.0),
-	...     'size': kx.random.random(100, 100) 
+	...     'size': kx.random.random(100, 100)
 	... })
 	>>> table.select(columns=kx.Column('price').max(), where=kx.Column('size') > 5)
 	>>> table.update(column=kx.Column('price').wavg(kx.Column('size')).rename('vwap'), by=kx.Column('sym'))
@@ -1141,7 +1205,7 @@
 	>>> import pykx as kx
 	>>> tab = kx.q('flip (`a;`$"!";`a;`$"a b")!4 4#16?1f')
 	>>> kx.util.detect_bad_columns(tab)
-	/usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py:593: UserWarning: 
+	/usr/local/anaconda3/lib/python3.8/site-packages/pykx/util.py:593: UserWarning:
 	Duplicate columns or columns with reserved characters detected:
 		Duplicate columns: ['a']
 		Invalid columns: ['!', 'a b']
@@ -1400,17 +1464,17 @@
 		>>> kx.util.debug_environment()
 		..
 		**** PyKX Environment Variables ****
-		PYKX_IGNORE_QHOME: 
-		PYKX_KEEP_LOCAL_TIMES: 
-		PYKX_ALLOCATOR: 
-		PYKX_GC: 
-		PYKX_LOAD_PYARROW_UNSAFE: 
-		PYKX_MAX_ERROR_LENGTH: 
-		PYKX_NOQCE: 
-		PYKX_Q_LIB_LOCATION: 
-		PYKX_RELEASE_GIL: 
-		PYKX_Q_LOCK: 
-		PYKX_DEFAULT_CONVERSION: 
+		PYKX_IGNORE_QHOME:
+		PYKX_KEEP_LOCAL_TIMES:
+		PYKX_ALLOCATOR:
+		PYKX_GC:
+		PYKX_LOAD_PYARROW_UNSAFE:
+		PYKX_MAX_ERROR_LENGTH:
+		PYKX_NOQCE:
+		PYKX_Q_LIB_LOCATION:
+		PYKX_RELEASE_GIL:
+		PYKX_Q_LOCK:
+		PYKX_DEFAULT_CONVERSION:
 		..
 		```
 
@@ -1462,7 +1526,7 @@
 		...     'price': kx.random.random(100, 10.0)})
 		>>> tab.groupby('sym')['price'].max()
 		pykx.KeyedTable(pykx.q('
-		sym| price   
+		sym| price
 		---| --------
 		a  | 9.830794
 		b  | 9.761246
@@ -1649,7 +1713,7 @@
 		>>> import pykx as kx
 		>>> db = kx.DB(path='/tmp/test directory/mydb')
 		>>> db.tables
-		['trade']		
+		['trade']
 		```
 
 - Improved handling of invalid methods for Splayed and Partitioned Tables.
@@ -1733,7 +1797,7 @@
 		```
 
 - Changed return of `pykx.KeyedTable.keys()` from a list of tuples to a `pykx.Table` to be consistent with `pykx.KeyedTable.values()` and unkeyed `pykx.Table`.
-  
+
 	=== "Behavior prior to change"
 
 		```python
@@ -1863,10 +1927,10 @@
 
 		>>> tab.dtypes
 		pykx.Table(pykx.q('
-		columns datatypes     type         
+		columns datatypes     type
 		-----------------------------------
 		a       "kx.LongAtom" "kx.LongAtom"
-		b       "kx.IntAtom"  "kx.IntAtom" 
+		b       "kx.IntAtom"  "kx.IntAtom"
 		'))
 
 		>>> tab.select_dtypes(include=['SymbolAtom'])
@@ -1895,10 +1959,10 @@
 
 		>>> tab.dtypes
 		pykx.Table(pykx.q('
-		columns datatypes     type         
+		columns datatypes     type
 		-----------------------------------
 		a       "kx.LongAtom" "kx.LongAtom"
-		b       "kx.IntAtom"  "kx.IntAtom" 
+		b       "kx.IntAtom"  "kx.IntAtom"
 		'))
 
 		>>> tab.select_dtypes(include=['SymbolAtom'])
@@ -1930,7 +1994,7 @@
 		File "pykx/_wrappers.pyx", line 486, in pykx._wrappers.factory
 		pykx.exceptions.QError: nyi
 		```
-                        
+
 
 	=== "Behavior post change"
 
@@ -1957,7 +2021,7 @@
 		/usr/python/site-packages/pykx/wrappers.py:2246: UserWarning: Attempting to call numpy..
 		  warn('Warning: Attempting to call numpy __array_function__ on a '
 		9
-		```	
+		```
 
 	=== "Behavior post change"
 
@@ -3013,7 +3077,7 @@
 		pykx.LongVector(pykx.q('24 28 32 36'))
 		```
 
-- Updated kdb Insights Core libraries to 4.0.8, see [here](https://code.kx.com/insights/1.8/core/release-notes/latest.html#408) for more information.
+- Updated kdb Insights Core libraries to 4.0.8, see [here](https://code.kx.com/insights/core/release-notes/previous.html#408) for more information.
 - Updated `libq` 4.0 version to 2024.03.04 for all supported OS's.
 - Fix issue where use of valid C backed q `code` APIs could result in segmentation faults when called.
 

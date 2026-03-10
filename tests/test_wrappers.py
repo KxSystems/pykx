@@ -14,6 +14,7 @@ import shutil
 from textwrap import dedent
 from uuid import UUID
 import itertools
+import sys
 
 # Do not import Pandas, PyArrow, or PyKX here - use the pd/pa/kx fixtures instead!
 import numpy as np
@@ -1677,7 +1678,10 @@ class Test_Vector:
                 py_err = str(e)
             if kx_err is not None or py_err is not None:
                 assert "is not in" in kx_err
-                assert "is not in" in py_err
+                if sys.version_info < (3, 14):
+                    assert "is not in" in py_err
+                else:
+                    assert "not in list" in py_err
             else:
                 assert kx_res == py_res
 
@@ -2092,11 +2096,8 @@ def test_ArrowUUIDType(q, kx, pa):
                       kx.wrappers.ArrowUUIDType)
     assert isinstance(kx.wrappers.PandasUUIDArray(v), kx.wrappers.PandasUUIDArray)
 
-    with pytest.raises(ValueError, match=r'(?i)Cannot convert multiple chunks'):
-        pa.Table.from_arrays(
-            [pa.chunked_array([q('enlist 0Ng'), q('enlist 0Ng')])],
-            names=['a']
-        ).to_pandas()
+    ca = pa.chunked_array([q('enlist 0Ng'), q('enlist 0Ng')])
+    assert len(ca.chunks) == 2
 
 
 def test_deserialize(kx):
@@ -5725,3 +5726,49 @@ def test_to_vec(kx):
 def test_atom_ufunc(kx):
     assert 5 == np.add(kx.LongAtom(2), kx.LongAtom(3)).py()
     assert 2 == np.floor(kx.FloatAtom(2.5)).py()
+
+
+class Test_Column:
+    def test_name_type(self, kx):
+        col = kx.Column('age', data=[25, 30, 31])
+        assert col._name == 'age'
+        col = col.name('age_upd')
+        assert col._name == 'age_upd'
+        with pytest.raises(TypeError) as err:
+            col.name(123)
+            assert "str or SymbolAtom" in str(err)
+        with pytest.raises(TypeError) as err:
+            col = kx.Column(1, data=[25, 30, 31])
+            assert "str or SymbolAtom" in str(err)
+
+        with pytest.raises(TypeError) as err:
+            col = kx.Column(None, [25, 30, 31])
+            assert "str or SymbolAtom" in str(err)
+
+        col = kx.Column(kx.SymbolAtom('age'), data=[25, 30, 31])
+        assert col._name == 'age'
+
+    def test_column_positional(self, kx):
+        t = kx.q('([] a: 1 2 3)')
+        tc = kx.q('([] a: 1 2 3;c:1 2 3)')
+        assert kx.q('~', tc, t.update(kx.Column('a', 'c')))
+
+    def test_column_time(self, kx):
+        d1 = kx.TimestampAtom(2150, 10, 22, 20, 31, 15, 70713856)
+        d2 = kx.TimestampAtom(2025, 11, 25, 11, 9, 13, 20120214)
+        tab = kx.Table(data={'a': [d1, d2]})
+
+        assert all(tab.exec(kx.Column('a').time) == kx.TimeVector(kx.q('20:31:15.070 11:09:13.020'))) # noqa E:501
+
+
+def test_column_types(kx):
+    a = kx.Column(name='age', data=(1, 2, 3))
+    assert (a._name=='age' and a._data==(1, 2, 3))
+
+    with pytest.raises(TypeError) as err:
+        kx.Column(data=(1, 2, 3))
+        assert "'name' cannot be None" in str(err)
+
+    with pytest.raises(TypeError) as err:
+        kx.Column(age=5, data=(1, 2, 3))
+        assert "name can only be of type Str and pykx.SymbolAtom" in str(err)

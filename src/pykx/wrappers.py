@@ -1924,10 +1924,18 @@ class Vector(Collection, abc.Sequence):
             np_array = self.np(raw=raw, has_nulls=has_nulls)
             if not raw and isinstance(self, List):
                 null_inds = []
+                atom_types = set()
                 for i in range(len(self)):
-                    if isinstance(self._unlicensed_getitem(i), IntegralNumericAtom)\
-                            and self._unlicensed_getitem(i).is_null:
+                    item = self._unlicensed_getitem(i)
+                    if not isinstance(item, Function):
+                        atom_types.add(type(item))
+                    if isinstance(item, IntegralNumericAtom) and item.is_null:
                         null_inds.append(i)
+                if len(atom_types) > 1:
+                    raise QError(
+                        'Unable to convert pykx.List with non conforming types '
+                        'to PyArrow,\n        failed with error: '
+                        'cannot mix types in a pykx.List for PyArrow conversion')
                 if 0 != len(null_inds):
                     np_array[null_inds] = None
             return pa.array(np_array)
@@ -2619,6 +2627,11 @@ class GUIDVector(Vector):
 
     def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         return _wrappers.guid_vector_np(self, raw, has_nulls)
+
+    def __arrow_array__(self, type=None):
+        if pa is None:
+            raise PyArrowUnavailable # nocov
+        return pa.array(self.np(raw=True).view('S16'), pa.binary(16))
 
     def pa(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         if pa is None:
@@ -5184,10 +5197,7 @@ class Function(Atom):
     vs = each_left
 
 
-bs4_spec = importlib.util.find_spec("bs4")
-md2_spec = importlib.util.find_spec("markdown2")
-if bs4_spec is not None and md2_spec is not None:
-    Function.scan.__doc__ = help.qhelp('scan')
+Function.scan.__doc__ = help.qhelp('scan')
 
 
 class Lambda(Function):
@@ -5759,7 +5769,7 @@ class ParseTree:
         if isinstance(tree, str):
             tree = q.parse(CharVector(tree))
         elif isinstance(tree, Column):
-            tree = tree._value
+            tree = tree._data
         elif isinstance(tree, QueryPhrase):
             tree = tree._phrase
         elif isinstance(tree, Variable):
@@ -5869,7 +5879,7 @@ class Variable:
 
 class Column:
     """Helper class creating queries for the Query API"""
-    def __init__(self, column=None, name=None, value=None, is_tree=False):
+    def __init__(self, column=None, name=None, data=None, is_tree=False, value=None):
         if not licensed:
             raise LicenseException("use kx.Column objects")
         if name is not None:
@@ -5879,21 +5889,32 @@ class Column:
             self._name = column
             self._renamed = False
         if value is not None:
-            self._value = value
+            self._data = value
+            self._renamed = True
+            warn("The kx.Column 'value' keyword is deprecated, please use 'data' instead",
+                 DeprecationWarning)
+        elif data is not None:
+            self._data = data
+            self._renamed = True
         else:
-            self._value = column
+            self._data = column
         self._is_tree = is_tree
+
+        if self._name is None:
+            raise TypeError("Column 'name' value cannot be None.")
+        elif not isinstance(self._name, (str, SymbolAtom)):
+            raise TypeError("Column 'name' can only be of type Str and pykx.SymbolAtom")
 
     def __repr__(self):
         preamble = f'pykx.{type(self).__name__}'
-        return f"{preamble}(name='{self._name}', value={type(self._value)})"
+        return f"{preamble}(name='{self._name}', data={type(self._data)})"
 
     """Function for building up a function call off a Column"""
     def call(self, op, *other, iterator=None, col_arg_ind=0, project_args=None):
         params = []
         for param in other:
             if isinstance(param, Column):
-                param = param._value
+                param = param._data
             elif isinstance(param, Variable):
                 param = param._name
             else:
@@ -5904,7 +5925,7 @@ class Column:
                 ):
                     param = [param]
             params.append(param)
-        params.insert(col_arg_ind, self._value)
+        params.insert(col_arg_ind, self._data)
         if isinstance(op, (str, bytes, CharVector)):
             op = op.encode() if isinstance(op, str) else op
             cmd = [q(op)]
@@ -5947,7 +5968,7 @@ class Column:
                 i.extend(cmd)
             cmd = i
         cpy = copy.deepcopy(self)
-        cpy._value = cmd
+        cpy._data = cmd
         return cpy
 
     def __add__(self, other, iterator=None, col_arg_ind=0, project_args=None):
@@ -6048,13 +6069,13 @@ class Column:
 
     def __or__(self, other):
         if isinstance(other, Column):
-            other = other._value
+            other = other._data
         elif isinstance(other, QueryPhrase):
             raise TypeError("Cannot | off a Column with a QueryPhrase")
         elif isinstance(other, ParseTree):
             other = other._tree
         cpy = copy.deepcopy(self)
-        cpy._value = [q(b'or'), self._value, other]
+        cpy._data = [q(b'or'), self._data, other]
         return cpy
 
     def abs(self, iterator=None):
@@ -7111,7 +7132,7 @@ class Column:
                 name = by[0]
         elif isinstance(by, Column):
             name = by._name
-            by = by._value
+            by = by._data
         elif isinstance(by, QueryPhrase):
             name = by._names[0]
             by = by.to_dict()
@@ -7120,7 +7141,7 @@ class Column:
         if isinstance(data, QueryPhrase):
             data = data.to_dict()
         pt = ParseTree.fby(by, aggregate, data, by_table, data_table)
-        return Column(name=name, value=pt)
+        return Column(name=name, data=pt)
 
     def fills(self, iterator=None):
         """
@@ -9613,6 +9634,39 @@ class Column:
                          project_args=project_args)
 
     @property
+    def time(self):
+        """
+        Retrieve the time information from a temporal column
+
+
+        Examples:
+
+        Retrieve time information from a column
+
+        ```python
+        >>> import pykx as kx
+        >>> tab = kx.Table(data={'time': kx.random.random(3, kx.TimestampAtom.inf)})
+        >>> tab
+        pykx.Table(pykx.q('
+        time
+        -----------------------------
+        2118.11.10D05:05:45.270444032
+        2052.01.18D19:21:15.973214208
+        2088.03.13D18:56:07.388233728
+        '))
+        >>> tab.select(kx.Column('time').time)
+        pykx.Table(pykx.q('
+        time
+        ------------
+        05:05:45.270
+        19:21:15.973
+        18:56:07.388
+        '))
+        ```
+        """
+        return self.call('`time$')
+
+    @property
     def hour(self):
         """
         Retrieve the hour information from a temporal column
@@ -9886,9 +9940,42 @@ class Column:
         '))
         ```
         """
+        if not isinstance(name, (str, SymbolAtom)):
+            raise TypeError("'name' must be of type str or SymbolAtom")
         cpy = copy.deepcopy(self)
         cpy._name = name
         cpy._renamed = True
+        return cpy
+
+    def data(self, data):
+        """
+        Replace data of a column object
+
+        Parameters:
+            data: The data to assign to the column
+
+        Examples:
+
+        Change the value of a column after selecting from table
+        ```python
+        >>> import pykx as kx
+        >>> tab = kx.Table(data={
+        ...     'a': [1, -1, 0.5],
+        ...     'b': [[-1, 2, 1], [0, 1, 2], [1, 2, 3]]
+        ...     })
+        >>> tab.update(kx.Column('a').data([1,2,3]))
+        pykx.Table(pykx.q('
+        a b
+        --------
+        1 -1 2 1
+        2 0  1 2
+        3 1  2 3
+        '))
+        ```
+        """
+        cpy = copy.deepcopy(self)
+        cpy._data = data
+        cpy._renamed=True
         return cpy
 
     def average(self, iterator=None):
@@ -10973,7 +11060,7 @@ class QueryPhrase:
         elif isinstance(phrase, ParseTree):
             self._phrase = phrase._tree
         elif isinstance(phrase, Column):
-            self._phrase = [phrase._value]
+            self._phrase = [phrase._data]
             self._names = [phrase._name]
             self._are_trees = [phrase._is_tree]
         elif isinstance(phrase, str):
@@ -10998,7 +11085,7 @@ class QueryPhrase:
             self._names.append('')
             self._are_trees.append(False)
         elif isinstance(other, Column):
-            self._phrase.append(other._value)
+            self._phrase.append(other._data)
             self._names.append(other._name)
             self._are_trees.append(other._is_tree)
         elif isinstance(other, QueryPhrase):
@@ -11016,7 +11103,7 @@ class QueryPhrase:
             self._names.extend('')
             self._are_trees.extend(False)
         elif isinstance(other, Column):
-            self._phrase.extend(other._value)
+            self._phrase.extend(other._data)
             self._names.extend(other._name)
             self._are_trees.extend(other._is_tree)
         elif isinstance(other, QueryPhrase):

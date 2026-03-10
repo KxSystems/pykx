@@ -546,11 +546,11 @@ cdef inline factory(uintptr_t addr, bint incref, str name='', bint err_preamble=
         err_string = str((<core.K>addr).s, 'utf-8')
         if err_string == 'nosocket':
             err_string = 'nosocket: Cannot open or use a socket on a thread other than main.\n'\
-                         'Read https://code.kx.com/user-guide/advanced/threading.html for more information'
+                         'Read https://code.kx.com/pykx/user-guide/advanced/threading.html for more information'
         elif err_string == 'noupdate':
             err_string = 'noupdate: Cannot update a global variable while using:\n\t- Multithreaded mode'\
                          '\n\t- peach with secondary threads\n\t- `-b` command line argument or reval code.\n'\
-                         'Read https://code.kx.com/user-guide/advanced/threading.html for more information'
+                         'Read https://code.kx.com/pykx/user-guide/advanced/threading.html for more information'
         elif err_string == 'par':
             err_string = 'par: Cannot execute an unsupported operation on a partitioned table or its '\
                          'constituent parts'

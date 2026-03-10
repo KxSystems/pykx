@@ -98,7 +98,7 @@ j12:36/:nA?;x12:nA@0x24\: /base36 J from char12(cusip)
 btoa:-32!;atob:-44!;sha1:-33!;prf0:+`name`file`line`col`text`pos!*-37!
 objp:{x like"[mgs][s3]://*"};
 lo:{if[$[1>@d:!f:-1!x;1;`.d~*d];:.[$[qt d;*|`\:f;99=@d;`.;'`type];();:;d:. f]];d@:&~d like"*$";p:(d=`par.txt)|d like"[0-9]*";
- if[y;if[objp x;'"no cd to object storage"];."\\cd ",$x;f:`:.];{.q.set[*|`\:x]$[0h>@!x;. x;x`]}'`/:'f,'d@&~(d=`html)|(d like"*#")|p|s:d like"*.?";if[|/p;L[d@&p;f;~y|objp x]];if[z&~`.=x;(."\\l ",$:)'`/:'f,'d@&s&~p];}
+ if[y;if[objp x;'"no cd to object storage"];."\\cd ",$x;f:`:.];{.q.set[*|`\:x]$[0h>@!x;. x;x`]}'`/:'f,'d@&~(d=`html)|(d like"*#")|p|s:|/d like/:("*.[kq]_";"*.?");if[|/p;L[d@&p;f;~y|objp x]];if[z&~`.=x;(."\\l ",$:)'`/:'f,'d@&s&~p];}
 l:lo[;1;1]
 
 sw:{.q.sublist[_.5**|."\\C"]x};tab:{" "/:'(x*|/#:''y)$/:y};t0:{$[x>#y;((#*y)#'" -"),y;y]}

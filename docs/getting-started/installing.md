@@ -21,7 +21,7 @@ _This page explains how to install PyKX on your machine._
 
 Before you start, make sure you have:
 
-- [**Python**](https://www.python.org/downloads/) (versions 3.8-3.13)
+- [**Python**](https://www.python.org/downloads/) (versions 3.8-3.14)
 - [**pip**](https://pypi.org/project/pip/)
 
 Recommended: a virtual environment with packages such as [venv](https://docs.python.org/3/library/venv.html) from the standard library.
@@ -30,9 +30,9 @@ Recommended: a virtual environment with packages such as [venv](https://docs.pyt
 
 KX only supports versions of PyKX built by KX (installed from wheel files) for:
 
-- **Linux** (`manylinux_2_17_x86_64`, `linux-arm64`) with CPython 3.8-3.13
-- **macOS** (`macosx_10_10_x86_64`, `macosx_10_10_arm`) with CPython 3.8-3.13
-- **Windows** (`win_amd64`) with CPython 3.8-3.13
+- **Linux** (`manylinux_2_17_x86_64`, `linux-arm64`) with CPython 3.8-3.14
+- **macOS** (`macosx_10_15_x86_64`, `macosx_10_15_arm`) with CPython 3.8-3.14
+- **Windows** (`win_amd64`) with CPython 3.8-3.14
 
 We provide assistance to user-built installations of PyKX only on a best-effort basis.
 
@@ -86,6 +86,31 @@ You can install PyKX from three sources:
 	pip install .
 
 	```
+
+=== "Install PyKX from UV"
+
+	Ensure you have `#!bash uv` installed, instructions can be found [here.](https://docs.astral.sh/uv/getting-started/installation/)
+	
+	Then install the latest version of PyKX with the following command:
+	
+	```sh
+	uv pip install pykx
+
+	```
+
+=== "Install PyKX from pipx"
+
+	Ensure you have `#!bash pipx` installed, installation guide can be found [here.](https://pipx.pypa.io/stable/installation/)
+
+	Then install PyKX using the flag to install dependencies:
+
+	```sh
+	pipx install pykx --include-deps
+	
+	```
+
+	This will create a virtual environment to run PyKX in, make sure you activate this to access the package.
+
 
 At this point you have [partial access to PyKX](../user-guide/advanced/modes.md#1a-running-in-unlicensed-mode). To gain access to all PyKX features, follow the steps in the next section, otherwise go straight to [3. Verify PyKX Installation](#3-verify-pykx-installation).
 
@@ -267,10 +292,10 @@ This command should display the installed version of PyKX.
 		PyKX depends on the following third-party Python packages:
 
       - `pandas>=1.2, <2.0; python_version=='3.8'`
-      - `pandas>=1.2, <=2.3.0; python_version>'3.8'`
-      - `numpy~=1.22; python_version<'3.11'`
-      - `numpy~=1.23, <2.3.0; python_version=='3.11'`
-      - `numpy~=1.26, <2.3.0; python_version>='3.12'`
+      - `pandas>=1.2, <3.0; python_version>'3.8'`
+      - `numpy>=1.22; python_version<'3.11'`
+      - `numpy>=1.23; python_version=='3.11'`
+      - `numpy>=1.26; python_version>='3.12'`
       - `pytz>=2022.1`
       - `toml~=0.10.2`
       - `dill>=0.2.0`
@@ -291,12 +316,10 @@ This command should display the installed version of PyKX.
 
 		**Optional Python dependencies:**
 
-		- **`pyarrow >=3.0.0, <19.0.0`**: install `pyarrow` extra, for example `pip install pykx[pyarrow]`.
+		- **`pyarrow >=3.0.0`**: install `pyarrow` extra, for example `pip install pykx[pyarrow]`.
 		- **`find-libpython ~=0.2`**: install `debug` extra, for example `pip install pykx[debug]`.
 		- **`ast2json ~=0.3`**: install with `dashboards` extra, for example `pip install pykx[dashboards]`
 		- **`dill >=0.2`**: install via pip, with `remote` extra, for example `pip install pykx[remote]`
-		- **`beautifulsoup4 >=4.10.0`**: install with `help` extra, for example `pip install pykx[help]`
-		- **`markdown2 >=2.5.0`**: install with `help` extra, for example `pip install pykx[help]`
 		- **`psutil >=5.0.0`**: install via pip, with `streaming` extra, for example `pip install pykx[streaming]`
 		- **`torch >2.1`**: install via pip, with `torch` extra, for example `pip install pykx[torch]`
 
@@ -331,11 +354,11 @@ This command should display the installed version of PyKX.
 | Mac ARM   | kdb+ 4.0   | libq.dylib  | 2025.02.18 |
 | Mac x86   | kdb+ 4.0   | libq.dylib  | 2025.02.18 |
 | Windows   | kdb+ 4.0   | q.dll/q.lib | 2025.02.18 |
-| Linux ARM | kdb+ 4.1   | libq.so     | 2025.11.25 |
-| Linux x86 | kdb+ 4.1   | libq.so     | 2025.11.25 |
-| Mac ARM   | kdb+ 4.1   | libq.dylib  | 2025.11.25 |
-| Mac x86   | kdb+ 4.1   | libq.dylib  | 2025.11.25 |
-| Windows   | kdb+ 4.1   | q.dll/q.lib | 2025.11.25 |
+| Linux ARM | kdb+ 4.1   | libq.so     | 2026.01.23 |
+| Linux x86 | kdb+ 4.1   | libq.so     | 2026.01.23 |
+| Mac ARM   | kdb+ 4.1   | libq.dylib  | 2026.01.23 |
+| Mac x86   | kdb+ 4.1   | libq.dylib  | 2026.01.23 |
+| Windows   | kdb+ 4.1   | q.dll/q.lib | 2026.01.23 |
 | Linux ARM | Unlicensed | libe.so     | 2023.11.22 |
 | Linux x86 | Unlicensed | libe.so     | 2023.11.22 |
 | Mac ARM   | Unlicensed | libe.so     | 2023.11.22 |

@@ -3,7 +3,7 @@ site_name: 'PyKX'
 site_author: 'KX'
 site_description: 'PyKX Documentation'
 site_url: 'https://code.kx.com/pykx'
-copyright: '© 2025 Kx Systems, Inc. KX and kdb+ are registered trademarks of Kx Systems, Inc., a subsidiary of FD Technologies plc.'
+copyright: '© 2026 KX Systems, Inc. KX, KDB-X, and kdb+ are registered trademarks of KX Systems, Inc., a subsidiary of KX Software Limited.'
 site_dir: 'public'
 dev_addr: 'localhost:8080'
 
@@ -104,7 +104,7 @@ plugins:
           rendering:
             docstring_section_style: 'table'
             heading_level: 2
-            line_length: 80
+            line_length: 100
             members_order: 'source'
             merge_init_into_class: true
             separate_signature: true
@@ -184,8 +184,8 @@ nav:
   - Home: 'https://code.kx.com/insights/'
   - kdb+ and q: 'https://code.kx.com/q'
   - kdb Insights SDK: "https://code.kx.com/insights/core"
-  - kdb Insights Enterprise: "https://code.kx.com/insights/platform/"
-  - KDB.AI: "https://code.kx.com/kdbai/"
+  - kdb Insights Enterprise: "https://docs.kx.com/insights-enterprise-latest/insights/enterprise/home.htm"
+  - KDB.AI: "https://code.kx.com/kdbai/latest/"
   - PyKX:
     - index.md
     - Get Started:
@@ -283,7 +283,7 @@ nav:
       - PyKX as a server: examples/server/server.md
       - Real-time streaming: examples/streaming/index.md
       - Multithreaded execution: examples/threaded_execution/threading.md
-      - Asynchronous Queries: examples/AsynchronousQueries/async_querying.md
+      - Asyncronous Queries: examples/AsynchronousQueries/async_querying.md
     - Releases:
       - Release notes:
         - PyKX: release-notes/changelog.md
@@ -301,5 +301,5 @@ nav:
       - PyKX license: license.md
       - Contributors: contributors.md
   - APIs: 'https://code.kx.com/insights/api/index.html'
-  - Licensing: 'https://code.kx.com/insights/licensing/licensing/'
+  - Licensing: 'https://code.kx.com/insights/licensing/index.html'
   - Help: 'https://code.kx.com/home/support.html'
