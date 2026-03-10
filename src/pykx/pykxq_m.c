@@ -157,7 +157,7 @@ EXPORT K k_pykx_init(K k_q_lib_pat, K _pykx_threading) {
     return (K)0;
 }
 
-void* thread_init();
+void* thread_init(void* args);
 EXPORT K k_init_python(K x, K y, K z) {
     pthread_mutex_init(&head_mutex, NULL);
     pthread_mutex_init(&cond_mutex, NULL);
