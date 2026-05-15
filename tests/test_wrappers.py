@@ -5772,3 +5772,11 @@ def test_column_types(kx):
     with pytest.raises(TypeError) as err:
         kx.Column(age=5, data=(1, 2, 3))
         assert "name can only be of type Str and pykx.SymbolAtom" in str(err)
+
+
+def test_column_bin(kx):
+    t = kx.q('([] n: 2 4)')
+    assert all(t.select(kx.Column('n').bin([1, 3, 5])) == kx.q('select 1 3 5 bin n from ([] n: 2 4)')) # noqa E:501
+
+    with pytest.raises(kx.QError):
+        t.select(kx.Column('n').bin(['a', 'b', 'c']))

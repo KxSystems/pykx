@@ -5,6 +5,7 @@ import shutil
 from time import sleep
 from uuid import uuid4
 
+import numpy as np
 import pytest
 import toml
 
@@ -241,3 +242,17 @@ def test_config_add_type(kx):
     assert data['default']['PYKX_MAX_ERROR_LENGTH'] == 1
     assert data['default']['PYKX_BETA_FEATURES']
     os.remove(fpath)
+
+
+def test_serialize_deserialize(kx, q):
+    vec = q('til 10')
+    ser = kx.serialize(vec)
+    assert isinstance(ser, kx.serialize)
+
+    byte = ser.copy()
+    arr = ser.np()
+    assert isinstance(byte, bytes)
+    assert isinstance(arr, np.ndarray)
+
+    assert q('{x ~ til 10}', kx.deserialize(byte)).py()
+    assert q('{x ~ til 10}', kx.deserialize(arr)).py()

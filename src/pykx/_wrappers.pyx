@@ -60,6 +60,14 @@ NPY_TYPE_ITEMSIZE = {
 }
 
 
+def memview_to_array(view) -> np.ndarray:
+    cdef np.npy_intp n = (<core.K><uintptr_t>view._ptr).n
+    cdef np.ndarray arr = np.PyArray_SimpleNewFromData(1, &n, 2, <void*>(<core.K><uintptr_t>view._ptr).G0)
+    Py_INCREF(view)
+    PyArray_SetBaseObject(arr, view)
+    return arr
+
+
 def k_vec_to_array(k_vec, np_type: int) -> np.ndarray:
     """Creates a Numpy array that references the K object until the array's data is deallocated."""
     cdef np.npy_intp n = (<core.K><uintptr_t>k_vec._addr).n
@@ -118,7 +126,11 @@ def k_str(self):
 
 
 cpdef inline deserialize(x):
-    cdef core.K buff = core.kpn(<char*>x, len(x))
+    l = len(x)
+    if isinstance(x, np.ndarray):
+        x = x.data.tobytes()
+    cdef core.K buff = core.kpn(<char*>x, l)
+
     if 0 == core.okx(buff):
         core.r0(buff)
         raise QError('Failed to deserialize supplied non PyKX IPC serialized format object')

@@ -23,3 +23,23 @@ h2.doc > code {
 h3.doc > code {
     background: var(--md-code-bg-color);
 }
+.md-grid {
+    max-width: 72rem;
+  }
+  
+  @media screen and (min-width: 76.25em) {
+    [dir="ltr"] .md-sidebar--primary:not([hidden])~.md-content>.md-content__inner {
+      margin-left: 0.4rem;
+    }
+  
+    [dir="ltr"] .md-sidebar--secondary:not([hidden])~.md-content>.md-content__inner {
+      margin-right: 0.4rem;
+    }
+  
+    [dir="rtl"] .md-sidebar--primary:not([hidden])~.md-content>.md-content__inner {
+      margin-right: 0.4rem;
+    }
+  
+    [dir="rtl"] .md-sidebar--secondary:not([hidden])~.md-content>.md-content__inner {
+      margin-left: 0.4rem;
+    }

@@ -28,7 +28,7 @@ extra_css:
   - https://code.kx.com/dashboards/stylesheets/dashboards.css
   - stylesheets/swagger.css
   # More accessible colors in the edited versions
-  - stylesheets/2021-edited.css
+  - stylesheets/2026-edited.css
   - stylesheets/prism-edited.css
 
 extra_javascript:
@@ -40,6 +40,7 @@ extra_javascript:
   - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML'
   - 'https://code.jquery.com/jquery-3.6.0.min.js'
   - 'https://use.fontawesome.com/3dbf29ed12.js'
+  - scripts/strip-q-prompt-copy.js
   # this relative path is needed to source from code.kx.com!!!
   - "&period;&period;/&period;&period;/pykx/scripts/versions.js"
   # Uncomment only for local test 
@@ -181,125 +182,118 @@ theme:
 docs_dir: docs
 
 nav:
-  - Home: 'https://code.kx.com/insights/'
-  - kdb+ and q: 'https://code.kx.com/q'
-  - kdb Insights SDK: "https://code.kx.com/insights/core"
-  - kdb Insights Enterprise: "https://docs.kx.com/insights-enterprise-latest/insights/enterprise/home.htm"
-  - KDB.AI: "https://code.kx.com/kdbai/latest/"
-  - PyKX:
-    - index.md
+  - Home: 
+    - Overview: index.md
     - Get Started:
       - Install: getting-started/installing.md
       - Quickstart guide: getting-started/quickstart.md
-    - Learn:
-      - What is PyKX?: getting-started/what_is_pykx.md
-      - Objects and attributes: learn/objects.md
-      - Databases: user-guide/advanced/database/index.md
-      - Modes of operation: user-guide/advanced/modes.md
-      - Performance tips: user-guide/advanced/performance.md
-      - Why upgrade from embedPy: pykx-under-q/upgrade.md
-      - Glossary: extras/glossary.md
-      - Blogs, articles, videos: blogs.md
-    - How to:
-      - Configure PyKX: user-guide/configuration.md
-      - Interact with data:
-        - Create objects: user-guide/fundamentals/creating.md
-        - Use objects: user-guide/fundamentals/evaluating.md
-        - Index objects: user-guide/fundamentals/indexing.md
-        - Convert data: user-guide/fundamentals/conversion_considerations.md
-        - Convert text: user-guide/fundamentals/text.md
-        - Convert nulls and infinities: user-guide/fundamentals/nulls_and_infinities.md
-        - Convert temporal data: user-guide/fundamentals/temporal.md
-      - Interact with databases:
-        - Generate databases: user-guide/advanced/database/db_gen.md
-        - Load databases: user-guide/advanced/database/db_loading.md
-        - Manage databases: user-guide/advanced/database/db_mgmt.md
-      - Query data:
-        - Introduction: user-guide/fundamentals/query/index.md
-        - Query with Python: user-guide/fundamentals/query/pyquery.md
-        - Query with SQL: user-guide/fundamentals/query/sql.md
-        - Query with q: user-guide/fundamentals/query/qquery.md
-        - Performance considerations: user-guide/fundamentals/query/perf.md
-      - Communicate via IPC: user-guide/advanced/ipc.md
-      - Capture real-time data:
-        - Introduction: user-guide/advanced/streaming/index.md
-        - Capture and Store: user-guide/advanced/streaming/basic.md
-        - Publish data: user-guide/advanced/streaming/publish.md
-        - Subscribe to data: user-guide/advanced/streaming/subscribe.md
-        - Analyze streaming data: user-guide/advanced/streaming/rta.md
-        - Build custom APIs: user-guide/advanced/streaming/custom_apis.md
-        - Manage query routing: user-guide/advanced/streaming/gateways.md
-        - Complex infrastructure: user-guide/advanced/streaming/complex.md
-      - Apply attributes: user-guide/advanced/attributes.md
-      - Compress and encrypt data: user-guide/advanced/compress-encrypt.md
-      - Import existing q functions: user-guide/advanced/context_interface.md
-      - Run remote functions: user-guide/advanced/remote-functions.md
-      - Serialize data: user-guide/advanced/serialization.md
-      - Use PyKX in subprocesses: user-guide/advanced/subprocess.md
-      - Run q code multithreaded: user-guide/advanced/threading.md
-      - Manage your license: user-guide/advanced/license.md
-      - Use Python in a q process: pykx-under-q/intro.md
-    - Reference:
-      - API references:
-        - q functions and operators: api/pykx-execution/q.md
-        - Execution classes: api/pykx-execution/embedded_q.md
-        - q contexts: api/pykx-execution/ctx.md
-        - Emulated q console: api/pykx-execution/console.md
-        - Data generation: api/random.md
-        - Schema generation: api/schema.md
-        - Query data: api/query.md
-        - Query classes: api/columns.md
-        - Registering custom operations: api/pykx-q-data/register.md
-        - Compression and encryption: api/compress.md
-        - Database management: api/db.md
-        - File I/O: api/pykx-save-load/fileio.md
-        - q IPC interface: api/ipc.md
-        - Streamlit integration: api/streamlit.md
-        - Serialize/deserialize: api/serialize.md
-        - Remote Python execution: api/remote.md
-        - Real-time capture: api/tick.md
-        - System command wrappers: api/system.md
-        - Utility functions: api/util.md
-        - Reimporter module: api/reimporting.md
-        - License management: api/license.md
-        - PyKX under q: pykx-under-q/api.md
-      - Data types and conversions:
-        - Python to PyKX: api/pykx-q-data/toq.md
-        - Wrappers: api/pykx-q-data/wrappers.md
-        - PyKX to Python: api/pykx-q-data/type_conversions.md
-      - Pandas API: user-guide/advanced/Pandas_API.ipynb
-      - Exceptions: api/exceptions.md
-    - Integrations:
-      - NumPy: user-guide/advanced/numpy.md
-      - Streamlit: user-guide/advanced/streamlit.md
-      - Python charting libraries: examples/charting.ipynb
-      - Jupyter Integration: examples/jupyter-integration.ipynb
-    - Examples:
-      - PyKX Introduction Notebook: examples/interface-overview.ipynb
-      - Subscriber: examples/subscriber/readme.md
-      - Compress and encrypt: examples/compress_and_encrypt/readme.md
-      - Database creation and management: examples/db-management.ipynb
-      - IPC: examples/ipc/README.md
-      - PyKX as a server: examples/server/server.md
-      - Real-time streaming: examples/streaming/index.md
-      - Multithreaded execution: examples/threaded_execution/threading.md
-      - Asynchronous Queries: examples/AsynchronousQueries/async_querying.md
-    - Releases:
-      - Release notes:
-        - PyKX: release-notes/changelog.md
-        - PyKX under q: release-notes/underq-changelog.md
-        - Deprecations: release-notes/deprecations.md
-      - 2.x -> 3.x Upgrade : upgrades/2030.md
-      - Beta features:
-        - Introduction: beta-features/index.md
-        - PyTorch Conversions: beta-features/torch.md
-    - Help and Support:
-      - Troubleshooting: help/troubleshooting.md
-      - FAQ: help/faq.md
-      - PyKX support: help/support.md
-      - Issues and limitations: help/issues.md
-      - PyKX license: license.md
-      - Contributors: contributors.md
-  - APIs: 'https://code.kx.com/insights/api/index.html'
-  - Licensing: 'https://code.kx.com/insights/licensing/index.html'
-  - Help: 'https://code.kx.com/home/support.html'
+  - Learn:
+    - What is PyKX?: getting-started/what_is_pykx.md
+    - Objects and attributes: learn/objects.md
+    - Databases: user-guide/advanced/database/index.md
+    - Modes of operation: user-guide/advanced/modes.md
+    - Performance tips: user-guide/advanced/performance.md
+    - Why upgrade from embedPy: pykx-under-q/upgrade.md
+    - Glossary: extras/glossary.md
+    - Blogs, articles, videos: blogs.md
+  - How to:
+    - Configure PyKX: user-guide/configuration.md
+    - Interact with data:
+      - Create objects: user-guide/fundamentals/creating.md
+      - Use objects: user-guide/fundamentals/evaluating.md
+      - Index objects: user-guide/fundamentals/indexing.md
+      - Convert data: user-guide/fundamentals/conversion_considerations.md
+      - Convert text: user-guide/fundamentals/text.md
+      - Convert nulls and infinities: user-guide/fundamentals/nulls_and_infinities.md
+      - Convert temporal data: user-guide/fundamentals/temporal.md
+    - Interact with databases:
+      - Generate databases: user-guide/advanced/database/db_gen.md
+      - Load databases: user-guide/advanced/database/db_loading.md
+      - Manage databases: user-guide/advanced/database/db_mgmt.md
+    - Query data:
+      - Introduction: user-guide/fundamentals/query/index.md
+      - Query with Python: user-guide/fundamentals/query/pyquery.md
+      - Query with SQL: user-guide/fundamentals/query/sql.md
+      - Query with q: user-guide/fundamentals/query/qquery.md
+      - Performance considerations: user-guide/fundamentals/query/perf.md
+    - Communicate via IPC: user-guide/advanced/ipc.md
+    - Capture real-time data:
+      - Introduction: user-guide/advanced/streaming/index.md
+      - Capture and Store: user-guide/advanced/streaming/basic.md
+      - Publish data: user-guide/advanced/streaming/publish.md
+      - Subscribe to data: user-guide/advanced/streaming/subscribe.md
+      - Analyze streaming data: user-guide/advanced/streaming/rta.md
+      - Build custom APIs: user-guide/advanced/streaming/custom_apis.md
+      - Manage query routing: user-guide/advanced/streaming/gateways.md
+      - Complex infrastructure: user-guide/advanced/streaming/complex.md
+    - Apply attributes: user-guide/advanced/attributes.md
+    - Compress and encrypt data: user-guide/advanced/compress-encrypt.md
+    - Import existing q functions: user-guide/advanced/context_interface.md
+    - Run remote functions: user-guide/advanced/remote-functions.md
+    - Serialize data: user-guide/advanced/serialization.md
+    - Use PyKX in subprocesses: user-guide/advanced/subprocess.md
+    - Run q code multithreaded: user-guide/advanced/threading.md
+    - Manage your license: user-guide/advanced/license.md
+    - Use Python in a q process: pykx-under-q/intro.md
+  - Reference:
+    - API references:
+      - q functions and operators: api/pykx-execution/q.md
+      - Execution classes: api/pykx-execution/embedded_q.md
+      - q contexts: api/pykx-execution/ctx.md
+      - Emulated q console: api/pykx-execution/console.md
+      - Data generation: api/random.md
+      - Schema generation: api/schema.md
+      - Query data: api/query.md
+      - Query classes: api/columns.md
+      - Registering custom operations: api/pykx-q-data/register.md
+      - Compression and encryption: api/compress.md
+      - Database management: api/db.md
+      - File I/O: api/pykx-save-load/fileio.md
+      - q IPC interface: api/ipc.md
+      - Streamlit integration: api/streamlit.md
+      - Serialize/deserialize: api/serialize.md
+      - Remote Python execution: api/remote.md
+      - Real-time capture: api/tick.md
+      - System command wrappers: api/system.md
+      - Utility functions: api/util.md
+      - Reimporter module: api/reimporting.md
+      - License management: api/license.md
+      - PyKX under q: pykx-under-q/api.md
+    - Data types and conversions:
+      - Python to PyKX: api/pykx-q-data/toq.md
+      - Wrappers: api/pykx-q-data/wrappers.md
+      - PyKX to Python: api/pykx-q-data/type_conversions.md
+    - Pandas API: user-guide/advanced/Pandas_API.ipynb
+    - Exceptions: api/exceptions.md
+  - Integrations:
+    - NumPy: user-guide/advanced/numpy.md
+    - Streamlit: user-guide/advanced/streamlit.md
+    - Python charting libraries: examples/charting.ipynb
+    - Jupyter Integration: examples/jupyter-integration.ipynb
+  - Examples:
+    - PyKX Introduction Notebook: examples/interface-overview.ipynb
+    - Subscriber: examples/subscriber/readme.md
+    - Compress and encrypt: examples/compress_and_encrypt/readme.md
+    - Database creation and management: examples/db-management.ipynb
+    - IPC: examples/ipc/README.md
+    - PyKX as a server: examples/server/server.md
+    - Real-time streaming: examples/streaming/index.md
+    - Multithreaded execution: examples/threaded_execution/threading.md
+    - Asynchronous Queries: examples/AsynchronousQueries/async_querying.md
+  - Releases:
+    - Release notes:
+      - PyKX: release-notes/changelog.md
+      - PyKX under q: release-notes/underq-changelog.md
+      - Deprecations: release-notes/deprecations.md
+    - 2.x -> 3.x Upgrade : upgrades/2030.md
+    - Beta features:
+      - Introduction: beta-features/index.md
+      - PyTorch Conversions: beta-features/torch.md
+  - Help and Support:
+    - Troubleshooting: help/troubleshooting.md
+    - FAQ: help/faq.md
+    - PyKX support: help/support.md
+    - Issues and limitations: help/issues.md
+    - PyKX license: license.md
+    - Contributors: contributors.md
+

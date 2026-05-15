@@ -3,7 +3,9 @@ Module to help with serializing K objects without copying the data.
 """
 from typing import Any, Union
 
-from ._wrappers import _to_bytes, decref, deserialize as _deserialize
+import numpy as np
+
+from ._wrappers import _to_bytes, decref, deserialize as _deserialize, memview_to_array
 from .wrappers import K
 
 
@@ -70,6 +72,28 @@ class serialize:
     def __del__(self):
         decref(self._ptr)
 
+    def np(self):
+        """Returns a copy of the bytes making up the serialized object as a NumPy array.
+
+        Examples:
+
+        Serializing a `K` object and then copying the serialized data to a new variable.
+
+        ```python
+        >>> k_obj = kx.q('til 10')
+        >>> ser = kx.serialize(k_obj)
+        >>> k_obj_array = ser.np()
+        >>> k_obj_array
+        array([ 1,  0,  0,  0, 94,  0,  0,  0,  7,  0, 10,  0,  0,  0,  0,  0,  0,
+                0,  0,  0,  0,  0,  1,  0,  0,  0,  0,  0,  0,  0,  2,  0,  0,  0,
+                0,  0,  0,  0,  3,  0,  0,  0,  0,  0,  0,  0,  4,  0,  0,  0,  0,
+                0,  0,  0,  5,  0,  0,  0,  0,  0,  0,  0,  6,  0,  0,  0,  0,  0,
+                0,  0,  7,  0,  0,  0,  0,  0,  0,  0,  8,  0,  0,  0,  0,  0,  0,
+                0,  9,  0,  0,  0,  0,  0,  0,  0], dtype=uint8)
+        ```
+        """
+        return memview_to_array(self)
+
     def copy(self):
         """Returns a copy of the bytes making up the serialized object.
 
@@ -120,4 +144,6 @@ def deserialize(data: Union[bytes, serialize, memoryview]):
         return _deserialize(data.data.tobytes())
     elif isinstance(data, memoryview):
         return _deserialize(data.tobytes())
+    elif isinstance(data, np.ndarray):
+        return _deserialize(data)
     return _deserialize(data)
