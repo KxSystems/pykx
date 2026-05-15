@@ -1267,3 +1267,110 @@ async def test_async_reponse(kx, q_port):
             q('{t: .z.p;while[.z.p < t+00:00:02; neg[.z.w]99]}[]', reuse=False, async_response=True)
         with pytest.warns(UserWarning, match='Cannot use async_response=True without reuse=False.'):
             q('{t: .z.p;while[.z.p < t+00:00:02; neg[.z.w]99]}[]', wait=False, async_response=True)
+
+
+def test_secure_connection_timeout(kx, q_port):
+    conn = kx.SecureQConnection(port=q_port, timeout=2.0, connection_timeout=1.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 2.0)
+            and (info['connection_timeout']==1.0))
+
+    conn = conn= kx.SecureQConnection(port=q_port)
+    info = conn._connection_info
+    assert (info['port'] == q_port)
+
+    conn = kx.SecureQConnection(port=q_port, timeout=2.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 2.0))
+
+    conn = kx.SecureQConnection(port=q_port, connection_timeout=1.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['connection_timeout']==1.0))
+
+    conn = kx.SecureQConnection(port=q_port, timeout=2.0, connection_timeout=0.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 2.0)
+            and (info['connection_timeout']==0.0))
+
+    conn = kx.SecureQConnection(port=q_port, timeout=2.0, connection_timeout=None)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 2.0)
+            and (info['connection_timeout'] is None))
+
+    conn = kx.SecureQConnection(port=q_port, timeout=0.0, connection_timeout=None)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 0.0)
+            and (info['connection_timeout'] is None))
+
+    conn = kx.SecureQConnection(port=q_port, timeout=0.0, connection_timeout=0.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 0.0)
+            and (info['connection_timeout']==0.0))
+
+
+def test_connection_timeout(kx, q_port):
+    conn = kx.QConnection(port=q_port, timeout=2.0, connection_timeout=1.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 2.0)
+            and (info['connection_timeout']==1.0))
+
+    conn = conn= kx.QConnection(port=q_port)
+    info = conn._connection_info
+    assert (info['port'] == q_port)
+
+    conn = kx.QConnection(port=q_port, timeout=2.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 2.0))
+
+    conn = kx.QConnection(port=q_port, connection_timeout=1.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['connection_timeout']==1.0))
+
+    conn = kx.QConnection(port=q_port, timeout=2.0, connection_timeout=0.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 2.0)
+            and (info['connection_timeout']==0.0))
+
+    conn = kx.QConnection(port=q_port, timeout=2.0, connection_timeout=None)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 2.0)
+            and (info['connection_timeout'] is None))
+
+    conn = kx.QConnection(port=q_port, timeout=0.0, connection_timeout=None)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 0.0)
+            and (info['connection_timeout'] is None))
+
+    conn = kx.QConnection(port=q_port, timeout=0.0, connection_timeout=0.0)
+    info = conn._connection_info
+    assert ((info['port'] == q_port) and (info['timeout'] == 0.0)
+            and (info['connection_timeout']==0.0))
+
+
+@pytest.mark.asyncio
+async def test_async_connection_timeout(kx, q_port):
+    async with kx.AsyncQConnection(port=q_port, connection_timeout=1.0) as q:
+        info = q._connection_info
+        assert ((info['port'] == q_port) and (info['connection_timeout'] == 1.0))
+
+    async with kx.AsyncQConnection(port=q_port) as q:
+        info = q._connection_info
+        assert (info['port'] == q_port)
+
+    async with kx.AsyncQConnection(port=q_port, connection_timeout=0.0) as q:
+        info = q._connection_info
+        assert ((info['port'] == q_port) and (info['connection_timeout']==0.0))
+
+    async with kx.AsyncQConnection(port=q_port, connection_timeout=None) as q:
+        info = q._connection_info
+        assert ((info['port'] == q_port) and (info['connection_timeout'] is None))
+
+    async with kx.AsyncQConnection(port=q_port, timeout=0.0, connection_timeout=None) as q:
+        info = q._connection_info
+        assert ((info['port'] == q_port) and (info['timeout'] == 0.0)
+                and (info['connection_timeout'] is None))
+
+    async with kx.AsyncQConnection(port=q_port, timeout=0.0, connection_timeout=0.0) as q:
+        info = q._connection_info
+        assert ((info['port'] == q_port) and (info['timeout'] == 0.0)
+                and (info['connection_timeout']==0.0))

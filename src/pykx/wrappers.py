@@ -11047,6 +11047,35 @@ class Column:
         fn = 'svar' if sample else 'var'
         return self.call(fn, iterator=iterator)
 
+    def bin(self, other, iterator=None, col_arg_ind=1, project_args=None):
+        """
+        Perform a binary search on the Column.
+
+        Parameters:
+            other: A sorted list of same type as column.
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 1.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n: 2 4)')
+        >>> t.select(kx.Column('n').bin([1,3,5]))
+        pykx.Table(pykx.q('
+        n
+        -
+        0
+        1
+        '))
+        """
+        return self.call('bin', other, iterator=iterator, col_arg_ind=col_arg_ind,
+                         project_args=project_args)
+
 
 class QueryPhrase:
     """Special wrapper for a list which will be treated as a QueryPhrase.

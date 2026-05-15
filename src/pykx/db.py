@@ -146,7 +146,13 @@ class DB(_TABLES):
         >>> db.tables
         ['quote', 'trade']
         ```
+        !!! note "Loading root-level objects"
+            When using `pykx.DB`, only partitioned tables are exposed as attributes of the
+            `DB` object. Root-level splayed objects (for example, dictionaries or lists stored
+            alongside partitions) are **not** attached to the `DB` instance, but are still loaded
+            into the q process and can be accessed directly using `kx.q`.
 
+            For example, you can retrieve a variable `mySplayTab` by running `kx.q['mySplayTab']`.
         Define the path to be used for a database which does not initially exist
 
         ```python
@@ -323,7 +329,10 @@ class DB(_TABLES):
         qfunc = q(_func_mapping[func_name])
         try:
             if format == 'splayed':
-                table = q.Q.en(save_dir, table)
+                if sym_enum is None:
+                    table = q.Q.en(save_dir, table)
+                else:
+                    table = q.Q.ens(save_dir, table, sym_enum)
                 q('{.Q.dd[x;`] set y}', save_dir/table_name, table)
             else:
                 if isinstance(partition, str):

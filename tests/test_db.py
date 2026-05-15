@@ -294,6 +294,7 @@ def test_compress(kx):
     assert compress_info['zipLevel'].py() == 8
 
 
+@pytest.mark.order(20)
 def test_enumerate(kx):
     tab = kx.Table(data={
         'date': kx.q('2015.01.01 2015.01.01 2015.01.02 2015.01.02'),
@@ -313,6 +314,7 @@ def test_enumerate(kx):
     assert type(kx.q.value(entab1['sym'])) == kx.SymbolVector # noqa: E721
 
 
+@pytest.mark.order(21)
 def test_partition_count(kx):
     db = kx.DB(path='db')
     fullview = db.partition_count()
@@ -325,6 +327,7 @@ def test_partition_count(kx):
     assert all(cache == kx.q.Q.pv)
 
 
+@pytest.mark.order(22)
 def test_subview(kx):
     db = kx.DB(path='db')
     db.subview([kx.q('2015.01.01')])
@@ -405,6 +408,74 @@ def test_load_failure(kx):
     assert 'type' in str(err.value)
     os.chdir('..')
     os.remove('db/test.q')
+
+
+@pytest.mark.order(23)
+def test_sym_enum_create_1(kx):
+    shutil.rmtree('db')
+    db = kx.DB(path='db')
+    N = 333
+    qtab = kx.Table(data={
+        'sym': kx.random.random(N, ['AAPL', 'GOOG', 'MSFT']),
+        'price': kx.random.random(N, 10.0),
+        'size': kx.random.random(N, 100)
+    })
+    db.create(qtab, 'stocks', kx.q('2020.04m'), by_field='sym', sym_enum='junk')
+    test_path = db.path/"junk"
+    assert test_path.is_file()
+
+
+@pytest.mark.order(24)
+def test_sym_enum_load_1(kx):
+    db2 = kx.DB()
+    db2.load("db")
+    assert db2.tables == ['stocks']
+    assert db2.stocks.size == kx.toq(1332)
+
+
+@pytest.mark.order(25)
+def test_sym_enum_create_2(kx):
+    db = kx.DB(path='db')
+    N = 333
+    qtab = kx.Table(data={
+        'sym': kx.random.random(N, ['AAPL', 'GOOG', 'MSFT']),
+        'price': kx.random.random(N, 10.0),
+        'size': kx.random.random(N, 100)
+    })
+    db.create(qtab, 'stocks', kx.q('2020.04m'), by_field='sym')
+    test_path = db.path/"sym"
+    assert test_path.is_file()
+
+
+@pytest.mark.order(26)
+def test_sym_enum_load_2(kx):
+    db2 = kx.DB()
+    db2.load('db')
+    assert db2.tables == ['stocks']
+    assert db2.stocks.size == kx.toq(1332)
+
+
+@pytest.mark.order(27)
+def test_sym_enum_create_3(kx):
+    db = kx.DB(path='db')
+    N = 333
+    qtab = kx.Table(data={
+        'sym': kx.random.random(N, ['AAPL', 'GOOG', 'MSFT']),
+        'price': kx.random.random(N, 10.0),
+        'size': kx.random.random(N, 100)
+    })
+    db.create(qtab, 'stocks', kx.q('2020.04m'), by_field='sym', format="splayed",
+              sym_enum="test_junk")
+    test_path = db.path/"test_junk"
+    assert test_path.is_file()
+
+
+@pytest.mark.order(28)
+def test_sym_enum_load_3(kx):
+    db2 = kx.DB()
+    db2.load('db')
+    assert db2.tables == ['stocks']
+    assert db2.stocks.size == kx.toq(1332)
 
 
 @pytest.mark.order(-1)

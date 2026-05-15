@@ -117,11 +117,11 @@ IN:{$[99h<@x;x in y;0]};qa:{$[qb x;0;IN[*x;a0];1;|/qa'1_x]};qb:{(2>#x)|(@x)&~11=
 / CAN EXIT HERE FOR SMALL Q
 / pt(tables) pf(date/month/year/int) pd(dirs) pv(values) pn(count)   pt::0#pf::`
 vt:(,`)!,()!();
-bvfp:{g:$[(::)~x;max;min];x:.Q.d;d:{$[y~pv;`/:'x,'d@&(d:!x)in`$$y;u@&{11h=@!x}'u:`/:'x,'`$$y]}[;y@:&y in pv]'P:$[`par.txt in!x;jp[x]'`$0:`/:x,`par.txt;,x];if[.Q.vt~(,`)!,()!();.Q.vt:P!(#P)#.:.Q.vt];
+bvfp:{g:$[(::)~x;max;min];x:.Q.d;d:$[y~z;{`/:'x,'d@&(d:!x)in`$$y}[;z];{u@&{11h=@!x}'u:`/:'x,'`$$y}[;y@:&y in pv]]'P:$[`par.txt in!x;jp[x]'`$0:`/:x,`par.txt;,x];if[.Q.vt~(,`)!,()!();.Q.vt:P!(#P)#.:.Q.vt];
  t:?,/!:'vt:{(&#:'x)(=,/. x)}'{({("DMJJ"`date`month`year`int?pf)$$last@`\:x}'x)!!:':x}'d;
- if[#nt:(exc:.q.except)[t;!vp];d:{`/:'x[(. y)[;0]],'(`$$(. y)[;1]),'!y}[P]@{i:y@&:x=y x:@[x;&x~\:();:;*0#pv];(i;x i)}[;g]'+:nt#/:g''nt#/:vt;.Q.vp,:nt!{(+(,pf)!,0#pv),'+(-2!'.+x)#'+|0#x:?[x;();0b;()]}':d;.Q.vt:.Q.vt,\:nt!(#nt)#,exc[?pv;y]];.Q.vt:(.Q.vt,''P!exc[y]''vt)exc''vt:(nt,!vp)#/:vt;{.[x;();:;+.q.except[!+vp x;pf]!x]}'exc[!vp;pt];pt::.q.asc@!vp;vpv::?pv;}
-bvi:{$[(`vpv in !.Q);bvfp[x;?.q.except[pv;vpv]];bv x]}
-bv:{vt::(,`)!,()!();vp::(0#`)!();vpv::0#pv;bvfp[x;?pv]}
+ if[#nt:(exc:.q.except)[t;!vp];d:{`/:'x[(. y)[;0]],'(`$$(. y)[;1]),'!y}[P]@{i:y@&:x=y x:@[x;&x~\:();:;*0#pv];(i;x i)}[;g]'+:nt#/:g''nt#/:vt;.Q.vp,:nt!{(+(,pf)!,0#pv),'+(-2!'.+x)#'+|0#x:?[x;();0b;()]}':d;.Q.vt:.Q.vt,\:nt!(#nt)#,exc[z;y]];.Q.vt:(.Q.vt,''P!exc[y]''vt)exc''vt:(nt,!vp)#/:vt;{.[x;();:;+.q.except[!+vp x;pf]!x]}'exc[!vp;pt];pt::.q.asc@!vp;vpv::z;}
+bvi:{$[(`vpv in !.Q);bvfp[x;?.q.except[pv;vpv];?pv];bv x]}
+bv:{vt::(,`)!,()!();vp::(0#`)!();vpv::0#pv;dpv:?pv;bvfp[x;dpv;dpv]}
 
 sp:{$[0>."\\s";x'y;x':y]}
 pt:pm:();MAP:{{$[0>@a:.+0!. x;.q.set[x]@.`$-1_$a;]}'a@&~(a:."\\a")in pt;pm::();if[#pt;pm::pt!sp[{(`u#pd,'pv)!sp[p2[(x;();0b;())]/;+(pd;pv)]}]pt]}

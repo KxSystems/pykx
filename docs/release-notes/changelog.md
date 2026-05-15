@@ -4,11 +4,68 @@
 
 	The changelog presented here outlines changes to PyKX when operating within a Python environment specifically, if you require changelogs associated with PyKX operating under a q environment see [here](./underq-changelog.md).
 
-# PyKX 3.1.7
+## PyKX 3.1.9
 
 #### Release Date
 
-2026-02-09
+2026-04-02
+
+### Additions
+
+- Added `.np()` method to `pykx.serialize` function, this returns the serialized data as a NumPy array.
+- Added support for calling `pykx.deserialize` on NumPy arrays of serialized `K` objects.
+
+	```python
+	>>> import pykx as kx
+	>>> vec = kx.q('til 10')
+	>>> vec
+	pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+	>>> ser = kx.serialize(vec)
+	>>> type(ser)
+	<class 'pykx.serialize.serialize'>
+	>>> ser_np = ser.np()
+	>>> type(ser_np)
+	<class 'numpy.ndarray'>
+	>>> ser_np.dtype
+	dtype('uint8')
+	>>> kx.deserialize(ser_np)
+	pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+	```
+
+- Added `.bin()` method to `pykx.Column` class, to perform a binary search using the data in a `pykx.Column` object.
+
+	```python
+	>>> import pykx as kx
+	>>> t = kx.q('([] n: 2 4)')
+	>>> t.select(kx.Column('n').bin([1,3,5]))
+	pykx.Table(pykx.q('
+	n
+	-
+	0
+	1
+	'))
+	```
+
+### Fixes and Improvements
+
+- Updated 4.1 to 2026.04.01 for all platforms.
+
+## PyKX 3.1.8
+
+#### Release Date
+
+2026-02-18
+
+### Additions
+
+- Added `connection_timeout` keyword argument to `AsyncQConnection` objects allowing the specification of a timeout for the initial connection to a `q` server.
+- Added the usage of `.q.Q.ens` for `sym_enum` argument in `DB` objects.
+
+## PyKX 3.1.7
+
+#### Release Date
+
+2026-02-10
 
 ### Additions
 

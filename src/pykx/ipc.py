@@ -458,7 +458,9 @@ class QConnection(Q):
                  no_ctx: bool = False,
                  reconnection_attempts: int = -1,
                  reconnection_delay: float = 0.5,
-                 reconnection_function: callable = reconnection_function
+                 reconnection_function: callable = reconnection_function,
+                 connection_timeout: Optional[float] = None,
+
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -498,6 +500,9 @@ class QConnection(Q):
             reconnection_delay: A `#!python float` for the initial delay between reconnect attempts
                 (in seconds). This is passed to the provided `#!python reconnection_function` that
                 is executed on reconnect attempt.
+            connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
+                `None`, the socket will not timeout when connecting.
+
 
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if the
@@ -518,6 +523,9 @@ class QConnection(Q):
         super().__init__()
 
     def _create_connection_to_server(self):
+        con_timeout = self._connection_info['connection_timeout']\
+            if self._connection_info['connection_timeout'] is not None\
+            else self._connection_info['timeout']
         object.__setattr__(
             self,
             '_handle',
@@ -527,7 +535,7 @@ class QConnection(Q):
                 self._connection_info['credentials'],
                 self._connection_info['unix'],
                 self._connection_info['tls'],
-                self._connection_info['timeout'],
+                con_timeout,
                 self._connection_info['large_messages']
             )
         )
@@ -564,7 +572,8 @@ class QConnection(Q):
               conn_gc_time: float = 0.0,
               reconnection_attempts: int = -1,
               reconnection_delay: float = 0.5,
-              reconnection_function: callable = reconnection_function
+              reconnection_function: callable = reconnection_function,
+              connection_timeout: Optional[float] = None,
     ):
         credentials = f'{normalize_to_str(username, "Username")}:' \
                       f'{normalize_to_str(password, "Password")}'
@@ -585,7 +594,8 @@ class QConnection(Q):
             'conn_gc_time': conn_gc_time,
             'reconnection_attempts': reconnection_attempts,
             'reconnection_delay': reconnection_delay,
-            'reconnection_function': reconnection_function
+            'reconnection_function': reconnection_function,
+            'connection_timeout': connection_timeout,
         })
         if system == 'Windows' and unix: # nocov
             raise TypeError('Unix domain sockets cannot be used on Windows')
@@ -600,13 +610,14 @@ class QConnection(Q):
             object.__setattr__(self, '_handle', server_sock.fileno())
             object.__setattr__(self, '_finalizer', lambda: server_sock.close())
         else:
+            con_timeout = connection_timeout if connection_timeout is not None else timeout
             try:
                handle = _ipc.init_handle(host,
                                          port,
                                          credentials,
                                          unix,
                                          tls,
-                                         timeout,
+                                         con_timeout,
                                          large_messages)
             except BaseException as e:
                 if isinstance(e, QError):
@@ -1140,7 +1151,8 @@ class SyncQConnection(QConnection):
                  no_ctx: bool = False,
                  reconnection_attempts: int = -1,
                  reconnection_delay: float = 0.5,
-                 reconnection_function: callable = reconnection_function
+                 reconnection_function: callable = reconnection_function,
+                 connection_timeout: Optional[float] = None,
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -1181,6 +1193,9 @@ class SyncQConnection(QConnection):
                 `#!python reconnection_delay` on successive attempts to reconnect to the server. By
                 default this is an exponential backoff where the `#!python reconnection_delay` is
                 multiplied by two on each invocation.
+            connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
+                `None`, the socket will not timeout when connecting.
+
 
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if the
@@ -1247,7 +1262,9 @@ class SyncQConnection(QConnection):
                    no_ctx=no_ctx,
                    reconnection_attempts=reconnection_attempts,
                    reconnection_delay=reconnection_delay,
-                   reconnection_function=reconnection_function
+                   reconnection_function=reconnection_function,
+                   connection_timeout=connection_timeout,
+
         )
         super().__init__()
 
@@ -1453,7 +1470,9 @@ class AsyncQConnection(QConnection):
                  no_ctx: bool = False,
                  reconnection_attempts: int = -1,
                  reconnection_delay: float = 0.5,
-                 reconnection_function: callable = reconnection_function
+                 reconnection_function: callable = reconnection_function,
+                 connection_timeout: Optional[float] = None,
+
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -1499,6 +1518,9 @@ class AsyncQConnection(QConnection):
                 `#!python reconnection_delay` on successive attempts to reconnect to the server. By 
                 default this is an exponential backoff where the `#!python reconnection_delay` is
                 multiplied by two on each invocation
+            connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
+                `None`, the socket will not timeout when connecting.
+
 
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if
@@ -1593,6 +1615,7 @@ class AsyncQConnection(QConnection):
             'reconnection_attempts':reconnection_attempts,
             'reconnection_delay': reconnection_delay,
             'reconnection_function': reconnection_function,
+            'connection_timeout': connection_timeout,
         })
         object.__setattr__(self, '_initialized', False)
 
@@ -1613,6 +1636,7 @@ class AsyncQConnection(QConnection):
                           reconnection_attempts: int = -1,
                           reconnection_delay: float = 0.5,
                           reconnection_function: callable = reconnection_function,
+                          connection_timeout: float = 0.0,
     ):
         object.__setattr__(self, '_call_stack', [])
         self._init(host,
@@ -1630,6 +1654,7 @@ class AsyncQConnection(QConnection):
                    reconnection_attempts=reconnection_attempts,
                    reconnection_delay=reconnection_delay,
                    reconnection_function=reconnection_function,
+                   connection_timeout=connection_timeout,
         )
         object.__setattr__(self, '_loop', event_loop)
         con_info = object.__getattribute__(self, '_connection_info')
@@ -1657,6 +1682,7 @@ class AsyncQConnection(QConnection):
                 reconnection_attempts=self._stored_args['reconnection_attempts'],
                 reconnection_delay=self._stored_args['reconnection_delay'],
                 reconnection_function=self._stored_args['reconnection_function'],
+                connection_timeout=self._stored_args['connection_timeout'],
             )
         return self
 
@@ -2055,6 +2081,7 @@ class RawQConnection(QConnection):
                  no_ctx: bool = False,
                  as_server: bool = False,
                  conn_gc_time: float = 0.0,
+                 connection_timeout: Optional[float] = None,
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -2093,6 +2120,9 @@ class RawQConnection(QConnection):
                 going through the list of opened connections and closing any that the clients have
                 closed. If not set the default of 0.0 will cause any old connections to never be
                 closed unless `#!python self.clean_open_connections()` is manually called.
+            connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
+                `None`, the socket will not timeout when connecting.
+
 
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if the q
@@ -2137,7 +2167,7 @@ class RawQConnection(QConnection):
         ```
         """
         if timeout > 0.0:
-            warnings.warn('Timeout is not supported when using AsyncQConnection objects.')
+            warnings.warn('Timeout is not supported when using RawQConnection objects.')
         # TODO: Remove this once TLS support is fixed
         if tls:
             raise PyKXException('TLS is currently only supported for SyncQConnections')
@@ -2164,6 +2194,7 @@ class RawQConnection(QConnection):
             'no_ctx': True if as_server else no_ctx,
             'as_server': as_server,
             'conn_gc_time': conn_gc_time,
+            'connection_timeout': connection_timeout,
         })
         object.__setattr__(self, '_initialized', False)
 
@@ -2182,6 +2213,7 @@ class RawQConnection(QConnection):
                           no_ctx: bool = False,
                           as_server: bool = False,
                           conn_gc_time: float = 0.0,
+                          connection_timeout: Optional[float] = None,
     ):
         object.__setattr__(self, '_call_stack', [])
         object.__setattr__(self, '_send_stack', [])
@@ -2198,6 +2230,7 @@ class RawQConnection(QConnection):
                    no_ctx=no_ctx,
                    as_server=as_server,
                    conn_gc_time=conn_gc_time,
+                   connection_timeout=connection_timeout,
         )
         object.__setattr__(self, '_loop', event_loop)
         con_info = object.__getattribute__(self, '_connection_info')
@@ -2222,6 +2255,7 @@ class RawQConnection(QConnection):
                                    no_ctx=self._stored_args['no_ctx'],
                                    as_server=self._stored_args['as_server'],
                                    conn_gc_time=self._stored_args['conn_gc_time'],
+                                   connection_timeout=self._stored_args['connection_timeout'],
                                    )
         return self
 
@@ -2788,6 +2822,7 @@ class SecureQConnection(QConnection):
                  reconnection_attempts: int = -1,
                  reconnection_delay: float = 0.5,
                  reconnection_function: callable = reconnection_function,
+                 connection_timeout: Optional[float] = None,
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -2828,6 +2863,9 @@ class SecureQConnection(QConnection):
                 `#!python reconnection_delay` on successive attempts to reconnect to the server. By
                 default this is an exponential backoff where the `#!python reconnection_delay` is
                 multiplied by two on each invocation
+            connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
+                `None`, the socket will not timeout when connecting.
+
 
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if
@@ -2869,6 +2907,7 @@ class SecureQConnection(QConnection):
                    reconnection_attempts=reconnection_attempts,
                    reconnection_delay=reconnection_delay,
                    reconnection_function=reconnection_function,
+                   connection_timeout=connection_timeout,
         )
         super().__init__()
 
