@@ -41,6 +41,7 @@ extra_javascript:
   - 'https://code.jquery.com/jquery-3.6.0.min.js'
   - 'https://use.fontawesome.com/3dbf29ed12.js'
   - scripts/strip-q-prompt-copy.js
+  - scripts/init_kapa_widget.js
   # this relative path is needed to source from code.kx.com!!!
   - "&period;&period;/&period;&period;/pykx/scripts/versions.js"
   # Uncomment only for local test 
