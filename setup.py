@@ -256,8 +256,7 @@ if __name__ == '__main__':
         ]),
     ]
 
-    if py_minor_version >= 8: # python 3.8 or higher is required for NEP-49
-        exts.append(ext('_numpy', numpy=True, cython=False, libraries=['dl', *windows_libraries]))
+    exts.append(ext('_numpy', numpy=True, cython=False, libraries=['dl', *windows_libraries]))
     exts.append(ext('numpy_conversions',
                     numpy=True,
                     cython=False,

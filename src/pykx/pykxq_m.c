@@ -157,7 +157,7 @@ EXPORT K k_pykx_init(K k_q_lib_pat, K _pykx_threading) {
     return (K)0;
 }
 
-void* thread_init();
+void* thread_init(void* args);
 EXPORT K k_init_python(K x, K y, K z) {
     pthread_mutex_init(&head_mutex, NULL);
     pthread_mutex_init(&cond_mutex, NULL);
@@ -664,8 +664,11 @@ K _get_attr(K f, K attr) {
     }
     P p = get_py_ptr(f);
     P _attr = Py_BuildValue("s", attr->s);
-    K res = create_foreign(PyObject_GetAttr(p, _attr));
+    P __attr = PyObject_GetAttr(p, _attr);
+    K res = create_foreign(__attr);
     Py_XDECREF(_attr);
+    // INCREF is called in create_foreign, decref here to avoid object not being freed
+    Py_XDECREF(__attr);
     if ((k = k_py_error())) {
         return k;
     }

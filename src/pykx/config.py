@@ -12,7 +12,7 @@ import webbrowser
 import toml
 import pandas as pd
 
-from .exceptions import PyKXWarning, QError
+from .exceptions import QError
 
 
 system = platform.system()
@@ -219,8 +219,8 @@ def _license_check(lic_type, lic_encoding, lic_variable): # pragma: no cover
 
 
 def _unlicensed_config(unlicensed_message):
-    choice = input('\nWould you like us to remember this choice? [Y/n]: ')
-    if choice in ('y', 'Y', ''):
+    choice = input('\nWould you like us to remember this choice? [N/y]: ')
+    if choice in ('y', 'Y'):
         fpath = Path(os.path.expanduser('~')) / '.pykx-config'
         try:
             os.access(fpath, os.W_OK)
@@ -271,8 +271,8 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
                 print(install_message)
             return True
 
-    personal_url = "https://kx.com/kdb-insights-sdk-personal-edition-download"
-    commercial_url = "https://kx.com/book-demo"
+    lic_url = 'https://developer.kx.com/products/kdb-x/install'
+    lic_type = 'kc.lic'
     unlicensed_message = '\nPyKX unlicensed mode enabled. To set this as your default behavior '\
                          "set the following environment variable PYKX_UNLICENSED='true'"
     first_user = '\nThank you for installing PyKX!\n\n'\
@@ -296,69 +296,24 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
         if existing_license not in ('Y', 'y', 'N', 'n', ''):
             raise Exception('Invalid input provided please try again')
         if existing_license in ('N', 'n', ''):
-            commercial = input('\nIs the intended use of this software for:'
-                               '\n    [1] Personal use (Default)'
-                               '\n    [2] Commercial use'
-                               '\nEnter your choice here [1/2]: ').strip().lower()
-            if commercial not in ('1', '2', ''):
-                raise Exception('User provided option was not one of [1/2]')
-
-            personal = commercial in ('1', '')
-
-            lic_url = personal_url if personal else commercial_url
-            lic_type = _kc_lic if personal else _k4_lic
-
-            if personal:
-                redirect = input(f'\nTo apply for your PyKX license, navigate to {lic_url}.\n'
-                                 'Shortly after you submit your application, you will receive a '
-                                 'welcome email containing your license information.\n'
-                                 'Would you like to open this page? [Y/n]: ')
-            else:
-                redirect = input('\nTo apply for your PyKX license, contact your '
-                                 'KX sales representative or sales@kx.com.\n'
-                                 f'Alternately apply through {lic_url}.\n'
-                                 'Would you like to open this page? [Y/n]: ')
-
+            redirect = input('\n** It is recommended to upgrade to KDB-X Python pykx>=4.0 **\n\n'
+                             f'For instructions and to obtain a license visit: {lic_url}\n'
+                             'Would you like to open this page? [Y/n]: ')
             if redirect.lower() in ('y', ''):
                 try:
                     webbrowser.open(lic_url)
                     time.sleep(2)
                 except BaseException:
                     raise Exception('Unable to open web browser')
-
-            install_type = input('\nPlease select the method you wish to use to activate your'
-                                 'license:\n  [1] Download the license file provided in your '
-                                 'welcome email and input the file path (Default)'
-                                 '\n  [2] Input the activation key (base64 encoded string) '
-                                 'provided in your welcome email'
-                                 '\n  [3] Proceed with unlicensed mode'
-                                 '\nEnter your choice here [1/2/3]: ').strip().lower()
-
-            if install_type not in ('1', '2', '3', ''):
-                raise Exception('User provided option was not one of [1/2/3]')
-
-            if install_type in ('1', ''):
-                license = input('\nProvide the download location of your license '
-                                f'(for example, {root}{lic_type}) : ').strip()
-                download_location = os.path.expanduser(Path(license))
-                _license_install_path(download_location, qlic)
-
-            elif install_type == '2':
-                license = input('\nProvide your activation key (base64 encoded string) '
-                                'provided with your welcome email : ').strip()
-
-                _license_install_B64(license, lic_type)
-
-                print('\nPyKX license successfully installed to: {qlic / lic_type}\n') # noqa: E501
-            elif install_type == '3':
-                _unlicensed_config(unlicensed_message)
-                if return_value:
-                    return False
+            print('\nPyKX will proceed in unlicensed mode')
+            _unlicensed_config(unlicensed_message)
+            if return_value:
+                return False
         else:
             install_type = input(
                 '\nPlease select the method you wish to use to activate your license:\n'
-                '    [1] Provide the location of your license\n'
-                '    [2] Input the activation key\n'
+                '    [1] Provide the location of your license file\n'
+                '    [2] Paste the license key\n'
                 'Enter your choice here [1/2]: ')
 
             if install_type not in ('1', '2', ''):
@@ -370,16 +325,15 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
                 _license_install_path(download_location, qlic)
 
             else:
-                commercial = input('\nPlease confirm the license type:\n'
-                                   f'    [1] Personal use ({_kc_lic})\n'
-                                   f'    [2] Commercial use ({_k4_lic})\n'
-                                   'Enter your choice here [1/2]: ')
-                if commercial not in ('1', '2', ''):
+                lic_type_choice = input('\nPlease confirm the license type:\n'
+                                        f'    [1] {_kc_lic} - The default\n'
+                                        f'    [2] {_k4_lic} - Used in some scenarios\n'
+                                        'Enter your choice here [1/2]: ')
+                if lic_type_choice not in ('1', '2', ''):
                     raise Exception('User provided option was not one of [1/2]')
 
-                personal = commercial in ('1', '')
-                lic_type = _kc_lic if personal else _k4_lic
-                license = input('\nProvide your activation key (base64 encoded string) : ').strip()
+                lic_type = _k4_lic if lic_type_choice == '2' else _kc_lic
+                license = input('f\nProvide your {lic_type} license key (base64 encoded string) : ').strip() # noqa: E501
 
                 _license_install_B64(license, lic_type)
 
@@ -420,15 +374,7 @@ ignore_qhome = _is_enabled('PYKX_IGNORE_QHOME', '--ignore-qhome')
 keep_local_times = _is_enabled('PYKX_KEEP_LOCAL_TIMES')
 max_error_length = int(_get_config_value('PYKX_MAX_ERROR_LENGTH', 256))
 
-allocator = _is_enabled('PYKX_ALLOCATOR', '--pykxalloc')
-if allocator:
-    if sys.version_info[1] <= 7:
-        raise PyKXWarning('A python version of at least 3.8 is required to use the PyKX allocators') # noqa nocov
-        k_allocator = False  # nocov
-    else:
-        k_allocator = True
-else:
-    k_allocator = False
+k_allocator = _is_enabled('PYKX_ALLOCATOR', '--pykxalloc')
 
 k_gc = _is_enabled('PYKX_GC', '--pykxgc')
 release_gil = _is_enabled('PYKX_RELEASE_GIL', '--release-gil')

@@ -60,6 +60,14 @@ NPY_TYPE_ITEMSIZE = {
 }
 
 
+def memview_to_array(view) -> np.ndarray:
+    cdef np.npy_intp n = (<core.K><uintptr_t>view._ptr).n
+    cdef np.ndarray arr = np.PyArray_SimpleNewFromData(1, &n, 2, <void*>(<core.K><uintptr_t>view._ptr).G0)
+    Py_INCREF(view)
+    PyArray_SetBaseObject(arr, view)
+    return arr
+
+
 def k_vec_to_array(k_vec, np_type: int) -> np.ndarray:
     """Creates a Numpy array that references the K object until the array's data is deallocated."""
     cdef np.npy_intp n = (<core.K><uintptr_t>k_vec._addr).n
@@ -118,7 +126,11 @@ def k_str(self):
 
 
 cpdef inline deserialize(x):
-    cdef core.K buff = core.kpn(<char*>x, len(x))
+    l = len(x)
+    if isinstance(x, np.ndarray):
+        x = x.data.tobytes()
+    cdef core.K buff = core.kpn(<char*>x, l)
+
     if 0 == core.okx(buff):
         core.r0(buff)
         raise QError('Failed to deserialize supplied non PyKX IPC serialized format object')
@@ -546,11 +558,11 @@ cdef inline factory(uintptr_t addr, bint incref, str name='', bint err_preamble=
         err_string = str((<core.K>addr).s, 'utf-8')
         if err_string == 'nosocket':
             err_string = 'nosocket: Cannot open or use a socket on a thread other than main.\n'\
-                         'Read https://code.kx.com/user-guide/advanced/threading.html for more information'
+                         'Read https://code.kx.com/pykx/user-guide/advanced/threading.html for more information'
         elif err_string == 'noupdate':
             err_string = 'noupdate: Cannot update a global variable while using:\n\t- Multithreaded mode'\
                          '\n\t- peach with secondary threads\n\t- `-b` command line argument or reval code.\n'\
-                         'Read https://code.kx.com/user-guide/advanced/threading.html for more information'
+                         'Read https://code.kx.com/pykx/user-guide/advanced/threading.html for more information'
         elif err_string == 'par':
             err_string = 'par: Cannot execute an unsupported operation on a partitioned table or its '\
                          'constituent parts'

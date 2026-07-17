@@ -2013,7 +2013,10 @@ def from_arrow_py(x,
     """
     if pa is None:
         raise PyArrowUnavailable
-    return toq(x.as_py(), ktype=ktype, cast=cast, handle_nulls=handle_nulls)
+    val = x.as_py()
+    if isinstance(x, pa.lib.HalfFloatScalar) and val is not None:
+        val = np.float16(val)
+    return toq(val, ktype=ktype, cast=cast, handle_nulls=handle_nulls)
 
 
 def from_datetime_date(x: Any,
@@ -2994,7 +2997,7 @@ class ToqModule(ModuleType):
             elif isinstance(x, k.GroupbyTable):
                 return self(x.tab, ktype=ktype, cast=cast, handle_nulls=handle_nulls)
             elif isinstance(x, k.Column):
-                return self(x._value)
+                return self(x._data)
             elif isinstance(x, k.QueryPhrase):
                 return self(x._phrase)
             elif isinstance(x, k.Variable):

@@ -98,7 +98,7 @@ j12:36/:nA?;x12:nA@0x24\: /base36 J from char12(cusip)
 btoa:-32!;atob:-44!;sha1:-33!;prf0:+`name`file`line`col`text`pos!*-37!
 objp:{x like"[mgs][s3]://*"};
 lo:{if[$[1>@d:!f:-1!x;1;`.d~*d];:.[$[qt d;*|`\:f;99=@d;`.;'`type];();:;d:. f]];d@:&~d like"*$";p:(d=`par.txt)|d like"[0-9]*";
- if[y;if[objp x;'"no cd to object storage"];."\\cd ",$x;f:`:.];{.q.set[*|`\:x]$[0h>@!x;. x;x`]}'`/:'f,'d@&~(d=`html)|(d like"*#")|p|s:d like"*.?";if[|/p;L[d@&p;f;~y|objp x]];if[z&~`.=x;(."\\l ",$:)'`/:'f,'d@&s&~p];}
+ if[y;if[objp x;'"no cd to object storage"];."\\cd ",$x;f:`:.];{.q.set[*|`\:x]$[0h>@!x;. x;x`]}'`/:'f,'d@&~(d=`html)|(d like"*#")|p|s:|/d like/:("*.[kq]_";"*.?");if[|/p;L[d@&p;f;~y|objp x]];if[z&~`.=x;(."\\l ",$:)'`/:'f,'d@&s&~p];}
 l:lo[;1;1]
 
 sw:{.q.sublist[_.5**|."\\C"]x};tab:{" "/:'(x*|/#:''y)$/:y};t0:{$[x>#y;((#*y)#'" -"),y;y]}
@@ -111,17 +111,17 @@ hap:{@[(0;h;(h:1+i 1)^(1+*&"@"=x)&e;e:(#x)^e)_x,(^e:(i:&"/"=x:(":"=*x)_x)2)#"/";
 hmb:{x:$[10=@x;x;1_$x];p:{$[#y;y;x]}/'getenv@+`$_:\("HTTP";"NO"),\:"_PROXY";u:hap@x;t:~(~#*p)||/(*":"\:u 2)like/:{(("."=*x)#"*"),x}'","\:p 1;a:$[t;p:hap@*p;u]1;r:(`$":",,/($[t;p;u]0 2))($y)," ",$[t;x;u 3]," HTTP/1.1",s,(s/:(~![-35;::])_("Accept-Encoding: gzip";"Connection: close";"Host: ",u 2),((0<#a)#,$[t;"Proxy-";""],"Authorization: Basic ",btoa a),$[#z;("Content-type: ",z 0;"Content-length: ",$#z 1);()]),(d:s,s:"\r\n"),$[#z;z 1;""];(0;n)_$[#ss[(n:4+*r ss d)#r;"content-encoding: gzip\r\n"];-35!r;r]}
 hg:{hmb[x;`GET;()]1};hp:{hmb[x;`POST;(y;z)]1}
 
-a0:(#:;*:;last;sum;prd;min;max;.q.all;.q.any;?:),a1:(avg;wsum;wavg;var;dev;cov;cor),`.q `svar`sdev`scov`med
+a0:(#:;*:;last;+/[0;];sum;prd;min;max;.q.all;.q.any;?:),a1:(avg;wsum;wavg;var;dev;cov;cor),`.q `svar`sdev`scov`med
 IN:{$[99h<@x;x in y;0]};qa:{$[qb x;0;IN[*x;a0];1;|/qa'1_x]};qb:{(2>#x)|(@x)&~11=@x}
 
 / CAN EXIT HERE FOR SMALL Q
 / pt(tables) pf(date/month/year/int) pd(dirs) pv(values) pn(count)   pt::0#pf::`
 vt:(,`)!,()!();
-bvfp:{g:$[(::)~x;max;min];x:.Q.d;d:{$[y~pv;`/:'x,'d@&(d:!x)in`$$y;u@&{11h=@!x}'u:`/:'x,'`$$y]}[;y@:&y in pv]'P:$[`par.txt in!x;jp[x]'`$0:`/:x,`par.txt;,x];if[.Q.vt~(,`)!,()!();.Q.vt:P!(#P)#.:.Q.vt];
+bvfp:{g:$[(::)~x;max;min];x:.Q.d;d:$[y~z;{`/:'x,'d@&(d:!x)in`$$y}[;z];{u@&{11h=@!x}'u:`/:'x,'`$$y}[;y@:&y in pv]]'P:$[`par.txt in!x;jp[x]'`$0:`/:x,`par.txt;,x];if[.Q.vt~(,`)!,()!();.Q.vt:P!(#P)#.:.Q.vt];
  t:?,/!:'vt:{(&#:'x)(=,/. x)}'{({("DMJJ"`date`month`year`int?pf)$$last@`\:x}'x)!!:':x}'d;
- if[#nt:(exc:.q.except)[t;!vp];d:{`/:'x[(. y)[;0]],'(`$$(. y)[;1]),'!y}[P]@{i:y@&:x=y x:@[x;&x~\:();:;*0#pv];(i;x i)}[;g]'+:nt#/:g''nt#/:vt;.Q.vp,:nt!{(+(,pf)!,0#pv),'+(-2!'.+x)#'+|0#x:?[x;();0b;()]}':d;.Q.vt:.Q.vt,\:nt!(#nt)#,exc[?pv;y]];.Q.vt:(.Q.vt,''P!exc[y]''vt)exc''vt:(nt,!vp)#/:vt;{.[x;();:;+.q.except[!+vp x;pf]!x]}'exc[!vp;pt];pt::.q.asc@!vp;vpv::?pv;}
-bvi:{$[(`vpv in !.Q);bvfp[x;?.q.except[pv;vpv]];bv x]}
-bv:{vt::(,`)!,()!();vp::(0#`)!();vpv::0#pv;bvfp[x;?pv]}
+ if[#nt:(exc:.q.except)[t;!vp];d:{`/:'x[(. y)[;0]],'(`$$(. y)[;1]),'!y}[P]@{i:y@&:x=y x:@[x;&x~\:();:;*0#pv];(i;x i)}[;g]'+:nt#/:g''nt#/:vt;.Q.vp,:nt!{(+(,pf)!,0#pv),'+(-2!'.+x)#'+|0#x:?[x;();0b;()]}':d;.Q.vt:.Q.vt,\:nt!(#nt)#,exc[z;y]];.Q.vt:(.Q.vt,''P!exc[y]''vt)exc''vt:(nt,!vp)#/:vt;{.[x;();:;+.q.except[!+vp x;pf]!x]}'exc[!vp;pt];pt::.q.asc@!vp;vpv::z;}
+bvi:{$[(`vpv in !.Q);bvfp[x;?.q.except[pv;vpv];?pv];bv x]}
+bv:{vt::(,`)!,()!();vp::(0#`)!();vpv::0#pv;dpv:?pv;bvfp[x;dpv;dpv]}
 
 sp:{$[0>."\\s";x'y;x':y]}
 pt:pm:();MAP:{{$[0>@a:.+0!. x;.q.set[x]@.`$-1_$a;]}'a@&~(a:."\\a")in pt;pm::();if[#pt;pm::pt!sp[{(`u#pd,'pv)!sp[p2[(x;();0b;())]/;+(pd;pv)]}]pt]}
@@ -142,7 +142,7 @@ fp:{+((,*x)!,(#z)#$[-7h=@y;y;(*|x)$y]),+z}
 foo:{[t;c;b;a;v;d]if[v;g:*|`\:b f:*!b;b:1_b];,/r(::;i)1=#i:&0<#:'r:$[v|~#a;d fp[$[v;f,g;pf]]';::]p[(.+t;c;b;a)]d}
 
 / select{u's|a's[by[date,]u's]}from t where[date..],[sym{=|in}..],..
-a2:({(%;(sum;("f"$;x));(sum;(~^:;x)))};{(sum;(*;("f"$;x);y))};{(%;(wsum;x;y);(sum;(*;x;(~^:;y))))};{(cov;x;x)};{(sqrt;(var;x))}
+a2:({(%;(sum;("f"$;x));(-;(#:;x);(+/[0;];(^:;x))))};{(sum;(*;("f"$;x);y))};{(%;(wsum;x;y);(sum;(*;x;(~^:;y))))};{(cov;x;x)};{(sqrt;(var;x))}
  {(-;(avg;(*;("f"$;x);y));(*;(avg;x);(avg;y)))};{(%;(cov;x;y);(*;(dev;x);(dev;y)))};{(.q.scov;x;x)};{(sqrt;(.q.svar;x))};{(*;(%;(#:;`i);(+;-1;(#:;`i)));(cov;x;y))};{'`part})
 
 / x0 translate;x1 aggrs;x2 translate  ?terminal (subselect/exec within partition)  unknown assumed uniform?

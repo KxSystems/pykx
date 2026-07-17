@@ -35,11 +35,11 @@ This walkthrough demonstrates the following steps:
 1. Import PyKX and generate a remote session object which denotes the process against which the Python functions will be executed.
 1. Define a number of Python functions which will be executed on the remote q/kdb+ server.
 
-### Initializea q/kdb+ server with PyKX under q
+### Initialize a q/kdb+ server with PyKX under q
 
 This step ensures you have a q process running with PyKX under q, as well as having a kdb+ table available to query. If you have this already, proceed to the next step.
 
-Ensure that you have q installed. If you do not have this installed please follow the guide provided [here](https://code.kx.com/q/learn/install/), retrieving your license following the instructions provided [here](https://kx.com/kdb-insights-sdk-personal-edition-download).
+Ensure that you have q installed. If you do not have this installed please follow the guide provided [here](https://code.kx.com/q/learn/install/).
 
 Install PyKX under q using the following command.
 

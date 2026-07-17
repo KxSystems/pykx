@@ -21,7 +21,7 @@ _This page explains how to install PyKX on your machine._
 
 Before you start, make sure you have:
 
-- [**Python**](https://www.python.org/downloads/) (versions 3.8-3.13)
+- [**Python**](https://www.python.org/downloads/) (versions 3.9-3.14)
 - [**pip**](https://pypi.org/project/pip/)
 
 Recommended: a virtual environment with packages such as [venv](https://docs.python.org/3/library/venv.html) from the standard library.
@@ -30,9 +30,9 @@ Recommended: a virtual environment with packages such as [venv](https://docs.pyt
 
 KX only supports versions of PyKX built by KX (installed from wheel files) for:
 
-- **Linux** (`manylinux_2_17_x86_64`, `linux-arm64`) with CPython 3.8-3.13
-- **macOS** (`macosx_10_10_x86_64`, `macosx_10_10_arm`) with CPython 3.8-3.13
-- **Windows** (`win_amd64`) with CPython 3.8-3.13
+- **Linux** (`manylinux2014_x86_64`, `manylinux2014_aarch64`) with CPython 3.9-3.14
+- **macOS** (`macosx_10_15_x86_64`, `macosx_10_15_arm64`) with CPython 3.9-3.14
+- **Windows** (`win_amd64`) with CPython 3.9-3.14
 
 We provide assistance to user-built installations of PyKX only on a best-effort basis.
 
@@ -87,22 +87,47 @@ You can install PyKX from three sources:
 
 	```
 
+=== "Install PyKX from UV"
+
+	Ensure you have `#!bash uv` installed, instructions can be found [here.](https://docs.astral.sh/uv/getting-started/installation/)
+	
+	Then install the latest version of PyKX with the following command:
+	
+	```sh
+	uv pip install pykx
+
+	```
+
+=== "Install PyKX from pipx"
+
+	Ensure you have `#!bash pipx` installed, installation guide can be found [here.](https://pipx.pypa.io/stable/installation/)
+
+	Then install PyKX using the flag to install dependencies:
+
+	```sh
+	pipx install pykx --include-deps
+	
+	```
+
+	This will create a virtual environment to run PyKX in, make sure you activate this to access the package.
+
+
 At this point you have [partial access to PyKX](../user-guide/advanced/modes.md#1a-running-in-unlicensed-mode). To gain access to all PyKX features, follow the steps in the next section, otherwise go straight to [3. Verify PyKX Installation](#3-verify-pykx-installation).
 
-## 2. Install a kdb Insights license
+## 2. Install a license
 
-To use all PyKX functionalities, you need to download and install a kdb Insights license.
+To use all PyKX functionalities, you need to download and install a license.
+
+If you do not have a license, it is recommended to upgrade to KDB-X Python `pykx>=4.0` and obtain a license from the [KX Developer Center](https://developer.kx.com/products/kdb-x/install).
 
 !!! Warning "Legacy kdb+/q licenses do not support all PyKX features."
 
-There are two types of kdb Insights licenses for PyKX: personal and commercial. For either of them, you have two installation options:
 
-  - a) from Python
-  - b) using environment variables
+!!! Warning "Newer KDB-X Python `pykx>=4.0` licenses will not work with PyKX `pykx<4.0`. Refer to [troubleshooting](../help/troubleshooting.md) for more."
 
-### 2.a Install license in Python
+### 2.a Install an existing license in Python
 
-Follow the steps below to install a kdb Insights license for PyKX from Python:
+Follow the steps below to install a license for PyKX from Python:
 
 1. Start your Python session:
 
@@ -121,79 +146,45 @@ Follow the steps below to install a kdb Insights license for PyKX from Python:
 	Would you like to install a license? [Y/n]:
 	```
 
-3. Indicate whether you have access to an existing PyKX enabled license or not, type `#!python N` or press `#!python Enter` to continue with accessing a new license:
+3. Indicate whether you have access to an existing PyKX enabled license or not, type `#!python Y` if you have a license:
 
 	```python
 	Do you have access to an existing license for PyKX that you would like to use? [N/y]:
 	```
 
-4. Choose whether you wish to install a personal or commercial license, type `#!python Y` or press `#!python Enter` to choose a personal license
-
-	```python
-	Is the intended use of this software for:
-	    [1] Personal use (Default)
-	    [2] Commercial use
-	Enter your choice here [1/2]:
-	```
-
-5. When asked if you would like to apply for a license, type `#!python Y` or press `#!python Enter`:
-
-	=== "Personal license"
-
-		```bash
-		To apply for a PyKX license, navigate to https://kx.com/kdb-insights-sdk-personal-edition-download
-		Shortly after you submit your license application, you will receive a welcome email containing your license information.
-		Would you like to open this page? [Y/n]:
-		```
-
-	=== "Commercial license"
-
-		```bash
-		To apply for your PyKX license, contact your KX sales representative or sales@kx.com.
-		Alternately apply through https://kx.com/book-demo.
-		Would you like to open this page? [Y/n]:
-		```
-
-6. For personal use, complete the form to receive your welcome email. For commercial use, the license will be provided over email after the commercial evaluation process has been followed with the support of your sales representative.
-
-7. Choose the desired method to activate your license by typing `#!python 1`, `#!python 2`, or `#!python 3` as appropriate:
+4. Choose the desired method to activate your license by typing `#!python 1` or `#!python 2` as appropriate:
 
 	```bash
-	Select the method you wish to use to activate your license:
-		[1] Download the license file provided in your welcome email and input the file path (Default)
-		[2] Input the activation key (base64 encoded string) provided in your welcome email
-		[3] Proceed with unlicensed mode
-	Enter your choice here [1/2/3]:
+	Please select the method you wish to use to activate your license:
+    [1] Provide the location of your license file
+    [2] Paste the license key
 	```
 
-8. Depending on your choice (`#!python 1`, `#!python 2`, or `#!python 3`), complete the installation by following the final step as below:
+5. Depending on your choice (`#!python 1` or `#!python 2`), complete the installation by following the final steps as below:
 
 	=== "1"
 
-		=== "Personal license"
-
-			```bash
-			Provide the download location of your license (for example, ~/path/to/kc.lic): 
-			```
-
-		=== "Commercial license"
-
-			```bash
-			Provide the download location of your license (for example, ~/path/to/k4.lic):
-			```
+		```bash
+		Provide the download location of your license (for example, ~/path/to/kc.lic): 
+		```
 
 	=== "2"
 
-		```bash
-		Provide your activation key (base64 encoded string) provided with your welcome email:
-		```
-	=== "3"
+		Specify the license type:
 
 		```bash
-		No further actions needed.
+		Please confirm the license type:
+		[1] kc.lic - The default
+		[2] k4.lic - Used in some scenarios
 		```
 
-9. Validate the correct installation of your license:
+		Then paste your license key and hit enter:
+
+		```bash
+		Provide your kc.lic license key (base64 encoded string) :
+		```
+
+6. Validate the correct installation of your license:
 
 	```python
 	>>> kx.q.til(10)
@@ -202,29 +193,25 @@ Follow the steps below to install a kdb Insights license for PyKX from Python:
 
 ### 2.b Install license with environment variables
 
-For environment-specific flexibility, there are two ways to install your license: by using a file or by copying text. Both are sourced in your welcome email. Click on the tabs below, read the instructions, and choose the method you wish to follow:
+For environment-specific flexibility, there are two ways to install your license: by using a file or by copying text. Click on the tabs below, read the instructions, and choose the method you wish to follow:
 
 !!! Note ""
 
 	=== "Using a file"
 
-		1. For personal usage, navigate to the [personal license](https://kx.com/kdb-insights-sdk-personal-edition-download/) and complete the form. For commercial usage, contact your KX sales representative or sales@kx.com or apply through https://kx.com/book-demo.
+		1. Download your license file.
 
-		2. On receipt of an email from KX, download and save the license file to a secure location on your computer.
-
-		3. Set an environment variable pointing to the folder with the license file. (Learn how to set environment variables from [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/)).
+		2. Set an environment variable pointing to the folder with the license file. (Learn how to set environment variables from [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/)).
        		* **Variable Name**: `#!bash QLIC`
       	    * **Variable Value**: `#!bash /user/path/to/folder`
 
 	=== "Using text"
 
-		1. For personal usage, navigate to the [personal license](https://kx.com/kdb-insights-sdk-personal-edition-download/) and complete the form. For commercial usage, contact your KX sales representative or sales@kx.com or apply through https://kx.com/book-demo.
+		1. Copy the `#!bash base64` encoded contents of your license key provided.
 
-		2. On receipt of an email from KX, copy the `#!bash base64` encoded contents of your license provided in plain-text within the email.
-
-		3. On your computer, set an environment variable `#!bash KDB_LICENSE_B64` when using a personal license or `KDB_K4LICENSE_B64` for a commercial license, pointing with the value copied in step 2. (Learn how to set environment variables from [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/)).
+		2. On your computer, set an environment variable with the contents of your `kc.lic` license key named `#!bash KDB_LICENSE_B64`. Or use `KDB_K4LICENSE_B64` if you have an older `k4.lic` license key. (Learn how to set environment variables from [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/)).
        		* **Variable Name**: `KDB_LICENSE_B64`  / `KDB_K4LICENSE_B64`
-      	    * **Variable Value**: `<copied contents from email>`
+      	    * **Variable Value**: `<copied license key>`
 
 To validate if you successfully installed your license with environment variables, start Python and import PyKX as follows:
 
@@ -266,11 +253,10 @@ This command should display the installed version of PyKX.
 
 		PyKX depends on the following third-party Python packages:
 
-      - `pandas>=1.2, <2.0; python_version=='3.8'`
-      - `pandas>=1.2, <=2.3.0; python_version>'3.8'`
-      - `numpy~=1.22; python_version<'3.11'`
-      - `numpy~=1.23, <2.3.0; python_version=='3.11'`
-      - `numpy~=1.26, <2.3.0; python_version>='3.12'`
+      - `pandas>=1.2, <3.0; python_version>'3.8'`
+      - `numpy>=1.22; python_version<'3.11'`
+      - `numpy>=1.23; python_version=='3.11'`
+      - `numpy>=1.26; python_version>='3.12'`
       - `pytz>=2022.1`
       - `toml~=0.10.2`
       - `dill>=0.2.0`
@@ -291,12 +277,10 @@ This command should display the installed version of PyKX.
 
 		**Optional Python dependencies:**
 
-		- **`pyarrow >=3.0.0, <19.0.0`**: install `pyarrow` extra, for example `pip install pykx[pyarrow]`.
+		- **`pyarrow >=3.0.0`**: install `pyarrow` extra, for example `pip install pykx[pyarrow]`.
 		- **`find-libpython ~=0.2`**: install `debug` extra, for example `pip install pykx[debug]`.
 		- **`ast2json ~=0.3`**: install with `dashboards` extra, for example `pip install pykx[dashboards]`
 		- **`dill >=0.2`**: install via pip, with `remote` extra, for example `pip install pykx[remote]`
-		- **`beautifulsoup4 >=4.10.0`**: install with `help` extra, for example `pip install pykx[help]`
-		- **`markdown2 >=2.5.0`**: install with `help` extra, for example `pip install pykx[help]`
 		- **`psutil >=5.0.0`**: install via pip, with `streaming` extra, for example `pip install pykx[streaming]`
 		- **`torch >2.1`**: install via pip, with `torch` extra, for example `pip install pykx[torch]`
 
@@ -331,11 +315,11 @@ This command should display the installed version of PyKX.
 | Mac ARM   | kdb+ 4.0   | libq.dylib  | 2025.02.18 |
 | Mac x86   | kdb+ 4.0   | libq.dylib  | 2025.02.18 |
 | Windows   | kdb+ 4.0   | q.dll/q.lib | 2025.02.18 |
-| Linux ARM | kdb+ 4.1   | libq.so     | 2025.11.25 |
-| Linux x86 | kdb+ 4.1   | libq.so     | 2025.11.25 |
-| Mac ARM   | kdb+ 4.1   | libq.dylib  | 2025.11.25 |
-| Mac x86   | kdb+ 4.1   | libq.dylib  | 2025.11.25 |
-| Windows   | kdb+ 4.1   | q.dll/q.lib | 2025.11.25 |
+| Linux ARM | kdb+ 4.1   | libq.so     | 2026.05.01 |
+| Linux x86 | kdb+ 4.1   | libq.so     | 2026.05.01 |
+| Mac ARM   | kdb+ 4.1   | libq.dylib  | 2026.05.01 |
+| Mac x86   | kdb+ 4.1   | libq.dylib  | 2026.05.01 |
+| Windows   | kdb+ 4.1   | q.dll/q.lib | 2026.05.01 |
 | Linux ARM | Unlicensed | libe.so     | 2023.11.22 |
 | Linux x86 | Unlicensed | libe.so     | 2023.11.22 |
 | Mac ARM   | Unlicensed | libe.so     | 2023.11.22 |

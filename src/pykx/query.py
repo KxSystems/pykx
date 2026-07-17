@@ -38,7 +38,7 @@ class QSQL:
 
         ```python
         qtable = pykx.q('([]1 2 3;4 5 6)')
-        qtable.update(pykx.Column('x', value=[10, 20, 30]))
+        qtable.update(pykx.Column('x', data=[10, 20, 30]))
         ```
 
     3. Development and maintenance of this interface is easier with regard to the different
@@ -246,13 +246,13 @@ class QSQL:
 
         ```python
         qtab.update({'eye': '`blue`brown`green'})
-        qtab.update(pykx.Column('age', value=[25, 30, 31]))
+        qtab.update(pykx.Column('age', data=[25, 30, 31]))
         ```
 
         Update the content of a column restricting scope using a where clause
 
         ```python
-        qtab.update(pykx.Column('age', value=['blue']), where=pykx.Column('hair')=='fair')
+        qtab.update(pykx.Column('age', data=['blue']), where=pykx.Column('hair')=='fair')
         ```
 
         Define a q table suitable for by clause example
@@ -424,17 +424,17 @@ class QSQL:
         elif isinstance(clause_value, k.Column):
             if query_type == 'exec':
                 if clause_value._is_tree:
-                    return [b'.[;enlist 0;eval]', clause_value._value]
+                    return [b'.[;enlist 0;eval]', clause_value._data]
                 else:
-                    return k.ParseTree(clause_value._value)
+                    return k.ParseTree(clause_value._data)
             elif query_type == 'delete' and clause_name == 'columns':
                 return [b'enlist', clause_value._name]
             else:
                 if clause_value._is_tree:
                     return [b'{enlist[x]!enlist .[y;enlist 0;eval]}',
-                            clause_value._name, clause_value._value]
+                            clause_value._name, clause_value._data]
                 else:
-                    return {clause_value._name: clause_value._value}
+                    return {clause_value._name: clause_value._data}
         elif isinstance(clause_value, k.Variable):
             if query_type == 'exec':
                 return k.ParseTree(clause_value._name)
@@ -459,7 +459,7 @@ class QSQL:
                 for x in clause_value:
                     if isinstance(x, k.Column):
                         kys.append(x._name)
-                        vls.append(x._value)
+                        vls.append(x._data)
                     else:
                         kys.append(x)
                         vls.append(x)
@@ -480,9 +480,9 @@ class QSQL:
                 clause_dict[key] = [1, k.CharVector(val)]
             elif isinstance(val, k.Column):
                 if val._is_tree:
-                    clause_dict[key] = [2, val._value]
+                    clause_dict[key] = [2, val._data]
                 else:
-                    clause_dict[key] = [0, val._value]
+                    clause_dict[key] = [0, val._data]
             else:
                 clause_dict[key] = [0, val]
         return [b'''{

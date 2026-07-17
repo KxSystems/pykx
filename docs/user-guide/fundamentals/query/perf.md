@@ -81,7 +81,7 @@ The following shows the scaling of queries based on the number of rows on an in-
 
 ## SQL
 
-To optimize frequently called SQL queries you can make use of the [prepare](../../../api/query.md#pykx.query.SQL.prepare) and [execute](../../../api/query.md#pykx.query.SQL.execute) functionality to separate SQL parsing from query execution as detailed [here](https://code.kx.com/insights/1.10/core/sql.html#prepare-and-execute).
+To optimize frequently called SQL queries you can make use of the [prepare](../../../api/query.md#pykx.query.SQL.prepare) and [execute](../../../api/query.md#pykx.query.SQL.execute) functionality to separate SQL parsing from query execution as detailed [here](https://code.kx.com/insights/core/sql.html#prepare-and-execute).
 
 ## Next Steps
 

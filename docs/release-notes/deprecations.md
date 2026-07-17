@@ -1,9 +1,10 @@
 # Deprecations
 
-A list of deprecated behaviors and the version in which they were removed.
+A list of deprecated behaviors and the version in which they were removed. For full release notes see [here](changelog.md), and for under q see [here](underq-changelog.md).
 
 | Feature                                           | Alternative               | Deprecated    | Removed    |
 |---------------------------------------------------|---------------------------|---------------|------------|
+| `value` keyword for `Column` creation             | `data`                    | 3.1.7         |            |
 | Creating more than one DB object                  | `overwrite=True`          | 3.1.5         |            |
 | `kx.q.system.console_size`                        | `kx.q.system.display_size`| 3.1.3         |            |
 | `.pykx.console[]` on Windows                      |                           | 3.1.3         | 3.1.3      |
@@ -21,9 +22,11 @@ A list of deprecated behaviors and the version in which they were removed.
 | `PYKX_ENABLE_PANDAS_API`                          |                           | 3.0.0         | 3.0.0      |
 | `.pd(raw_guids)`                                  |                           | 2.5.0         | 2.5.0      |
 
-## PyKX 3.1.5
+## PyKX 3.1.7
 
-Release Date: 2025-10-21
+- Deprecated `value` keyword when creating `Column` objects, use `data` instead
+
+## PyKX 3.1.5
 
 ### Fixes and Improvements
 
@@ -56,13 +59,9 @@ Release Date: 2025-02-11
 
 ## PyKX 3.0.1
 
-Release Date: 2024-12-04
-
 - Removal of column `type` from the return of `#!python dtypes` method for `#!python kx.Table` objects, previously this had raised a deprecation warning
 
 ## PyKX 3.0.0
-
-Release Date: 2024-11-12
 
 - Removal of various deprecated keywords used in table operations:
 	- `#!python modify` keyword for `#!python select`, `#!python exec`, `#!python update` and `#!python delete` operations on `#!python pykx.Table` and `#!python pykx.KeyedTable`. This has been permanently changed to use `#!python inplace`.
@@ -84,8 +83,6 @@ Release Date: 2024-11-12
 
 ## PyKX 2.5.0
 
-Release Date: 2024-05-15
-
 - Deprecated `.pd(raw_guids)` keyword.
 - Renamed `labels` parameter in `Table.rename()` to `mapper` to match Pandas. Added deprecation warning to `labels`.
 - Deprecation of `type` column in `dtypes` output as it is a reserved keyword. Use new `datatypes` column instead.
@@ -93,35 +90,25 @@ Release Date: 2024-05-15
 
 ## PyKX 2.3.1
 
-Release Date: 2024-02-07
-
 - To align with other areas of PyKX the `upsert` and `insert` methods for PyKX tables and keyed tables now support the keyword argument `inplace`, this change will deprecate usage of `replace_self` with the next major release of PyKX.
   
 
 ## PyKX 2.2.1
-
-Release Date: 2023-11-30
 
 - Deprecation of internally used environment variable `UNDER_PYTHON` which has been replaced by `PYKX_UNDER_PYTHON` to align with other internally used environment variables.
 - Addition of deprecation warning for environmental configuration option `PYKX_NO_SIGINT` which is to be replaced by `PYKX_NO_SIGNAL`. This is used when users require no signal handling logic overwrites and now covers `SIGTERM`, `SIGINT`, `SIGABRT` signals amongst others.
 
 ## PyKX 1.6.1
 
-Release Date: 2023-07-19
-
 - Added deprecation warning around the discontinuing of support for Python 3.7.
 
 
 ## PyKX 1.0.1
 
-Release Date: 2022-03-18
-
 - The `sync` parameter for `pykx.QConnection` and `pykx.QConnection.__call__` has been renamed to the less confusing name `wait`. The `sync` parameter remains, but its usage will result in a `DeprecationWarning` being emitted. The `sync` parameter will be removed in a future version.
 
 
 ## PyKX 1.0.0
-
-Release Date: 2022-02-14
 
 - The `pykdb.q.ipc` attribute has been removed. The IPC module can be accessed directly instead at `pykx.ipc`, but generally one will only need to access the `QConnection` class, which can be accessed at the top-level: `pykx.QConnection`.
 - The `pykdb.q.K` attribute has been removed. Instead, `K` types can be used as constructors for that type by leveraging the `toq` module. For example, instead of `pykdb.q.K(x)` one should write `pykx.K(x)`. Instead of `pykx.q.K(x, k_type=pykx.k.SymbolAtom)` one should write `pykx.SymbolAtom(x)` or `pykx.toq(x, ktype=pykx.SymbolAtom)`.

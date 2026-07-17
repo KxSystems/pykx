@@ -1924,10 +1924,18 @@ class Vector(Collection, abc.Sequence):
             np_array = self.np(raw=raw, has_nulls=has_nulls)
             if not raw and isinstance(self, List):
                 null_inds = []
+                atom_types = set()
                 for i in range(len(self)):
-                    if isinstance(self._unlicensed_getitem(i), IntegralNumericAtom)\
-                            and self._unlicensed_getitem(i).is_null:
+                    item = self._unlicensed_getitem(i)
+                    if not isinstance(item, Function):
+                        atom_types.add(type(item))
+                    if isinstance(item, IntegralNumericAtom) and item.is_null:
                         null_inds.append(i)
+                if len(atom_types) > 1:
+                    raise QError(
+                        'Unable to convert pykx.List with non conforming types '
+                        'to PyArrow,\n        failed with error: '
+                        'cannot mix types in a pykx.List for PyArrow conversion')
                 if 0 != len(null_inds):
                     np_array[null_inds] = None
             return pa.array(np_array)
@@ -1980,6 +1988,9 @@ class Vector(Collection, abc.Sequence):
 
     def median(self):
         return q.med(self)
+
+    def fills(self):
+        return q.fills(self)
 
     def mode(self):
         return q('{where max[c]=c:count each d:group x}', self)
@@ -2619,6 +2630,11 @@ class GUIDVector(Vector):
 
     def np(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         return _wrappers.guid_vector_np(self, raw, has_nulls)
+
+    def __arrow_array__(self, type=None):
+        if pa is None:
+            raise PyArrowUnavailable # nocov
+        return pa.array(self.np(raw=True).view('S16'), pa.binary(16))
 
     def pa(self, *, raw: bool = False, has_nulls: Optional[bool] = None):
         if pa is None:
@@ -4307,7 +4323,7 @@ class Dictionary(Mapping):
     def __setitem__(self, key, val):
         if isinstance(key, tuple):
             raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented, .pykx.Dictionary objects do not support tuple key assignment") # noqa: E501
-        self.__dict__.update(q('{x,((),y)!((),z)}', self, key, val).__dict__)
+        self.__dict__.update(q('{ye:(),y;x,ye!$[y~ye;z;enlist z]}', self, key, val).__dict__)
 
     def _repr_html_(self):
         if not licensed:
@@ -5184,12 +5200,6 @@ class Function(Atom):
     vs = each_left
 
 
-bs4_spec = importlib.util.find_spec("bs4")
-md2_spec = importlib.util.find_spec("markdown2")
-if bs4_spec is not None and md2_spec is not None:
-    Function.scan.__doc__ = help.qhelp('scan')
-
-
 class Lambda(Function):
     """Wrapper for q lambda functions.
 
@@ -5759,7 +5769,7 @@ class ParseTree:
         if isinstance(tree, str):
             tree = q.parse(CharVector(tree))
         elif isinstance(tree, Column):
-            tree = tree._value
+            tree = tree._data
         elif isinstance(tree, QueryPhrase):
             tree = tree._phrase
         elif isinstance(tree, Variable):
@@ -5869,7 +5879,7 @@ class Variable:
 
 class Column:
     """Helper class creating queries for the Query API"""
-    def __init__(self, column=None, name=None, value=None, is_tree=False):
+    def __init__(self, column=None, name=None, data=None, is_tree=False, value=None):
         if not licensed:
             raise LicenseException("use kx.Column objects")
         if name is not None:
@@ -5879,21 +5889,73 @@ class Column:
             self._name = column
             self._renamed = False
         if value is not None:
-            self._value = value
+            self._data = value
+            self._renamed = True
+            warn("The kx.Column 'value' keyword is deprecated, please use 'data' instead",
+                 DeprecationWarning)
+        elif data is not None:
+            if isinstance(data, (SymbolAtom, SymbolVector, str)):
+                data = [data]
+            elif isinstance(data, list) and all(isinstance(x, str) for x in data):
+                data = [data]
+            self._data = data
+            self._renamed = True
         else:
-            self._value = column
+            self._data = column
         self._is_tree = is_tree
+
+        if self._name is None:
+            raise TypeError("Column 'name' value cannot be None.")
+        elif not isinstance(self._name, (str, SymbolAtom)):
+            raise TypeError("Column 'name' can only be of type Str and pykx.SymbolAtom")
 
     def __repr__(self):
         preamble = f'pykx.{type(self).__name__}'
-        return f"{preamble}(name='{self._name}', value={type(self._value)})"
+        return f"{preamble}(name='{self._name}', data={type(self._data)})"
 
-    """Function for building up a function call off a Column"""
+    def __getitem__(self, key):
+        res = copy.deepcopy(self)
+        if isinstance(key, (SymbolAtom, SymbolVector, str)):
+            key = [key]
+        elif isinstance(key, list) and all(isinstance(x, str) for x in key):
+            key = [key]
+        res._data = [res._data, key]
+        return res
+
     def call(self, op, *other, iterator=None, col_arg_ind=0, project_args=None):
+        """
+        Used to makes function calls off a Column object.
+
+        Parameters:
+            op: The function to apply.
+            *other: The other column(s) or variable(s) (Python/q) to be used
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Examples:
+
+            Find the maximum values in nested lists.
+
+            ```python
+            >>> t = kx.q('([] n:(1 2;4 3;10 10))')
+            >>> t.select(kx.Column('n').call('max', iterator='each'))
+            pykx.Table(pykx.q('
+            n
+            --
+            2
+            4
+            10
+            '))
+            ```
+        """
         params = []
         for param in other:
             if isinstance(param, Column):
-                param = param._value
+                param = param._data
             elif isinstance(param, Variable):
                 param = param._name
             else:
@@ -5904,7 +5966,7 @@ class Column:
                 ):
                     param = [param]
             params.append(param)
-        params.insert(col_arg_ind, self._value)
+        params.insert(col_arg_ind, self._data)
         if isinstance(op, (str, bytes, CharVector)):
             op = op.encode() if isinstance(op, str) else op
             cmd = [q(op)]
@@ -5947,7 +6009,7 @@ class Column:
                 i.extend(cmd)
             cmd = i
         cpy = copy.deepcopy(self)
-        cpy._value = cmd
+        cpy._data = cmd
         return cpy
 
     def __add__(self, other, iterator=None, col_arg_ind=0, project_args=None):
@@ -6048,13 +6110,13 @@ class Column:
 
     def __or__(self, other):
         if isinstance(other, Column):
-            other = other._value
+            other = other._data
         elif isinstance(other, QueryPhrase):
             raise TypeError("Cannot | off a Column with a QueryPhrase")
         elif isinstance(other, ParseTree):
             other = other._tree
         cpy = copy.deepcopy(self)
-        cpy._value = [q(b'or'), self._value, other]
+        cpy._data = [q(b'or'), self._data, other]
         return cpy
 
     def abs(self, iterator=None):
@@ -6143,7 +6205,7 @@ class Column:
         Use `&` or `[]` in general to build queries.
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -6467,7 +6529,7 @@ class Column:
         - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -6611,7 +6673,7 @@ class Column:
         - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             sample: Should calculations of covariance return the
                 sample covariance (set True) covariance (set False {default})
             iterator: What iterator to use when operating on the column
@@ -6673,7 +6735,7 @@ class Column:
             - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -6997,7 +7059,7 @@ class Column:
             - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -7111,7 +7173,7 @@ class Column:
                 name = by[0]
         elif isinstance(by, Column):
             name = by._name
-            by = by._value
+            by = by._data
         elif isinstance(by, QueryPhrase):
             name = by._names[0]
             by = by.to_dict()
@@ -7120,7 +7182,7 @@ class Column:
         if isinstance(data, QueryPhrase):
             data = data.to_dict()
         pt = ParseTree.fby(by, aggregate, data, by_table, data_table)
-        return Column(name=name, value=pt)
+        return Column(name=name, data=pt)
 
     def fills(self, iterator=None):
         """
@@ -7446,7 +7508,7 @@ class Column:
             - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -7495,7 +7557,7 @@ class Column:
         Most commonly this function is used in where clauses to filter data
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -7598,7 +7660,7 @@ class Column:
             clauses to filter data.
 
         Parameters:
-            other: A string/byte array defining a regex pattern to be used for query
+            other: A string/byte array defining a regex pattern to be used for query.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -7746,7 +7808,7 @@ class Column:
             The results are returned as a floating point.
 
         Parameters:
-            other: An integer denoting the window to be used for calculation of
+            other: An integer denoting the window to be used for calculation of.
                 the moving average
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -7884,7 +7946,7 @@ class Column:
             so far, thereafter the result is the moving average
 
         Parameters:
-            other: An integer denoting the window to be used for calculation of
+            other: An integer denoting the window to be used for calculation of.
                 the moving count
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -7957,7 +8019,7 @@ class Column:
             of items so far, thereafter the result is the moving standard deviation
 
         Parameters:
-            other: An integer denoting the window to be used for calculation of
+            other: An integer denoting the window to be used for calculation of.
                 the moving standard deviation
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -8131,7 +8193,7 @@ class Column:
             of items so far, thereafter the result is the moving maximum
 
         Parameters:
-            other: An integer denoting the window to be used for calculation of
+            other: An integer denoting the window to be used for calculation of.
                 the moving maximum
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -8164,7 +8226,7 @@ class Column:
             of items so far, thereafter the result is the moving minimum
 
         Parameters:
-            other: An integer denoting the window to be used for calculation of
+            other: An integer denoting the window to be used for calculation of.
                 the moving minimum
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -8195,11 +8257,11 @@ class Column:
         Calculate the modulus of items in a column for a given value.
 
         Parameters:
-            other: An integer denoting the divisor to be used when calculating the modulus
+            other: An integer denoting the divisor to be used when calculating the modulus.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
-                where the column parameter will be used. Default 1.
+                where the column parameter will be used. Default 0.
             project_args: The argument indices of a multivariate function which will be
                 projected on the function before evocation with use of an iterator.
 
@@ -8227,7 +8289,7 @@ class Column:
             of items so far, thereafter the result is the moving sum
 
         Parameters:
-            other: An integer denoting the window to be used for calculation of
+            other: An integer denoting the window to be used for calculation of.
                 the moving sum
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -8320,7 +8382,7 @@ class Column:
         Return the larger of the underlying boolean values between two columns:
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -8596,7 +8658,7 @@ class Column:
             by the parameter other.
 
         Parameters:
-            other: An integer denoting the number of elements left(positive) or right(negative)
+            other: An integer denoting the number of elements left(positive) or right(negative).
                 which the column list will be shifted
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -9168,7 +9230,7 @@ class Column:
             - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -9286,7 +9348,7 @@ class Column:
         fn = 'svar' if sample else 'var'
         return self.call(fn, iterator=iterator)
 
-    def wavg(self, other, iterator=None, col_arg_ind=0, project_args=None):
+    def wavg(self, weight, iterator=None, col_arg_ind=0, project_args=None):
         """
         Return the weighted average between a column and:
 
@@ -9295,7 +9357,7 @@ class Column:
             - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            weight: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -9330,7 +9392,7 @@ class Column:
         pykx.FloatAtom(pykx.q('2.431111'))
         ```
         """
-        return self.call('wavg', other, iterator=iterator, col_arg_ind=col_arg_ind,
+        return self.call('wavg', weight, iterator=iterator, col_arg_ind=col_arg_ind,
                          project_args=project_args)
 
     def within(self, lower, upper, iterator=None, col_arg_ind=0, project_args=None):
@@ -9396,7 +9458,7 @@ class Column:
             - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -9440,7 +9502,7 @@ class Column:
             parameter other.
 
         Parameters:
-            other: An integer denoting the multiple to which all values will be rounded
+            other: An integer denoting the multiple to which all values will be rounded.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -9498,7 +9560,7 @@ class Column:
             the parameter other.
 
         Parameters:
-            other: An integer denoting the power to which all values will be raised
+            other: An integer denoting the power to which all values will be raised.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -9538,7 +9600,7 @@ class Column:
             by the parameter other.
 
         Parameters:
-            other: An integer denoting the logarithmic base to which all values will be set
+            other: An integer denoting the logarithmic base to which all values will be set.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -9577,7 +9639,7 @@ class Column:
             before it. Where N is specified by the parameter other.
 
         Parameters:
-            other: An integer denoting the number of indices before elements in the list
+            other: An integer denoting the number of indices before elements in the list.
                 to retrieve the value of
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -9611,6 +9673,39 @@ class Column:
         """
         return self.call('xprev', other, iterator=iterator, col_arg_ind=col_arg_ind,
                          project_args=project_args)
+
+    @property
+    def time(self):
+        """
+        Retrieve the time information from a temporal column
+
+
+        Examples:
+
+        Retrieve time information from a column
+
+        ```python
+        >>> import pykx as kx
+        >>> tab = kx.Table(data={'time': kx.random.random(3, kx.TimestampAtom.inf)})
+        >>> tab
+        pykx.Table(pykx.q('
+        time
+        -----------------------------
+        2118.11.10D05:05:45.270444032
+        2052.01.18D19:21:15.973214208
+        2088.03.13D18:56:07.388233728
+        '))
+        >>> tab.select(kx.Column('time').time)
+        pykx.Table(pykx.q('
+        time
+        ------------
+        05:05:45.270
+        19:21:15.973
+        18:56:07.388
+        '))
+        ```
+        """
+        return self.call('`time$')
 
     @property
     def hour(self):
@@ -9787,7 +9882,7 @@ class Column:
             when adding elements.
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -9886,9 +9981,46 @@ class Column:
         '))
         ```
         """
+        if not isinstance(name, (str, SymbolAtom)):
+            raise TypeError("'name' must be of type str or SymbolAtom")
         cpy = copy.deepcopy(self)
         cpy._name = name
         cpy._renamed = True
+        return cpy
+
+    def data(self, data):
+        """
+        Replace data of a column object
+
+        Parameters:
+            data: The data to assign to the column
+
+        Examples:
+
+        Change the value of a column after selecting from table
+        ```python
+        >>> import pykx as kx
+        >>> tab = kx.Table(data={
+        ...     'a': [1, -1, 0.5],
+        ...     'b': [[-1, 2, 1], [0, 1, 2], [1, 2, 3]]
+        ...     })
+        >>> tab.update(kx.Column('a').data([1,2,3]))
+        pykx.Table(pykx.q('
+        a b
+        --------
+        1 -1 2 1
+        2 0  1 2
+        3 1  2 3
+        '))
+        ```
+        """
+        cpy = copy.deepcopy(self)
+        if isinstance(data, (SymbolAtom, SymbolVector, str)):
+            data = [data]
+        elif isinstance(data, list) and all(isinstance(x, str) for x in data):
+            data = [data]
+        cpy._data = data
+        cpy._renamed=True
         return cpy
 
     def average(self, iterator=None):
@@ -9942,13 +10074,13 @@ class Column:
         Convert the content of a column to another PyKX type
 
         Parameters:
-            other: The name of the type to which your column should be cast
+            other: The name of the type to which your column should be cast.
                 or the lower case letter used to define it in q, for more information
                 see [here](https://code.kx.com/q/ref/cast/).
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
-                where the column parameter will be used. Default 0.
+                where the column parameter will be used. Default 1.
             project_args: The argument indices of a multivariate function which will be
                 projected on the function before evocation with use of an iterator.
 
@@ -9984,6 +10116,8 @@ class Column:
         """
         if not isinstance(other, str):
             raise QError('Supplied value other must be a str')
+        if other == 'symbol':
+            other = ''
         if 1 == len(other):
             other = other.encode('UTF-8')
         return self.call('$', other, iterator=iterator, col_arg_ind=col_arg_ind,
@@ -9998,7 +10132,7 @@ class Column:
             - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -10058,7 +10192,7 @@ class Column:
             - A PyKX variable in q memory
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             sample: Should calculations of covariance return the
                 sample covariance (set True) covariance (set False {default})
             iterator: What iterator to use when operating on the column
@@ -10129,7 +10263,7 @@ class Column:
             when adding elements.
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -10209,11 +10343,11 @@ class Column:
             an iterator. Where N is specified by the other parameter.
 
         Parameters:
-            other: An integer defining the number of elements to drop
+            other: An integer defining the number of elements to drop.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
-                where the column parameter will be used. Default 0.
+                where the column parameter will be used. Default 1.
             project_args: The argument indices of a multivariate function which will be
                 projected on the function before evocation with use of an iterator.
 
@@ -10247,11 +10381,11 @@ class Column:
         Replace all null values in a column with a specified 'other' parameter
 
         Parameters:
-            other: The value which should replace nulls within a column
+            other: The value which should replace nulls within a column.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
-                where the column parameter will be used. Default 0.
+                where the column parameter will be used. Default 1.
             project_args: The argument indices of a multivariate function which will be
                 projected on the function before evocation with use of an iterator.
 
@@ -10340,7 +10474,7 @@ class Column:
             - A variable in q memory
 
         Parameters:
-            other: The Column, list, item or variable to be joined to the
+            other: The Column, list, item or variable to be joined to the.
                 original column
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
@@ -10427,7 +10561,7 @@ class Column:
         Calculate the modulus of items in a column for a given value.
 
         Parameters:
-            other: An integer denoting the divisor to be used when calculating the modulus
+            other: An integer denoting the divisor to be used when calculating the modulus.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -10470,7 +10604,7 @@ class Column:
             when adding elements.
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -10777,7 +10911,7 @@ class Column:
             when adding elements.
 
         Parameters:
-            other: The second column or variable (Python/q) to be used
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
@@ -10857,11 +10991,11 @@ class Column:
             from a column using an iterator. Where N is specified by the other parameter.
 
         Parameters:
-            other: An integer defining the number of elements to retrieve
+            other: An integer defining the number of elements to retrieve.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`.
             col_arg_ind: Determines the index within the multivariate function
-                where the column parameter will be used. Default 0.
+                where the column parameter will be used. Default 1.
             project_args: The argument indices of a multivariate function which will be
                 projected on the function before evocation with use of an iterator.
 
@@ -10960,6 +11094,441 @@ class Column:
         fn = 'svar' if sample else 'var'
         return self.call(fn, iterator=iterator)
 
+    def bin(self, other, iterator=None, col_arg_ind=1, project_args=None):
+        """
+        Perform a binary search on the Column.
+
+        Parameters:
+            other: A sorted list of same type as column.
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 1.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n: 2 4)')
+        >>> t.select(kx.Column('n').bin([1,3,5]))
+        pykx.Table(pykx.q('
+        n
+        -
+        0
+        1
+        '))
+        ```
+        """
+        return self.call('bin', other, iterator=iterator, col_arg_ind=col_arg_ind,
+                         project_args=project_args)
+
+    def enlist(self, iterator=None):
+        """
+        Return column values as a list.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n: 2 4)')
+        >>> t.exec(kx.Column('n').enlist(iterator='each'))
+        pykx.List(pykx.q('
+        2
+        4
+        '))
+        ```
+        """
+        return self.call('enlist', iterator=iterator)
+
+    def all(self, iterator=None):
+        """
+        Returns a boolean atom 1b if all items are nonzero, else retuns 0b.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n: 5#1b)')
+        >>> t.exec(kx.Column('n').all())
+        pykx.BooleanAtom(pykx.q('1b'))
+        ```
+        """
+        return self.call('all', iterator=iterator)
+
+    def any(self, iterator=None):
+        """
+        Returns a boolean atom 1b if at least one item is nonzero, else retuns 0b.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n: 0010b)')
+        >>> t.exec(kx.Column('n').any())
+        pykx.BooleanAtom(pykx.q('1b'))
+        ```
+        """
+        return self.call('any', iterator=iterator)
+
+    def _in(self, other, iterator=None, col_arg_ind=0, project_args=None):
+        """
+        Returns a boolean atom 1b if at least one item is nonzero, else retuns 0b.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n:1 2 3 4 5)')
+        >>> t.select(kx.Column('n')._in([0,2,4], iterator='\\:'))
+        pykx.Table(pykx.q('
+        n
+        -
+        0
+        1
+        0
+        1
+        0
+        '))
+        ```
+        """
+        return self.call('in', other, iterator=iterator, col_arg_ind=col_arg_ind,
+                         project_args=project_args)
+
+    def _except(self, other, iterator=None, col_arg_ind=0, project_args=None):
+        """
+        Returns a list of all items of column that are not items of `other`.
+
+        Parameters:
+            other: A list or atom to be excepted from the column.
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n: til 5)')
+        >>> t.exec(kx.Column('n')._except(3))
+        pykx.LongVector(pykx.q('0 1 2 4'))
+        ```
+        """
+        return self.call('except', other, iterator=iterator, col_arg_ind=col_arg_ind,
+                         project_args=project_args)
+
+    def hsym(self, iterator=None):
+        """
+        Returns a list of all items of column prefixed with a colon.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n: `a`b`c)')
+        >>> t.exec(kx.Column('n').hsym())
+        pykx.SymbolVector(pykx.q('`:a`:b`:c'))
+        ```
+        """
+        return self.call('hsym', iterator=iterator)
+
+    def raze(self, iterator=None):
+        """
+        Returns the collapsed items of the column.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n:(1 2;(3 4;5 6);7;8))')
+        >>> t.exec(kx.Column('n').raze())
+        pykx.List(pykx.q('
+        1
+        2
+        3 4
+        5 6
+        7
+        8
+        '))
+        ```
+
+        If you want to flatten all levels use the `over` or `\\` option for iterator.
+        ```python
+        >>> t.exec(kx.Column('n').raze(iterator='over'))
+        pykx.LongVector(pykx.q('1 2 3 4 5 6 7 8'))
+        ```
+        """
+        return self.call('raze', iterator=iterator)
+
+    def type(self, iterator=None):
+        """
+        Returns the type of the column.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n:(1 2;(3 4;5 6);7;8))')
+        >>> t.exec(kx.Column('n').type(iterator='each'))
+        pykx.ShortVector(pykx.q('7 0 -7 -7h'))
+        ```
+        """
+        return self.call('type', iterator=iterator)
+
+    def key(self, iterator=None):
+        """
+        Where a column is made of dictionaries, return the keys.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> d1 = kx.q('`a`b`c ! 1 2 3')
+        >>> d2 = kx.q('`d`e`f ! 4 5 6')
+        >>> t = kx.Table(data={'n':[d1, d2]})
+        >>> t.exec(kx.Column('n').type(iterator='each'))
+        pykx.Table(pykx.q('
+        n
+        -----
+        a b c
+        d e f
+        '))
+        ```
+        """
+        return self.call('key', iterator=iterator)
+
+    def get(self, iterator=None):
+        """
+        Read value from a column of named global variables or file names.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> kx.q('`:tb1 set ([] n: `a`b`c)')
+        pykx.SymbolAtom(pykx.q('`:tb1'))
+        >>> kx.q('`:tb2 set ([] n: 1 2 3)')
+        pykx.SymbolAtom(pykx.q('`:tb2'))
+        >>> t = kx.q('([] n: `:tb1`:tb2)')
+        >>> t.exec(kx.Column('n').get(iterator='each'))
+        pykx.List(pykx.q('
+        +(,`n)!,`a`b`c
+        +(,`n)!,1 2 3
+        '))
+        ```
+        """
+        return self.call('get', iterator=iterator)
+
+    def read0(self, iterator=None):
+        """
+        Read text from a file or process handle.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> kx.q('`:t1.txt 0: enlist "hello"')
+        pykx.SymbolAtom(pykx.q('`:t1.txt'))
+        >>> kx.q('`:t2.txt 0: enlist "goodbye"')
+        pykx.SymbolAtom(pykx.q('`:t2.txt'))
+        >>> t = kx.q('([] n: `:t1.txt`:t2.txt)')
+        >>> t.exec(kx.Column('n').read0(iterator='each'))
+        pykx.List(pykx.q('
+        "hello"
+        "goodbye"
+        '))
+        ```
+        """
+        return self.call('read0', iterator=iterator)
+
+    def read1(self, iterator=None):
+        """
+        Read bytes from a file or named pipe.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> kx.q('`:t1.txt 0: enlist "hello"')
+        pykx.SymbolAtom(pykx.q('`:t1.txt'))
+        >>> kx.q('`:t2.txt 0: enlist "goodbye"')
+        pykx.SymbolAtom(pykx.q('`:t2.txt'))
+        >>> t = kx.q('([] n: `:t1.txt`:t2.txt)')
+        >>> t.exec(kx.Column('n').read1(iterator='each'))
+        pykx.List(pykx.q('
+        0x68656c6c6f0a
+        0x676f6f646279650a
+        '))
+        ```
+        """
+        return self.call('read1', iterator=iterator)
+
+    def next(self, iterator=None):
+        """
+        For each item in the column, return the next item.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n:3 6 9 12)')
+        >>> t.exec(kx.Column('n').next()))
+        pykx.LongVector(pykx.q('6 9 12 0N'))
+        ```
+        """
+        return self.call('next', iterator=iterator)
+
+    def prior(self, other, iterator=None, col_arg_ind=1, project_args=None):
+        """
+        Applies passed function to value in column and the item preceding it.
+
+        Parameters:
+            other: A binary function.
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`.
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 1.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
+        Example:
+
+        ```python
+        >>> import pykx as kx
+        >>> t = kx.q('([] n: 1 2 3)')
+        >>> t.select(kx.Column('n').prior(kx.q('+')))
+        pykx.Table(pykx.q('
+        n
+        -
+        1
+        3
+        5
+        '))
+        ```
+        """
+        return self.call('prior', other, iterator=iterator, col_arg_ind=col_arg_ind,
+                         project_args=project_args)
+
+    def where(self, iterator=None):
+        """
+        Return indexes of True values.
+
+        Parameters:
+            iterator: What iterator to use when operating on the column
+                for example, to execute per row, use `each`
+
+        Examples:
+
+        Find indexes where values are True
+
+        ```python
+        >>> import pykx as kx
+        >>> tab = kx.q('([] a:101010b)')
+        >>> tab.exec(kx.Column('a').where())
+        pykx.LongVector(pykx.q('0 2 4'))
+        ```
+        """
+        return self.call('where', iterator=iterator)
+
 
 class QueryPhrase:
     """Special wrapper for a list which will be treated as a QueryPhrase.
@@ -10973,7 +11542,7 @@ class QueryPhrase:
         elif isinstance(phrase, ParseTree):
             self._phrase = phrase._tree
         elif isinstance(phrase, Column):
-            self._phrase = [phrase._value]
+            self._phrase = [phrase._data]
             self._names = [phrase._name]
             self._are_trees = [phrase._is_tree]
         elif isinstance(phrase, str):
@@ -10998,7 +11567,7 @@ class QueryPhrase:
             self._names.append('')
             self._are_trees.append(False)
         elif isinstance(other, Column):
-            self._phrase.append(other._value)
+            self._phrase.append(other._data)
             self._names.append(other._name)
             self._are_trees.append(other._is_tree)
         elif isinstance(other, QueryPhrase):
@@ -11016,7 +11585,7 @@ class QueryPhrase:
             self._names.extend('')
             self._are_trees.extend(False)
         elif isinstance(other, Column):
-            self._phrase.extend(other._value)
+            self._phrase.extend(other._data)
             self._names.extend(other._name)
             self._are_trees.extend(other._is_tree)
         elif isinstance(other, QueryPhrase):

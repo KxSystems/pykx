@@ -15,6 +15,8 @@ _This page details known issues and functional limitations when using PyKX eithe
 * Enabling the NEP-49 NumPy allocators will often segfault when running in a multiprocess setting.
 * The timeout value is always set to 0 when using PYKX_Q_LOCK.
 * Enabling PYKX_ALLOCATOR and using PyArrow tables can cause segfaults.
+* Multiprocessing is not available on Windows. When using PyKX in a multiprocessing setup, PyKX must be imported and initialized within each subprocess where it is needed, regardless of the multiprocessing start method used (spawn, fork, or forkserver).
+* Multithreading mode is not available on Windows.
 * `#!python kurl` functions require their `#!python options` dictionary to have mixed type values. Add a `#!python None` value to bypass: `#!python {'': None, ...}`
 * `#!python None` and `#!python pykx.Identity(pykx.q('::'))` do not pass through to single argument Python functions set under q as outlined in this example:
 ```python
