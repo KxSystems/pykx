@@ -23,3 +23,11 @@ feature Memory Allocation tests
             initmem:pymem[];
             do[100000;.pykx.eval"bbb(10, 100)"];
             10000 > abs initmem - pymem[]
+
+        expect repeated getting of an objects attribute to not increase memory
+            .pykx.pyexec"class Foo:\n    def __init__(self):\n        self.a = 1\n        self.b = list(range(10000))";
+            f: .pykx.eval"Foo()";
+            initmem:pymem[];
+            do[10000;f[`:a]];
+            do[10000;f[`:b]];
+            10000 > abs initmem-pymem[]

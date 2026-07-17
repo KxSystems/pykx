@@ -15,7 +15,7 @@ _This quickstart guide provides first time users with essential instructions for
 Before you start, make sure to:
 
 - [Install the PyKX library](installing.md#1-install-pykx).
-- [Have a kdb Insights license](installing.md#2-install-a-kdb-insights-license).
+- [Have a license](installing.md#2-install-a-license).
 
 ## 1. Import PyKX
 

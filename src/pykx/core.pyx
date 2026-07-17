@@ -312,20 +312,19 @@ if not pykx_threading:
                                         'Would you like to renew your license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
                             _license_message = _license_install(_exp_license, True, True, 'exp')
                         elif re.compile('licen[cs]e error: embedq').search(_capout_msg):
-                            _ce_license = 'You appear to be using a non kdb Insights license.\n\n'\
+                            _ce_license = 'You appear to be using a non PyKX enabled license.\n\n'\
                                         f'{_capout_msg}\n\n'\
                                         f'{_lic_location}\n\n'\
-                                        'Running PyKX in the absence of a kdb Insights license '\
+                                        'Running PyKX in the absence of a license '\
                                         'has reduced functionality.\nWould you like to install '\
-                                        'a kdb Insights personal license? [Y/n]: '
+                                        'a license? [Y/n]: '
                             _license_message = _license_install(_ce_license, True)
                         elif re.compile('licen[cs]e error: upd').search(_capout_msg):
                             _upd_license = 'Your installed license is out of date for this version'\
                                         ' of PyKX and must be updated.\n\n'\
                                         f'{_capout_msg}\n\n'\
                                         f'{_lic_location}\n\n'\
-                                        'Would you like to install an updated kdb '\
-                                        'Insights personal license? [Y/n]: '
+                                        'Would you like to install an updated license? [Y/n]: '
                             _license_message = _license_install(_upd_license, True)
                         elif re.compile('licen[cs]e error: k[xc4].lic').search(_capout_msg) or re.compile('licen[cs]e error: badmsg').search(_capout_msg):
                             _k_license = '\nThe PyKX license found is corrupt or incompatible with'\

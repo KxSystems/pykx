@@ -1,28 +1,38 @@
 # PyKX under q Changelog
 
-This changelog provides updates from PyKX 2.0.0 and above, for information relating to versions of PyKX prior to this version see the changelog linked below.
+This changelog covers PyKX under q from version 2.0.0 onwards.
 
 !!! Note
 
-	The changelog presented here outlines changes to PyKX when operating within a q environment specifically, if you require changelogs associated with PyKX operating within a Python environment see [here](./changelog.md).
+	For changes to PyKX within a Python environment, refer to the [Python changelog](./changelog.md).
+
+## PyKX 3.2.0
+
+**Release Date**
+
+2026-06-24
+
+**Fixes and Improvements**
+
+- Fixed a memory leak when using `.pykx.getattr` on foreign object in `q`.
 
 ## PyKX 3.1.5
 
-#### Release Date
+**Release Date**
 
 2025-10-21
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Added `.pykx.noalloc` which can be used to wrap a foreign object. When used with `.pykx.toq` the conversion will not use the `PYKX_ALLOCATOR`. See [here](../help/issues.md#known-issues) for details.
 
 ## PyKX 3.1.4
 
-#### Release Date
+**Release Date**
 
 2025-07-17
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Resolved `object has no attribute 't'` error for certain conversions
 
@@ -49,11 +59,11 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 3.1.3
 
-#### Release Date
+**Release Date**
 
 2025-06-12
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Dashboards integration now lists missing libraries by name.
 
@@ -78,17 +88,17 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 - Resolved `double free or corruption (out)` error when `pykx.q` was loaded in `QINIT` or `q.q`.
 - `pykx.q` load time has been roughly halved.
 
-### Deprecations & Removals
+**Deprecations & Removals**
 
 - `.pykx.console[]` has been removed on Windows due to incompatibility. Will now error with `'.pykx.console is not available on Windows` if called.
 
 ## PyKX 3.1.1
 
-#### Release Date
+**Release Date**
 
 2025-02-14
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Fix throwing of errors for `.pykx.safeReimport`, now throws an error instead of returning a value.
   
@@ -116,11 +126,11 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 3.1.0
 
-#### Release Date
+**Release Date**
 
 2025-02-11
 
-### Additions
+**Additions**
 
 - Addition of `.pykx.typepy` which returns an objects datatype as a `CharVector` after being passed to python.
 
@@ -133,7 +143,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 	"<class 'pandas.core.series.Series'>"
 	```
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Using `.pykx.toq`/`.pykx.toq0` now return the q representation of an object when passed a wrapped type conversion object
 
@@ -189,7 +199,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 - When attempting to load PyKX after embedPy has already been loaded, an error will be thrown and PyKX will not continue to load.
 
-### Beta Features
+**Beta Features**
 
 - Added ability for users to convert between PyKX numeric vectors or N-Dimensional Lists and PyTorch Tensor objects using the `.pykx.topt` function.
 
@@ -200,11 +210,11 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 3.0.1
 
-#### Release Date
+**Release Date**
 
 2024-12-04
 
-### Additions
+**Additions**
 
 - Added a function `.pykx.loadPy` which can be used to execute/load a Python file following expected Python syntax, this removes limitations which exist due to use of q parsing syntax when loading a Python file using `system"l /path/to/file.p"` for example
 
@@ -222,16 +232,16 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 3.0.0
 
-#### Release Date
+**Release Date**
 
 2024-11-12
 
-### Additions
+**Additions**
 
 - Added `cloud_libraries` kwarg to `install_into_QHOME` allowing installation of the kdb Insights cloud libraries to QHOME.
 - Addition of support for new environment variable `PYKX_USE_FIND_LIBPYTHON` which will use the Python package [`find_libpython`](https://pypi.org/project/find-libpython/) to specify the location from which `libpython.[so|dll]` will be taken.
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Addition of function `.pykx.toq0` to support conversion of Python strings to q strings rather than q symbols as is the default behavior
 
@@ -293,21 +303,21 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 2.5.4
 
-#### Release Date
+**Release Date**
 
 2024-10-22
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - `.pykx.util.loadfile` now loads a file using it's full path unless it contains a space. This is to avoid issues loading scripts which are sensitive to their working directory.
 
 ## PyKX 2.5.3
 
-#### Release Date
+**Release Date**
 
 2024-08-20
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Previously PyKX conversions of generic lists (type 0h) would convert this data to it's `raw` representation rather than it's `python` representation as documented. This had the effect of restricting the usability of some types within PyKX under q in non-trivial use-cases. With the `2.5.2` changes to more accurately represent `raw` data at depth this became more obvious as an issue.
 
@@ -329,21 +339,21 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 2.5.0
 
-#### Release Date
+**Release Date**
 
 2024-05-15
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - When loading PyKX under from a source file path containing a space initialisation would fail with an `nyi` error message, this has now been resolved.
 
 ## PyKX 2.4.1
 
-#### Release Date
+**Release Date**
 
 2024-03-27
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - When loading PyKX under q users who had previously loaded [embedPy](https://github.com/KxSystems/embedPy) into their process would cause a segfault of unspecified origin. With this release we have added a warning prior to loading of PyKX which specifies that if a value of `.p.e` has been specified which does not match that expected of PyKX a user should consider installing PyKX under q fully:
 
@@ -359,11 +369,11 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 2.3.1
 
-#### Release Date
+**Release Date**
 
 2024-02-07
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - `.pykx.eval` is now variadic allowing an optional second parameter to be passed to define return type. Previously would error with `rank`.
 
@@ -424,11 +434,11 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 2.3.0
 
-#### Release Date
+**Release Date**
 
 2024-01-22
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - A bug was fixed when using `.pykx.console`, it is now possible to access python variables set using the console with `.pykx.(eval|pyexec|pyeval)` functions.
 
@@ -455,21 +465,21 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 2.2.2
 
-#### Release Date
+**Release Date**
 
 2023-12-07
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - When loaded in a q process loading `pykx.q` would not allow `Ctrl+C` (SIGINT) interruption.
 
 ## PyKX 2.2.1
 
-#### Release Date
+**Release Date**
 
 2023-11-30
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - `.pykx.print` was using `repr` representation for some objects. Now consistently calls `print`.
 - `.pykx.safeReimport` now resets environment variables correctly before throwing any error raised by the function supplied to it.
@@ -519,15 +529,15 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 2.2.0
 
-#### Release Date
+**Release Date**
 
 2023-11-09
 
-### Additions
+**Additions**
 
 - Addition of `PYKX_EXECUTABLE` environment/configuration variable to allow control of which Python executable is used under q.
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Failure to access and load PyKX resulting in an `os` error now returns Python backtrace outlining the underlying Python error allowing for easier debugging
 
@@ -578,11 +588,11 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 2.1.0
 
-#### Release Date
+**Release Date**
 
 2023-10-09
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Update to default conversion logic for q objects passed to PyKX functions to more closely match embedPy based conversion expectations.For version <=2.0 conversions of KX lists would produce N Dimensional Numpy arrays of singular type. This results in issues when applying to many analytic libraries which rely on lists of lists rather than singular N Dimensional arrays. Additionally q tables and keyed tables would be converted to Numpy recarrays, these are now converted to Pandas DataFrames. To maintain previous behavior please set the following environment variable `PYKX_DEFAULT_CONVERSION="np"`.
 
@@ -606,11 +616,11 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 
 ## PyKX 2.0.0
 
-#### Release Date
+**Release Date**
 
 2023-09-18
 
-### Additions
+**Additions**
 
 - Addition of `.pykx.qcallable` and `.pykx.pycallable` functions which allow wrapping of a foreign Python callable function returning the result as q or Python foreign respectively.
 - Addition of `.pykx.version` allowing users to programmatically access their version from a q process.
@@ -628,7 +638,7 @@ This changelog provides updates from PyKX 2.0.0 and above, for information relat
 	4  0.691953  0.375638
 	```
 
-### Fixes and Improvements
+**Fixes and Improvements**
 
 - Application of object setting on a Python list returns generic null rather than wrapped foreign object.
 - Use of environment variables relating to `PyKX under q` must use `"true"` as accepted value, previously any value set for such environment variables would be supported.

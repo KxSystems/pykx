@@ -362,11 +362,9 @@ def merge_asof(left, *args, **kwargs):
     return left.merge_asof(*args, **kwargs)
 
 
-if sys.version_info[1] < 8:
+if sys.version_info[1] < 9:
     warn(
-        'Python 3.7 has reach its end of life period and is no longer supported.'
-        'Please consider upgrading to Python 3.8, as PyKX will no longer support issues for this '
-        'Python version.',
+        'Python 3.9 is the minimum support version. Please upgrade.',
         exceptions.PyKXWarning
     )
 

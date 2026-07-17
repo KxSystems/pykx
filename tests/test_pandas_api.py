@@ -1978,13 +1978,16 @@ def test_mode(kx, q): # noqa
 
 
 def test_table_merge_asof(kx, q):
-    left = pd.DataFrame({"a": [1, 5, 10], "left_val": ["a", "b", "c"]})
-    right = pd.DataFrame({"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]})
+    left = pd.DataFrame({"a": [1, 5, 10], "b": ["a", "a", "b"], "left_val": ["a", "b", "c"]})
+    right = pd.DataFrame({"a": [1, 2, 3, 6, 7], "b": ["a", "a", "b", "b", "a"],
+                         "right_val": [1, 2, 3, 6, 7]})
     qleft = kx.toq(left)
     qright = kx.toq(right)
 
     assert (pd.merge_asof(left, right, on='a')
             == kx.merge_asof(qleft, qright, on='a').pd()).all().all()
+    assert (pd.merge_asof(left, right, on='a', by="b")
+            == kx.merge_asof(qleft, qright, on='a', by="b").pd()).all().all()
     assert (pd.merge_asof(left, right, on='a')
             == qleft.merge_asof(qright, on='a').pd()).all().all()
     assert (pd.merge_asof(left, right, on='a')
@@ -2658,3 +2661,13 @@ def test_merge_qjoin_errors(kx):
                        match=r"Right Join requires a keyed table"
                        " for the left dataset."):
         assert tab1.merge(tab2, how='right', q_join=True)
+
+
+def test_fills(kx, q):
+    t = q('([] n:0N 2 3 0N 0N 7 0N;b:``h`h```j`;g:0N 1 0N 2 0N 3 0N)')
+    assert kx.q('~', t.fills(), kx.q('fills', t))
+
+
+def test_ungroup(kx, q):
+    t = q('([] n:1 2 3;nn:(1 1;2 2 2;3 3 3))')
+    assert kx.q('~', t.ungroup(), kx.q('ungroup', t))

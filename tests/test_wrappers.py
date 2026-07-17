@@ -3504,6 +3504,17 @@ class Test_Dictionary:
                  '(`c`d)!([] metaa: (19; 14); metab: (17; 16)));'
                  'data: (1; 2))').py() == double_nested
 
+    def test_setitem(self, kx):
+        a = kx.q('`a`b!(`;2)')
+        c = kx.q('([] a:enlist 2;b:enlist 6)')
+        a['c'] = c
+        assert isinstance(a['c'], kx.Table)
+
+        a = kx.q('`a`b!(`;2)')
+        d = kx.q('([] a:1 2;b:3 6)')
+        a['d'] = d
+        assert isinstance(a['d'], kx.Table)
+
 
 class Test_KeyedTable:
     kt = '([k1:100+til 3] x:til 3; y:`singly`keyed`table)'
@@ -5760,23 +5771,152 @@ class Test_Column:
 
         assert all(tab.exec(kx.Column('a').time) == kx.TimeVector(kx.q('20:31:15.070 11:09:13.020'))) # noqa E:501
 
+    def test_column_bin(self, kx):
+        t = kx.q('([] n: 2 4)')
+        assert all(t.select(kx.Column('n').bin([1, 3, 5])) == kx.q('select 1 3 5 bin n from ([] n: 2 4)')) # noqa E:501
 
-def test_column_types(kx):
-    a = kx.Column(name='age', data=(1, 2, 3))
-    assert (a._name=='age' and a._data==(1, 2, 3))
+        with pytest.raises(kx.QError):
+            t.select(kx.Column('n').bin(['a', 'b', 'c']))
 
-    with pytest.raises(TypeError) as err:
-        kx.Column(data=(1, 2, 3))
-        assert "'name' cannot be None" in str(err)
+    def test_column_enlist(self, kx):
+        t = kx.q('([] n: 2 4)')
+        assert all(t.select(kx.Column('n').enlist(iterator='each')) == kx.q('select enlist each n from ([] n: 2 4)')) # noqa E:501
+        t2 = kx.q('([] n:((2 3);(4 5)))')
+        assert (t2.exec(kx.Column('n').enlist(iterator='each')) == kx.q('exec enlist each n from ([] n:((2 3);(4 5)))')).all() # noqa E:501
 
-    with pytest.raises(TypeError) as err:
-        kx.Column(age=5, data=(1, 2, 3))
-        assert "name can only be of type Str and pykx.SymbolAtom" in str(err)
+    def test_column_any(self, kx):
+        t1 = kx.q('([] n: 3#1b)')
+        assert all(t1.select(kx.Column('n').any()) == kx.q('select any n from ([] n: 3#1b)'))
 
+        t2 = kx.q('([] n: 3#0b)')
+        assert all(t2.select(kx.Column('n').any()) == kx.q('select any n from ([] n: 3#0b)'))
 
-def test_column_bin(kx):
-    t = kx.q('([] n: 2 4)')
-    assert all(t.select(kx.Column('n').bin([1, 3, 5])) == kx.q('select 1 3 5 bin n from ([] n: 2 4)')) # noqa E:501
+        t3 = kx.q('([] n: 0b, 0b, 1b, 0b)')
+        assert all(t3.select(kx.Column('n').any()) == kx.q('select any n from ([] n: 0b, 0b, 1b, 0b)')) # noqa E:501
 
-    with pytest.raises(kx.QError):
-        t.select(kx.Column('n').bin(['a', 'b', 'c']))
+    def test_column_all(self, kx):
+        t1 = kx.q('([] n: 3#1b)')
+        assert all(t1.select(kx.Column('n').all()) == kx.q('select all n from ([] n: 3#1b)'))
+
+        t2 = kx.q('([] n: 3#0b)')
+        assert all(t2.select(kx.Column('n').all()) == kx.q('select all n from ([] n: 3#0b)'))
+
+        t3 = kx.q('([] n: 0b, 0b, 1b, 0b)')
+        assert all(t3.select(kx.Column('n').all()) == kx.q('select all n from ([] n: 0b, 0b, 1b, 0b)')) # noqa E:501
+
+    def test_column_not(self, kx):
+        t1 = kx.q('([] n: 3#1b)')
+        assert all(t1.select(kx.Column('n')._not()) == kx.q('select not n from ([] n: 3#1b)'))
+
+        t2 = kx.q('([] n: 3#0b)')
+        assert all(t2.select(kx.Column('n')._not()) == kx.q('select not n from ([] n: 3#0b)'))
+
+        t3 = kx.q('([] n: 0b, 0b, 1b, 0b)')
+        assert all(t3.select(kx.Column('n')._not()) == kx.q('select not n from ([] n: 0b, 0b, 1b, 0b)')) # noqa E:501
+
+    def test_column_in(self, kx):
+        t = kx.q('([] n: til 5)')
+        assert (t.exec(kx.Column('n')._in(3)) == kx.q('exec n in 3 from ([] n: til 5)')).all()
+
+    def test_column_except(self, kx):
+        t = kx.q('([] n: til 5)')
+        assert (t.exec(kx.Column('n')._except(3)) == kx.q('exec n except 3 from ([] n: til 5)')).all() # noqa E:501
+
+    def test_column_hsym(self, kx):
+        t = kx.q('([] n: `a`b`c)')
+        assert (t.exec(kx.Column('n').hsym()) == kx.q('exec hsym n from ([] n : `a`b`c)')).all()
+
+    def test_column_raze(self, kx):
+        t = kx.q('([] n:(1 2;(3 4;5 6);7;8))')
+        assert (t.exec(kx.Column('n').raze()) == kx.q('exec raze n from ([] n:(1 2;(3 4;5 6);7;8))')).all() # noqa E:501
+        assert (t.exec(kx.Column('n').raze(iterator='over')) == kx.q('exec raze/[n] from ([] n:(1 2;(3 4;5 6);7;8))')).all() # noqa E:501
+
+    def test_column_type(self, kx):
+        t = kx.q('([] n:(1 2;(3 4;5 6);7;8))')
+        assert (t.exec(kx.Column('n').type(iterator='each')) == kx.q('exec type each n from ([] n:(1 2;(3 4;5 6);7;8))')).all() # noqa E:501
+
+    def test_column_key(self, kx):
+        d1 = kx.q('`a`b`c ! 1 2 3')
+        kx.q['d1'] = d1
+        d2 = kx.q('`d`e`f ! 4 5 6')
+        kx.q['d2'] = d2
+        t = kx.Table(data={'n': [d1, d2]})
+        assert all(t.select(kx.Column('n').key(iterator='each')) == kx.q('select key each n from ([] n:(d1;d2))')) # noqa E:501
+
+    def test_column_get(self, kx):
+        kx.q('`:tb1 set (`a`b`c)')
+        kx.q('`:tb2 set (1 2 3)')
+        t = kx.q('([] n: `:tb1`:tb2)')
+        assert (t.exec(kx.Column('n').get(iterator='each')) == kx.q('exec get each n from ([] n: `:tb1`:tb2)')).all() # noqa E:501
+        os.remove('tb1')
+        os.remove('tb2')
+
+    def test_column_read0(self, kx):
+        kx.q('`:t1.txt 0: enlist "hello"')
+        kx.q('`:t2.txt 0: enlist "goodbye"')
+        t = kx.q('([] n:`:t1.txt`:t2.txt)')
+        assert (t.exec(kx.Column('n').read0(iterator='each')) == kx.q('exec read0 each n from ([]n:`:t1.txt`:t2.txt)')).all() # noqa E:501
+        os.remove('t1.txt')
+        os.remove('t2.txt')
+
+    def test_column_read1(self, kx):
+        kx.q('`:t1.txt 0: enlist "hello"')
+        kx.q('`:t2.txt 0: enlist "goodbye"')
+        t = kx.q('([] n:`:t1.txt`:t2.txt)')
+        assert (t.exec(kx.Column('n').read1(iterator='each')) == kx.q('exec read1 each n from ([]n:`:t1.txt`:t2.txt)')).all() # noqa E:501
+        os.remove('t1.txt')
+        os.remove('t2.txt')
+
+    def test_column_next(self, kx):
+        t = kx.q('([] n:3 6 9 12)')
+        assert (t.exec(kx.Column('n').call('next')) == kx.q('exec next n from ([]n: 3 6 9 12)')).all() # noqa E:501
+
+    def test_column_prior(self, kx):
+        t = kx.q('([] n:1 2 3 3 2 1)')
+        assert t.exec(kx.Column('n').prior(kx.q('<')) == kx.q('000011b')).all()
+
+    def test_column_where(self, kx):
+        t = kx.q('([] a:101010b)')
+        assert (t.exec(kx.Column('a').where()) == kx.q('0 2 4')).all()
+
+    def test_column_types(self, kx):
+        a = kx.Column(name='age', data=(1, 2, 3))
+        assert (a._name=='age' and a._data==(1, 2, 3))
+
+        with pytest.raises(TypeError) as err:
+            kx.Column(data=(1, 2, 3))
+            assert "'name' cannot be None" in str(err)
+
+        with pytest.raises(TypeError) as err:
+            kx.Column(age=5, data=(1, 2, 3))
+            assert "name can only be of type Str and pykx.SymbolAtom" in str(err)
+
+    def test_column_data_str(self, kx):
+        t = kx.q('([] a:1 2 3)')
+        r = kx.q('([] a:1 2 3;n:`t`t`t)')
+        kx.q['s'] = 't'
+        kx.q['svec'] = ['t', 't', 't']
+        assert kx.q('~', r, t.update(kx.Column('n', data='t')))
+        assert kx.q('~', r, t.update(kx.Column('n', data=['t', 't', 't'])))
+        assert kx.q('~', r, t.update(kx.Column('n', data=kx.SymbolAtom('t'))))
+        assert kx.q('~', r, t.update(kx.Column('n', data=kx.SymbolVector(['t', 't', 't']))))
+        assert kx.q('~', r, t.update(kx.Column('n', data=kx.Variable('s'))))
+        assert kx.q('~', r, t.update(kx.Column('n', data=kx.Variable('svec'))))
+        assert kx.q('~', r, t.update(kx.Column('n').data('t')))
+        assert kx.q('~', r, t.update(kx.Column('n').data(['t', 't', 't'])))
+        assert kx.q('~', r, t.update(kx.Column('n').data(kx.SymbolAtom('t'))))
+        assert kx.q('~', r, t.update(kx.Column('n').data(kx.SymbolVector(['t', 't', 't']))))
+        assert kx.q('~', r, t.update(kx.Column('n').data(kx.Variable('s'))))
+        assert kx.q('~', r, t.update(kx.Column('n').data(kx.Variable('svec'))))
+
+    def test_column_getitem(self, kx):
+        t = kx.q('([] a:5 10 15 20)')
+        assert kx.q('~', kx.q('([] a:10 15)'), t.select(kx.Column('a')[[1, 2]]))
+        kx.q['myvar'] = [1, 2]
+        assert kx.q('~', kx.q('([] a:10 15)'), t.select(kx.Column('a')[kx.Variable('myvar')]))
+
+    def test_column_cast(self, kx):
+        t = kx.q('([] a:("this";"that"))')
+        assert kx.q('~', kx.q('([] a:`this`that)'), t.select(kx.Column('a').cast('symbol')))
+        t = kx.q('([] a:1 2 3)')
+        assert kx.q('~', kx.q('([] a:1 2 3i)'), t.select(kx.Column('a').cast('int')))
