@@ -55,12 +55,12 @@ pre[class*="language-"] {
 
 pre[class*="language-"]::-moz-selection, pre[class*="language-"] ::-moz-selection,
 code[class*="language-"]::-moz-selection, code[class*="language-"] ::-moz-selection {
-	background: #073642; /* base02 */
+	background: var(--md-typeset-mark-color);
 }
 
 pre[class*="language-"]::selection, pre[class*="language-"] ::selection,
 code[class*="language-"]::selection, code[class*="language-"] ::selection {
-	background: #073642; /* base02 */
+	background: var(--md-typeset-mark-color);
 }
 
 /* Code blocks */
@@ -120,7 +120,6 @@ pre[class*="language-"] {
 
 .token.entity {
 	color: #657b83; /* base00 */
-	background: #eee8d5; /* base2 */
 }
 
 .token.atrule,

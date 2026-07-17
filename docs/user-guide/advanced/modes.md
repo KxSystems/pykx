@@ -8,21 +8,21 @@ tags: PyKX, q language, Python, licensed, unlincensed,
 
 # Modes of operation
 
-_This page explains how to operate PyKX in Python and q, with or without a KDB Insights license._
+_This page explains how to operate PyKX in Python and q, with or without a license._
 
 PyKX can operate in different modes. Each mode has its limitations and requirements, so we're breaking them down into the following:
 
 1. PyKX within Python
      - 1.a Unlicensed
      - 1.b Licensed
-2. PyKX within q with a kdb Insights license
+2. PyKX within q - licensed
 
 ## 1. PyKX within Python
 
 The purpose of operating PyKX within a Python session is to replace [qPython](https://github.com/exxeleron/qPython) and [PyQ](https://github.com/kxsystems/pyq). Within Python, PyKX has two modes of operation:
 
-- `#!python Licensed` (this means you have a kdb Insights license with PyKX enabled)
-- `#!python Unlicensed` (this means you don't have a kdb Insights license or a license in which PyKX is not enabled)
+- `#!python Licensed` (this means you have a license with PyKX enabled)
+- `#!python Unlicensed` (this means you don't have a license or a license in which PyKX is not enabled)
 
 The main difference between the two is that the `#!python Unlicensed` mode is for IPC-based communication. This mean that it allows to create IPC connections and convert data from Pythonic representations to PyKX objects. 
 
@@ -55,9 +55,9 @@ This mode cannot run q embedded within it. Also, it lacks the ability to run q c
 
 ### 1.b Running in Licensed mode
 
-Licensed mode is the standard way to operate PyKX, wherein it's running under a Python process [with a valid q license](../../getting-started/installing.md#2-install-a-kdb-insights-license). This modality aims to replace PyQ as the Python-first library for KX. All PyKX features are available in this mode.
+Licensed mode is the standard way to operate PyKX, wherein it's running under a Python process [with a valid q license](../../getting-started/installing.md#2-install-a-license). This modality aims to replace PyQ as the Python-first library for KX. All PyKX features are available in this mode.
 
-The differences provided through operating with a valid kdb Insights license are:
+The differences provided through operating with a valid license are:
 
 1. You can execute PyKX/q functionalities directly within a Python session.
 2. PyKX objects can be represented in a human readable format rather than as a memory address, namely:

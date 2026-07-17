@@ -145,20 +145,20 @@ class PandasConversions:
                                     c1:()!();
                                     if[any b1;
                                       dCols1:dictCols where b1;
-                                      f1:{(`$';x)}; c1:dCols1!(f1 each dCols1)];
+                                      f1:{({(0b;`$'x)};x)}; c1:dCols1!(f1 each dCols1)];
                                     // Check casting to symbol, run `$string col
                                     // (also covers any symbol -> symbol cases)
                                     b2:(dictColTypes=11h) & not (b1 or tabColTypes=0h);
                                     c2:()!();
                                     if[any b2;
                                       dCols2:dictCols where b2;
-                                      f2:{(`$string; x)}; c2:dCols2!(f2 each dCols2)];
+                                      f2:{({(0b;`$string x)}; x)}; c2:dCols2!(f2 each dCols2)];
                                     // Casting to string covering all cases except mixed lists
                                     b3: (dictColTypes=10h) & not tabColTypes=0h;
                                     c3:()!();
                                     if[any b3;
                                       dCols3:dictCols where b3;
-                                      f3:{(string; x)}; c3:dCols3!(f3 each dCols3)];
+                                      f3:{({(0b;string x)}; x)}; c3:dCols3!(f3 each dCols3)];
                                     // Check mixed lists
                                     // if string column then allow cast to symbol
                                     // Check at beginning of method
@@ -168,31 +168,32 @@ class PandasConversions:
                                     c4:()!();
                                     if[any b4;
                                       dCols4:dictCols where b4;
-                                      f4:{(`$; x)}; c4:dCols4!(f4 each dCols4)];
+                                      f4:{({(0b;`$x)}; x)}; c4:dCols4!(f4 each dCols4)];
                                     // Any matches that meet the vanilla case
                                     // and don't have additional needs --> not any (bools)
                                     b5:not any (b1;b2;b3;b4);
-                                    .pykx.i.errorList:();
                                     if[any b5;
                                     dCols5:dictCols where b5;
                                     dictColTypes5:dictColTypes where b5;
                                     f5:{[c;t;tvd]
                                         ({[cl;t;tvd]
-                                            @[t$;cl;
-                                            {[cl;ty;tvd;err].pykx.i.errorList,:enlist
+                                            @[{(0b;x$y)}t;cl;
+                                            {[cl;ty;tvd;err] (1b;
                                              "Not supported: Error casting ",
                                              string[tvd 7h$type cl],
                                              " to ", string[tvd 7h$ty],
-                                             " with q error: ", err;}[cl;t;tvd;]]}[;t;tvd];
+                                             " with q error: ", err)}[cl;t;tvd;]]}[;t;tvd];
                                         c)};
                                     f5:f5[;;typeValDict];
                                     c5:dCols5!(f5\'[dCols5;dictColTypes5])];
                                     // Grab all cols
                                     c:c1,c2,c3,c4,c5;
-                                    tableOutput:tabColsOrig xcols ![tab;();0b;c];
-                                    $[count .pykx.i.errorList;
-                                    .pykx.i.errorList;
-                                    tableOutput]
+                                    res:?[tab;();();c];
+                                    $[any value[res][;0];
+                                      {x[;1] where x[;0]} value[res];
+                                         tabColsOrig xcols flip res[;1],
+                                         $[count cls:cols[tab] except key c;
+                                           ?[tab;();();{x!x} cls];()]]
                                     }''',
                                  self, dict_grab, type_number_to_pykx_k_type)
             else:
@@ -234,21 +235,21 @@ class PandasConversions:
                                     c1:()!();
                                     if[any b1;
                                     tCols1:tabCols where b1;
-                                    f1:{(`$';x)}; c1:tCols1!(f1 each tCols1)
+                                    f1:{({(0b;`$'x)};x)}; c1:tCols1!(f1 each tCols1)
                                     ];
                                     // Support casting to symbol
                                     b2:(dtype=11h) & not (b1 or tabColTypes=0h);
                                     c2:()!();
                                     if[any b2;
                                     tCols2:tabCols where b2;
-                                    f2:{(`$string@; x)}; c2:tCols2!(f2 each tCols2)
+                                    f2:{({(0b;`$string x)}; x)}; c2:tCols2!(f2 each tCols2)
                                     ];
                                     // Support casting to string except for mixed lists
                                     b3:(dtype=10h) & not tabColTypes=0h;
                                     c3:()!();
                                     if[any b3;
                                     tCols3:tabCols where b3;
-                                    f3:{(string; x)}; c3:tCols3!(f3 each tCols3)
+                                    f3:{({(0b;string x)}; x)}; c3:tCols3!(f3 each tCols3)
                                     ];
                                     // For mixed lists support casting strings to symbols
                                     b4:(dtype=11h) & (tabColTypes=0h)
@@ -256,30 +257,31 @@ class PandasConversions:
                                     c4:()!();
                                     if[any b4;
                                     tCols4:tabCols where b4;
-                                    f4:{(`$; x)}; c4:tCols4!(f4 each tCols4)
+                                    f4:{({(0b;`$x)}; x)}; c4:tCols4!(f4 each tCols4)
                                     ];
                                     // Any other combination not matching b1-4
                                     b5:not any (b1;b2;b3;b4);
-                                    .pykx.i.errorList:();
                                     c5:()!();
                                     if[any b5;
                                     tCols5: tabCols where b5;
                                     f5:{[c;t;tvd]
                                         ({[cl;t;tvd]
-                                        @[t$;cl;
-                                            {[cl;ty;tvd;err].pykx.i.errorList,:enlist
+                                        @[{(0b;x$y)}t;cl;
+                                            {[cl;ty;tvd;err] (1b;
                                             "Not supported: Error casting ",
                                             string[tvd 7h$type cl], " to ",
                                             string[tvd 7h$ty], " with q error: ",
-                                            err;}[cl;t;tvd;]]}[;t;tvd];
+                                            err)}[cl;t;tvd;]]}[;t;tvd];
                                             c)};
                                     c5:tCols5!(f5[;dtype;typeValDict] each tCols5)
                                     ];
                                     c:c1,c2,c3,c4,c5;
-                                    tableOutput:tabCols xcols ![tab;();0b;c];
-                                    $[count .pykx.i.errorList;
-                                    .pykx.i.errorList;
-                                    tableOutput]
+                                    res:?[tab;();();c];
+                                    $[any value[res][;0];
+                                      {x[;1] where x[;0]} value[res];
+                                        tabCols xcols flip res[;1],
+                                        $[count cls:cols[tab] except key c;
+                                          ?[tab;();();{x!x} cls];()]]
                                     }''',
                                  self, dtype_val, type_number_to_pykx_k_type)
 

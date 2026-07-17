@@ -68,7 +68,7 @@ show:{1 .Q.s x;};csv:"," / ";"  also \z 1 for "D"$"dd/mm/yyyy"
 
 parse:{$["\\"=*x;(system;1_x);-5!x]};eval:-6!;reval:-24!
 \d .Q  /def[`a`b`c!(0;0#0;`)]`b`c!(("23";"24");,"qwe")
-k:4.1;K:0Nd;host:-12!;addr:-13!;gc:-20!;ts:{-34!(x;y)};gz:-35!;w:{`used`heap`peak`wmax`mmap`mphy`syms`symw!(."\\w"),."\\w 0"}  / used: dpft en par chk ind fs fu fc
+k:4.1;K:0Nd;host:-12!;addr:-13!;gc:-20!;ts:{-34!(x;y)};gz:-35!;ipc:{-40!(x;y)};w:{`used`heap`peak`wmax`mmap`mphy`syms`symw!(."\\w"),."\\w 0"}  / used: dpft en par chk ind fs fu fc
 res:`abs`acos`asin`atan`avg`bin`binr`cor`cos`cov`delete`dev`div`do`enlist`exec`exit`exp`getenv`hopen`if`in`insert`last`like`log`max`min`prd`select`setenv`sin`sqrt`ss`sum`tan`update`var`wavg`while`within`wsum`xexp`from`by
 addmonths:{("d"$m+y)+x-"d"$m:"m"$x}
 f:{$[^y;"";y<0;"-",f[x;-y];y<1;1_f[x;10+y];9e15>j:"j"$y*prd x#10f;(x_j),".",(x:-x)#j:$j;$y]}
@@ -111,7 +111,7 @@ hap:{@[(0;h;(h:1+i 1)^(1+*&"@"=x)&e;e:(#x)^e)_x,(^e:(i:&"/"=x:(":"=*x)_x)2)#"/";
 hmb:{x:$[10=@x;x;1_$x];p:{$[#y;y;x]}/'getenv@+`$_:\("HTTP";"NO"),\:"_PROXY";u:hap@x;t:~(~#*p)||/(*":"\:u 2)like/:{(("."=*x)#"*"),x}'","\:p 1;a:$[t;p:hap@*p;u]1;r:(`$":",,/($[t;p;u]0 2))($y)," ",$[t;x;u 3]," HTTP/1.1",s,(s/:(~![-35;::])_("Accept-Encoding: gzip";"Connection: close";"Host: ",u 2),((0<#a)#,$[t;"Proxy-";""],"Authorization: Basic ",btoa a),$[#z;("Content-type: ",z 0;"Content-length: ",$#z 1);()]),(d:s,s:"\r\n"),$[#z;z 1;""];(0;n)_$[#ss[(n:4+*r ss d)#r;"content-encoding: gzip\r\n"];-35!r;r]}
 hg:{hmb[x;`GET;()]1};hp:{hmb[x;`POST;(y;z)]1}
 
-a0:(#:;*:;last;sum;prd;min;max;.q.all;.q.any;?:),a1:(avg;wsum;wavg;var;dev;cov;cor),`.q `svar`sdev`scov`med
+a0:(#:;*:;last;+/[0;];sum;prd;min;max;.q.all;.q.any;?:),a1:(avg;wsum;wavg;var;dev;cov;cor),`.q `svar`sdev`scov`med
 IN:{$[99h<@x;x in y;0]};qa:{$[qb x;0;IN[*x;a0];1;|/qa'1_x]};qb:{(2>#x)|(@x)&~11=@x}
 
 / CAN EXIT HERE FOR SMALL Q
@@ -142,7 +142,7 @@ fp:{+((,*x)!,(#z)#$[-7h=@y;y;(*|x)$y]),+z}
 foo:{[t;c;b;a;v;d]if[v;g:*|`\:b f:*!b;b:1_b];,/r(::;i)1=#i:&0<#:'r:$[v|~#a;d fp[$[v;f,g;pf]]';::]p[(.+t;c;b;a)]d}
 
 / select{u's|a's[by[date,]u's]}from t where[date..],[sym{=|in}..],..
-a2:({(%;(sum;("f"$;x));(sum;(~^:;x)))};{(sum;(*;("f"$;x);y))};{(%;(wsum;x;y);(sum;(*;x;(~^:;y))))};{(cov;x;x)};{(sqrt;(var;x))}
+a2:({(%;(sum;("f"$;x));(-;(#:;x);(+/[0;];(^:;x))))};{(sum;(*;("f"$;x);y))};{(%;(wsum;x;y);(sum;(*;x;(~^:;y))))};{(cov;x;x)};{(sqrt;(var;x))}
  {(-;(avg;(*;("f"$;x);y));(*;(avg;x);(avg;y)))};{(%;(cov;x;y);(*;(dev;x);(dev;y)))};{(.q.scov;x;x)};{(sqrt;(.q.svar;x))};{(*;(%;(#:;`i);(+;-1;(#:;`i)));(cov;x;y))};{'`part})
 
 / x0 translate;x1 aggrs;x2 translate  ?terminal (subselect/exec within partition)  unknown assumed uniform?

@@ -65,7 +65,7 @@ To add values to your configuration file you can modify the file directly or alt
 >>> import pykx as kx
 >>> kx.util.add_to_config({'PYKX_GC': 'True', 'PYKX_BETA_FEATURES': 'True'})
 
-Configuration updated at: /Users/conormccarthy/.pykx-config.
+Configuration updated at: /Users/user/.pykx-config.
 Profile updated: default.
 Successfully added:
 	- PYKX_GC = True

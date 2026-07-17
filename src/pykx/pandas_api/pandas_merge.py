@@ -383,7 +383,6 @@ class PandasMerge:
             direction != 'backward'
             or not allow_exact_matches
             or tolerance is not None
-            or by is not None
             or left_by is not None
             or right_by is not None
         ):
@@ -395,7 +394,9 @@ class PandasMerge:
                 )
             else:
                 raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() only implemented for direction='backward', \
-                                            allow_exact_matches=True, tolerance=None, by=None, left_by=None, right_by=None.") # noqa: E501
+                                            allow_exact_matches=True, tolerance=None, left_by=None, right_by=None.") # noqa: E501
+        if by is not None:
+            on = ([by] if isinstance(by, str) else by) + [on]
         (left, right, on, added_idx) = _parse_input(
             self,
             right,

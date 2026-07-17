@@ -550,6 +550,8 @@ EXPORT K get_attr(K f, K attr) {
     }
     K res = create_foreign(pres);
     Py_XDECREF(_attr);
+    // INCREF is called in create_foreign, decref here to avoid object not being freed
+    Py_XDECREF(pres);
     PyGILState_Release(gstate);
     return res;
 }

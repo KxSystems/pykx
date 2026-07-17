@@ -6,12 +6,11 @@ The following section outlines practical information useful when dealing with ge
 
 ### Accessing a license valid for PyKX
 
-A number of trial and enterprise type licenses exist for q/kdb+. Not all licenses for q/kdb+ however are valid for PyKX. In particular users require access to a license which contains the feature flags **pykx** and **embedq** which provide access to the PyKX functionality. The following locations can be used for the retrieval of evaluation/personal licenses
+Not all licenses for q/kdb+ are valid for PyKX. In particular users require access to a license which contains the feature flags **pykx** and **embedq** which provide access to the PyKX functionality.
+Newer KDB-X licenses use shorter flags **py** and **eq**, these work with KDB-X Python `pykx>=4.0` only and not PyKX `pykx<4.0`.
 
-- For non-commercial personal users you can access a 12 month kdb+ license with PyKX enabled [here](https://kx.com/kdb-insights-sdk-personal-edition-download).
-- For commercial evaluation, contact your KX sales representative or sales@kx.com requesting a PyKX trial license. Alternately apply through https://kx.com/book-demo.
-
-For non-personal or non-commercial usage please contact sales@kx.com.
+Go to the [KX Developer Center](https://developer.kx.com/products/kdb-x/install) to obtain a KDB-X license.
+For other enquiries email sales@kx.com.
 
 Once you have access to your license you can install the license following the steps provided [here](../getting-started/installing.md) or through installation using the function `#!python kx.license.install` as follows
 
@@ -24,6 +23,11 @@ Once you have access to your license you can install the license following the s
 
 Failure to initialize PyKX while raising an error `#!python embedq` indicates that the license you are attempting to use for PyKX in [licensed modality](../user-guide/advanced/modes.md) does not have the sufficient feature flags necessary to run PyKX. To access a license which does allow for running PyKX in this modality please following the instructions [here](#accessing-a-license-valid-for-pykx) to get a new license with appropriate feature flags.
 
+This error can also be thrown when attempting to use a KDB-X license with PyKX.
+Newer KDB-X licenses use shorter flags **py** and **eq**, these work with KDB-X Python `pykx>=4.0` only and not PyKX `pykx<4.0`.
+
+Check the output of `.z.l` in a q process to view the flags in your license.
+
 ### Initialization failing with a `#!python kc.lic` error
 
 If after initially completing the installation guide for PyKX [here](../getting-started/installing.md) you receive the following error:
@@ -34,6 +38,7 @@ pykx.exceptions.PyKXException: Failed to initialize embedded q. Captured output 
 ```
 
 It usually indicates that your license was not correctly written to disk or a license could not be found, to check that the installed license matches the license you expect.
+This error can also be thrown when attempting to use a KDB-X license with PyKX.
 
 === "License file based checking"
 

@@ -7,7 +7,6 @@ if not sys.version_info < (3, 8):
     import streamlit as st
 
 
-@pytest.mark.skipif(sys.version_info < (3, 8), reason="requires python3.8 or higher")
 def test_streamlit(kx, q_port):
     conn = st.connection('pykx', type=kx.streamlit.PyKXConnection,
                          host='localhost', port=q_port)

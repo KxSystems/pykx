@@ -41,9 +41,14 @@ extra_javascript:
   - 'https://code.jquery.com/jquery-3.6.0.min.js'
   - 'https://use.fontawesome.com/3dbf29ed12.js'
   - scripts/strip-q-prompt-copy.js
-  # this relative path is needed to source from code.kx.com!!!
-  - "&period;&period;/&period;&period;/pykx/scripts/versions.js"
-  # Uncomment only for local test 
+  - scripts/init_kapa_widget.js
+  - scripts/collapse-code.js
+  - scripts/search-highlight-clear.js
+  # absolute URL so the shared, symlinked versions.js loads on every page.
+  # The old "&period;" relative hack is double-escaped to "&amp;period;" by
+  # newer mkdocs-material, which 404s and breaks the version dropdown.
+  - https://code.kx.com/pykx/scripts/versions.js
+  # Uncomment only for local test
   # - 'scripts/versions.js'
 
 
@@ -82,7 +87,8 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tilde
   - toc:
-      permalink: false
+      permalink: true
+      permalink_title: ""
       title: On this page
 
 plugins:
@@ -127,11 +133,12 @@ plugins:
   - search
   - exclude-search:
       exclude:
-        - user-guide/advanced/Pandas_API.ipynb
-        - examples/interface-overview.ipynb
-        - examples/jupyter-integration.ipynb
-        - examples/db-management.ipynb
-        - examples/streaming/Evolving System.ipynb
+        - user-guide/advanced/Pandas_API*
+        - examples/interface-overview*
+        - examples/jupyter-integration*
+        - examples/db-management*
+        - "examples/streaming/Evolving System*"
+        - examples/charting*
   - spellcheck:
       known_words: spelling.txt
       ignore_code: true    # Ignore words in <code> tags
@@ -147,7 +154,56 @@ plugins:
         - examples/db-management.ipynb
         - examples/streaming/Evolving System.ipynb
         - examples/charting.ipynb
-
+  - redirects:
+      redirect_maps:
+        'api/console.md': 'api/pykx-execution/console.md'
+        'api/ctx.md': 'api/pykx-execution/ctx.md'
+        'api/embedded_q.md': 'api/pykx-execution/embedded_q.md'
+        'api/pykx-save-load/read.md': 'api/pykx-save-load/fileio.md'
+        'api/pykx-save-load/write.md': 'api/pykx-save-load/fileio.md'
+        'api/pykx_under_q.md': 'api/pykx-execution/ctx.md'
+        'api/q/q.md': 'api/pykx-execution/q.md'
+        'api/read.md': 'api/pykx-save-load/fileio.md'
+        'api/toq.md': 'api/pykx-q-data/toq.md'
+        'api/type_conversions.md': 'api/pykx-q-data/type_conversions.md'
+        'api/wrappers.md': 'api/pykx-q-data/wrappers.md'
+        'api/write.md': 'api/pykx-save-load/fileio.md'
+        'beta-features/compress-encypt.md': 'user-guide/advanced/compress-encrypt.md'
+        'beta-features/db-management.md': 'user-guide/advanced/database/index.md'
+        'beta-features/remote-functions.md': 'user-guide/advanced/remote-functions.md'
+        'beta-features/streamlit.md': 'user-guide/advanced/streamlit.md'
+        'beta-features/threading.md': 'user-guide/advanced/threading.md'
+        'changelog.md': 'release-notes/changelog.md'
+        'comparisons.md': 'getting-started/what_is_pykx.md'
+        'evaluating.md': 'user-guide/fundamentals/evaluating.md'
+        'examples/threaded_execution/index.md': 'examples/threaded_execution/threading.md'
+        'examples/threaded_execution/threaded_execution.md': 'examples/threaded_execution/threading.md'
+        'extras/comparisons.md': 'getting-started/what_is_pykx.md'
+        'extras/faq.md': 'help/faq.md'
+        'extras/known_issues.md': 'help/issues.md'
+        'faq.md': 'help/faq.md'
+        'getting-started/interface_overview.md': 'getting-started/what_is_pykx.md'
+        'getting-started/q_magic_command.md': 'examples/jupyter-integration.ipynb'
+        'indexing.md': 'user-guide/fundamentals/indexing.md'
+        'installing.md': 'getting-started/installing.md'
+        'interface_overview.md': 'getting-started/what_is_pykx.md'
+        'known_issues.md': 'help/issues.md'
+        'licenses.md': 'license.md'
+        'limitations.md': 'help/issues.md'
+        'modes.md': 'user-guide/advanced/modes.md'
+        'nulls_and_infinities.md': 'user-guide/fundamentals/nulls_and_infinities.md'
+        'parallelization.md': 'user-guide/advanced/performance.md'
+        'performance.md': 'user-guide/advanced/performance.md'
+        'pykx-under-q/known_issues.md': 'help/issues.md'
+        'troubleshooting.md': 'help/troubleshooting.md'
+        'user-guide/advanced/environment_variables.md': 'user-guide/configuration.md'
+        'user-guide/advanced/limitations.md': 'help/issues.md'
+        'user-guide/advanced/running_under_q.md': 'pykx-under-q/intro.md'
+        'user-guide/fundamentals/querying.md': 'user-guide/fundamentals/query/index.md'
+        'user-guide/index.md': 'index.md'
+        '1.0/licenses.md': 'license.md'
+        '1.5/api/type_conversion.md': 'api/pykx-q-data/type_conversions.md'
+        '3.0/pykx-under-q/type_conversions.md': 'api/pykx-q-data/type_conversions.md'      
 
 theme:
   name: material
@@ -166,6 +222,10 @@ theme:
     - content.code.annotate
     - content.action.edit
     - content.code.copy
+    - search.highlight
+    - navigation.tracking
+    - navigation.top
+    - toc.follow
   palette:
   - media: "(prefers-color-scheme: light)"
     scheme: kx-light
