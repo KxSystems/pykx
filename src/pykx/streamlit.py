@@ -6,7 +6,7 @@ from .ipc import SyncQConnection
 
 
 # This class is required to ensure that in the absence
-# of the streamlit dependency PyKX can be imported
+# of the streamlit dependency KDB-X Python can be imported
 class _dummy_class(object):
     def __getattr__(self, item):
         return self

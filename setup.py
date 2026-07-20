@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """
-Handles building/packaging PyKX. Generally pip should be used instead of
+Handles building/packaging KDB-X Python. Generally pip should be used instead of
 executing this file directly.
 """
 
@@ -256,8 +256,7 @@ if __name__ == '__main__':
         ]),
     ]
 
-    if py_minor_version >= 8: # python 3.8 or higher is required for NEP-49
-        exts.append(ext('_numpy', numpy=True, cython=False, libraries=['dl', *windows_libraries]))
+    exts.append(ext('_numpy', numpy=True, cython=False, libraries=['dl', *windows_libraries]))
     exts.append(ext('numpy_conversions',
                     numpy=True,
                     cython=False,
@@ -268,59 +267,31 @@ if __name__ == '__main__':
                     libraries=['dl', *windows_libraries]))
 
     with cd(src_dir/'q.so'/'qk'):
-        [
-            shutil.copy(f, f'../../lib/4-1-libs/{f}')
-            for f in
-            [str(f) for f in os.listdir() if os.path.isfile(f) and (str(f) != 'q.k') and ('pykx_init' not in str(f))] # noqa: E501
-        ]
 
         [
             shutil.copy(f, f'../../lib/{f}')
             for f in
-            [str(f) for f in os.listdir() if os.path.isfile(f) and (str(f) != 'q.k') and ('pykx_init' not in str(f))] # noqa: E501
+            [str(f) for f in os.listdir() if os.path.isfile(f) and ('pykx_init' not in str(f))]
         ]
 
         [
             shutil.copy('pykx_init.q_', '../../' + p + 'pykx_init.q_')
             for p in
-            ['', 'lib/', 'lib/4-1-libs/']
+            ['', 'lib/']
         ]
 
     for p in ('l64', 'l64arm', 'm64', 'm64arm', 'w64'):
-        with cd(src_dir/'q.so'/'libs'/'4-1'/p):
-            [
-                shutil.copy(f, f'../../../../lib/4-1-libs/{p}/{f}')
-                for f in
-                [str(f) for f in os.listdir()
-                 if str(f) != 'symbols.txt' and not os.path.exists(f'../../../../4-1-libs/{p}/{f}')]
-            ]
-
-        with cd(src_dir/'q.so'/'libs'/'4-0'/p):
+        with cd(src_dir/'q.so'/'libs'/'kdbx'/p):
             [
                 shutil.copy(f, f'../../../../lib/{p}/{f}')
                 for f in
                 [str(f) for f in os.listdir()
-                 if str(f) != 'symbols.txt' and not os.path.exists(f'../../../../../{p}/{f}')]
-            ]
-
-        with cd(src_dir/'lib'/p):
-            [
-                shutil.copy(f, f'../4-1-libs/{p}/{f}')
-                for f in
-                [str(f) for f in os.listdir()
-                 if str(f) != 'symbols.txt' and not os.path.exists(f'../4-1-libs/{p}/{f}')]
-            ]
-
-        with cd(src_dir/'lib'):
-            [
-                shutil.copy(f, f'4-1-libs/{f}')
-                for f in
-                [str(f) for f in os.listdir() if os.path.isfile(f) and (str(f) != 'q.k')]
+                 if str(f) != 'symbols.txt' and not os.path.exists(
+                     f'../../../../{p}/{f}')]
             ]
 
         with cd(src_dir):
             shutil.copy('pykx.q', 'lib')
-            shutil.copy('pykx.q', 'lib/4-1-libs')
 
     setup(
         name=pyproject['name'],

@@ -1,6 +1,6 @@
 ---
 title: q context interface
-description: PyKX interface for q contexts/namespaces
+description: KDB-X Python interface for q contexts/namespaces
 author: KX Systems
 date: September 2024
 tags: namespace

@@ -1,9 +1,9 @@
 ---
 title: Complex Streaming Control
-description: How to edit/manage your streaming workflows with PyKX
+description: How to edit/manage your streaming workflows with KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, streaming, simple
+tags: KDB-X Python, q, streaming, simple
 ---
 
 # Complex streaming control
@@ -27,7 +27,7 @@ The sections below discuss in detail why it's important and how to update the ex
 
 ## Fine-grained ingest control
 
-In the [basic infrastructure](basic.md) section we made use of the function [`#!python kx.tick.BASIC`](../../../api/tick.md#pykx.tick.BASIC) to start the component parts of a PyKX streaming workflow namely:
+In the [basic infrastructure](basic.md) section we made use of the function [`#!python kx.tick.BASIC`](../../../api/tick.md#pykx.tick.BASIC) to start the component parts of a KDB-X Python streaming workflow namely:
 
 - [Tickerplant](basic.md#tickerplant): The ingestion point which logs incoming messages and publishes messages to down-stream subscribers.
 - [Real-Time Database(RDB)](basic.md#real-time-database): A process which contains the current day's data in-memory and writes the data to disk at end-of-day.
@@ -137,7 +137,7 @@ Each process type supports a keyword argument `#!python process_logs` which can 
 
 ## How to stop processes
 
-While we hope that we will always generate the perfect code, there can be times when being able to stop processing of our system is a requirement. As the streaming infrastructure for PyKX operates by starting sub-processes from Python, the control of these processes is more complex than it would be, should the parent process be in full control.
+While we hope that we will always generate the perfect code, there can be times when being able to stop processing of our system is a requirement. As the streaming infrastructure for KDB-X Python operates by starting sub-processes from Python, the control of these processes is more complex than it would be, should the parent process be in full control.
 
 For each of the `#!python BASIC`, `#!python TICK`, `#!python RTP`, `#!python HDB` and `#!python GATEWAY` classes, the initialized class objects have an associated `#!python stop` function. Call this function if you want to gracefully shut down processing and kill the underlying process. You can invoke it using the `#!python rtp` process started in the previous section as an example:
 

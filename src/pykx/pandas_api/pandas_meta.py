@@ -438,6 +438,14 @@ class PandasMeta:
         return q.null(self)
 
     @api_return
+    def fills(self):
+        return q.fills(self)
+
+    @api_return
+    def ungroup(self):
+        return q.ungroup(self)
+
+    @api_return
     def isnull(self):
         return self.isna()
 

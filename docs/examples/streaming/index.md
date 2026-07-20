@@ -1,14 +1,14 @@
 ---
 title: Example: Real-Time Streaming
-description: The development of a basic streaming workflow using PyKX
+description: The development of a basic streaming workflow using KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, streaming, basic
+tags: PyKX, q, streaming, basic, KDB-X Python
 ---
 
-# Example: Real-Time Streaming using PyKX
+# Real-Time Streaming using KDB-X Python
 
-_This page outlines the steps taken and functionality shown in demonstrating your first PyKX streaming application_
+_This page outlines the steps taken and functionality shown in demonstrating your first KDB-X Python (`pykx`) streaming application._
 
 To run this example please download the [zip](./real-time-pykx.zip) file containing the notebook or visit our github repository [here](https://github.com/KxSystems/pykx/tree/main/docs/examples/streaming) to view the code directly.
 
@@ -20,11 +20,11 @@ In this example we will generate a real-time and historical analysis system whic
 4. Develop a number of query analytics on the historical database and real-time database which provide the count of the number of trades/quotes for a specified ticker symbol.
 5. Generate a username/password protected gateway process which a user can query to combine the results from the real-time and historical data view into one value.
 
-Each of the analytics provided in steps 3, 4 and 5 are Python analytics operating on data in kdb+/PyKX format.
+Each of the analytics provided in steps 3, 4 and 5 are Python analytics operating on data in KDB-X/`pykx` format.
 
 ## Want more information?
 
-The documentation surrounding real-time streaming with PyKX is extensively outlined [here](../../user-guide/advanced/streaming/index.md). For information on specific parts of the infrastructures that can be generated you might find the following links useful:
+The documentation surrounding real-time streaming with KDB-X Python is extensively outlined [here](../../user-guide/advanced/streaming/index.md). For information on specific parts of the infrastructures that can be generated you might find the following links useful:
 
 | Title                                                                    | Description                                                                                                                         |
 |--------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|

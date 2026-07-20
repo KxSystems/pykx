@@ -1,14 +1,14 @@
 ---
-title: Querying data using PyKX
-description: Introduction to the concept of querying PyKX databases and tables
+title: Querying data using KDB-X Python
+description: Introduction to the concept of querying KDB-X Python databases and tables
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, query, historical, SQL, qSQL
+tags: KDB-X Python, q, query, historical, SQL, qSQL
 ---
 
-# Querying data using the query API with PyKX
+# Querying data using the query API with KDB-X Python
 
-_This page explains how to query your data with PyKX using the query API._
+_This page explains how to query your data with KDB-X Python using the query API._
 
 Before we get started the following dataset will be used throughout the remainder of this page.
 
@@ -30,7 +30,7 @@ Creating a sample table:
 
 ## Query basics
 
-The PyKX [query API](../../../api/query.md) provides a Pythonic way to query kdb+ table. This API builds [qSQL](https://code.kx.com/q/basics/qsql/) queries in their [functional](https://code.kx.com/q/basics/funsql/) allowing you to query in-memory and on-disk data.
+The KDB-X Python [query API](../../../api/query.md) provides a Pythonic way to query KDB-X table. This API builds [qSQL](https://code.kx.com/q/basics/qsql/) queries in their [functional](https://code.kx.com/q/basics/funsql/) allowing you to query in-memory and on-disk data.
 
 In the following sections we will introduce the functions, their arguments and how they can be used to perform queries of increasing complexity.
 
@@ -91,7 +91,7 @@ table.delete(columns=None, where=None, by=None, inplace=False)
 
 !!! Note
 
-    The following sections makes use of `kx.Column` objects which are only enabled in PyKX licensed mode. For unlicensed query examples using `str` objects see the [query API](../../../api/query.md) page.
+    The following sections makes use of `kx.Column` objects which are only enabled in KDB-X Python licensed mode. For unlicensed query examples using `str` objects see the [query API](../../../api/query.md) page.
 
 ### Query arguments
 
@@ -645,7 +645,7 @@ MSFT 2022.01.03 46.11964 93
 
 ### Query Types
 
-While this page discusses primarily the Pythonic API for querying kdb+ tables locally. The following describes some of the other ways that queries can be completed
+While this page discusses primarily the Pythonic API for querying KDB-X tables locally. The following describes some of the other ways that queries can be completed
 
 #### Local Queries
 
@@ -870,9 +870,9 @@ The following are a few examples of this various operations in use
 	'))
 	```
 
-#### PyKX methods
+#### KDB-X Python methods
 
-In addition to support for the Python operators outlined above PyKX provides a number of analytic methods and properties for the `kx.Column` objects. In total there are more than 100 analytic methods supported ranging from a basic method to retrieve the maximum value of a column, to more complex analytics for the calculation of the weighted average between two vectors.
+In addition to support for the Python operators outlined above KDB-X Python provides a number of analytic methods and properties for the `kx.Column` objects. In total there are more than 100 analytic methods supported ranging from a basic method to retrieve the maximum value of a column, to more complex analytics for the calculation of the weighted average between two vectors.
 
 The following drop-down provides a list of the supported methods, with full details on the API page [here](../../../api/columns.md).
 
@@ -1015,7 +1015,7 @@ Not all analytics that you may wish to run on your table will expect to take the
 r example in some cases you may wish to apply an analytic on each row of a column. While operations which rely on iterato
 rs may be slower than purely vectorised operations they may be necessary.
 
-PyKX supports the following iterators, a number of examples are provided below
+KDB-X Python supports the following iterators, a number of examples are provided below
 
 | Iterator | Type        | Link                                                                             |
 | :------- | :---------- | :------------------------------------------------------------------------------- |
@@ -1110,4 +1110,4 @@ Now that you have learnt how to query your data using the Pythonic API you may b
 For some further reading, here are some related topics:
 
 - If you don't have a historical database available see [here](../../advanced/database/index.md).
-- To learn about creating PyKX Table objects see [here](../../../examples/interface-overview.ipynb).
+- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.ipynb).

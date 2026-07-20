@@ -1,11 +1,10 @@
 # pykx.q Library Reference Card
 
-!!! tip "Tip: For the best experience, read [How to use PyKX within q](../pykx-under-q/intro.md) and [Why upgrade from embedPy](../pykx-under-q/upgrade.md) first." 
+!!! tip "Tip: For the best experience, read [How to use KDB-X Python within q](../pykx-under-q/intro.md) and [Why upgrade from embedPy](../pykx-under-q/upgrade.md) first." 
 
 This page documents the functions found in the `pykx.q` q library that are available.
 
-This library can be installed by calling a helper function within `PyKX`, this function will move
-all the required files and libraries into your `QHOME` directory.
+This library can be installed by calling a helper function within `pykx`, this function will move all the required files and libraries into your `QHOME` directory.
 
 ```python
 import pykx as kx
@@ -44,14 +43,14 @@ Gain access to the `.pykx` namespace within the `q` session
 q)\l pykx.q
 ```
 
-**PyKX q API functionality:**
+**KDB-X Python q API functionality:**
 
 <div markdown="1" class="typewriter">
 **.pykx.**
 
 **General:**
 [console                           open an interactive Python REPL](#pykxconsole)
-[version                           retrieve PyKX version](#pykxversion)
+[version                           retrieve KDB-X Python version](#pykxversion)
 [print                             print a Python object directly to stdout](#pykxprint)
 [repr                              evaluate the Python function repr() on supplied Python object](#pykxrepr)
 [debugInfo                         print useful process debug information to q session](#pykxdebuginfo)
@@ -59,9 +58,9 @@ q)\l pykx.q
 
 **Data Conversions:**
 [setdefault                        define the default conversion for KX objects to Python](#pykxsetdefault)
-[toq                               convert an (un)wrapped `PyKX` foreign object into a q type](#pykxtoq)
-[toq0                              convert an (un)wrapped `PyKX` foreign object into a q type, use 2nd parameter to allow str objects to return as strings](#pykxtoq0)
-[tok                               tag a q object to be indicate conversion to a Pythonic PyKX object when called in Python](#pykxtok)
+[toq                               convert an (un)wrapped `pykx` foreign object into a q type](#pykxtoq)
+[toq0                              convert an (un)wrapped `pykx` foreign object into a q type, use 2nd parameter to allow str objects to return as strings](#pykxtoq0)
+[tok                               tag a q object to be indicate conversion to a Pythonic `pykx` object when called in Python](#pykxtok)
 [topy                              tag a q object to be indicate conversion to a Python object when called in Python](#pykxtopy)
 [tonp                              tag a q object to be indicate conversion to a Numpy object when called in Python](#pykxtonp)
 [topd                              tag a q object to be indicate conversion to a Pandas object when called in Python](#pykxtopd)
@@ -89,7 +88,7 @@ q)\l pykx.q
 [get                               retrieve a named item from the Python memory](#pykxget)
 [getattr                           retrieve an attribute of a Python object](#pykxgetattr)
 
-**Foreign and PyKX object Handling:**
+**Foreign and `pykx` object Handling:**
 [wrap                              convert a foreign object generated from Python execution to a callable q object](#pykxwrap)
 [unwrap                            convert a wrapped foreign object generated from this interface into a python foreign](#pykxunwrap)
 
@@ -125,7 +124,7 @@ type | description
 **Example:**
 
 ```q
-Enter PyKX console and evaluate Python code
+Enter `pykx` console and evaluate Python code
 q).pykx.console[]
 >>> 1+1
 2
@@ -134,7 +133,7 @@ q).pykx.console[]
 >>> quit()
 q)
 
-// Enter PyKX console setting q objects using PyKX
+// Enter `pykx` console setting q objects using pykx
 q).pykx.console[]
 >>> import pykx as kx
 >>> kx.q['table'] = kx.q('([]2?1f;2?0Ng;2?`3)'
@@ -145,7 +144,7 @@ x         x1                                   x2
 0.439081  49f2404d-5aec-f7c8-abba-e2885a580fb6 mil
 0.5759051 656b5e69-d445-417e-bfe7-1994ddb87915 igf
 
-// Enter PyKX console setting Python objects using PyKX
+// Enter `pykx` console setting Python objects using pykx
 q).pykx.console[]
 >>> a = list(range(5))
 >>> quit()
@@ -172,7 +171,7 @@ type   | description
 
 ```q
 q).pykx.debugInfo[]
-"**** PyKX information ****"
+"**** pykx information ****"
 "pykx.args: ()"
 "pykx.qhome: /usr/local/anaconda3/envs/qenv/q"
 "pykx.qlic: /usr/local/anaconda3/envs/qenv/q"
@@ -300,7 +299,7 @@ _List all q scripts in the extensions directory which can be loaded_
 
 type   | description
 -------|------------
-`list` | A list of strings denoting the available extensions in your version of PyKX
+`list` | A list of strings denoting the available extensions in your version of KDB-X Python
 
 **Example:**
 
@@ -313,7 +312,7 @@ q).pykx.listExtensions[]
 ## `.pykx.loadExtension`
 
 
-_Loading of a PyKX extension_
+_Loading of a `pykx` extension_
 
 ```q
 .pykx.loadExtension[ext]
@@ -425,7 +424,7 @@ q).pykx.print .pykx.topd ([]5?1f;5?0b)
 ## `.pykx.toq`
 
 
-_Convert an (un)wrapped `PyKX` foreign object into an analogous q type._
+_Convert an (un)wrapped `pykx` foreign object into an analogous q type._
 
 ```q
 .pykx.toq[pythonObject]
@@ -444,19 +443,19 @@ type  | description
 `any` | A q object converted from Python
 
 ```q
-// Convert a wrapped PyKX foreign object to q
+// Convert a wrapped `pykx` foreign object to q
 q)show a:.pykx.eval["1+1"]
 {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 q).pykx.toq a
 2
 
-// Convert an unwrapped PyKX foreign object to q
+// Convert an unwrapped `pykx` foreign object to q
 q)show b:a`.
 foreign
 q).pykx.toq b
 2
 
-// Convert a PyKX conversion object back to q
+// Convert a `pykx` conversion object back to q
 q).pykx.toq .pykx.topd ([]5?1f;5?`a`b`c)
 
 x         x1
@@ -677,7 +676,7 @@ q).pykx.repr til 5
 ## `.pykx.safeReimport`
 
 
-_Isolated execution of a q function which relies on importing PyKX_
+_Isolated execution of a q function which relies on importing `pykx`_
 
 ```q
 .pykx.safeReimport[qFunction]
@@ -692,7 +691,7 @@ For more information on the reimporter module which this functionality calls see
 
 name         | type       | description
 -------------|------------|-------------
-`qFunction`  | `function` | A function which is to be run following unsetting of PyKX environment variables and prior to their reset
+`qFunction`  | `function` | A function which is to be run following unsetting of `pykx` environment variables and prior to their reset
 
 **Returns:**
 
@@ -702,7 +701,7 @@ type   | description
 
 **Example:**
 
-Initializing a Python process which imports PyKX
+Initializing a Python process which imports `pykx`
 
 ```q
 q)\l pykx.q
@@ -902,7 +901,7 @@ q).pykx.util.defaultConv
 ## `.pykx.todefault`
 
 
-_Tag a q object to indicate it should use the PyKX default conversion when called in Python_
+_Tag a q object to indicate it should use the `pykx` default conversion when called in Python_
 
 ```q
 .pykx.todefault[qObject]
@@ -929,7 +928,7 @@ type         | description
 q).pykx.todefault til 10
 enlist[`..numpy;;][0 1 2 3 4 5 6 7 8 9]
 
-// Pass a q list to Python treating the Python object as PyKX default
+// Pass a q list to Python treating the Python object as `pykx` default
 q).pykx.typepy .pykx.todefault (til 10;til 10)
 "<class 'list'>"
 
@@ -941,7 +940,7 @@ q).pykx.typepy .pykx.todefault ([]til 10;til 10)
 ## `.pykx.tok`
 
 
-_Tag a q object to be indicate conversion to a Pythonic PyKX object when called in Python_
+_Tag a q object to be indicate conversion to a Pythonic `pykx` object when called in Python_
 
 ```q
 .pykx.tok[qObject]
@@ -951,16 +950,16 @@ _Tag a q object to be indicate conversion to a Pythonic PyKX object when called 
 
 name      | type    | description |
 ----------|---------|-------------|
-`qObject` | `any`   | A q object which is to be defined as a PyKX object in Python. |
+`qObject` | `any`   | A q object which is to be defined as a `pykx` object in Python. |
 
 **Return:**
 
 type         | description
 -------------|------------
-`projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a PyKX type object. |
+`projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a `pykx` type object. |
 
 ```q
-// Denote that a q object once passed to Python should be managed as a PyKX object
+// Denote that a q object once passed to Python should be managed as a `pykx` object
 q).pykx.tok til 10
 enlist[`..k;;][0 1 2 3 4 5 6 7 8 9]
 
@@ -968,7 +967,7 @@ enlist[`..k;;][0 1 2 3 4 5 6 7 8 9]
 q).pykx.typepy til 10
 "<class 'numpy.ndarray'>"
 
-// Pass a q object to Python treating the Python object as a PyKX object
+// Pass a q object to Python treating the Python object as a `pykx` object
 q).pykx.typepy .pykx.tok til 10
 "<class 'pykx.wrappers.LongVector'>"
 ```
@@ -1158,7 +1157,7 @@ q).pykx.typepy .pykx.topy til 10
 ## `.pykx.toq0`
 
 
-_Convert an (un)wrapped `PyKX` foreign object into an analogous q type._
+_Convert an (un)wrapped `pykx` foreign object into an analogous q type._
 
 ```q
 .pykx.toq0[pythonObject;strAsChar]
@@ -1178,13 +1177,13 @@ type  | description
 `any` | A q object converted from Python
 
 ```q
-// Convert a wrapped PyKX foreign object to q
+// Convert a wrapped `pykx` foreign object to q
 q)show a:.pykx.eval["1+1"]
 {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 q).pykx.toq0 a
 2
 
-// Convert an unwrapped PyKX foreign object to q
+// Convert an unwrapped `pykx` foreign object to q
 q)show b:a`.
 foreign
 q).pykx.toq0 b
@@ -1306,7 +1305,7 @@ foreign
 ## `.pykx.version`
 
 
-_Retrieve the version of PyKX presently being used by a q process_
+_Retrieve the version of KDB-X Python presently being used by a q process_
 
 ```q
 .pykx.version[]
@@ -1316,7 +1315,7 @@ _Retrieve the version of PyKX presently being used by a q process_
 
 type     | description
 ---------|------------
-`string` | The version number of PyKX installed within the users q session
+`string` | The version number of KDB-X Python installed within the users q session
 
 ```q
 q).pykx.version[]

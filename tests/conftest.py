@@ -30,7 +30,7 @@ def pa(kx):
 
 @pytest.fixture
 def pd(kx):
-    """Fixture that safely imports Pandas after PyKX has potentially blocked PyArrow imports."""
+    """Fixture that safely imports Pandas after pykx has potentially blocked PyArrow imports."""
     import pandas
     return pandas
 
@@ -39,7 +39,7 @@ def pd(kx):
 def kx(request):
     markers = {x.name: x.kwargs for x in request.node.own_markers}
     if 'isolate' in markers and 'pykx' in sys.modules:
-        raise Exception('PyKX has been imported - test isolation has failed')
+        raise Exception('KDB-X Python has been imported - test isolation has failed')
     # Use the seed set by the `pytest-randomly` plugin as q's random seed
     seed = int(request.config.getoption('randomly_seed')) % (2**31 - 1)
     os.environ['QARGS'] = f'-S {seed} --testflag {request.param}'
@@ -88,8 +88,8 @@ def random_free_port():
             return port
 
 
-# Need to know what $QHOME to use for the q subprocesses before PyKX changes it.
-original_QHOME = os.environ['QHOME']
+# Need to know what $QHOME to use for the q subprocesses before KDB-X Python changes it.
+original_QHOME = os.getenv('QHOME', '')
 
 
 @contextmanager
@@ -239,9 +239,9 @@ def pytest_generate_tests(metafunc): # noqa
             'indirect': True,
             'ids': lambda argvalue: argvalue.lstrip('-') if argvalue else 'licensed',
         }
-        if 'nep49' in markers and py_minor_version >= 8:
+        if 'nep49' in markers:
             kx_fixture_kwargs['argvalues'].append(
-                pytest.param(' --pykxalloc --pykxgc',
+                pytest.param('--pykxgc',
                              marks=[pytest.mark.licensed, pytest.mark.nep49]
                 )
             )
@@ -256,14 +256,14 @@ def pytest_generate_tests(metafunc): # noqa
     if unlicensed or (ipc and not markers['ipc'].get('licensed_only', False)):
         if 'unlicensed' in markers and markers['unlicensed'].get('unlicensed_only', False):
             kx_fixture_kwargs['argvalues'].pop()
-            if 'nep49' in markers and py_minor_version >= 8:
+            if 'nep49' in markers:
                 kx_fixture_kwargs['argvalues'].pop()
         kx_fixture_kwargs['argvalues'].append(
             pytest.param('--unlicensed', marks=[pytest.mark.isolate, pytest.mark.unlicensed])
         )
-        if 'nep49' in markers and py_minor_version >= 8:
+        if 'nep49' in markers:
             kx_fixture_kwargs['argvalues'].append(
-                pytest.param('--unlicensed --pykxalloc',
+                pytest.param('--unlicensed',
                              marks=[pytest.mark.isolate,
                                     pytest.mark.unlicensed,
                                     pytest.mark.nep49]
@@ -280,7 +280,7 @@ def pytest_generate_tests(metafunc): # noqa
 def pytest_runtest_protocol(item):
     # FIXME: Because fork is being used instead of spawn, as soon as the first licensed test runs,
     # all tests afterwards must be licensed. To work around this issue, we run every test within
-    # a fork that has not imported PyKX, unless we are on Windows.
+    # a fork that has not imported KDB-X Python, unless we are on Windows.
     if (system() != 'Windows') and (item.get_closest_marker('isolate') or True):
         item.ihook.pytest_runtest_logstart(nodeid=item.nodeid, location=item.location)
         reports = [_pytest.runner.TestReport(**x) for x in marshal.loads(isolate_test(item))]

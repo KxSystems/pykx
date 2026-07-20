@@ -1,9 +1,9 @@
 ---
 title: FAQ
-description: Frequently questions for PyKX
+description: Frequently questions for KDB-X Python
 maintained by: KX Systems, Inc.
 date: Aug 2024
-tags: PyKX, FAQ
+tags: KDB-X Python, FAQ
 ---
 # FAQ
 
@@ -15,7 +15,7 @@ tags: PyKX, FAQ
     '2022.09.15T10:32:13.419 license error: cores
 ```
 
-This error indicates PyKX tried to use more cores than your license allows. You can fix this by limiting the number of cores used by the python process.
+This error indicates that KDB-X Python tried to use more cores than your license allows. You can fix this by limiting the number of cores used by the python process.
 
 - On Linux you can use `#!bash taskset` to limit the number of cores used by a process:
 
@@ -24,7 +24,7 @@ This error indicates PyKX tried to use more cores than your license allows. You 
 $ taskset -c 0-3 python
 ```
 
-- You can also do this in python before importing PyKX (Linux only):
+- You can also do this in python before importing KDB-X Python (Linux only):
 
 ```python
 >>> import os
@@ -42,15 +42,15 @@ pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
 
 (above, `#!bat 0xf = 00001111b`, so the python process will only use the four cores for which the mask bits are equal to 1)
 
-## How does PyKX determine the license that is used?
+## How does KDB-X Python determine the license that is used?
 
-The following steps are run by PyKX to find the license when you execute `#!python import pykx`:
+The following steps are run by `pykx` to find the license when you execute `#!python import pykx`:
 
 1. Search for **kx.lic**, **kc.lic** and **k4.lic** license files in this order within the following locations:
 	1. Current working directory
 	1. Location defined by environment variable `#!bash QLIC` if set
 	1. Location defined by environment variable `#!bash QHOME` if set
-2. If a license is not found PyKX will use the following environment variables (if they are set) to install and make use of a license:
+2. If a license is not found KDB-X Python will use the following environment variables (if they are set) to install and make use of a license:
 	1. `#!bash KDB_LICENSE_B64` containing a base64 encoded version of a **kc.lic** license
 	1. `#!bash KDB_K4LICENSE_B64` containing a base64 encoded version of a **k4.lic** license
 3. If a license has not been located you will be guided to install a license following a prompt based license installation.

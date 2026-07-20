@@ -2,16 +2,15 @@
 
 ## License issues
 
-The following section outlines practical information useful when dealing with getting access to and managing licenses for PyKX.
+The following section outlines practical information useful when dealing with getting access to and managing licenses for KDB-X Python.
 
-### Accessing a license valid for PyKX
+### Accessing a license valid for KDB-X Python
 
-A number of trial and enterprise type licenses exist for q/kdb+. Not all licenses for q/kdb+ however are valid for PyKX. In particular users require access to a license which contains the feature flags **pykx** and **embedq** which provide access to the PyKX functionality. The following locations can be used for the retrieval of evaluation/personal licenses
+KDB-X licenses use flags **py** and **eq** to enable KDB-X Python (these work with KDB-X Python `pykx>=4.0` only and not PyKX `pykx<4.0`).
+Older licenses using long flags **pykx** and **embedq** also work with KDB-X Python.
 
-- For non-commercial personal users you can access a 12 month kdb+ license with PyKX enabled [here](https://kx.com/kdb-insights-sdk-personal-edition-download).
-- For commercial evaluation, contact your KX sales representative or sales@kx.com requesting a PyKX trial license. Alternately apply through https://kx.com/book-demo.
-
-For non-personal or non-commercial usage please contact sales@kx.com.
+Go to the [KX Developer Center](https://developer.kx.com/products/kdb-x/install) to obtain a KDB-X license.
+For other enquiries email sales@kx.com.
 
 Once you have access to your license you can install the license following the steps provided [here](../getting-started/installing.md) or through installation using the function `#!python kx.license.install` as follows
 
@@ -22,11 +21,16 @@ Once you have access to your license you can install the license following the s
 
 ### Initialization failing with a `#!python embedq` error
 
-Failure to initialize PyKX while raising an error `#!python embedq` indicates that the license you are attempting to use for PyKX in [licensed modality](../user-guide/advanced/modes.md) does not have the sufficient feature flags necessary to run PyKX. To access a license which does allow for running PyKX in this modality please following the instructions [here](#accessing-a-license-valid-for-pykx) to get a new license with appropriate feature flags.
+Failure to initialize `pykx` while raising an error `#!python embedq` indicates that the license you are attempting to use for `pykx` in [licensed modality](../user-guide/advanced/modes.md) does not have the sufficient feature flags necessary to run KDB-X Python. To access a license which does allow for running `pykx` in this modality please following the instructions [here](#accessing-a-license-valid-for-pykx) to get a new license with appropriate feature flags.
+
+KDB-X licenses use flags **py** and **eq** to enable KDB-X Python (these work with KDB-X Python `pykx>=4.0` only and not PyKX `pykx<4.0`).
+Older licenses using long flags **pykx** and **embedq** also work with KDB-X Python.
+
+Check the output of `.z.l` in a q process to view the flags in your license.
 
 ### Initialization failing with a `#!python kc.lic` error
 
-If after initially completing the installation guide for PyKX [here](../getting-started/installing.md) you receive the following error:
+If after initially completing the installation guide for `pykx` [here](../getting-started/installing.md) you receive the following error:
 
 ```python
 pykx.exceptions.PyKXException: Failed to initialize embedded q. Captured output from initialization attempt:
@@ -91,16 +95,16 @@ It usually indicates that your license was not correctly written to disk or a li
 
 ## Environment issues
 
-### Using PyKX under q is raising a `'libpython` error
+### Using KDB-X Python under q is raising a `'libpython` error
 
-If you are getting a `'libpython` error when starting PyKX within a q session, this may indicate that PyKX has been unable to source the Python shared libraries that are required to run Python within an embedded setting. To fix this issue users can either
+If you are getting a `'libpython` error when starting `pykx` within a q session, this may indicate that KDB-X Python has been unable to source the Python shared libraries that are required to run Python within an embedded setting. To fix this issue users can either
 
 - Find the absolute path to the appropriate shared object and set the environment variable `PYKX_PYTHON_LIB_PATH` with this location.
 - Set the environment variable `PYKX_USE_FIND_LIBPYTHON` to `"true"`, this will use the Python library [`find-libpython`](https://pypi.org/project/find-libpython/) to locate the `libpython` shared library and automatically set `PYKX_PYTHON_LIB_PATH` to the returned location.
 
 ### Getting more information about your environment
 
-The following section outlines how a user can get access to a verbose set of environment configuration associated with PyKX. This information is helpful when debugging your environment and should be provided if possible with support requests.
+The following section outlines how a user can get access to a verbose set of environment configuration associated with KDB-X Python. This information is helpful when debugging your environment and should be provided if possible with support requests.
 
 ```python
 >>> import pykx as kx
@@ -111,7 +115,7 @@ The following section outlines how a user can get access to a verbose set of env
 
 	```python
 	>>> kx.util.debug_environment()
-	**** PyKX information ****
+	**** KDB-X Python information ****
 	pykx.args: ()
 	pykx.qhome: /usr/local/anaconda3/envs/qenv/q
 	pykx.qlic: /usr/local/anaconda3/envs/qenv/q
@@ -131,29 +135,28 @@ The following section outlines how a user can get access to a verbose set of env
 	**** Platform information ****
 	platform.platform: macOS-13.0.1-x86_64-i386-64bit
 
-	**** PyKX Configuration File ****
-	File location: /usr/local/.pykx-config
+	**** KDB-X Python Configuration File ****
+	File location: /usr/local/.kx/config-pykx
 	Used profile: default
 	Profile content: {'PYKX_Q_EXECUTABLE': '/usr/local/anaconda3/envs/qenv/q/m64/q'}
 
-	**** PyKX Configuration Variables ****
+	**** KDB-X Python Configuration Variables ****
 	PYKX_IGNORE_QHOME: False
 	PYKX_KEEP_LOCAL_TIMES: False
-	PYKX_ALLOCATOR: False
+	PYKX__NO_ALLOCATOR: False
 	PYKX_GC: False
 	PYKX_LOAD_PYARROW_UNSAFE: False
 	PYKX_MAX_ERROR_LENGTH: 256
-	PYKX_NOQCE: False
+	PYKX_QCE: False
 	PYKX_RELEASE_GIL: False
 	PYKX_Q_LIB_LOCATION: /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pykx/lib
 	PYKX_Q_LOCK: False
 	PYKX_SKIP_UNDERQ: False
 	PYKX_Q_EXECUTABLE: /usr/local/anaconda3/envs/qenv/q/m64/q
 	PYKX_THREADING: False
-	PYKX_4_1_ENABLED: False
 	PYKX_QDEBUG: False
 	PYKX_DEBUG_INSIGHTS_LIBRARIES: False
-	PYKX_CONFIGURATION_LOCATION: .
+	PYKX_CONFIGURATION_LOCATION: 
 	PYKX_NO_SIGNAL: False
 	PYKX_CONFIG_PROFILE: default
 	PYKX_BETA_FEATURES: True
@@ -168,13 +171,13 @@ The following section outlines how a user can get access to a verbose set of env
 	PYKX_USE_FIND_LIBPYTHON: 
 	PYKX_UNLICENSED: 
 	PYKX_LICENSED: 
-    PYKX_4_1_ENABLED: 
 
 	**** q Environment Variables ****
 	QARGS: 
 	QHOME: /Library/Frameworks/Python.framework/Versions/3.12/lib/python3.12/site-packages/pykx/lib
 	QLIC: /usr/local/anaconda3/envs/qenv/q
-	QINIT: 
+	QINIT:
+    QCFG:  
 
 	**** License information ****
 	pykx.qlic directory: True
@@ -193,7 +196,7 @@ The following section outlines how a user can get access to a verbose set of env
 
 ### Debugging q code issues
 
-If you are developing a library of q code, by default PyKX does not provide the full backtrace on error. As an example assume you have developed the a function and pass it an incorrect input
+If you are developing a library of q code, by default KDB-X Python does not provide the full backtrace on error. As an example assume you have developed the a function and pass it an incorrect input
 
 ```python
 >>> import pykx as kx

@@ -1,5 +1,5 @@
 """
-_This page documents the API functions for using q IPC within PyKX._
+_This page documents the API functions for using q IPC within KDB-X Python._
 """
 
 from enum import Enum
@@ -460,7 +460,6 @@ class QConnection(Q):
                  reconnection_delay: float = 0.5,
                  reconnection_function: callable = reconnection_function,
                  connection_timeout: Optional[float] = None,
-
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -502,7 +501,6 @@ class QConnection(Q):
                 is executed on reconnect attempt.
             connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
                 `None`, the socket will not timeout when connecting.
-
 
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if the
@@ -825,7 +823,7 @@ class QConnection(Q):
                         print("WARN: Discarding unexpected sync message from handle: "
                               + str(self.fileno()), file=sys.stderr)
                         try:
-                            self._send(SymbolAtom("PyKX cannot receive queries in client mode"),
+                            self._send(SymbolAtom("KDB-X Python cannot receive queries in client mode"),
                                        error=True)
                         except BaseException:
                             pass
@@ -866,7 +864,7 @@ class QConnection(Q):
                         print("WARN: Discarding unexpected sync message from handle: "
                               + str(self.fileno()), file=sys.stderr)
                         try:
-                            self._send(SymbolAtom("PyKX cannot receive queries in client mode"),
+                            self._send(SymbolAtom("KDB-X Python cannot receive queries in client mode"),
                                        error=True)
                         except BaseException:
                             pass
@@ -899,7 +897,7 @@ class QConnection(Q):
                     self.close()
             except BaseException:
                 self.close()
-            raise RuntimeError("PyKX attempted to process a message containing less than "
+            raise RuntimeError("KDB-X Python attempted to process a message containing less than "
                                "the expected number of bytes, connection closed."
                                f"\nReturned bytes: {chunks}.\n"
                                "If you have a reproducible use-case please raise an "
@@ -960,7 +958,7 @@ class QConnection(Q):
                     self.close()
             except BaseException:
                 self.close()
-            raise RuntimeError("PyKX attempted to process a message containing less than "
+            raise RuntimeError("KDB-X Python attempted to process a message containing less than "
                                "the expected number of bytes, connection closed."
                                f"\nReturned bytes: {chunks}.\n"
                                "If you have a reproducible use-case please raise an "
@@ -1030,7 +1028,7 @@ class QConnection(Q):
         Execute `#!q .u.upd` on a remote q process. This function assumes the definition of
             `#!q .u.upd` on the remote q process takes the same count and data type of arguments
             as the default implementation (q keyword `#!q insert`). The `#!python data` argument
-            will be converted to a list if it is a PyKX `#!python Table`.
+            will be converted to a list if it is a KDB-X Python `#!python Table`.
 
         Parameters:
             table: The name of the global variable on the q process to update.
@@ -1098,11 +1096,11 @@ class QConnection(Q):
         ```
         """
         wlist = ['k', 'q', 'p', 'py']
-        with open(pykx_lib_dir/'q.k', 'r') as f:
+        with open(pykx_lib_dir/'pykx.q', 'r') as f:
             lines = f.readlines()
             for line in lines:
                 if 'pykxld:' in line:
-                    ld = line[7:].encode()
+                    ld = line[12:].encode()
         if isinstance(file_path, str):
             path_stem = Path(file_path).suffix[1:]
             if not path_stem in wlist:
@@ -1115,7 +1113,7 @@ class QConnection(Q):
                         $[any stem~/:("p";"py");
                             $[`pykx in key `;
                               .pykx.pyexec "\n" sv code;
-                              '"PyKX must be loaded on remote server"];
+                              '"pykx must be loaded on remote server"];
                             value (@';last file;enlist[file],/:value[\"k)\",fn]code)
                             ]
                         }
@@ -1196,7 +1194,6 @@ class SyncQConnection(QConnection):
             connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
                 `None`, the socket will not timeout when connecting.
 
-
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if the
             q server requires authorization. Refer to
@@ -1264,7 +1261,6 @@ class SyncQConnection(QConnection):
                    reconnection_delay=reconnection_delay,
                    reconnection_function=reconnection_function,
                    connection_timeout=connection_timeout,
-
         )
         super().__init__()
 
@@ -1334,13 +1330,13 @@ class SyncQConnection(QConnection):
         q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
 
-        Call a PyKX Operator function with supplied parameters
+        Call a KDB-X Python Operator function with supplied parameters
 
         ```python
         q(kx.q.sum, [1, 2, 3])
         ```
 
-        Call a PyKX Keyword function with supplied parameters
+        Call a KDB-X Python Keyword function with supplied parameters
 
         ```python
         q(kx.q.floor, [5.2, 10.4])
@@ -1472,7 +1468,6 @@ class AsyncQConnection(QConnection):
                  reconnection_delay: float = 0.5,
                  reconnection_function: callable = reconnection_function,
                  connection_timeout: Optional[float] = None,
-
     ):
         """Interface with a q process using the q IPC protocol.
 
@@ -1520,7 +1515,6 @@ class AsyncQConnection(QConnection):
                 multiplied by two on each invocation
             connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
                 `None`, the socket will not timeout when connecting.
-
 
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if
@@ -1771,13 +1765,13 @@ class AsyncQConnection(QConnection):
         await q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
 
-        Call a PyKX Operator function with supplied parameters
+        Call a KDB-X Python Operator function with supplied parameters
       
         ```python
         await q(kx.q.sum, [1, 2, 3])
         ```
 
-        Call a PyKX Keyword function with supplied parameters
+        Call a KDB-X Python Keyword function with supplied parameters
         
         ```python
         await q(kx.q.floor, [5.2, 10.4])
@@ -2123,7 +2117,6 @@ class RawQConnection(QConnection):
             connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
                 `None`, the socket will not timeout when connecting.
 
-
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if the q
             server requires authorization. Refer to
@@ -2463,7 +2456,7 @@ class RawQConnection(QConnection):
                 return
             elif len(chunks) <8:
                 self.close()
-                raise RuntimeError("PyKX attempted to process a message containing less than "
+                raise RuntimeError("KDB-X Python attempted to process a message containing less than "
                                    "the expected minimum number of bytes, connection closed."
                                    f"\nReturned bytes: {chunks}.\n"
                                    "If you have a reproducible use-case please raise an "
@@ -2866,7 +2859,6 @@ class SecureQConnection(QConnection):
             connection_timeout: Timeout in seconds for connection to `q` server. If left as default 
                 `None`, the socket will not timeout when connecting.
 
-
         Note: The `#!python username` and `#!python password` parameters are not required.
             The `#!python username` and `#!python password` parameters are only required if
             the q server requires authorization. Refer to
@@ -2988,13 +2980,13 @@ class SecureQConnection(QConnection):
         q('{x set y+til z}', 'async_query', 10, 5, wait=True)
         ```
 
-        Call a PyKX Operator function with supplied parameters
+        Call a KDB-X Python Operator function with supplied parameters
       
         ```python
         q(kx.q.sum, [1, 2, 3])
         ```
 
-        Call a PyKX Keyword function with supplied parameters
+        Call a KDB-X Python Keyword function with supplied parameters
         
         ```python
         q(kx.q.floor, [5.2, 10.4])

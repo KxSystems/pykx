@@ -132,12 +132,6 @@ feature Qlog functions to not be defined in pykx namespace
             @[{get x;0b};`.pykx.i.endpoint;1b]
         expect namespace to not have functions in root provided by qlog
             @[{get x;0b};`.pykx.setCorrelator;1b]
-        
-    should have logging namespace populated when running on linux
-        expect logging to be defined if running on linux in root namespace
-            $[.z.o~`l64;@[{get x;1b};`.com_kx_log.setCorrelator;0b];1b]
-        expect logging functionality to have loaded in the .i namespace
-            $[.z.o~`l64;@[{get x;1b};`.com_kx_log.i.endpoint;0b];1b]
 
 feature toq conversions to support compositions
     should pass through compositions

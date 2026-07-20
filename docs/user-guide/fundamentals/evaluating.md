@@ -1,34 +1,34 @@
 ---
-title: Use PyKX objects
-description: How to use PyKX objects and evaluate q code with PyKX
+title: Use `pykx` objects
+description: How to use `pykx` objects and evaluate q code with KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, PyKX objects, 
+tags: KDB-X Python, q, `pykx` objects, 
 ---
 
-# Use PyKX objects and evaluate q code with PyKX
+# Use `pykx` objects and evaluate q code with KDB-X Python
 
-_This page provides details on how to use PyKX objects and how to evaluate q code with PyKX._
+_This page provides details on how to use `pykx` objects and how to evaluate q code with KDB-X Python._
 
-!!! tip "Tip: For the best experience, we recommend reading [PyKX objects and attributes](..//../learn/objects.md) and [Create and convert PyKX objects](creating.md) first." 
+!!! tip "Tip: For the best experience, we recommend reading [`pykx` objects and attributes](..//../learn/objects.md) and [Create and convert `pykx` objects](creating.md) first." 
 
-There are four ways to manipulate PyKX objects and evaluate q code in PyKX:
+There are four ways to manipulate `pykx` objects and evaluate q code in KDB-X Python:
 
 - a. By calling `#!python pykx.q` directly, for example, `#!python pykx.q('10 {x,sum -2#x}/ 0 1')`
 - b. By dropping into the [interactive console][pykx.QConsole]
 - c. By using `#!python q` keyword functions, for example, `#!python pykx.q.til(10)`
 - d. Over [IPC][pykx.QConnection]
 
-The first three methods evaluate the code locally within the Python process and require a q license. The final method evaluates the code in a separate q process and can be used with or without a q license, provided the server your PyKX instance is connected to is appropriately licensed.
+The first three methods evaluate the code locally within the Python process and require a q license. The final method evaluates the code in a separate q process and can be used with or without a q license, provided the server your KDB-X Python instance is connected to is appropriately licensed.
 
 !!! Warning
 
-    Functions pulled in over IPC are executed locally in PyKX. Go to the [IPC documentation](../../api/ipc.md)
+    Functions pulled in over IPC are executed locally in KDB-X Python. Go to the [IPC documentation](../../api/ipc.md)
     for more information on how to ensure the `q` code is executed on the server and not locally.
 
 ## a. Call q using `#!python pykx.q`
 
-For users familiar with kdb+/q code, the `#!python pykx.q` (or `#!python kx.q`) method allows the evaluation of q code to take place providing the return of the function as a `#!python PyKX` object. This method is variadic, meaning it can accept a variable number of arguments. You can use in two different ways:”
+For users familiar with KDB-X/q code, the `#!python pykx.q` (or `#!python kx.q`) method allows the evaluation of q code to take place providing the return of the function as a `#!python KDB-X Python` object. This method is variadic, meaning it can accept a variable number of arguments. You can use in two different ways:”
 
 1. Direct evaluation of single lines of code
 2. Application of functions that take multiple arguments
@@ -48,7 +48,7 @@ pykx.FloatVector(pykx.q('0.06165008 0.285799 0.6684724 0.9133033 0.1485357'))
 
 ### a.2 Application of functions taking multiple arguments
 
-If the first argument of `#!python pykx.q` is a function, the `#!python N` following arguments are treated as arguments to that function. Arguments can be Python or PyKX objects. All objects passed to a q function are converted to a PyKX object using the method `#!python pykx.toq`. For example:
+If the first argument of `#!python pykx.q` is a function, the `#!python N` following arguments are treated as arguments to that function. Arguments can be Python or `pykx` objects. All objects passed to a q function are converted to a `pykx` object using the method `#!python pykx.toq`. For example:
 
 ```python
 >>> import pykx as kx
@@ -72,7 +72,7 @@ x          x1
 
 !!! Note
 
-	The application of arguments to functions within PyKX is limited to a maximum of 8 arguments. This limitation is imposed by the evaluation of q code.
+	The application of arguments to functions within KDB-X Python is limited to a maximum of 8 arguments. This limitation is imposed by the evaluation of q code.
 
 Users wishing to debug failed evaluation of q code can do so, either by globally setting the environment variable `#!python PYKX_QDEBUG` or through a `#!python debug` keyword:
 
@@ -122,7 +122,7 @@ Users wishing to debug failed evaluation of q code can do so, either by globally
 	pykx.exceptions.QError: type
 	```
 
-## b. Use the q console within PyKX
+## b. Use the q console within KDB-X Python
 
 For users more comfortable prototyping q code within a q terminal, it's possible within a Python terminal to run an emulation of a q session directly in Python through the `#!python kx.q.console` method:
 
@@ -137,7 +137,7 @@ q)\\
 
 !!! Note
 
-    This is not a fully-featured q terminal. It shares the same core [limitations](../../help/issues.md) as PyKX, particularly regarding the running of timers and subscriptions.
+    This is not a fully-featured q terminal. It shares the same core [limitations](../../help/issues.md) as KDB-X Python, particularly regarding the running of timers and subscriptions.
 
 ## c. Use q keywords
 

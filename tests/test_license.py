@@ -33,7 +33,7 @@ def test_initialization_using_unlicensed_mode(tmp_path, q):
 def test_fallback_to_unlicensed_mode_error(tmp_path):
     os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
     os.environ['QARGS'] = '--licensed'
-    # Can't use PyKXException here because we have to import PyKX after entering the with-block
+    # Can't use PyKXException here, we have to import KDB-X Python after entering the with-block
     with pytest.raises(Exception, match='(?i)Failed to initialize embedded q'):
         import pykx # noqa: F401
 
@@ -292,7 +292,7 @@ def test_envvar_init():
 )
 def test_use_both_licensed_and_unlicensed_flags(QARGS):
     os.environ['QARGS'] = QARGS
-    # Can't use PyKXException here because we have to import PyKX after entering the with-block
+    # Can't use PyKXException here, we have to import KDB-X Python after entering the with-block
     with pytest.raises(Exception, match='(?i)mutually exclusive'):
         import pykx # noqa: F401
 

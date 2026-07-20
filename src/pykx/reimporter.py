@@ -1,11 +1,11 @@
-"""PyKX reimport helper module.
+"""KDB-X Python reimport helper module.
 
-PyKX uses various environment variables to monitor the state of various modules initialization. This
-is required to manage all of the different modes of operation, however it can cause issues when
-attempting to reimport PyKX within a spawned subprocess.
+KDB-X Python uses various environment variables to monitor the state of various modules
+initialization. This is required to manage all of the different modes of operation,
+however it can cause issues when attempting to reimport KDB-X Python within a spawned subprocess.
 
-This module provides a mechanism to allow users to safely reimport PyKX within spawned subprocesses
-without having to manually manage any of these internal environment variables.
+This module provides a mechanism to allow users to safely reimport KDB-X Python within spawned
+subprocesses without having to manually manage any of these internal environment variables.
 """
 import os
 
@@ -13,7 +13,7 @@ from .config import pykx_executable, qhome
 
 
 class PyKXReimport:
-    """Helper class to help manage the environment variables around reimporting PyKX in a
+    """Helper class to help manage the environment variables around reimporting KDB-X Python in a
     subprocess.
 
     It is strongly recommended to use this class by using the python `with` syntax. This will ensure
@@ -24,7 +24,7 @@ class PyKXReimport:
 
     ```
     with kx.PyKXReimport():
-        # This process can safely import PyKX
+        # This process can safely import KDB-X Python
         subprocess.Popen(f"python other_file.py")
     ```
     """

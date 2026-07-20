@@ -3,7 +3,7 @@ title: Subscribing to data
 description: How to subscribe to real-time updates from your streaming infrastructure
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, streaming, subscribing
+tags: KDB-X Python, q, streaming, subscribing
 ---
 
 # Subscribe to data

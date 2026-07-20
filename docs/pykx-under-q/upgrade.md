@@ -1,22 +1,22 @@
 ---
 title:  Upgrade from embedPy
-description: How to upgrade from embedPy to PyKX within q
+description: How to upgrade from embedPy to KDB-X Python within q
 date: June 2024
 author: KX Systems, Inc.,
-tags: embedPy, PyKX, q,
+tags: embedPy, KDB-X Python, q,
 ---
 
 # Why upgrade from embedPy
 
-_This page outlines differences and function mappings when upgrading from embedPy to PyKX in a q session._
+_This page outlines differences and function mappings when upgrading from embedPy to KDB-X Python in a q session._
 
-Just like [PyKX](../getting-started/what_is_pykx.md), [embedPy](https://github.com/kxsystems/embedpy) is a tool that allows to execute Python code and call Python functions. 
+Just like [KDB-X Python](../getting-started/what_is_pykx.md), [embedPy](https://github.com/kxsystems/embedpy) is a tool that allows to execute Python code and call Python functions. 
 
 ## Functional differences
 
 ### q symbol and string support 
 
-EmbedPy doesn't allow users to discern between q `#!python string` and `#!python symbol` types when converting to Python. In both cases, these are converted to `#!python str` objects in Python. As a result, embedPy doesn't support round-trip conversions for symbols, but PyKX does:
+EmbedPy doesn't allow users to discern between q `#!python string` and `#!python symbol` types when converting to Python. In both cases, these are converted to `#!python str` objects in Python. As a result, embedPy doesn't support round-trip conversions for symbols, but KDB-X Python does:
 
 === "embedPy"
 
@@ -29,7 +29,7 @@ EmbedPy doesn't allow users to discern between q `#!python string` and `#!python
 	0b
 	```
 
-=== "PyKX"
+=== "KDB-X Python"
 
 	```q
 	q).pykx.set[`a;"test"]
@@ -42,9 +42,9 @@ EmbedPy doesn't allow users to discern between q `#!python string` and `#!python
 
 ### Functionality mapping
 
-The following table describes function mapping from PyKX to embedPy:
+The following table describes function mapping from KDB-X Python to embedPy:
 
-| Description                                                           | PyKX                            | embedPy         |
+| Description                                                           | KDB-X Python                            | embedPy         |
 |-----------------------------------------------------------------------|---------------------------------|-----------------|
 | Load library                                                          | `\l pykx.q`                     | `\l p.q`        |
 | Import Python Libraries as wrapped Python objects                     | `.pykx.import`                  | `.p.import`     |
@@ -54,7 +54,7 @@ The following table describes function mapping from PyKX to embedPy:
 | Execute Python code returning as intermediary q/Python object         | `.pykx.eval`                    | `.p.eval`       |
 | Execute Python code returning a q object                              | `.pykx.qeval`                   | `.p.qeval`      |
 | Execute Python code returning a Python foreign object                 | `.pykx.pyeval`                  | `.p.eval`       |
-| Retrieve a printable representation of a supplied PyKX/q object       | `.pykx.repr`                    | `.p.repr`       |
+| Retrieve a printable representation of a supplied pykx/q object       | `.pykx.repr`                    | `.p.repr`       |
 | Set an attribute on a supplied Python object                          | `.pykx.setattr`                 | `.p.setattr`    |
 | Retrieve an attribute from a supplied Python object                   | `.pykx.getattr`                 | `.p.getattr`    |
 | Convert a Python foreign object to a wrapped object for conversion    | `.pykx.wrap`                    | `.p.wrap`       |
@@ -69,26 +69,26 @@ The following table describes function mapping from PyKX to embedPy:
 | Create a Python closure using a q function                            |  Unsupported                    | `.p.closure`    |
 | Create a Python generator using a q function                          |  Unsupported                    | `.p.generator`  |
 
-## PyKX under q benefits over embedPy
+## KDB-X Python under q benefits over embedPy
 
-When generating workloads that integrate Python and q code, PyKX under q provides a few key functional benefits over embedPy alone:
+When generating workloads that integrate Python and q code, KDB-X Python under q provides a few key functional benefits over embedPy alone:
 
 1. [Flexibility in supported data formats and conversions](#1-flexibility-in-supported-data-formats-and-conversions)
 2. [Python code interoperability](#2-python-interoperability)
-3. [Access to PyKX as a Python module](#3-access-to-pykx-as-a-python-module)
+3. [Access to KDB-X Python as a Python module](#3-access-to-pykx-as-a-python-module)
 
 ### 1. Flexibility in supported data formats and conversions
 
 When using EmbedPy to convert data between q and Python, there’s a fundamental limitation related to supported data formats. Specifically, when passed to Python functions, q objects use the analogous Python/NumPy representation. This means that if an embedPy user requires data in a Pandas/PyArrow format, they need to convert it manually.
 
-As PyKX supports Python, NumPy, Pandas, and PyArrow data formats, it improves the workflow coverage and flexibility. For instance, PyKX by default converts q tables to Pandas DataFrames when passed to a Python function as follows:
+As KDB-X Python supports Python, NumPy, Pandas, and PyArrow data formats, it improves the workflow coverage and flexibility. For instance, KDB-X Python by default converts q tables to Pandas DataFrames when passed to a Python function as follows:
 
 ```q
 q).pykx.eval["lambda x:type(x)"] ([]10?1f;10?1f)
 <class 'pandas.core.frame.DataFrame'>
 ```
 
-Additionally, PyKX provides helper functions, allowing you to choose the target data formats used when passing to multivariable functions. For example:
+Additionally, KDB-X Python provides helper functions, allowing you to choose the target data formats used when passing to multivariable functions. For example:
 
 ```q
 q).pykx.eval["lambda x, y:print(type(x), type(y))"][.pykx.tonp ([]10?1f);.pykx.topd til 10];
@@ -112,7 +112,7 @@ Alternatively, you could create a `#!python .py`/`#!python .p` file and access y
 
 Both solutions are not intuitive to users versed both in Python and q.
 
-That's why PyKX provides a Python `#!python .pykx.console` function that you can run within a q session to generate your functions/variables. The following example uses PyKX 2.3.0:
+That's why KDB-X Python provides a Python `#!python .pykx.console` function that you can run within a q session to generate your functions/variables. The following example uses KDB-X Python 2.3.0:
 
 ```q
 q).pykx.console[]
@@ -127,11 +127,11 @@ q)pyfunc[2]
 
 This function allows you to iterate your analytics development faster than when operating with embedPy.
 
-### 3. Access to PyKX as a Python module
+### 3. Access to KDB-X Python as a Python module
 
-Access to PyKX in its Python-first mode adds more flexibility to users who develop analytics to use within q.
+Access to KDB-X Python in its Python-first mode adds more flexibility to users who develop analytics to use within q.
 
-With embedPy, when you pass q/kdb+ data to Python to complete a "Python-first" analysis, you're restricted to your Python libraries and can't get performance benefits from having access to q/kdb+.
+With embedPy, when you pass q/KDB-X data to Python to complete a "Python-first" analysis, you're restricted to your Python libraries and can't get performance benefits from having access to q/KDB-X.
 
 Take for example a case where a user wishes to run a Python function which queries a table available in their q process using SQL and calculates the mean value for all numeric columns.
 
@@ -151,5 +151,5 @@ x2| 0.486176
 
 ## Next steps
 
-- Learn [how to use PyKX within q](../pykx-under-q/intro.md).
+- Learn [how to use KDB-X Python within q](../pykx-under-q/intro.md).
 - Use the [pykx.q Library Reference Card](../pykx-under-q/api.md).

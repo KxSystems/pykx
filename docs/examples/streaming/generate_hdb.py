@@ -1,6 +1,4 @@
 import argparse
-import os
-os.environ['PYKX_BETA_FEATURES'] = "true"
 
 import pykx as kx
 

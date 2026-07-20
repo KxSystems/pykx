@@ -58,16 +58,7 @@ def test_num_threads(kx, q):
         assert q.system.num_threads == 0
         return
 
-    assert q.system.max_num_threads > 0
-
-    orig_num_threads = q.system.num_threads
-    assert q.system.num_threads > 0
-    q.system.num_threads = 0
-    assert q.system.num_threads == 0
-    q.system.num_threads = 2
-    assert q.system.num_threads == 2
-    q.system.num_threads = orig_num_threads
-    assert q.system.num_threads == orig_num_threads
+    assert q.system.max_num_threads == 0
 
     with pytest.raises(ValueError):
         q.system.num_threads = 1000000

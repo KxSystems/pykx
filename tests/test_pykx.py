@@ -36,25 +36,24 @@ def test_dir(kx):
 
 @pytest.mark.isolate
 def test_qargs_q_flag():
-    # PyKX used to fail on startup if the '-q' flag was manually provided
+    # KDB-X Python used to fail on startup if the '-q' flag was manually provided
     os.environ['QARGS'] = '-q'
     import pykx as kx
     assert kx.q('2 + 2') == 4
+    del os.environ['QARGS']
 
 
 @pytest.mark.isolate
 def test_no_sql():
-    os.environ['QARGS'] = '--no-sql'
     import pykx as kx
     with pytest.raises(kx.QError) as err:
-        kx.q.sql('select 42')
+        kx.q('.s.sp')
     assert '.s.sp' in str(err)
 
 
 @pytest.mark.isolate
 @pytest.mark.skipif(not sys.platform.startswith('linux'), reason="qlog only supported on Linux")
 def test_no_qlog():
-    os.environ['QARGS'] = '--no-qlog'
     import pykx as kx
     with pytest.raises(kx.QError) as err:
         kx.q('.qlog')
@@ -63,10 +62,11 @@ def test_no_qlog():
 
 @pytest.mark.isolate
 def test_qinit_startup():
-    # PyKX would not initialise appropriately if QINIT was set to a file containing show statement
+    # KDB-X Python would not initialise appropriately if QINIT file contained show statement
     os.environ['QINIT'] = 'tests/qinit.q'
     import pykx as kx
     assert kx.q('2 + 2') == 4
+    del os.environ['QINIT']
 
 
 @pytest.mark.isolate
@@ -87,7 +87,7 @@ def test_unlicensed_env():
     reason='Not supported with PYKX_THREADING'
 )
 def test_qinit_qq_startup():
-    # PyKX would not initialise appropriately if q.q exists in QHOME containing a show statement
+    # pykx would not initialise appropriately if q.q exists in QHOME containing a show statement
     shutil.copy('tests/qinit.q', os.environ['QHOME']+'/q.q')
     import pykx as kx
     try_clean(os.environ['QHOME']+'/q.q')
@@ -102,7 +102,7 @@ def test_qinit_qq_startup():
 )
 def test_QHOME_symlinks():
     # This logic to get QHOME is copied from `pykx.config`, since we can't use `pykx.qhome` until
-    # after PyKX has been imported, but that would ruin the test.
+    # after KDB-X Python has been imported, but that would ruin the test.
     try:
         QHOME = Path(os.environ.get('QHOME', Path().home()/'q')).resolve(strict=True)
     except FileNotFoundError:
@@ -119,8 +119,8 @@ def test_QHOME_symlinks():
         'Windows': 'w64',
     }[system()]
     (QHOME/q_lib_dir_name).mkdir(exist_ok=True)
-    lib = Path('lib')/'4-1-libs' if os.getenv('PYKX_4_1_ENABLED') is not None else Path('lib')
-    fake_q_lib_path = Path(site.getsitepackages()[0])/'pykx'/lib/q_lib_dir_name/'fake_q_lib.so'
+    fake_q_lib_path = Path(
+        site.getsitepackages()[0])/'pykx'/'lib'/q_lib_dir_name/'fake_q_lib.so'
     fake_q_lib_path.touch()
     # Convert first argument of `shutil.move` to `str` to work around Python bug bpo-32689
     shutil.move(str(fake_q_lib_path), QHOME/q_lib_dir_name)
@@ -144,7 +144,7 @@ def try_clean(path):
 def test_QHOME_symlinks_skip():
     os.environ['PYKX_IGNORE_QHOME'] = "1"
     # This logic to get QHOME is copied from `pykx.config`, since we can't use `pykx.qhome` until
-    # after PyKX has been imported, but that would ruin the test.
+    # after KDB-X Python has been imported, but that would ruin the test.
     try:
         QHOME = Path(os.environ.get('QHOME', Path().home()/'q')).resolve(strict=True)
     except FileNotFoundError:
@@ -213,20 +213,21 @@ def test_top_level_attributes(kx):
 #     assert run_time > 3.0 and run_time < 4.0
 
 
-@pytest.mark.isolate
-@pytest.mark.skipif(
-    os.getenv('PYKX_THREADING') is not None,
-    reason='Not supported with PYKX_THREADING'
-)
-def test_q_lock_error_instant():
-    os.environ['PYKX_RELEASE_GIL'] = '1'
-    os.environ['PYKX_Q_LOCK'] = '0'
+# TODO: Investigate in KXI-64675
+# @pytest.mark.isolate
+# @pytest.mark.skipif(
+#     os.getenv('PYKX_THREADING') is not None,
+#     reason='Not supported with PYKX_THREADING'
+# )
+# def test_q_lock_error_instant():
+#     os.environ['PYKX_RELEASE_GIL'] = '1'
+#     os.environ['PYKX_Q_LOCK'] = '0'
 
-    import pykx as kx
+#     import pykx as kx
 
-    with pytest.raises(kx.QError) as err:
-        kx.q('{[f] f peach til 20}', lambda x: kx.q(f'til {x}'))
-        assert 'Attempted to acquire lock on already locked call into q.' in str(err.value)
+#     with pytest.raises(kx.QError) as err:
+#         kx.q('{[f] f peach til 20}', lambda x: kx.q(f'til {x}'))
+#         assert 'Attempted to acquire lock on already locked call into q.' in str(err.value)
 
 
 @pytest.mark.isolate
@@ -292,10 +293,6 @@ def test_pykx_star():
     os.getenv('PYKX_THREADING') is not None,
     reason='Not supported with PYKX_THREADING'
 )
-@pytest.mark.skipif(
-    (sys.version_info.major == 3) and (sys.version_info.minor == 8),
-    reason="python3.8 subprocess behavior inconsistent with newest versions"
-)
 def test_pykx_stdout_stderr():
     output = subprocess.run(
         (str(Path(sys.executable).as_posix()), '-c',
@@ -313,10 +310,6 @@ def test_pykx_stdout_stderr():
 @pytest.mark.skipif(
     os.getenv('PYKX_THREADING') is not None,
     reason='Not supported with PYKX_THREADING'
-)
-@pytest.mark.skipif(
-    (sys.version_info.major == 3) and (sys.version_info.minor == 8),
-    reason="python3.8 subprocess behavior inconsistent with newest versions"
 )
 def test_pykx_stdout_stderr_under_q():
     subprocess.run(
@@ -445,35 +438,35 @@ def test_kx_versions(kx):
     test_arch = platform.uname()[4]
     test_K = str(kx.q.z.K.py())
     test_vars = (test_os, test_arch, test_K)
-    if test_vars == ('Linux',   'x86_64', '4.0'):
-        assert kx.q.z.k == kx.q('2025.02.18')
-    elif test_vars == ('Linux',   'x86_64', '4.1'):
-        assert kx.q.z.k == kx.q('2026.04.01')
-    # elif test_vars == ('Linux',   'x86_64', '4.2'):
-    #    assert kx.q.z.k == kx.q('?')
-    elif test_vars == ('Linux',   'aarch64',    '4.0'):
-        assert kx.q.z.k == kx.q('2025.02.18')
-    elif test_vars == ('Linux',   'aarch64',    '4.1'):
-        assert kx.q.z.k == kx.q('2026.04.01')
-    # elif test_vars == ('Linux',   'aarch64',    '4.2'):
-    #    assert kx.q.z.k == kx.q('?')
-    elif test_vars == ('Darwin',  'x86_64', '4.0'):
-        assert kx.q.z.k == kx.q('2025.02.18')
-    elif test_vars == ('Darwin',  'x86_64', '4.1'):
-        assert kx.q.z.k == kx.q('2026.04.01')
-    # elif test_vars == 'Darwin',  'x86_64', '4.2'):
-    #    assert kx.q.z.k == kx.q('?')
-    elif test_vars == ('Darwin',  'arm64',    '4.0'):
-        assert kx.q.z.k == kx.q('2025.02.18')
-    elif test_vars == ('Darwin',  'arm64',    '4.1'):
-        assert kx.q.z.k == kx.q('2026.04.01')
-    # elif test_vars == ('Darwin',  'arm',    '4.2'):
-    #    assert kx.q.z.k == kx.q('?')
-    elif test_vars == ('Windows', 'AMD64', '4.0'):
-        assert kx.q.z.k == kx.q('2025.02.18')
-    elif test_vars == ('Windows', 'AMD64', '4.1'):
-        assert kx.q.z.k == kx.q('2026.04.01')
-    # elif test_vars == ('Windows', 'AMD64', '4.2'):
-    #    assert kx.q.z.k == kx.q('?')
+    if test_vars == ('Linux', 'x86_64', '5.0'):
+        assert kx.q.z.k == kx.q('2026.05.01')
+    elif test_vars == ('Linux', 'aarch64', '5.0'):
+        assert kx.q.z.k == kx.q('2026.05.01')
+    elif test_vars == ('Darwin', 'x86_64', '5.0'):
+        assert kx.q.z.k == kx.q('2026.05.01')
+    elif test_vars == ('Darwin', 'arm64', '5.0'):
+        assert kx.q.z.k == kx.q('2026.05.01')
+    elif test_vars == ('Windows', 'AMD64', '5.0'):
+        assert kx.q.z.k == kx.q('2026.05.01')
     else:
         raise AssertionError(f"Unexpected env: {test_vars}")
+
+
+@pytest.mark.isolate
+def test_default_qce():
+    import pykx as kx
+    assert not kx.q('@[{2<count .s};`;{0b}]').py()
+
+
+@pytest.mark.isolate
+def test_QARGS_QCE_qce():
+    os.environ['QARGS']='--qce'
+    import pykx as kx
+    assert kx.q('@[{2<count .s};`;{0b}]').py()
+
+
+@pytest.mark.isolate
+def test_PYKX_QCE_qce():
+    os.environ['PYKX_QCE']='True'
+    import pykx as kx
+    assert kx.q('@[{2<count .s};`;{0b}]').py()

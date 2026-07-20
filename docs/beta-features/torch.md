@@ -1,13 +1,13 @@
 ---
 title: PyTorch Conversions
-description: PyTorch Tensor Conversions beta feature in PyKX
+description: PyTorch Tensor Conversions beta feature in KDB-X Python 
 date: January 2025
 author: KX Systems, Inc.,
-tags: PyKX,  PyTorch Tensor
+tags: PyKX, PyTorch Tensor, KDB-X Python 
 ---
 # PyTorch Conversions
 
-_This page provides an overview of PyTorch Conversions, a beta feature in PyKX._
+_This page provides an overview of PyTorch Conversions, a beta feature in KDB-X Python (`pykx`)._
 
 !!! Warning
 
@@ -17,7 +17,7 @@ _This page provides an overview of PyTorch Conversions, a beta feature in PyKX._
 
 Commonly used in the development of complex machine learning algorithms, PyTorch is a machine learning library based on the Torch library and is used in applications such as computer vision and natural language processing. Originally developed by Meta AI it is now widely used in the open-source community for algorithm development.
 
-This beta feature allows PyKX users to convert PyKX Vector/List objects into their PyTorch [Tensor](https://pytorch.org/docs/stable/tensors.html) equivalents.
+This beta feature allows KDB-X Python users to convert `pykx` Vector/List objects into their PyTorch [Tensor](https://pytorch.org/docs/stable/tensors.html) equivalents.
 
 ## Requirements and limitations
 
@@ -32,13 +32,13 @@ pip install pykx[torch]
 
 This walkthrough demonstrates the following steps:
 
-1. Convert a PyKX Vector object to a Tensor object.
-1. Convert a PyKX List object to a Tensor object.
-1. Convert a Tensor object to a PyKX equivalent object.
+1. Convert a `pykx` Vector object to a Tensor object.
+1. Convert a `pykx` List object to a Tensor object.
+1. Convert a Tensor object to a `pykx` equivalent object.
 
 ### Vector to Tensor
 
-Use the `*.pt()` methods to convert PyKX numeric data representations to Tensor objects. In the example below we convert PyKX numeric types to their PyTorch Tensor equivalents:
+Use the `*.pt()` methods to convert `pykx` numeric data representations to Tensor objects. In the example below we convert `pykx` numeric types to their PyTorch Tensor equivalents:
 
 ```python
 >>> import os
@@ -62,7 +62,7 @@ In particular note in the above that the data types are converted to their Tenso
 
 ### List to Tensor
 
-To convert PyKX List objects to Tensors, two criteria must be met:
+To convert `pykx` List objects to Tensors, two criteria must be met:
 
 1. The `#!python pykx.List` contains only data of a single type.
 1. The `#!python pykx.List` is an N-Dimensional regularly shaped/rectangular structure.

@@ -3,7 +3,7 @@ title: Publish Data
 description: How to publish data to your streaming infrastructure
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, streaming, publishing
+tags: KDB-X Python, q, streaming, publishing
 ---
 
 # Publish Data
@@ -14,7 +14,7 @@ _This page outlines how you can publish new data to your streaming infrastructur
 
          The functionality outlined below provides the necessary tools for users to build complex streaming infrastructures. The generation and management of such workflows rest solely with the users. KX supports only individual elements used to create these workflows, not the end-to-end applications.
 
-Publishing data to a PyKX streaming workflow is completed by publishing messages to a [tickerplant process](basic.md#tickerplant) using [Interprocess Communication (IPC)](../ipc.md). The sections below show how to achieve this with Python and q in a [basic streaming infrastructure](basic.md). Commonly in KX literature and whitepapers, processes which publish data to a tickerplant are described as Feedhandlers.
+Publishing data to a KDB-X Python streaming workflow is completed by publishing messages to a [tickerplant process](basic.md#tickerplant) using [Interprocess Communication (IPC)](../ipc.md). The sections below show how to achieve this with Python and q in a [basic streaming infrastructure](basic.md). Commonly in KX literature and whitepapers, processes which publish data to a tickerplant are described as Feedhandlers.
 
 Any messages that is published to a tickerplant is a triplet list with the following structure `#!python [Function;Table;Data]`, where:
 
@@ -91,10 +91,10 @@ In the above code we open a connection to the Tickerplant process on port 5010. 
 
 ### Other languages
 
-It's possible to publish data to PyKX streaming infrastructures using other languages, such as C and Java:
+It's possible to publish data to KDB-X Python streaming infrastructures using other languages, such as C and Java:
 
-- [Publishing to kdb+ using Java](https://www.timestored.com/kdb-guides/kdb-java-api#feedhandling)
-- [Publishing to kdb+ tickerplant using C](https://code.kx.com/q/wp/capi/#publishing-to-a-kdb-tickerplant)
+- [Publishing to KDB-X using Java](https://www.timestored.com/kdb-guides/kdb-java-api#feedhandling)
+- [Publishing to KDB-X tickerplant using C](https://code.kx.com/q/wp/capi/#publishing-to-a-kdb-tickerplant)
 
 ## Continuous streaming example
 

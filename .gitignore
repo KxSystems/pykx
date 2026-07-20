@@ -65,19 +65,6 @@ __pycache__/
 !e.*
 !libkurl.*
 !libobjstor.*
-**/4-1-libs/*.q
-**/4-1-libs/*.q_
-**/4-1-libs/*.k_
-**/4-1-libs/*.k
-!**/4-1-libs/q.k
-**/4-1-libs/**/libe.so
-**/4-1-libs/**/e.*
-
-#ToDo revert in KXI-44621
-src/pykx/lib/4-1-libs/l64/kxreaper
-src/pykx/lib/4-1-libs/l64/libkurl.so
-src/pykx/lib/4-1-libs/l64/libobjstor.so
-src/pykx/lib/4-1-libs/l64/pg
 
 # Distribution / packaging
 .Python
@@ -252,3 +239,5 @@ symsEnumsSplay/**
 
 src/pykx/pykx_init.q_
 qcumber_results.xml
+
+src/pykx/lib/4-1-libs

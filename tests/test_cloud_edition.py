@@ -8,7 +8,7 @@ import pytest
 
 if platform.system() != 'Linux' or platform.machine() == 'aarch64':
     pytest.skip(
-        'PyKX Cloud Edition functionality only supports'
+        'KDB-X Cloud Edition functionality only supports'
         ' x86_64 Linux',
         allow_module_level=True
     )
@@ -268,6 +268,7 @@ def test_objstor_aws_read1(q, kx):
 )
 def test_qlog_fd_stdout_endpoint(q):
     """Test STDOUT endpoint creation."""
+    q('\\l qlog.q_')
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')
     q('.fd.cache:()')
 
@@ -284,6 +285,7 @@ def test_qlog_fd_stdout_endpoint(q):
 )
 def test_qlog_fd_stderr_setup(q):
     """Tests creation of stderr endpoint."""
+    q('\\l qlog.q_')
     q('id:.com_kx_log.lopen[`:fd://stderr]')
     q('data:.com_kx_log.i.endpoint[id; `data]')
     assert q('-2i~data`handle')
@@ -296,6 +298,7 @@ def test_qlog_fd_stderr_setup(q):
 )
 def test_qlog_fd_stdout_log_string(q):
     """Test default string logging."""
+    q('\\l qlog.q_')
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')
     q('.fd.cache:()')
 
@@ -318,6 +321,7 @@ def test_qlog_fd_stdout_log_string(q):
 )
 def test_qlog_fd_stdout_custom_log(q):
     """Tests custom string logging."""
+    q('\\l qlog.q_')
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')
     q('.fd.cache:()')
 
@@ -338,6 +342,7 @@ def test_qlog_fd_stdout_custom_log(q):
 )
 def test_qlog_fd_stdout_dict_log(q):
     """Tests dictionary message logging."""
+    q('\\l qlog.q_')
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')
     q('.fd.cache:()')
 
@@ -356,6 +361,7 @@ def test_qlog_fd_stdout_dict_log(q):
 )
 def test_qlog_fd_file_publish(q):
     """Tests logging message to file."""
+    q('\\l qlog.q_')
     q('.com_kx_log.fd.i.write:{.fd.cache,:enlist(x;y)}')
     q('.fd.cache:()')
 

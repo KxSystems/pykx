@@ -112,7 +112,7 @@ from . import wrappers as k
 from ._pyarrow import pyarrow as pa
 from .cast import *
 from . import config
-from .config import beta_features, find_core_lib, k_allocator, licensed, pandas_2, system
+from .config import beta_features, find_core_lib, k_allocator, licensed, pandas_gt1, system
 from .constants import NULL_INT16, NULL_INT32, NULL_INT64
 from .constants import INF_INT16, INF_INT32, INF_INT64, INF_NEG_INT16, INF_NEG_INT32, INF_NEG_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
@@ -666,8 +666,8 @@ def from_int(x: Any,
         range is the null value for that type, one larger than that is the negative infinity for
         that type, and the upper bound of the range is positive infinity for that type. An
         exception will not be raised if `int` objects with these values are provided. Refer to
-        the nulls and infinities PyKX documentation for more information about q nulls and
-        infinities, and how to handle them with PyKX.
+        the nulls and infinities documentation for more information about q nulls and
+        infinities, and how to handle them with KDB-X Python.
 
     Returns:
         An instance of a `pykx.IntegralNumericAtom` subclass.
@@ -1207,7 +1207,7 @@ def from_numpy_ndarray(x: np.ndarray,
 ) -> k.Vector:
     """Converts a `numpy.ndarray` into a `pykx.Vector`.
 
-    Warning: Data is always copied when converting from Numpy to q if not using the PyKX Allocator.
+    Warning: Data is always copied when converting from Numpy to q if not using the KDB-X Python Allocator.
         While many conversions from q to Python types can be performed without incurring a copy,
         the reverse is not true. As mentioned in
         [the q C API documentation](https://code.kx.com/q/interfaces/capiref/#k-object), vectors in
@@ -1215,9 +1215,8 @@ def from_numpy_ndarray(x: np.ndarray,
         an array in Python's memory cannot be shared by q, since q would have to store the metadata
         in a memory location it has no ownership of.
 
-    If the `pykx.k_allocator` is enabled with the environment variable `PYKX_ALLOCATOR` or if the
-    `QARGS` environment variable contains `--pykxalloc`, then 0 copy numpy array conversions
-    will be enabled for certain `numpy.dtypes`s. This will allow for 0 copy conversions from `numpy`
+    0 copy numpy array conversions are be enabled for certain `numpy.dtypes`s.
+    This will allow for 0 copy conversions from `numpy`
     arrays of a corresponding `numpy.dtype` to `pykx.NumericVector`s, and `pykx.TimespanVector`s.
     You can find the corresponding `numpy.dtype` of a `pykx.Vector` type by checking the
     `pykx.Vector._np_dtype` property of the type you want to create.
@@ -1501,6 +1500,8 @@ def from_numpy_ndarray(x: np.ndarray,
 
             mask = None
             if handle_nulls:
+                if not x.flags.writeable:
+                    x = x.copy()
                 mask = (x != NULL_INT64)
                 x[~mask] = NULL_INT32
 
@@ -1579,10 +1580,14 @@ def _to_numpy_or_categorical(x, col_name=None, df=None):
         if isinstance(x.values, pd.Categorical):
             return from_pandas_categorical(
                 x.values,
-                name=col_name if pandas_2 and col_name is not None else x.name
+                name=col_name if pandas_gt1 and col_name is not None else x.name
             )
         elif isinstance(x.values, pd.core.arrays.ExtensionArray):
-            if x.dtype.kind != 'f' and hasattr(x, 'isnull') and x.isnull().values.any():
+            attrnull = hasattr(x, 'isnull')
+            hasnull = x.isnull().values.any() if attrnull else False
+            if isinstance(x.dtype, pd.StringDtype) and attrnull and hasnull:
+                return np.array(x.to_numpy(copy=False, na_value=None))
+            elif x.dtype.kind != 'f' and attrnull and hasnull:
                 if not x.dtype.kind in ['i', 'M', 'm']:
                     raise TypeError(
                         'Non-integral masked array conversions to q are not yet implemented'
@@ -1596,7 +1601,7 @@ def _to_numpy_or_categorical(x, col_name=None, df=None):
                 if k_allocator:
                     return np.array(x.to_numpy(copy=False, na_value=_size_to_nan[x.dtype.itemsize], dtype=dtype))
                 return x.to_numpy(copy=False, na_value=_size_to_nan[x.dtype.itemsize], dtype=dtype)
-            elif x.dtype.kind == 'f' and hasattr(x, 'isnull') and x.isnull().values.any():
+            elif x.dtype.kind == 'f' and attrnull and hasnull:
                 float_class = _float_size_to_class[x.dtype.itemsize]
                 if k_allocator:
                     return np.array(x.to_numpy(copy=False, dtype=float_class))
@@ -1660,7 +1665,7 @@ def from_pandas_dataframe(x: pd.DataFrame,
     """
     cdef core.K kx
 
-    if not x.columns.values.dtype == np.object_:
+    if not isinstance(x.columns.values.dtype, (np.dtypes.ObjectDType, pd.StringDtype)):
         col_names = ['x']
         cols_length =  len(x.columns)-1
         for i in range(cols_length):
@@ -1747,7 +1752,7 @@ def from_pandas_series(x: pd.Series,
         return arr
 
 
-if not pandas_2:
+if not pandas_gt1:
     _supported_pandas_index_types_via_numpy = (
         pd.core.indexes.base.Index,
         pd.core.indexes.numeric.NumericIndex,
@@ -1948,7 +1953,7 @@ def from_arrow(x: Union['pa.Array', 'pa.Table'],
                strings_as_char: bool = False,
                no_allocator: bool = False,
 ) -> Union[k.Vector, k.Table]:
-    """Converts PyArrow arrays/tables into PyKX vectors/tables, respectively.
+    """Converts PyArrow arrays/tables into KDB-X Python vectors/tables, respectively.
 
     Conversions from PyArrow to q are performed by converting the PyArrow array/table to pandas
     first, which avoids copying data when possible, then converting the resulting Pandas
@@ -1996,7 +2001,7 @@ def from_arrow_py(x,
                strings_as_char: bool = False,
                   no_allocator: bool = False,
 ) -> Union[k.Vector, k.Table]:
-    """Converts PyArrow scalars into PyKX objects.
+    """Converts PyArrow scalars into KDB-X Python objects.
 
     Conversions from PyArrow to q are performed by converting the PyArrow object to python
     first.
@@ -2548,7 +2553,7 @@ def from_ellipsis(x: Ellipsis,
         If you aren't sure you know what you are doing, then you probably don't need to use a
         projection null.
 
-    PyKX uses Python's `...` singleton to represent the q projection null, which is similar to
+    KDB-X Python uses Python's `...` singleton to represent the q projection null, which is similar to
     generic null (see [`from_none`][pykx.toq.from_none]), but indicates to q not just that there
     is missing data, but that it should be filled in with the next q object that is applied onto
     it.
@@ -2557,7 +2562,7 @@ def from_ellipsis(x: Ellipsis,
     the q function projection `{x+y}[;7]` has an argument list of 2 q objects: a projection null,
     followed by a long atom with a value of 7.
 
-    Because PyKX treats `...` as projection null, q projections can be created in Python like so:
+    Because KDB-X Python treats `...` as projection null, q projections can be created in Python like so:
 
     ```python
     >>> f = pykx.K(lambda x, y: x + y)
@@ -2669,7 +2674,7 @@ def from_callable(x: Callable,
     `*args` parameters and a `**kwargs` each count as a single parameter towards this limit.
 
     Note: Inspection of the callable must be possible.
-        In order to determine how many parameters a provided callable has, PyKX calls
+        In order to determine how many parameters a provided callable has, KDB-X Python calls
         `inspect.signature` on it. Some callables may not be introspectable in certain
         implementations of Python. For example, in CPython, some built-in functions defined in C
         provide no metadata about their arguments.
@@ -2933,7 +2938,7 @@ _converter_from_python_type = {
 }
 
 
-if not pandas_2:
+if not pandas_gt1:
     _converter_from_python_type[pd.core.indexes.numeric.Int64Index] = from_pandas_index
     _converter_from_python_type[pd.core.indexes.numeric.Float64Index] = from_pandas_index
 

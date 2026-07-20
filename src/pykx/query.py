@@ -1,4 +1,4 @@
-"""_This page documents query interfaces for querying q tables using PyKX._"""
+"""_This page documents query interfaces for querying q tables using KDB-X Python._"""
 
 from abc import ABCMeta
 import asyncio
@@ -8,6 +8,7 @@ from . import Q
 from . import wrappers as k
 from .ipc import QFuture
 from .exceptions import PyKXException, QError
+from .config import licensed
 
 __all__ = [
     'Insert',
@@ -75,7 +76,7 @@ class QSQL:
                 See [here](https://code.kx.com/q/basics/qsql/#result-and-side-effects).
 
         Returns:
-            A PyKX Table or KeyedTable object resulting from the executed select query
+            A `pykx` Table or KeyedTable object resulting from the executed select query
 
         Examples:
 
@@ -138,7 +139,7 @@ class QSQL:
                 values are aggregation rules used when q functionally applies group-by.
 
         Returns:
-            A PyKX Vector or Dictionary object resulting from the executed exec query
+            A `pykx` Vector or Dictionary object resulting from the executed exec query
 
         Examples:
 
@@ -224,7 +225,7 @@ class QSQL:
                 https://code.kx.com/q/basics/qsql/#result-and-side-effects.
 
         Returns:
-            The updated PyKX Table or KeyedTable object resulting from the executed update query
+            The updated `pykx` Table or KeyedTable object resulting from the executed update query
 
         Examples:
 
@@ -300,7 +301,7 @@ class QSQL:
                 https://code.kx.com/q/basics/qsql/#result-and-side-effects.
 
         Returns:
-            The updated PyKX Table or KeyedTable object resulting from the executed delete query
+            The updated `pykx` Table or KeyedTable object resulting from the executed delete query
 
         Examples:
 
@@ -349,9 +350,9 @@ class QSQL:
         if not isinstance(table, str):
             table = k.K(table)
 
-        if isinstance(table, (k.SplayedTable, k.PartitionedTable)) and inplace:
+        if isinstance(table, (k.SplayedTable, k.PartitionedTable, k.VirtualTable)) and inplace:
             raise QError("Application of 'inplace' updates not "
-                         "supported for splayed/partitioned tables")
+                         "supported for splayed/partitioned/virtual tables")
         if isinstance(columns, k.Column) and columns._renamed:
             columns=k.QueryPhrase(columns)
         if isinstance(by, k.Column) and by._renamed:
@@ -362,7 +363,7 @@ class QSQL:
         get = ''
         query_char = '!' if query_type in ('delete', 'update') else '?'
         if isinstance(table, k.K):
-            if not isinstance(table, (k.Table, k.KeyedTable)):
+            if not isinstance(table, (k.Table, k.KeyedTable, k.VirtualTable)):
                 raise TypeError("'table' object provided was not a K tabular object or an "
                                 "object which could be converted to an appropriate "
                                 "representation")
@@ -523,6 +524,32 @@ class SQL:
 
     def __init__(self, q: Q):
         self._q = q
+        self.loaded = None
+        if '_connection_info' in q.__dict__:
+            if not q._connection_info['no_ctx'] and 'event_loop' not in q._connection_info.keys():
+                try:
+                    self.loaded = self._q('@[{2<count .s};(::);{0b}]').py()
+                except BaseException:
+                    pass
+        elif licensed:
+            self.loaded = self._q('@[{2<count .s};(::);{0b}]').py()
+
+    def init(self):
+        """Attempts to load the SQL interface if not already loaded.
+
+        Examples:
+
+        ```Python
+        >>> kx.q.sql.loaded
+        False
+        >>> kx.q.sql.init()
+        >>> kx.q.sql.loaded
+        True
+        ```
+        """
+        if not self.loaded:
+            self._q('s) ')
+            self.loaded = True
 
     def __call__(self, query: str, *args: Any) -> k.Table:
         """Compile and run a SQL statement using string interpolation.
@@ -592,6 +619,7 @@ class SQL:
         '))
         ```
         """
+        self.init()
         return self._q('.s.sp', k.CharVector(query), args)
 
     def prepare(self, query: str, *args: Any) -> k.List:
@@ -652,6 +680,7 @@ class SQL:
         _args = []
         for a in args:
             _args.append(a._prototype() if (isinstance(a, type) or isinstance(a, ABCMeta)) else a)
+        self.init()
         return self._q('.s.sq', k.CharVector(query), _args)
 
     def execute(self, query: k.List, *args: Any) -> k.K:
@@ -712,6 +741,7 @@ class SQL:
         '))
         ```
         """
+        self.init()
         return self._q('.s.sx', query, args)
 
     def get_input_types(self, prepared_query: k.List) -> List[str]:

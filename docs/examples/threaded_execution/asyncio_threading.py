@@ -1,7 +1,6 @@
 import os
 import asyncio
 os.environ['PYKX_THREADING'] = '1'
-os.environ['PYKX_BETA_FEATURES'] = '1'
 
 import pykx as kx
 

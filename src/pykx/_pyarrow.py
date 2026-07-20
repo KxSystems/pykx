@@ -1,11 +1,11 @@
-"""A single point in PyKX through which PyArrow can be imported safely.
+"""A single point in KDB-X Python through which PyArrow can be imported safely.
 
 PyArrow can appear to install without error, but then fail to import with a Python exception, or a
 segmentation fault.
 
 Because it's very hard to know when a segfault may occur when importing PyArrow, we test it out
 first by importing it in a subprocess. If that works, then we import it here, and provide it for
-the rest of PyKX to use under the name `pyarrow`. Otherwise `pyarrow` is set to `None`.
+the rest of KDB-X Python to use under the name `pyarrow`. Otherwise `pyarrow` is set to `None`.
 """
 import os
 

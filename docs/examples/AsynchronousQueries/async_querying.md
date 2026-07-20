@@ -5,9 +5,9 @@ author: KX Systems, Inc.
 tags: PyKX, q, asyncio, IPC, asynchronous
 ---
 
-# PyKX Calling into multiple q servers without blocking
+# KDB-X Python Calling into multiple q servers without blocking
 
-_This example provides a quick start for setting up a Python process using `PyKX` to call into 
+_This example provides a quick start for setting up a Python process using KDB-X Python to call into 
 multiple q servers without blocking each other._
 
 To follow along, feel free to download this <a href="./archive.zip" download>zip archive</a> that 
@@ -16,7 +16,7 @@ contains a copy of the python scripts and this writeup.
 ## Quickstart
 
 This example creates a python process that sends 2 queries meant to simulate long running queries to 
-two separate q servers to show how to query q servers without blocking using `PyKX`.
+two separate q servers to show how to query q servers without blocking.
 
 ### Run the Example
 

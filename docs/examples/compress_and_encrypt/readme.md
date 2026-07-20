@@ -1,14 +1,14 @@
 ---
-title:  PyKX Compress and encrypt
+title:  KDB-X Python Compress and encrypt
 description: Compress and encrypt Examples
 date: October 2024
 author: KX Systems, Inc.,
-tags: compression, encryption, PyKX
+tags: compression, encryption, PyKX, KDB-X Python
 ---
 
 # Compress and encrypt example
 
-_This example shows how to use various `#!python q` compression and encryption algorithms on a `#!python PyKX` table._
+_This example shows how to use various `#!python q` compression and encryption algorithms on a `#!python pykx` table._
 
 To follow along, download this <a href="./archive.zip" download>zip archive</a> that contains a copy of the python script and this writeup.
 

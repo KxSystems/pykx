@@ -1,16 +1,16 @@
 ---
-title: PyKX Performance 
-description: How to optimize PyKX 
+title: KDB-X Python Performance 
+description: How to optimize KDB-X Python 
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, performance, parallelization, secondary q threads, multithreading, peach
+tags: KDB-X Python, q, performance, parallelization, secondary q threads, multithreading, peach
 ---
 
 # Performance tips
 
-_This page includes PyKX performance optimization tips, including insights on parallelization, secondary q threads, multithreading, and peach._
+_This page includes KDB-X Python performance optimization tips, including insights on parallelization, secondary q threads, multithreading, and peach._
 
-To get the best performance out of PyKX, follow these guidelines. Note that this page focuses on efficiently interfacing between Python and q, rather than optimizing Python or q individually.
+To get the best performance out of KDB-X Python, follow these guidelines. Note that this page focuses on efficiently interfacing between Python and q, rather than optimizing Python or q individually.
 
 ## General guidelines
 
@@ -37,11 +37,11 @@ To get the best performance out of PyKX, follow these guidelines. Note that this
 ## Parallelization
 
 Parallelization involves distributing computational tasks across multiple threads to improve performance and efficiency. 
-Use the following methods if you want to allow PyKX to handle large-scale data processing tasks efficiently by utilizing the available computational resources: secondary q threads, multithreading, or `#!python peach`.
+Use the following methods if you want to allow KDB-X Python to handle large-scale data processing tasks efficiently by utilizing the available computational resources: secondary q threads, multithreading, or `#!python peach`.
 
 ### Secondary q threads
 
-PyKX starts embedded q with as many secondary q threads enabled as are available. q automatically uses these threads to parallelize some computations as it deems appropriate. You can use the `#!python QARGS` environment variable to provide command-line arguments and other startup flags to q/PyKX, including the number of secondary threads:
+KDB-X Python starts embedded q with as many secondary q threads enabled as are available. q automatically uses these threads to parallelize some computations as it deems appropriate. You can use the `#!python QARGS` environment variable to provide command-line arguments and other startup flags to q/KDB-X Python, including the number of secondary threads:
 
 ```sh
 QARGS='-s 0' python # disable secondary threads
@@ -51,14 +51,14 @@ QARGS='-s 0' python # disable secondary threads
 QARGS='-s 12' python # use 12 secondary threads by default
 ```
 
-- The value set using `#!python -s` sets both the default and the maximum available to the process; you can't change it after importing PyKX.
+- The value set using `#!python -s` sets both the default and the maximum available to the process; you can't change it after importing KDB-X Python.
 - `#!python pykx.q.system.max_num_threads` shows the maximum number of threads and cannot be changed.
 - `#!python pykx.q.system.num_threads` shows the current number of threads in use. It starts at the maximum value but can be set to a lower number.
 
 
 ### Multithreading
 
-By default, PyKX doesn’t support calling q from multiple threads in a Python process due to the Global Interpreter Lock [GIL](https://wiki.python.org/moin/GlobalInterpreterLock). Enabling the `#!python PYKX_RELEASE_GIL` environment variable drops the GIL when calling q, making it unsafe to call q from multiple threads. To ensure thread safety, you can also enable the `#!python PYKX_Q_LOCK` environment variable, which adds a re-entrant lock around q. Learn [how to enable multithreaded execution](threading.md) and set up a Python process using PyKX to [call into EmbeddedQ from multiple threads](../../examples/threaded_execution/threading.md)
+By default, KDB-X Python doesn’t support calling q from multiple threads in a Python process due to the Global Interpreter Lock [GIL](https://wiki.python.org/moin/GlobalInterpreterLock). Enabling the `#!python PYKX_RELEASE_GIL` environment variable drops the GIL when calling q, making it unsafe to call q from multiple threads. To ensure thread safety, you can also enable the `#!python PYKX_Q_LOCK` environment variable, which adds a re-entrant lock around q. Learn [how to enable multithreaded execution](threading.md) and set up a Python process using KDB-X Python to [call into EmbeddedQ from multiple threads](../../examples/threaded_execution/threading.md)
 
 ### Peach
 

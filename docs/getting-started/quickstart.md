@@ -1,30 +1,30 @@
 ---
-title:  Quickstart for PyKX
-description: Quickstart guide for setting up PyKX
-date: June 2024
+title:  Quickstart for KDB-X Python
+description: Quickstart guide for setting up KDB-X Python
+last_updated: October 2025
 author: KX Systems, Inc.,
-tags: PyKX, quickstart, import PyKX, use PyKX objects
+tags: KDB-X Python, quickstart, import KDB-X Python, use  pykx objects
 ---
 
 # Quickstart
 
-_This quickstart guide provides first time users with essential instructions for using the PyKX library._
+_This quickstart guide provides first time users with essential instructions for using the KDB-X Python library._
 
 ## Prerequisites
 
 Before you start, make sure to:
 
-- [Install the PyKX library](installing.md#1-install-pykx).
-- [Have a kdb Insights license](installing.md#2-install-a-kdb-insights-license).
+- [Install the KDB-X Python library](installing.md#1-install-pykx).
+- [Have a license](installing.md#2-install-a-license).
 
-## 1. Import PyKX
+## 1. Import KDB-X Python
 
-To access PyKX, import it within your Python code using the following syntax:
+To access KDB-X Python, import it within your Python code using the following syntax:
 
 ```python
 >>> import pykx as kx
 ```
-!!! Info "The use of the shortened name `#!python kx` is optional and provides a terse convention for interacting with methods and objects from the PyKX library."
+!!! Info "The use of the shortened name `#!python kx` is optional and provides a terse convention for interacting with methods and objects from the KDB-X Python library."
 
 Many examples in this guide make use of NumPy so we import this:
 
@@ -32,13 +32,13 @@ Many examples in this guide make use of NumPy so we import this:
 >>> import numpy as np
 ```
 
-## 2. Generate PyKX objects
+## 2. Generate `pykx` objects
 
-You can generate PyKX objects in three ways. Click on the tabs below to follow the instructions:
+You can generate `pykx` objects in three ways. Click on the tabs below to follow the instructions:
 
-=== "Use PyKX functions"
+=== "Use KDB-X Python functions"
 
-    Generate PyKX objects using `#!python pykx` helper functions:
+    Generate `pykx` objects using `#!python pykx` helper functions:
 
     ```python
     >>> kx.random.random([3, 4], 10.0)
@@ -62,7 +62,7 @@ You can generate PyKX objects in three ways. Click on the tabs below to follow t
 
 === "From Python data types"
 
-    Generate PyKX objects from Python, NumPy, Pandas and PyArrow objects by using the `#!python kx.toq` method:
+    Generate `pykx` objects from Python, NumPy, Pandas and PyArrow objects by using the `#!python kx.toq` method:
 
     ```python
     >>> pylist = [10, 20, 30]
@@ -107,7 +107,7 @@ You can generate PyKX objects in three ways. Click on the tabs below to follow t
 
 === "Execute q code"
 
-    Generate PyKX objects using q by calling `#!python kx.q`:
+    Generate `pykx` objects using q by calling `#!python kx.q`:
 
     ```python
     >>> kx.q('10 20 30')
@@ -125,11 +125,18 @@ You can generate PyKX objects in three ways. Click on the tabs below to follow t
     '))
     ```
 
-## 3. Interact with PyKX objects
+## 3. Interact with `pykx` objects
 
-You can interact with PyKX objects in a variety of ways, for example, through [indexing using Pythonic syntax](../user-guide/fundamentals/indexing.md), passing [PyKX objects to q/NumPy](../user-guide/fundamentals/creating.md#2-convert-pykx-objects-to-pythonic-types) functions, [querying via Python/SQL/qSQL](..//user-guide/fundamentals/query/index.md) syntax or by [using the q functionality](../user-guide/advanced/context_interface.md) via the context interface. Each way is described in more depth under the the User guide > Fundamentals section. For now, we recommend a few examples:
+You can interact with KDB-X Python objects in a variety of ways, for example:
 
-* Create a PyKX list and interact with it using indexing and slices:
+- through [indexing using Pythonic syntax](../user-guide/fundamentals/indexing.md)
+- passing [`pykx` objects to q/NumPy](../user-guide/fundamentals/creating.md#converting-pykx-objects-to-pythonic-types) functions
+- [querying via Python/SQL/qSQL](..//user-guide/fundamentals/query/index.md) syntax
+- by [using the q functionality](../user-guide/advanced/context_interface.md) via the context interface. 
+
+Each way is described in more depth under the **How to** section. For now, we recommend a few examples:
+
+* Create a KDB-X Python list and interact with it using indexing and slices:
 
     ```python
     >>> qarray = kx.random.random(10, 1.0)
@@ -141,7 +148,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
     pykx.FloatVector(pykx.q('0.08123546 0.9367503 0.2782122'))
     ```
 
-* Assign objects to PyKX lists:
+* Assign objects to KDB-X Python lists:
 
     ```python
     >>> qarray = kx.random.random(3, 10.0, seed=10)
@@ -151,7 +158,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
     pykx.FloatVector(pykx.q('0.891041 0.1 3.621949'))
     ```
 
-* Create a PyKX table and manipulate using Pythonic syntax:
+* Create a KDB-X Python table and manipulate using Pythonic syntax:
 
     ```python
     >>> N = 100
@@ -205,7 +212,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
     '))
     ```
 
-* Pass a PyKX object to a q function:
+* Pass a KDB-X Python object to a q function:
 
     ```python
     >>> qfunction = kx.q('{x+til 10}')
@@ -213,7 +220,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
     pykx.FloatVector(pykx.q('0.3992327 1.726329 2.488636 3.653597 4.028107 5.444905 6.542917 7.00628 8.152..'))
     ```
 
-* Apply a Python function on a PyKX Vector:
+* Apply a Python function on a KDB-X Python vector:
 
     ```python
     >>> qvec = kx.random.random(10, 10, seed=42)
@@ -223,7 +230,7 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
     pykx.LongVector(pykx.q('5 8 3 3 10 5 3 1 9 1'))
     ```
 
-* Pass PyKX arrays of objects to NumPy functions:
+* Pass `pykx` arrays of objects to NumPy functions:
 
     ```python
     >>> qarray1 = kx.random.random(10, 1.0)
@@ -323,9 +330,9 @@ You can interact with PyKX objects in a variety of ways, for example, through [i
             pykx.LongAtom(q('5'))
     ```
 
-## 4. Convert PyKX objects to Python types
+## 4. Convert `pykx` objects to Python types
 
-To convert the objects generated via the PyKX library to the corresponding `#!python Python`, `#!python NumPy`, `#!python Pandas`, and `#!python PyArrow` types, use `#!python py`, `#!python np`, `#!python pd`, and `#!python pa` methods. Click on the tabs below to go through the examples:
+To convert the objects generated via the KDB-X Python library to the corresponding `#!python Python`, `#!python NumPy`, `#!python Pandas`, and `#!python PyArrow` types, use `#!python py`, `#!python np`, `#!python pd`, and `#!python pa` methods. Click on the tabs below to go through the examples:
 
 === "Convert to Python"
 
@@ -395,7 +402,7 @@ To convert the objects generated via the PyKX library to the corresponding `#!py
     ```
 
     If using `#!python pandas>=2.0` it is possible to also use the `#!python as_arrow` keyword argument to convert to
-    pandas types using pyarrow as the backend instead of the default numpy backed pandas objects.
+    pandas types using pyarrow as the backend instead of the default NumPy-backed Pandas objects.
 
     ```python
     >>> qvec = kx.toq(np.random.randint(5, size=10))

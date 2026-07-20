@@ -1,10 +1,9 @@
 """
-_This page documents the API for managing kdb+ databases using PyKX._
+_This page documents the API for managing kdb+ databases using KDB-X Python._
 """
 
 from .exceptions import DBError, QError
 from . import wrappers as k
-from .config import pykx_4_1
 from .compress_encrypt import Compress, Encrypt
 
 import os
@@ -127,11 +126,8 @@ class DB(_TABLES):
         Parameters:
             path: The location at which your database is/will be located.
             change_dir: Should the working directory be changed to the location of the
-                loaded database, for q 4.0 this is the only supported behavior, please
-                set `PYKX_4_1_ENABLED` to allow use if this functionality.
-            load_scripts: Should any q scripts find in the database directory be loaded,
-                for q 4.0 this is the only supported behavior, please set
-                `PYKX_4_1_ENABLED` to allow use if this functionality.
+                loaded database.
+            load_scripts: Should any q scripts find in the database directory be loaded.
 
         Returns:
             A database class which can be used to interact with a partitioned database.
@@ -165,11 +161,6 @@ class DB(_TABLES):
         """
         self._change_dir = change_dir
         self._load_scripts = load_scripts
-        if not pykx_4_1:
-            if not change_dir:
-                raise QError("'change_dir' behavior only supported with PYKX_4_1_ENABLED")
-            if not load_scripts:
-                raise QError("'load_scripts' behavior only supported with PYKX_4_1_ENABLED")
         if path is not None:
             try:
                 self.load(path, change_dir=self._change_dir, load_scripts=self._load_scripts)
@@ -383,11 +374,8 @@ class DB(_TABLES):
         Parameters:
             path: The file system path at which your database is located
             change_dir: Should the working directory be changed to the location of the
-                loaded database, for q 4.0 this is the only supported behavior, please
-                set `PYKX_4_1_ENABLED` to allow use if this functionality.
-            load_scripts: Should any q scripts find in the database directory be loaded,
-                for q 4.0 this is the only supported behavior, please set
-                `PYKX_4_1_ENABLED` to allow use if this functionality.
+                loaded database, for q 4.0 this is the only supported behavior.
+            load_scripts: Should any q scripts find in the database directory be loaded.
             overwrite: Should loading of the database overwrite any currently
                 loaded databases
             encrypt: The encryption key object to be loaded prior to database load
@@ -479,38 +467,20 @@ class DB(_TABLES):
                 raise ValueError('Supplied encrypt object not an instance of pykx.Encrypt')
             if not encrypt.loaded:
                 encrypt.load_key()
-        if pykx_4_1:
-            q('''
-              {[path;cd;ld]
-                .[.Q.lo;
-                  (`$1_string path;cd;ld);
-                  {x:$[x like "*.DS_Store";
-                       "Invalid MacOS metadata file '.DS_Store' stored in Database";
-                       x];
-                   '"Failed to load Database with error: ",x
-                  }
-                  ]
+
+        q('''
+            {[path;cd;ld]
+            .[.Q.lo;
+                (`$1_string path;cd;ld);
+                {x:$[x like "*.DS_Store";
+                    "Invalid MacOS metadata file '.DS_Store' stored in Database";
+                    x];
+                '"Failed to load Database with error: ",x
                 }
-              ''', load_path, change_dir, load_scripts)
-        else:
-            if not change_dir:
-                raise QError("'change_dir' behavior only supported with PYKX_4_1_ENABLED")
-            if not load_scripts:
-                raise QError("'load_scripts' behavior only supported with PYKX_4_1_ENABLED")
-            db_path = load_path.parent
-            db_name = os.path.basename(load_path)
-            q('''
-              {[dbpath;dbname]
-                .[.pykx.util.loadfile;
-                  (1_string dbpath;string dbname);
-                  {x:$[x like "*.DS_Store";
-                       "Invalid MacOS metadata file '.DS_Store' stored in Database";
-                       x];
-                   '"Failed to load Database with error: ",x
-                  }
-                  ]
-                }
-              ''', db_path, db_name)
+                ]
+            }
+            ''', load_path, change_dir, load_scripts)
+
         self.path = load_path
         self.loaded = True
         self.tables = q('{x where {$[-1h=type t:.Q.qp tab:get x;$[t;x in .Q.pt;in[`$last vs["/";-1_string value flip tab]; key y]];0b]}[;y]each x}', q.tables(), load_path).py() # noqa: E501
@@ -892,7 +862,7 @@ class DB(_TABLES):
         Parameters:
             table: The name of the table within which a column is to be converted
             column_name: Name of the column which is to be converted
-            new_type: PyKX type to which a column is to be converted
+            new_type: KDB-X Python type to which a column is to be converted
 
         Returns:
             A `#!python None` object on successfully updating the type of the column

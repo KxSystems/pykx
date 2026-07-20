@@ -1,14 +1,14 @@
 ---
 title: Multithreaded Execution Example
-description: Example of PyKX Calling into q from multiple threads
+description: Example of KDB-X Python Calling into q from multiple threads
 date: July 2024
 author: KX Systems, Inc.,
 tags: PyKX, q, threading, python, asyncio, multithreaded
 ---
 
-# PyKX Calling into q from multiple threads
+# KDB-X Python Calling into q from multiple threads
 
-_This example provides a quick start for setting up a Python process using `#!python PyKX` to call into `#!python EmbeddedQ` from multiple threads._
+_This example provides a quick start for setting up a Python process using `#!python KDB-X Python` to call into `#!python EmbeddedQ` from multiple threads._
 
 To follow along, feel free to download this <a href="./archive.zip" download>zip archive</a> that contains a copy of the python scripts and this writeup.
 

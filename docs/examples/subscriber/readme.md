@@ -1,21 +1,21 @@
 ---
-title:  PyKX installation guide
+title:  KDB-X Python installation guide
 description: Subscriber Examples
 date: October 2024
 author: KX Systems, Inc.,
-tags: subscriber, synchronous, asynchronous, PyKX
+tags: subscriber, synchronous, asynchronous, PyKX, KDB-X Python
 ---
-# PyKX Subscribing to a `q` Process
+# KDB-X Python Subscribing to a `q` Process
 
-_This example demonstrates using `PyKX` to setup a python process as a subscriber to data messages published from a q process._
+_This example demonstrates using `pykx` to setup a python process as a subscriber to data messages published from a q process._
 
 ## Pre-requisites
 
-A kdb+ license is required to complete this example. [Sign-up for a license](https://code.kx.com/q/learn/licensing/).
+A KDB-X license is required to complete this example. [Sign-up for a license](https://code.kx.com/q/learn/licensing/).
 
 The following python libraries are required to run this example:
 
-1. pykx
+1. KDB-X Python (`pykx`)
 1. asyncio
 
 The source code for this example is available in the examples directory here:

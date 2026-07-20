@@ -3,7 +3,7 @@ title: Custom Query API Development
 description: How to generate a custom query API
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, streaming, publishing
+tags: KDB-X Python, q, streaming, publishing
 ---
 
 # Custom query API development

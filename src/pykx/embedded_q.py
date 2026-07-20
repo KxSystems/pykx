@@ -2,7 +2,6 @@ from abc import ABCMeta
 import os
 from pathlib import Path
 import sys
-import platform
 from typing import Any, Optional, Union
 from warnings import warn
 
@@ -12,7 +11,7 @@ from . import Q
 from . import toq
 from . import wrappers
 from . import schema
-from .config import find_core_lib, licensed, no_qce, pykx_dir, pykx_libs_dir, pykx_qdebug, pykx_threading, qargs, skip_under_q, suppress_warnings, pykx_debug_insights # noqa
+from .config import find_core_lib, licensed, pykx_dir, pykx_libs_dir, pykx_qdebug, pykx_threading, qargs, qce, skip_under_q, suppress_warnings, pykx_debug_insights # noqa
 from .core import keval as _keval
 from .exceptions import FutureCancelled, LicenseException, NoResults, PyKXException, PyKXWarning, QError # noqa
 from ._wrappers import _factory as factory
@@ -117,6 +116,7 @@ class ABCMetaSingleton(ABCMeta):
 class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
     """Interface for using q within the current python process. Call this to execute q code."""
     def __init__(self): # noqa
+        object.__setattr__(self, '_modules', {})
         if licensed:
             kxic_path = pykx_libs_dir.as_posix()
             kxic_file = 'kxic.k'
@@ -139,12 +139,11 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                       };
                     '''
             code += f'.pykx.util.loadfile["{kxic_path}";"html.q"];'
-            if not no_qce:
-                code += f'''
-                         if[not `comkxic in key `;
-                           .pykx.util.loadfile["{kxic_path}";"{kxic_file}"]
-                           ];
-                         '''
+            code += f'''
+                        if[not `comkxic in key `;
+                        .pykx.util.loadfile["{kxic_path}";"{kxic_file}"]
+                        ];
+                        '''
             if os.getenv('PYKX_UNDER_Q') is None:
                 os.environ['PYKX_UNDER_PYTHON'] = 'true'
                 code += 'setenv[`PYKX_UNDER_PYTHON;"true"];'
@@ -158,8 +157,8 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q{suffix}") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
             code += '@[get;`.pykx.i.kxic.loadfailed;{()!()}]'
             kxic_loadfailed = self._call(code, skip_debug=True).py()
-            if (platform.system() != "Linux") and (not no_qce) and ('--no-sql' not in qargs):
-                sql = self._call('$[("insights.lib.sql" in " " vs .z.l 4)&not `s in key`; @[system; "l s.k_";{x}];::]', skip_debug=True).py()  # noqa: E501
+            if qce or '--sql' in qargs:
+                sql = self._call('$[(any ("sq";"insights.lib.sql") in " " vs .z.l 4) and not @[{2<count .s};(::);{0b}];@[.s.init;`;{x}];::]', skip_debug=True).py()  # noqa: E501
                 if sql is not None:
                     kxic_loadfailed['s.k'] = sql
             for lib, msg in kxic_loadfailed.items():
@@ -173,19 +172,12 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             ):
                 os.environ['PYKX_Q_LOADED_MARKER'] = 'loaded'
                 self._call('setenv[`PYKX_Q_LOADED_MARKER; "loaded"]', skip_debug=True)
-                try:
-                    self._call('.Q.ld', skip_debug=True)
-                except QError as err:
-                    if '.Q.ld' in str(err):
-                        # .Q.ld is not defined on the server so we define it here
-                        with open(Path(__file__).parent.absolute()/'lib'/'q.k', 'r') as f:
-                            lines = f.readlines()
-                        for line in lines:
-                            if 'pykxld:' in line:
-                                self._call('k).Q.' + line, skip_debug=True)
-                                break
-                    else:
-                        raise err
+                with open(Path(__file__).parent.absolute()/'pykx.q', 'r') as f:
+                    lines = f.readlines()
+                for line in lines:
+                    if 'pykxld:' in line:
+                        self._call(line, skip_debug=True)
+                        break
                 pykx_qini_path = Path(__file__).parent.absolute().as_posix()
                 self._call(f'.pykx.util.loadfile["{pykx_qini_path}";"pykx_init.q_"]', skip_debug=True) # noqa
                 pykx_q_path = (Path(__file__).parent.absolute()/'pykx.q')
@@ -198,6 +190,13 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                     b'pykx.q', skip_debug=True
                 )
                 self._call('.pykx.setdefault[enlist"k"]', skip_debug=True)
+            if (self._call('@[{x in " " vs .z.l 7};"COMMUNITY";{0b}]', skip_debug=True).py()
+                    and os.getenv('PYKX_UNDER_Q') is None):
+                print(("\nWelcome to KDB-X Community Edition!\n"
+                       "For Community support, please visit https://kx.com/slack\n"
+                       "Tutorials can be found at https://github.com/KxSystems/tutorials\n"
+                       "Ready to go beyond the Community Edition? Email preview@kx.com\n"
+                ))
         super().__init__()
 
     def __repr__(self):
@@ -253,10 +252,17 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
     # been added in order to provide a consistent interface across all subclasses of `Q`.
     _call = __call__
 
+    def _add_module(self, name: str, module):
+        mods = object.__getattribute__(self, '_modules')
+        mods[name] = module
+        object.__setattr__(self, '_modules', mods)
+
+    def _get_module(self, name: str):
+        return object.__getattribute__(self, '_modules').get(name)
+
 
 q = EmbeddedQ()
 
-# HACK: some modules are reliant on the EmbeddedQ instance, so we provide it to them here
 ipc._init(q)
 toq._init(q)
 wrappers._init(q)

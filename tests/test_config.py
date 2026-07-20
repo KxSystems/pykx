@@ -1,15 +1,9 @@
-from pathlib import Path
 import os
+from pathlib import Path
 from tempfile import TemporaryDirectory
 import warnings
 
 import pytest
-
-
-@pytest.mark.unlicensed
-def test_QHOME(kx):
-    assert isinstance(kx.config.qhome, Path)
-    assert (kx.config.qhome/'q.k').exists()
 
 
 @pytest.mark.unlicensed
@@ -22,10 +16,12 @@ def test_dir(kx):
 def test_missing_profile(capsys):
     with TemporaryDirectory() as tmp_dir:
         os.chdir(tmp_dir)
-        open('.pykx-config', 'a').close()
+        open('my-config-pykx', 'a').close()
+        os.environ['PYKX_CONFIGURATION_LOCATION'] = str(Path(tmp_dir)/'my-config-pykx')
         import pykx as kx # noqa
     out, _ = capsys.readouterr()
     assert "Unable to locate specified 'PYKX_PROFILE': 'default' in file" in out
+    del os.environ['PYKX_CONFIGURATION_LOCATION']
 
 
 @pytest.mark.isolate
@@ -37,11 +33,13 @@ def test_boolean_config():
     '''
     with TemporaryDirectory() as tmp_dir:
         os.chdir(tmp_dir)
-        with open('.pykx-config', 'w+') as f:
+        with open('my-config-pykx', 'w+') as f:
             f.writelines(config)
+        os.environ['PYKX_CONFIGURATION_LOCATION'] = str(Path(tmp_dir)/'my-config-pykx')
         import pykx as kx
         assert kx.config.suppress_warnings
         assert kx.config.pykx_qdebug
+        del os.environ['PYKX_CONFIGURATION_LOCATION']
 
 
 @pytest.mark.isolate

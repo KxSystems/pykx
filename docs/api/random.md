@@ -1,6 +1,6 @@
 ---
 title: Random data generation
-description: PyKX interface for accessing q random data generation
+description: KDB-X Python interface for accessing q random data generation
 author: KX Systems
 date: September 2024
 tags: random

@@ -1,6 +1,6 @@
 ---
 title: Compression and encryption
-description: API reference page for using kdb+ compression and encryption through PyKX
+description: API reference page for using kdb+ compression and encryption through KDB-X Python
 author: KX Systems
 date: September 2024
 tags: compression, encryption, dare

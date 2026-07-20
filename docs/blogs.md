@@ -1,6 +1,6 @@
 # Blogs, Articles, Podcasts and Videos
 
-KX, Partners and members of the public regularly post articles, blogs and videos relating to their usage of PyKX and how it can be used as part of solutions to real-world problems. The intention of this page is to centralise these blogs and articles and will be kept up to date regularly.
+KX, Partners and members of the public regularly post articles, blogs and videos relating to their usage of KDB-X Python and how it can be used as part of solutions to real-world problems. The intention of this page is to centralise these blogs and articles and will be kept up to date regularly.
 
 !!! note "Want to contribute?"
 
@@ -17,7 +17,7 @@ _Last updated:_ 10th May 2024
 | [PyKX Boosts Trade Analytics](https://www.treliant.com/knowledge-center/pykx-boosts-trade-analytics/) | An introduction to the fundamental features and functionality of PyKX | Paul Douglas, Paul Walsh, and Thomas Smyth | June 26th 2023 |
 | [PyKX Highlights 2023](https://kx.com/blog/pykx-highlights-2023/) | A breakdown of new features and functionality added from January 2023 to version 2.1.1 in October 2023. | Rian Ó Cuinneagáin | 25th October 2023 |
 | [Build and Manage Databases using PyKX](https://kx.com/blog/how-to-build-and-manage-databases-using-pykx/) | A breakdown of how PyKX can be used to generate and maintain kdb+ databases using newly released functionality | Conor McCarthy | 24th January 2024 |
-| [Contributing to PyKX](https://www.habla.dev/blog/2024/04/10/Contributing-to-PyKX.html) | Outlining how new developers can contribute to PyKX | Oscar Nydza Nicpoñ | 10th April 2024 |
+| [Contributing to PyKX](https://www.habla.dev/blog/2024/04/10/Contributing-to-PyKX.html) | Outlining how new developers can contribute to PyKX| Oscar Nydza Nicpoñ | 10th April 2024 |
 
 
 ## Articles
@@ -36,7 +36,7 @@ Conor McCarthy Introduces how PyKX can be used generate data, run analytics and 
 
 <iframe width="560" height="315" src="https://www.youtube.com/embed/lO77dNd0OCI?si=c194oIYZ5FkB_RUA" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 
-### Accelerating Application Development with PyKX 
+### Accelerating Application Development with PyKX
 
 Jack Kiernan outlines the fundamentals of PyKX.
 

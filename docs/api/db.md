@@ -1,6 +1,6 @@
 ---
 title: DB Admin
-description: API reference page for managing kdb+ databases with PyKX
+description: API reference page for managing kdb+ databases with KDB-X Python
 author: KX Systems
 date: September 2024
 tags: admin, management

@@ -1,16 +1,16 @@
 ---
 title: Serialization and De-serialization
-description: Learn how to serialize and de-serialize in PyKX
+description: Learn how to serialize and de-serialize in KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, python, serialize, de-serialize
+tags: KDB-X Python, q, python, serialize, de-serialize
 ---
 
 # Serialize and de-serialize data
 
-_This page explains how to use PyKX to serialize and de-serialize kdb+/q data structures directly to and from Python byte objects._
+_This page explains how to use KDB-X Python to serialize and de-serialize KDB-X/q data structures directly to and from Python byte objects._
 
-There are two main ways to serialize/de-serialize data with PyKX:
+There are two main ways to serialize/de-serialize data with KDB-X Python:
 
 - By interfacing with Python's [`pickle`](https://docs.python.org/3/library/pickle.html) library to persist data to disk in a Python friendly format.
 - By using the [`kx.serialize`](../../api/serialize.md) module to prepare data in q IPC data format.
@@ -22,11 +22,11 @@ There are two main ways to serialize/de-serialize data with PyKX:
 
 ## Serialization using pickle
 
-Serializing data is extremely useful in cases where you need to convert a data object into a format that is easily transmittable, such as storing data or transferring it to a remote process. When serializing your PyKX data in most cases it is suggested that you make use of the integration between PyKX and Pickle.
+Serializing data is extremely useful in cases where you need to convert a data object into a format that is easily transmittable, such as storing data or transferring it to a remote process. When serializing your KDB-X Python data in most cases it is suggested that you make use of the integration between KDB-X Python and Pickle.
 
-In the following three examples you can see the serialization and de-serialization of various PyKX objects:
+In the following three examples you can see the serialization and de-serialization of various `pykx` objects:
 
-1. PyKX Table
+1. `pykx.Table`
 
 	```python
 	>>> import pykx as kx
@@ -45,7 +45,7 @@ In the following three examples you can see the serialization and de-serializati
     1 2  3
 	```
 
-2. PyKX Float Vector
+2. `pykx.FloatVector`
 
 	```python
 	>>> import pykx as kx
@@ -60,7 +60,7 @@ In the following three examples you can see the serialization and de-serializati
 	0.7855048 1.034182 1.031959 0.8133284 0.3561677 0.6035445 1.570066 1.069419 1..
 	```
 
-3. PyKX List
+3. `pykx.List`
 
 	```python
 	>>> import pykx as kx
@@ -84,11 +84,11 @@ In the following three examples you can see the serialization and de-serializati
 
 While using `#!python pickle` will be sufficient in most cases, there will be times where you are required to convert data to or from the q IPC format byte representation. Using the `#!python kx.serialize` and `#!python kx.deserialize` functions will provide better performance in these situations.
 
-Unlike with `#!python pickle`, which returns the byte representation immediately on serialization, PyKX allows the generation of this byte object to be deferred by creating a [`memoryview`](https://docs.python.org/3/library/stdtypes.html#memoryview). Deserialization can be completed directly from this `#!python memoryview` or from the raw byte objects
+Unlike with `#!python pickle`, which returns the byte representation immediately on serialization, KDB-X Python allows the generation of this byte object to be deferred by creating a [`memoryview`](https://docs.python.org/3/library/stdtypes.html#memoryview). Deserialization can be completed directly from this `#!python memoryview` or from the raw byte objects
 
-Similar to the examples in the previous section in the below we will serialize and deserialize various PyKX objects:
+Similar to the examples in the previous section in the below we will serialize and deserialize various `pykx` objects:
 
-1. PyKX Table
+1. `pykx.Table`
 
 	```python
 	>>> import pykx as kx
@@ -112,7 +112,7 @@ Similar to the examples in the previous section in the below we will serialize a
 	1 2  3 
     ```
 
-2. PyKX Float Vector
+2. `pykx.FloatVector`
 
 	```python
 	>>> import pykx as kx
@@ -131,7 +131,7 @@ Similar to the examples in the previous section in the below we will serialize a
 	0.7855048 1.034182 1.031959 0.8133284 0.3561677 0.6035445 1.570066 1.069419 1..
 	```
 
-3. PyKX List
+3. `pykx.List`
 
 	```python
 	>>> import pykx as kx
@@ -159,7 +159,7 @@ Similar to the examples in the previous section in the below we will serialize a
 
 ## What are the limitations?
 
-Serialization of PyKX objects is limited to objects which are purely generated from kdb+/q data. Serialization of `pykx.Foreign` objects, for example, is not supported as these represent underlying objects defined in C of arbitrary complexity.
+Serialization of `pykx` objects is limited to objects which are purely generated from KDB-X/q data. Serialization of `pykx.Foreign` objects, for example, is not supported as these represent underlying objects defined in C of arbitrary complexity.
 
 ```python
 >>> import pykx as kx

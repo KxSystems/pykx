@@ -1,21 +1,21 @@
 ---
-title: Querying data using PyKX
-description: Introduction to the concept of querying PyKX databases and tables
+title: Querying data using KDB-X Python
+description: Introduction to the concept of querying KDB-X Python databases and tables
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, query, historical, SQL, qSQL
+tags: KDB-X Python, q, query, historical, SQL, qSQL
 ---
 
-# Query performance considerations using PyKX
+# Query performance considerations using KDB-X Python
 
-_This page explains how to efficiently query your data using PyKX._
+_This page explains how to efficiently query your data using KDB-X Python._
 
 ## qSQL
 
 The whitepapers detailed below outline optimizations which can be useful for qSQL queries. However, the core lessons/concepts which apply in the [q query](./qquery.md) case also apply to using the [Pythonic query API](./pyquery.md) and [SQL](./sql.md) modes:
 
 - [Columnar database and query optimization](https://code.kx.com/q/wp/columnar-database/)
-- [kdb+ query scaling](https://code.kx.com/q/wp/query-scaling/)
+- [KDB-X query scaling](https://code.kx.com/q/wp/query-scaling/)
 
 The following provides a tangible example of two impactful optimizations
 
@@ -85,6 +85,6 @@ To optimize frequently called SQL queries you can make use of the [prepare](../.
 
 ## Next Steps
 
-- Learn how to query your data using the PyKX Pythonic Query API [here](pyquery.md).
+- Learn how to query your data using the KDB-X Python Query API [here](pyquery.md).
 - If you don't have a historical database available see [here](../../advanced/database/index.md).
-- To learn about creating PyKX Table objects see [here](../../../examples/interface-overview.ipynb).
+- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.ipynb).

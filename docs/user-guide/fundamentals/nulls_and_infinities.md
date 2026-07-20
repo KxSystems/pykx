@@ -1,18 +1,18 @@
 ---
 title: Convert nulls and infinities
-description: How to handle nulls and infinities in PyKX
+description: How to handle nulls and infinities in KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, nulls, infinity
+tags: KDB-X Python, q, nulls, infinity
 ---
 
 # Convert nulls and infinities
 
-_This page explains how to handle nulls and infinities in PyKX._
+_This page explains how to handle nulls and infinities in KDB-X Python._
 
-PyKX handles nulls and infinities in ways that are subtly different from familiar libraries like NumPy, due to its q legacy.
+KDB-X Python handles nulls and infinities in ways that are subtly different from familiar libraries like NumPy, due to its q legacy.
 
-PyKX provides typed null and infinity values for most types. [As shown in the q docs](https://code.kx.com/q/ref/#datatypes):
+KDB-X Python provides typed null and infinity values for most types. [As shown in the q docs](https://code.kx.com/q/ref/#datatypes):
 
 - nulls can be expressed as `#!python 0N` followed by a type character (or no type character for long integer null).
 - infinities can be expressed as `#!python 0W` followed by a type character (or no type character for a long integer infinity).
@@ -84,7 +84,7 @@ NotImplementedError: Retrieval of infinite values not supported for this type
 
 ## Checking for nulls and infinities
 
-If you apply [the q function named null](https://code.kx.com/q/ref/null/) to most PyKX objects, it returns `#!python 1b` if the object is null. If it contains nulls, returns a collection of booleans whose shape matches the object. Like with any function from the `#!python .q` namespace, you can access it via the [context interface](../../api/pykx-execution/ctx.md): [`#!python q.null`](../../api/pykx-execution/q.md#null).
+If you apply [the q function named null](https://code.kx.com/q/ref/null/) to most `pykx` objects, it returns `#!python 1b` if the object is null. If it contains nulls, returns a collection of booleans whose shape matches the object. Like with any function from the `#!python .q` namespace, you can access it via the [context interface](../../api/pykx-execution/ctx.md): [`#!python q.null`](../../api/pykx-execution/q.md#null).
 
 ```python
 >>> import pykx as kx
@@ -138,7 +138,7 @@ See also the page with specifics on [temporal](./temporal.md) conversions.
 
 !!! note "Note"
 
-    PyKX null conversion behavior changed in version 3.0.0. The below table outlines the before and after conversions.
+    KDB-X Python null conversion behavior changed in version 3.0.0. The below table outlines the before and after conversions.
 
     === ".py()"
 
@@ -332,7 +332,7 @@ x                    x1
 -9223372036854775808  2                     3
 ```
 
-To illustrate this as a limitation of Pandas rather than PyKX consider the following:
+To illustrate this as a limitation of Pandas rather than KDB-X Python consider the following:
 
 ```python
 >>> tab = kx.Table(data = {
@@ -388,7 +388,7 @@ Additional to the above inconsistency with Pandas you may also run into issues w
 [1000 rows x 3 columns]    
 ```
 
-While `#!python -9223372036854778080` represents an underlying PyKX Null value, for display purposes it's visually distracting. To display the DataFrame with the masked values, set its `#!python display.max_rows` to be longer than the length of the specified table. Notice the result below:
+While `#!python -9223372036854778080` represents an underlying KDB-X Python Null value, for display purposes it's visually distracting. To display the DataFrame with the masked values, set its `#!python display.max_rows` to be longer than the length of the specified table. Notice the result below:
 
 ```python
 >>> import pandas as pd
@@ -417,7 +417,7 @@ See also the page with specifics on [temporal](./temporal.md) conversions to exp
 
 !!! note "Note"
 
-    PyKX infinite conversion behavior changed in version 3.0.0. The below tables outline the before and after conversions.
+    KDB-X Python infinite conversion behavior changed in version 3.0.0. The below tables outline the before and after conversions.
 
     #### Positive Infinity conversions
 
@@ -583,7 +583,7 @@ See also the page with specifics on [temporal](./temporal.md) conversions to exp
 
 #### Infinite weirdness
 
-Other than real/float infinities, which follow the IEEE standard for infinities and so are ignored in this section, infinite values in kdb+ do not behave how you would expect them to. PyKX opts to expose their behavior as-is, since the alternatives (error for infinities, or always expose them as their underlying values) are undesirable. For this reason you should take care when using them.
+Other than real/float infinities, which follow the IEEE standard for infinities and so are ignored in this section, infinite values in KDB-X do not behave how you would expect them to. KDB-X Python opts to expose their behavior as-is, since the alternatives (error for infinities, or always expose them as their underlying values) are undesirable. For this reason you should take care when using them.
 
 Arithmetic operations on infinities are applied directly to the underlying values. As such, adding 1 to many positive infinities in q will result in the null for that type, as the value overflows and becomes the smallest value in that type's range. Subtracting 1 from positive infinities merely yields the second largest number for that type. For instance, `#!python 2147483646 == q('0Wi') - 1`.
 
@@ -593,7 +593,7 @@ Wherever possible, the conversions from Q to Python are symmetric. Therefore, yo
 
 ## Performance
 
-By default, whenever PyKX converts a q vector to a Python representation (e.g. a NumPy array) it checks where the nulls (if any) are located. This requires operating on every element of the array, which can be rather expensive. 
+By default, whenever KDB-X Python converts a q vector to a Python representation (e.g. a NumPy array) it checks where the nulls (if any) are located. This requires operating on every element of the array, which can be rather expensive. 
 
 If you know ahead of time that your q vector/table has no nulls in it, you can provide the keyword argument `#!python has_nulls=False` to `#!python .py`/`#!python .np`/`#!python .pd`/`#!python .pa`. This will skip the null-check. If you set this keyword argument to false, but there are still nulls in the data, they will come through as the underlying values from q, for example, `#!python -32768` for a short integer.
 

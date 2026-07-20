@@ -1,22 +1,22 @@
 ---
-title: Databases in PyKX
-description: PyKX database creation and management
+title: Databases in KDB-X Python
+description: KDB-X Python database creation and management
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, database, maintenance, management, generation
+tags: KDB-X Python, q, database, maintenance, management, generation
 ---
 
-# Databases in PyKX
+# Databases in KDB-X Python
 
-_This page explains the concept of databases in PyKX, including the creation and management of databases._
+_This page explains the concept of databases in KDB-X Python, including the creation and management of databases._
 
-## What's a PyKX database?
+## What's a KDB-X Python database?
 
-In PyKX, the term database refers to a kdb+ database which can hold a set of [splayed](https://code.kx.com/q/kb/splayed-tables/) and [partitioned](https://code.kx.com/q/kb/partition/) tables.
+In KDB-X Python, the term database refers to a KDB-X database which can hold a set of [splayed](https://code.kx.com/q/kb/splayed-tables/) and [partitioned](https://code.kx.com/q/kb/partition/) tables.
 
 ### Splayed Database
 
-A splayed kdb+ database consists of a single table stored on-disk with each column stored as a separate file rather than using a single file for the whole table. Tables of medium-size with < 100 million rows and many columns are good candidates for being stored as splayed tables, in particular when only a small subset of columns are being accessed often.
+A splayed KDB-X database consists of a single table stored on-disk with each column stored as a separate file rather than using a single file for the whole table. Tables of medium-size with < 100 million rows and many columns are good candidates for being stored as splayed tables, in particular when only a small subset of columns are being accessed often.
 
 ```bash
 quotes
@@ -28,7 +28,7 @@ quotes
 
 !!! note "More information on splayed databases"
 
-	The splayed database format used by PyKX has been used in production environments for decades. As such there is a significant amount of information available on the creation and use of these databases. Below are some articles.
+	The splayed database format used by KDB-X Python has been used in production environments for decades. As such there is a significant amount of information available on the creation and use of these databases. Below are some articles.
 
 	- [q knowledge base splayed databases](https://code.kx.com/q/kb/splayed-tables/)
 	- [Q for Mortals splayed tables](https://code.kx.com/q4m3/14_Introduction_to_Kdb%2B/#142-splayed-tables)
@@ -36,7 +36,7 @@ quotes
 
 ### Partitioned Database
 
-A partitioned kdb+ database consists of one or more tables saved on-disk, where they are split into separate folders called partitions. These partitions are most often based on a temporal field within the dataset, such as date or month. Each table within the database must follow the same partition structure.
+A partitioned KDB-X database consists of one or more tables saved on-disk, where they are split into separate folders called partitions. These partitions are most often based on a temporal field within the dataset, such as date or month. Each table within the database must follow the same partition structure.
 
 A visual representation of a database containing 2 tables (trade and quote) partitioned by date would be as follows, where `#!python price`, `#!python sym`, `#!python time` in the quotes folder are columns within the table:
 
@@ -62,17 +62,17 @@ db
 
 !!! note "More information on partitioned databases"
 
-	The partitioned database format used by PyKX has been used in production environments for decades in many of the world's best-performing tier-1 investment banks. Today, there is a significant amount of information available on the creation and maintenance of these databases. Below are some articles related to their creation and querying.
+	The partitioned database format used by KDB-X Python has been used in production environments for decades in many of the world's best-performing tier-1 investment banks. Today, there is a significant amount of information available on the creation and maintenance of these databases. Below are some articles related to their creation and querying.
 
-	- [Blog: Partitioning data with kdb+](https://kx.com/blog/partitioning-data-in-kdb/)
+	- [Blog: Partitioning data with KDB-X](https://kx.com/blog/partitioning-data-in-kdb/)
 	- [Q for Mortals Partitioned Tables](https://code.kx.com/q4m3/14_Introduction_to_Kdb%2B/#143-partitioned-tables)
 	- [Partitioned Tables](https://thinqkdb.wordpress.com/partitioned-tables/)
 
-## How to use databases in PyKX
+## How to use databases in KDB-X Python
 
 Creating and managing databases is crucial for handling large amounts of data. The `#!python pykx.DB` module helps make these tasks easier, Pythonic, and more user-friendly.
 
-PyKX Database API supports the following operations:
+KDB-X Python Database API supports the following operations:
 
 | **Operation**            | **Description**                                                                                   |
 |:-------------------------|:--------------------------------------------------------------------------------------------------|

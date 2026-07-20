@@ -1,30 +1,30 @@
 ---
-title: Convert data types in PyKX 
-description: Converting data types in PyKX
+title: Convert data types in KDB-X Python 
+description: Converting data types in KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, data, convert
+tags: KDB-X Python, data, convert
 ---
 
-# PyKX conversion considerations
+# KDB-X Python conversion considerations
 
-_This page provides details on data types and conversions in PyKX._
+_This page provides details on data types and conversions in KDB-X Python._
 
-PyKX attempts to make conversions between q and Python as seamless as possible.
+KDB-X Python attempts to make conversions between q and Python as seamless as possible.
 However due to differences in their underlying implementations there are cases where 1 to 1 mappings are not possible.
 
 ## Data types and conversions
 
-The key PyKX APIs around data types and conversions are outlined under:
+The key KDB-X Python APIs around data types and conversions are outlined under:
 
-* [Convert Pythonic data to PyKX](../../api/pykx-q-data/toq.md)
-* [PyKX type wrappers](../../api/pykx-q-data/wrappers.md)
-* [PyKX to Pythonic data type mapping](../../api/pykx-q-data/type_conversions.md)
+* [Convert Pythonic data to KDB-X Python](../../api/pykx-q-data/toq.md)
+* [KDB-X Python type wrappers](../../api/pykx-q-data/wrappers.md)
+* [KDB-X Python to Pythonic data type mapping](../../api/pykx-q-data/type_conversions.md)
 * [Registering Custom Conversions](../../api/pykx-q-data/register.md)
 
-## Text representation in PyKX
+## Text representation in KDB-X Python
 
-Handling and converting [text in PyKX](./text.md) requires consideration as there are some key differences between the `Symbol` and `Char` data types.
+Handling and converting [text in KDB-X Python](./text.md) requires consideration as there are some key differences between the `Symbol` and `Char` data types.
 
 ## Nulls and Infinites
 
@@ -32,11 +32,11 @@ Most q datatypes have the concepts of null, negative infinity, and infinity. Pyt
 
 ## Temporal data types
 
-Converting [temporal data types](./temporal.md) in PyKX involves handling [timestamp/datetime](./temporal.md#timestampdatetime-types) types and [duration](./temporal.md#duration-types) types, each with specific considerations due to differences in how Python and q (the language used by kdb+) represent these data types.
+Converting [temporal data types](./temporal.md) in KDB-X Python involves handling [timestamp/datetime](./temporal.md#timestampdatetime-types) types and [duration](./temporal.md#duration-types) types, each with specific considerations due to differences in how Python and q (the language used by KDB-X) represent these data types.
 
 ## List conversion considerations
 
-By default the library converts generic PyKX List objects `#!python pykx.List` to NumPy as an array of NumPy arrays. This conversion is chosen as it allows for the most flexible representation of data allowing ragged array representations and mixed lists of objects to be converted easily. However, this representation can be difficult to work with if/when dealing with multi-dimensional numeric data as is common in machine learning tasks for example.
+By default the library converts generic `#!python pykx.List` objects to NumPy as an array of NumPy arrays. This conversion is chosen as it allows for the most flexible representation of data allowing ragged array representations and mixed lists of objects to be converted easily. However, this representation can be difficult to work with if/when dealing with multi-dimensional numeric data as is common in machine learning tasks for example.
 
 As an example we can look at the conversion of a 3-Dimensional regularly shaped `#!python pykx.List` object to a NumPy array as follows:
 

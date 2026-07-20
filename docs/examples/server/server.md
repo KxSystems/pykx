@@ -1,20 +1,20 @@
 ---
-title:  PyKX as q server
-description: PyKX as q server example 
+title: KDB-X Python as q server
+description: KDB-X Python as q server example 
 date: October 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, server
+tags: PyKX, q, server, KDB-X Python
 ---
 
-# Use PyKX as a `#!python q` Server
+# Use KDB-X Python as a `#!python q` Server
 
-_This example provides a quick start for setting up PyKX as a `#!python q` server that other `#!python q` and PyKX sessions can connect to._
+_This example provides a quick start for setting up KDB-X Python (`pykx`) as a `#!python q` server that other `#!python q` and `pykx` sessions can connect to._
 
 To follow along, feel free to download this <a href="./archive.zip" download>zip archive</a> that contains a copy of the python script and this writeup.
 
 ## Quick start
 
-To run this example, run the `#!python server.py` script to launch a `#!python PyKX` server on port 5000. Alternatively, run `#!python server_async.py` to run an asynchronous version of the server. 
+To run this example, run the `#!python server.py` script to launch a `#!python pykx` server on port 5000. Alternatively, run `#!python server_async.py` to run an asynchronous version of the server. 
 
 The server prints out any queries it receives as well as the result of executing the query before replying.
 
@@ -91,4 +91,4 @@ set the `#!python conn_gc_time` to `#!python 10.0` then this clean-up happens ev
 
 !!! Note
 
-    [reval](../../api/pykx-execution/q.md#reval) will not impose read only execution on a PyKX server as Python manages the sockets rather than `q`.
+    [reval](../../api/pykx-execution/q.md#reval) will not impose read only execution on a KDB-X Python server as Python manages the sockets rather than `q`.

@@ -175,7 +175,7 @@ def test_large_vector(q):
     reason='Not supported with PYKX_THREADING'
 )
 def test_path_arguments(q):
-    # KXI-30172: Projections of PyKX functions don't support Path
+    # KXI-30172: Projections of KDB-X Python functions don't support Path
     a = q("{[f;x] f x}")(lambda x: x)(Path('test'))
     assert q('`:test') == a
 
@@ -198,7 +198,7 @@ def test_dir(kx, q):
         'hdel', 'hsym', 'iasc', 'idesc', 'ij', 'ijf', 'inter', 'inv', 'j', 'key', 'keys', 'lj',
         'ljf', 'load', 'lower', 'lsq', 'ltime', 'ltrim', 'mavg', 'maxs', 'mcount', 'md5', 'mdev',
         'med', 'meta', 'mins', 'mmax', 'mmin', 'mmu', 'mod', 'msum', 'neg', 'next', 'not', 'null',
-        'o', 'or', 'over', 'parse', 'peach', 'pj', 'prds', 'prev', 'prior', 'q', 'qsql', 'query',
+        'or', 'over', 'parse', 'peach', 'pj', 'prds', 'prev', 'prior', 'q', 'qsql', 'query',
         'rand', 'rank', 'ratios', 'raze', 'read0', 'read1', 'reciprocal', 'reserved_words',
         'reval', 'reverse', 'rload', 'rotate', 'rsave', 'rtrim', 'save', 'scan', 'scov', 'sdev',
         'set', 'show', 'signum', 'sql', 'ssr', 'string', 'sublist', 'sums', 'sv', 'svar', 'system',
@@ -267,14 +267,11 @@ def test_debug_global():
 
 
 @pytest.mark.isolate
-def test_41():
-    os.environ['PYKX_4_1_ENABLED'] = 'True'
+def test_41_syntax():
     import pykx as kx
-    assert kx.q('~', kx.q.z.K, 4.1).py()
     with pytest.raises(kx.QError) as err:
         kx.q('(`a;):(`b;1.2)')
     assert 'match' in str(err)
-    os.unsetenv('PYKX_4_1_ENABLED')
 
 
 @pytest.mark.isolate
@@ -288,19 +285,3 @@ def test_load_spacefile(tmp_path):
     kx.q('{.pykx.util.loadfile[1_string x;y]}', test_location, b'file.q')
     assert kx.q('.pykx_test.tmp.variable')
     assert cd == os.getcwd()
-
-
-@pytest.mark.isolate
-def test_41_not_enabled():
-    os.environ['PYKX_4_1_ENABLED'] = 'JUNK'
-    import pykx as kx
-    assert kx.q('~', kx.q.z.K, 4.0).py()
-    os.unsetenv('PYKX_4_1_ENABLED')
-
-
-@pytest.mark.isolate
-def test_41_enabled():
-    os.environ['PYKX_4_1_ENABLED'] = 'True'
-    import pykx as kx
-    assert kx.q('~', kx.q.z.K, 4.1).py()
-    os.unsetenv('PYKX_4_1_ENABLED')

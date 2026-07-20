@@ -11,7 +11,7 @@ import sys
 from . import beta_features
 from .util import add_to_config, num_available_cores
 from .config import (tcore_path_location, _is_enabled, _license_install, pykx_threading, _get_config_value, pykx_lib_dir,
-                     ignore_qhome, _pwd, lic_path, pykx_4_1, _pykx_force_licensed, _pykx_force_unlicensed)
+                     ignore_qhome, lic_path, _pykx_force_licensed, _pykx_force_unlicensed)
 
 
 def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
@@ -26,7 +26,7 @@ def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
     try:
         s_index = user_args.index('-s')
     except ValueError: # -s was not specified
-        num_cores_as_bytes = str(num_available_cores()).encode()
+        num_cores_as_bytes = None
     else:
         try:
             num_cores_user_arg = user_args[s_index + 1]
@@ -41,7 +41,8 @@ def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
                 "Invalid argument for '-s' (number of secondary threads) in $QARGS: "
                 f'{num_cores_user_arg!r}'
             ) from ex
-    normalized_args.extend([b'-s', num_cores_as_bytes])
+    if num_cores_as_bytes != None:
+        normalized_args.extend([b'-s', num_cores_as_bytes])
 
     return (
         *normalized_args,
@@ -71,7 +72,7 @@ cdef void* _q_handle
 # like a license error, but could also cause a segfault. The subprocess allows us to safely attempt
 # calling `_qinit`, and return the result for the parent to decide if it should use licensed mode,
 # or fallback to unlicensed mode.
-# Data is passed in via the `PYKX_QINIT_CHECK` env var to reduce PyKX's import time - why do the
+# Data is passed in via the `PYKX_QINIT_CHECK` env var to reduce `pykx` import time - why do the
 # work to gather that data when the parent process has already done it?
 qinit_check_data = os.environ.get('PYKX_QINIT_CHECK')
 if qinit_check_data is not None:                                                   # nocov
@@ -215,7 +216,7 @@ def _link_qhome():
             # QHOME has not had any files/directories added/removed since we last updated links.
             return
     # Avoid recursion, but allow for the effective merger via symlinks of the directories under the
-    # lib dir that come with PyKX.
+    # lib dir that come with KDB-X Python.
     if not ignore_qhome:
         for subdir in subdirs:
             # Remove old symlinks:
@@ -227,6 +228,8 @@ def _link_qhome():
             try:
                 with os.scandir(qhome/subdir) as dir_iter:
                     for dir_entry in dir_iter:
+                        if dir_entry.name in ['q.k', 's.k_']:
+                            continue
                         try:
                             os.symlink(
                                 dir_entry,
@@ -234,14 +237,14 @@ def _link_qhome():
                                 target_is_directory=dir_entry.is_dir()
                             )
                         except FileExistsError:
-                            pass # Skip files/dirs that would overwrite those that come with PyKX.
+                            pass # Skip files/dirs that would overwrite those that come with KDB-X Python.
                         except OSError as ex:  #nocov
                             # Making this a warning instead of an error is particularly important for
                             # Windows, which essentially only lets admins create symlinks.
-                            warn('Unable to connect user QHOME to PyKX QHOME via symlinks.\n' # nocov
+                            warn('Unable to connect user QHOME to KDB-X Python QHOME via symlinks.\n' # nocov
                                  'To permanently disable attempts to create symlinks you can\n' # nocov
                                  '\t1. Set the environment variable "PYKX_IGNORE_QHOME" = True.\n' # nocov
-                                 '\t2. Update the file ".pykx-config" using kx.util.add_to_config({\'PYKX_IGNORE_QHOME\': \'True\'})\n' # nocov
+                                 '\t2. Update the file "~/.kx/config-pykx" using kx.util.add_to_config({\'PYKX_IGNORE_QHOME\': \'True\'})\n' # nocov
                                  f'Error: {ex}\n',     # nocov
                                  PyKXWarning) # nocov
                             return            # nocov
@@ -296,8 +299,7 @@ if not pykx_threading:
                 if _qinit_unsuccessful: # Fallback to unlicensed mode
                     if _qinit_output != '    ':
                         _capout_msg = f'Captured output from initialization attempt:\n{_qinit_output}'
-                        _paths_checked = f'    .        {_pwd}\n'\
-                                         f'    QLIC     {_qlic if _qlic else "Not Set"}\n'\
+                        _paths_checked = f'    QLIC     {_qlic if _qlic else "Not Set"}\n'\
                                          f'    QHOME    {qhome if qhome else "Not Set"}'
                         _lic_location = f'License used:\n    {lic_path}'
                     else:
@@ -306,42 +308,40 @@ if not pykx_threading:
                         _paths_checked = '' # nocov - this additional line is to ensure this code path is covered.
                     if (hasattr(sys, 'ps1') and not _pykx_force_licensed):
                         if re.compile('licen[cs]e error: exp').search(_capout_msg):
-                            _exp_license = 'Your PyKX license has now expired.\n\n'\
+                            _exp_license = 'Your KDB-X Python license has now expired.\n\n'\
                                         f'{_capout_msg}\n\n'\
                                         f'{_lic_location}\n\n'\
                                         'Would you like to renew your license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
                             _license_message = _license_install(_exp_license, True, True, 'exp')
                         elif re.compile('licen[cs]e error: embedq').search(_capout_msg):
-                            _ce_license = 'You appear to be using a non kdb Insights license.\n\n'\
+                            _ce_license = 'You appear to be using a non KDB-X Python enabled license.\n\n'\
                                         f'{_capout_msg}\n\n'\
                                         f'{_lic_location}\n\n'\
-                                        'Running PyKX in the absence of a kdb Insights license '\
+                                        'Running KDB-X Python in the absence of a license '\
                                         'has reduced functionality.\nWould you like to install '\
-                                        'a kdb Insights personal license? [Y/n]: '
+                                        'a license? [Y/n]: '
                             _license_message = _license_install(_ce_license, True)
                         elif re.compile('licen[cs]e error: upd').search(_capout_msg):
                             _upd_license = 'Your installed license is out of date for this version'\
-                                        ' of PyKX and must be updated.\n\n'\
+                                        ' of KDB-X Python and must be updated.\n\n'\
                                         f'{_capout_msg}\n\n'\
                                         f'{_lic_location}\n\n'\
-                                        'Would you like to install an updated kdb '\
-                                        'Insights personal license? [Y/n]: '
+                                        'Would you like to install an updated license? [Y/n]: '
                             _license_message = _license_install(_upd_license, True)
                         elif re.compile('licen[cs]e error: k[xc4].lic').search(_capout_msg) or re.compile('licen[cs]e error: badmsg').search(_capout_msg):
-                            _k_license = '\nThe PyKX license found is corrupt or incompatible with'\
-                                        ' kdb+ ' + ('4.1' if pykx_4_1 else '4.0') + '.\n\n'\
+                            _k_license = '\nThe KDB-X Python license found is corrupt or incompatible.\n\n'\
                                         f'{_capout_msg}\n\n'\
                                         f'{_lic_location}\n\n'\
                                         'Would you like to install a new license? [Y/n]: '
                             _license_message = _license_install(_k_license, True)
                         else:
-                            warning = f'Failed to initialize PyKX successfully with the following error: {_capout_msg}\n\n'
+                            warning = f'Failed to initialize KDB-X Python successfully with the following error: {_capout_msg}\n\n'
                             if _lic_location == '':
-                                    warning = warning + f'PyKX was unable to locate a license file in:\n{_paths_checked}\n'
+                                    warning = warning + f'KDB-X Python was unable to locate a license file in:\n{_paths_checked}\n'
                             else:
                                     warning = warning + f'{_lic_location}\n'
                             warn(warning, PyKXWarning)
-                            _missing_license = 'Running PyKX in unlicensed mode has reduced functionality.\n\n'\
+                            _missing_license = 'Running KDB-X Python in unlicensed mode has reduced functionality.\n\n'\
                                             'Would you like to install a license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
                             _license_message = _license_install(_missing_license, True)
                 if (not _license_message) and _qinit_check_proc.returncode:
@@ -361,13 +361,13 @@ if not pykx_threading:
                         raise PyKXException(f'Non-zero qinit following license install with configuration: {_qinit_args}\n'
                                             f'failed with output: {_qinit_output}')
                 if 'QHOME' in os.environ and not ignore_qhome:
-                    # Only link the user's QHOME to PyKX's QHOME if the user actually set $QHOME.
+                    # Only link the user's QHOME to KDB-X Python's QHOME if the user actually set $QHOME.
                     # Note that `pykx.qhome` has a default value of `./q`, as that is the behavior
                     # employed by q.
                     try:
                         _link_qhome()
                     except BaseException as e:
-                        warn('Failed to link user QHOME directory contents to allow access to PyKX.\n'
+                        warn('Failed to link user QHOME directory contents to allow access to KDB-X Python.\n'
                             'To suppress this warning please set the configuration option "PYKX_IGNORE_QHOME" as outlined at:\n'
                             'https://code.kx.com/pykx/user-guide/configuration.html')
                 _libq_path_py = bytes(_core_q_lib_path)

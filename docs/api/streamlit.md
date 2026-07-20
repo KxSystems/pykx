@@ -7,7 +7,7 @@ tags: streamlit, ipc
 ---
 # Streamlit integration
 
-_This page documents the API for using the Streamlit library with PyKX._
+_This page documents the API for using the Streamlit library with KDB-X Python._
 
 ::: pykx.streamlit
     rendering:

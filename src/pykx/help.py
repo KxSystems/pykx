@@ -1,14 +1,10 @@
 import os
 import re
-from urllib.request import Request, urlopen
-from urllib.error import HTTPError, URLError
 
 __all__ = ["help"]
 _filepath = os.path.join(
-    os.path.dirname(__file__), '..', '..', 'docs', 'api',
-    'pykx-execution', 'q.md'
+    os.path.dirname(__file__), 'docs', 'api', 'pykx-execution', 'q.md'
 )
-_base_url = "https://code.kx.com/pykx/4.0/api/pykx-execution/q.html"
 
 
 def __dir__():
@@ -18,73 +14,6 @@ def __dir__():
 def _init(_q):
     global q
     q = _q
-
-
-def _fetch_web_documentation(keyword):
-    """Fetch documentation from the PyKX website."""
-    url = _base_url
-    try:
-        req = Request(url, headers={'User-Agent': 'PyKX/help'})
-        with urlopen(req, timeout=5) as response:
-            html = response.read().decode('utf-8')
-
-            # Extract the article content
-            article_match = re.search(
-                r'<article[^>]*class="[^"]*md-content__inner[^"]*"[^>]*>'
-                r'(.*?)</article>',
-                html, re.DOTALL
-            )
-            if not article_match:
-                return None
-
-            article_html = article_match.group(1)
-
-            # Find the h3 section for this keyword
-            # Pattern: <h3 id="keyword">...</h3> ... content ... <h3 id="next">
-            pattern = rf'<h3[^>]*id="{keyword}"[^>]*>.*?</h3>(.*?)(?=<h3[^>]*id="|$)'
-            section_match = re.search(pattern, article_html, re.DOTALL)
-
-            if not section_match:
-                return None
-
-            section_html = section_match.group(1)
-            text = f" • {keyword}\n\n"
-
-            # Extract paragraphs
-            for para_match in re.finditer(r'<p(?:\s[^>]*)?>(.*?)</p>', section_html, re.DOTALL):
-                para_text = re.sub(r'<[^>]+>', '', para_match.group(1))
-                para_text = _decode_html_entities(para_text).strip()
-                if para_text:
-                    text += para_text + "\n\n"
-
-            # Extract code blocks
-            for code_match in re.finditer(r'<pre[^>]*><code[^>]*>(.*?)</code></pre>',
-                                          section_html, re.DOTALL):
-                code_text = _decode_html_entities(code_match.group(1)).strip()
-                if code_text:
-                    text += "\n"
-                    for line in code_text.split("\n"):
-                        text += "    " + line + "\n"
-                    text += "\n"
-
-            return text
-
-    except (URLError, HTTPError, TimeoutError):
-        return None
-    except Exception:
-        return None
-
-
-def _decode_html_entities(text):
-    """Decode common HTML entities."""
-    return (text.replace('&lt;', '<')
-            .replace('&gt;', '>')
-            .replace('&amp;', '&')
-            .replace('&quot;', '"')
-            .replace('&#39;', "'")
-            .replace('&nbsp;', ' ')
-            .replace('&para;', '')  # Remove paragraph symbols
-            .replace('&middot;', '·'))
 
 
 def _load_markdown_section(keyword, file_path=_filepath):
@@ -174,15 +103,9 @@ def qhelp(keyword):
 
         return text
 
-    # Fallback to web scraping if local file fails
-    web_result = _fetch_web_documentation(keyword)
-    if web_result:
-        return web_result
-
     # If both local and web sources fail
     return (f" • {keyword}\n\n"
-            f"Documentation not available. Please check your internet connection\n"
-            f"or visit {_base_url}#{keyword} for documentation.")
+            f"Documentation not available locally. Visit https://code.kx.com for documentation.")
 
 
 def _parse_markdown_table(lines):

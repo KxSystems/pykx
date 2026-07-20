@@ -342,34 +342,18 @@ def test_subview(kx):
 
 @pytest.mark.isolate
 def test_q_lo_move_dir():
-    os.environ['PYKX_4_1_ENABLED'] = 'True'
     curr_dir = os.getcwd()
     import pykx as kx
     kx.DB(path='db')
     assert curr_dir != os.getcwd()
-    os.unsetenv('PYKX_4_1_ENABLED')
-    os.unsetenv('PYKX_BETA_FEATURES')
 
 
 @pytest.mark.isolate
 def test_q_lo_keep_dir():
-    os.environ['PYKX_4_1_ENABLED'] = 'True'
     curr_dir = os.getcwd()
     import pykx as kx
     kx.DB(path='db', change_dir=False)
     assert curr_dir == os.getcwd()
-    os.unsetenv('PYKX_4_1_ENABLED')
-    os.unsetenv('PYKX_BETA_FEATURES')
-
-
-def test_q_lo_40(kx):
-    if os.getenv('PYKX_4_1_ENABLED') is None:
-        with pytest.raises(kx.QError) as err:
-            db = kx.DB(path='db', change_dir=False) # noqa: F841
-        assert 'behavior only supported with PYKX_4_1_ENABLED' in str(err.value)
-        with pytest.raises(kx.QError) as err:
-            db = kx.DB(path='db', load_scripts=False) # noqa: F841
-        assert 'behavior only supported with PYKX_4_1_ENABLED' in str(err.value)
 
 
 @pytest.mark.isolate

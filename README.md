@@ -1,12 +1,12 @@
-# PyKX
+# KDB-X Python
 
 ## Introduction
 
-PyKX is a Python first interface to the worlds fastest time-series database kdb+ and it's underlying vector programming language q. PyKX takes a Python first approach to integrating q/kdb+ with Python following 10+ years of integrations between these two languages. Fundamentally it provides users with the ability to efficiently query and analyze huge amounts of in-memory and on-disk time-series data.
+KDB-X Python is a Python first interface to the worlds fastest time-series database kdb+ and it's underlying vector programming language q. KDB-X Python takes a Python first approach to integrating q/kdb+ with Python following 10+ years of integrations between these two languages. Fundamentally it provides users with the ability to efficiently query and analyze huge amounts of in-memory and on-disk time-series data.
 
 This interface exposes q as a domain-specific language (DSL) embedded within Python, taking the approach that q should principally be used for data processing and management of databases. This approach does not diminish the ability for users familiar with q or those wishing to learn more about it from making the most of advanced analytics and database management functionality but rather empowers those who want to make use of the power of kdb+/q who lack this expertise to get up and running fast.
 
-PyKX supports three principal use cases:
+KDB-X Python supports three principal use cases:
 
 - It allows users to store, query, manipulate and use q objects within a Python process.
 - It allows users to query external q processes via an IPC interface.
@@ -14,7 +14,7 @@ PyKX supports three principal use cases:
 
 Users wishing to install the library can do so following the instructions [here](https://code.kx.com/pykx/getting-started/installing.html).
 
-Once you have the library installed you can get up and running with PyKX following the quickstart guide [here](https://code.kx.com/pykx/getting-started/quickstart.html).
+Once you have the library installed you can get up and running with KDB-X Python following the quickstart guide [here](https://code.kx.com/pykx/getting-started/quickstart.html).
 
 ### What is q/kdb+?
 
@@ -31,7 +31,7 @@ For more information on using q/kdb+ and getting started with see the following 
 
 ## Installation
 
-### Installing PyKX using `pip`
+### Installing KDB-X Python using `pip`
 
 Ensure you have a recent version of pip:
 
@@ -39,13 +39,13 @@ Ensure you have a recent version of pip:
 pip install --upgrade pip
 ```
 
-Then install the latest version of PyKX with the following command:
+Then install the latest version of KDB-X Python with the following command:
 
 ```bash
-pip install pykx
+pip install --upgrade pykx
 ```
 
-To install a specific version of PyKX run the following command replacing <INSERT_VERSION> with a specific released semver version of the interface
+To install a specific version of KDB-X Python run the following command replacing <INSERT_VERSION> with a specific released semver version of the interface
 
 ```bash
 pip install pykx==<INSERT_VERSION>
@@ -53,48 +53,29 @@ pip install pykx==<INSERT_VERSION>
 
 **Warning:** Python packages should typically be installed in a virtual environment. [This can be done with the venv package from the standard library](https://docs.python.org/3/library/venv.html).
 
-### PyKX License access and enablement
+### KDB-X Python License access and enablement
 
-Installation of PyKX via pip provides users with access to the library with limited functional scope, full details of these limitations can be found [here](docs/user-guide/advanced/modes.md). To access the full functionality of PyKX you must first download and install a kdb+ license, this can be achieved either through use of a personal evaluation license or receipt of a commercial license.
+Installation of KDB-X Python via pip provides users with access to the library with limited functional scope, full details of these limitations can be found [here](docs/user-guide/advanced/modes.md). To access the full functionality of KDB-X Python you must first download and install a license.
 
-#### Personal Evaluation License
+If you do not have a license go to the [KX Developer Center](https://developer.kx.com/products/kdb-x/install) to obtain a KDB-X license.
 
-The following steps outline the process by which a user can gain access to an install a kdb Insights license which provides access to PyKX
-
-1. Visit https://kx.com/kdb-insights-sdk-personal-edition-download/ and fill in the attached form following the instructions provided.
-2. On receipt of an email from KX providing access to your license download this file and save to a secure location on your computer.
-3. Set an environment variable on your computer pointing to the folder containing the license file (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
-	* Variable Name: `QLIC`
-	* Variable Value: `/user/path/to/folder`
-
-#### Commercial Evaluation License
-
-The following steps outline the process by which a user can gain access to an install a kdb Insights license which provides access to PyKX
-
-1. Contact you KX sales representative or sales@kx.com requesting a trial license for PyKX evaluation. Alternately apply through https://kx.com/book-demo.
-2. On receipt of an email from KX providing access to your license download this file and save to a secure location on your computer.
-3. Set an environment variable on your computer pointing to the folder containing the license file (instructions for setting environment variables on PyKX supported operating systems can be found [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/).
-	* Variable Name: `QLIC`
-	* Variable Value: `/user/path/to/folder`
-
-__Note:__ PyKX will not operate with a vanilla or legacy kdb+ license which does not have access to specific feature flags embedded within the license. In the absence of a license with appropriate feature flags PyKX will fail to initialise with full feature functionality.
+Full instructions on license installation are covered on the [Installing page](docs/getting-started/installing.md).
 
 ### Supported Environments
 
-KX only officially supports versions of PyKX built by KX, i.e. versions of PyKX installed from wheel files. Support for user-built installations of PyKX (e.g. built from the source distribution) is only provided on a best-effort basis. Currently, PyKX provides wheels for the following environments:
+KX only officially supports versions of KDB-X Python built by KX, i.e. versions of KDB-X Python installed from wheel files. Support for user-built installations of KDB-X Python (e.g. built from the source distribution) is only provided on a best-effort basis. Currently, KDB-X Python provides wheels for the following environments:
 
-- Linux (`manylinux_2_17_x86_64`) with CPython 3.8-3.11
-- macOS (`macosx_10_10_x86_64`) with CPython 3.8-3.11
-- Windows (`win_amd64`) with CPython 3.8-3.11
+- Linux (`manylinux2014_x86_64`, `manylinux2014_aarch64`) with CPython 3.9-3.14
+- macOS (`macosx_10_15_x86_64`, `macosx_10_15_arm64`) with CPython 3.9-3.14
+- Windows (`win_amd64`) with CPython 3.9-3.14
 
 ### Dependencies
 
 #### Python Dependencies
 
-PyKX depends on the following third-party Python packages:
+KDB-X Python depends on the following third-party Python packages:
 
-- `pandas>=1.2, <2.0; python_version=='3.8'`
-- `pandas>=1.2, <3.0; python_version>'3.8'`
+- `pandas>=1.2; python_version>'3.8'`
 - `numpy>=1.22; python_version<'3.11'`
 - `numpy>=1.23; python_version=='3.11'`
 - `numpy>=1.26; python_version>'3.11'`
@@ -103,13 +84,13 @@ PyKX depends on the following third-party Python packages:
 - `dill>=0.2.0`
 - `requests>=2.25.0`
 
-They are installed automatically by `pip` when PyKX is installed.
+They are installed automatically by `pip` when KDB-X Python is installed.
 
-PyKX also has an optional Python dependency of `pyarrow>=3.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`
+KDB-X Python also has an optional Python dependency of `pyarrow>=3.0.0`, which can be included by installing the `pyarrow` extra, e.g. `pip install pykx[pyarrow]`
 
-When using PyKX with KX Dashboards users will be required to install `ast2json~=0.3` this can be installed using the `dashboards` extra, e.g. `pip install pykx[dashboards]`
+When using KDB-X Python with KX Dashboards users will be required to install `ast2json~=0.3` this can be installed using the `dashboards` extra, e.g. `pip install pykx[dashboards]`
 
-When using PyKX Streaming users may require the ability to stop processes initialized in a now unavailable process to facilitate this PyKX can make use of `psutil` this can be installed using the `streaming` extra, e.g. `pip install pykx[streaming]`
+When using KDB-X Python Streaming users may require the ability to stop processes initialized in a now unavailable process to facilitate this KDB-X Python can make use of `psutil` this can be installed using the `streaming` extra, e.g. `pip install pykx[streaming]`
 
 When using Streamlit users will be required to install `streamlit~=1.28` this can be installed using the `streamlit` extra, e.g. `pip install pykx[streamlit]`
 
@@ -162,16 +143,16 @@ python3 -m venv pykx-dev
 source pykx-dev/bin/activate
 ```
 
-Build and install PyKX:
+Build and install KDB-X Python:
 
 ```bash
 cd pykx
 pip3 install -U '.[all]'
 ```
 
-To run PyKX in licensed mode ensure to follow the steps to receive a [Personal Evaluation License](https://code.kx.com/pykx/getting-started/installing.html#personal-evaluation-license)
+To run in licensed mode see [here](docs/getting-started/installing.md).
 
-Now you can run/test PyKX:
+Now you can run/test KDB-X Python:
 
 ```bash
 (pykx-dev) /data/pykx$ python
@@ -198,7 +179,7 @@ export QHOME=/location/of/your/q #q needs QHOME available
 python -m pytest -vvv -n 0 --no-cov --junitxml=report.xml
 ```
 
-## PyKX Licenses
+## KDB-X Python Licenses
 
 This work is dual licensed under [Apache 2.0](https://code.kx.com/pykx/license.html#apache-2-license) and the [Software License for q.so](https://code.kx.com/pykx/license.html#qso-license) and users are required to abide by the terms of both licenses in their entirety.
 

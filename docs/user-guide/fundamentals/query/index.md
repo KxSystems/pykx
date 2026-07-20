@@ -1,14 +1,14 @@
 ---
-title: Querying data using PyKX
-description: Introduction to the concept of querying PyKX databases and tables
+title: Querying data using KDB-X Python
+description: Introduction to the concept of querying KDB-X Python databases and tables
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, query, historical, SQL, qSQL
+tags: KDB-X Python, q, query, historical, SQL, qSQL
 ---
 
-# Querying data using PyKX
+# Querying data using KDB-X Python
 
-_This page provides an introduction to querying your data using PyKX._
+_This page provides an introduction to querying your data using KDB-X Python._
 
 | Title                                 | Description                                                                         |
 |:--------------------------------------|:------------------------------------------------------------------------------------|
@@ -20,4 +20,4 @@ _This page provides an introduction to querying your data using PyKX._
 ## Next Steps
 
 - If you don't have a historical database available see [here](../../advanced/database/index.md).
-- To learn about creating PyKX Table objects see [here](../../../examples/interface-overview.ipynb).
+- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.ipynb).

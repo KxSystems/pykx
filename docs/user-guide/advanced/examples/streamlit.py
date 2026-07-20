@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 
 
 def main():
-    st.header('PyKX Demonstration')
+    st.header('KDB-X Python Demonstration')
     connection = st.connection('pykx',
                                type=kx.streamlit.PyKXConnection,
                                port=5050,

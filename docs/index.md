@@ -1,8 +1,8 @@
-# PyKX Home
+# KDB-X Python Home
 
-_Welcome to the home of PyKX technical documentation._
+_Welcome to the home of KDB-X Python technical documentation._
 
-[PyKX](./getting-started/what_is_pykx.md) is a Python-first interface to kdb+, the world's fastest time-series database, and its underlying vector programming language q. Whether you're a Python developer looking to harness kdb+'s analytics, or a q developer wanting to leverage Python's data science ecosystem, PyKX bridges both worlds.
+[KDB-X Python](./getting-started/what_is_pykx.md) is a Python-first interface to kdb+, the world's fastest time-series database, and its underlying vector programming language q. Whether you're a Python developer looking to harness kdb+'s analytics, or a q developer wanting to leverage Python's data science ecosystem, KDB-X Python bridges both worlds.
 
 ## Ready to dive in?
 
@@ -10,8 +10,8 @@ _Welcome to the home of PyKX technical documentation._
     <div>
         <h2>Get Started</h2>
         <ul>
-            <li><a href="getting-started/what_is_pykx.html" target="_blank" rel="noopener">PyKX Overview</a></li>
-            <li><a href="getting-started/installing.html" target="_blank" rel="noopener">Install PyKX</a></li>
+            <li><a href="getting-started/what_is_pykx.html" target="_blank" rel="noopener">KDB-X Python Overview</a></li>
+            <li><a href="getting-started/installing.html" target="_blank" rel="noopener">Install KDB-X Python</a></li>
             <li><a href="getting-started/quickstart.html" target="_blank" rel="noopener">Quick Start</a></li>
         </ul>
     </div>
@@ -26,7 +26,7 @@ _Welcome to the home of PyKX technical documentation._
     <div>
         <h2>How-to Guides</h2>
         <ul>
-            <li><a href="user-guide/configuration.html" target="_blank" rel="noopener">Configure PyKX</a></li>
+            <li><a href="user-guide/configuration.html" target="_blank" rel="noopener">Configure KDB-X Python</a></li>
             <li><a href="user-guide/fundamentals/creating.html" target="_blank" rel="noopener">Interact with Data</a></li>
             <li><a href="user-guide/advanced/database/db_gen.html" target="_blank" rel="noopener">Create Databases</a></li>
         </ul>
@@ -50,7 +50,7 @@ _Welcome to the home of PyKX technical documentation._
         <div>
         <h2>Examples</h2>
         <ul>
-            <li><a href="examples/interface-overview.html" target="_blank" rel="noopener">PyKX Introduction Notebook</a></li>
+            <li><a href="examples/interface-overview.html" target="_blank" rel="noopener">KDB-X Python Introduction Notebook</a></li>
             <li><a href="examples/subscriber/readme.html" target="_blank" rel="noopener">Subscribe to a q Process</a></li>
             <li><a href="examples/compress_and_encrypt/readme.html" target="_blank" rel="noopener">Compress and Encrypt</a></li>
         </ul>
@@ -59,9 +59,8 @@ _Welcome to the home of PyKX technical documentation._
 
 ## What's next?
 
-Discover how PyKX builds upon kdb+ and what's coming soon:
+Discover how KDB-X Python builds upon KDB-X and what's coming soon:
 
 - Submit a [feature request](https://forum.kx.com/c/ideas-feature-requests/10)
 - Stay updated with the latest [release notes](release-notes/changelog.md){target="_blank"}
 - Join our [community channels](https://kx-community.slack.com/) to get assistance
-

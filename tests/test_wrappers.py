@@ -16,7 +16,7 @@ from uuid import UUID
 import itertools
 import sys
 
-# Do not import Pandas, PyArrow, or PyKX here - use the pd/pa/kx fixtures instead!
+# Do not import Pandas, PyArrow, or pykx here - use the pd/pa/kx fixtures instead!
 import numpy as np
 import pandas as pd
 import pytest
@@ -2109,7 +2109,7 @@ def test_deserialize(kx):
 def test_deserialize_unsupported_message(kx):
     with pytest.raises(kx.QError) as err:
         kx.deserialize(b'unsupported message format')
-    assert 'Failed to deserialize supplied non PyKX IPC' in str(err.value)
+    assert 'Failed to deserialize supplied non ' in str(err.value)
 
 
 class Test_GUIDVector:
@@ -2709,7 +2709,7 @@ class Test_EnumVector:
         assert all(q(self.q_vec_str).pd(raw=True).to_numpy() == [0, 1, 2, 0, 1, 2])
         assert all(q(self.q_vec_str).pd().to_numpy() == ['abc', 'xyz', 'hmm', 'abc', 'xyz', 'hmm'])
 
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert all(q(self.q_vec_str).pd(raw=True, as_arrow=True) == [0, 1, 2, 0, 1, 2])
             assert all(
                 q(self.q_vec_str).pd(as_arrow=True) == ['abc', 'xyz', 'hmm', 'abc', 'xyz', 'hmm'])
@@ -2848,9 +2848,9 @@ class Test_Table:
         df = q(self.q_table_str).pd()
         assert isinstance(df, pd.DataFrame)
         assert list(df.keys()) == ['a', 'b', 'c']
-        assert df.dtypes[0] == np.dtype('int64')
-        assert df.dtypes[1] == np.dtype('|S1')
-        assert df.dtypes[2] == np.dtype('object')
+        assert df.dtypes['a'] == np.dtype('int64')
+        assert df.dtypes['b'] == np.dtype('|S1')
+        assert df.dtypes['c'] == np.dtype('object')
         assert list(df['a']) == [0, 1, 2]
         assert list(df['b']) == [b'x', b'y', b'z']
         assert all(isinstance(x, UUID) for x in df['c'])
@@ -2865,10 +2865,10 @@ class Test_Table:
         x = q('([]a:(.z.t;0Nt))').pd()
         y = q('([]a:(.z.D;0Nd))').pd()
         z = q('([]a:(2000.01;0Nm))').pd()
-        pandas_2 = pd.__version__.split('.')[0] == 2
+        pandas_gt1 = not pd.__version__.split('.')[0] == '1'
         assert w.dtypes['a'] == np.dtype('<m8[ns]')
-        assert x.dtypes['a'] == np.dtype('<m8[ms]') if pandas_2 else np.dtype('<m8[ns]')
-        assert y.dtypes['a'] == np.dtype('datetime64[s]') if pandas_2 else np.dtype('<M8[ns]')
+        assert x.dtypes['a'] == np.dtype('<m8[ms]') if pandas_gt1 else np.dtype('<m8[ns]')
+        assert y.dtypes['a'] == np.dtype('datetime64[s]') if pandas_gt1 else np.dtype('<M8[ns]')
         assert z.dtypes['a'] == np.dtype('O')
         assert pd.isnull(w['a'][1])
         assert pd.isnull(x['a'][1])
@@ -2930,14 +2930,17 @@ class Test_Table:
         assert df['c'].iloc[0] == b' '
         assert df['s'].iloc[0] == ''
 
-        pandas_2 = pd.__version__.split('.')[0] == '2'
+        pandas_gt1 = not pd.__version__.split('.')[0] == '1'
         for c, t in [('p', np.dtype('datetime64[ns]')),
-                     ('m', np.dtype('datetime64[s]') if pandas_2 else np.dtype('datetime64[ns]')),
-                     ('d', np.dtype('datetime64[s]') if pandas_2 else np.dtype('datetime64[ns]')),
+                     ('m', np.dtype('datetime64[s]') if pandas_gt1 else np.dtype('datetime64[ns]')),
+                     ('d', np.dtype('datetime64[s]') if pandas_gt1 else np.dtype('datetime64[ns]')),
                      ('n', np.dtype('timedelta64[ns]')),
-                     ('u', np.dtype('timedelta64[s]') if pandas_2 else np.dtype('timedelta64[ns]')),
-                     ('v', np.dtype('timedelta64[s]') if pandas_2 else np.dtype('timedelta64[ns]')),
-                     ('t', np.dtype('timedelta64[ms]') if pandas_2 else np.dtype('timedelta64[ns]'))
+                     ('u', np.dtype('timedelta64[s]') if pandas_gt1
+                      else np.dtype('timedelta64[ns]')),
+                     ('v', np.dtype('timedelta64[s]') if pandas_gt1
+                      else np.dtype('timedelta64[ns]')),
+                     ('t', np.dtype('timedelta64[ms]') if pandas_gt1
+                      else np.dtype('timedelta64[ns]'))
         ]:
             assert df[c].dtype == t
             assert pd.isna(df[c].iloc[0])
@@ -3503,6 +3506,17 @@ class Test_Dictionary:
                  'metadata: ((`c`d)!([] metaa: (9; 4); metab: (7; 6));'
                  '(`c`d)!([] metaa: (19; 14); metab: (17; 16)));'
                  'data: (1; 2))').py() == double_nested
+
+    def test_setitem(self, kx):
+        a = kx.q('`a`b!(`;2)')
+        c = kx.q('([] a:enlist 2;b:enlist 6)')
+        a['c'] = c
+        assert isinstance(a['c'], kx.Table)
+
+        a = kx.q('`a`b!(`;2)')
+        d = kx.q('([] a:1 2;b:3 6)')
+        a['d'] = d
+        assert isinstance(a['d'], kx.Table)
 
 
 class Test_KeyedTable:
@@ -5392,7 +5406,11 @@ def test_pyarrow_pandas_all(q):
     q('tab: (til 100)!(tab)')
 
 
-@pytest.mark.skipif(pd.__version__[0] == '1', reason="Only supported from Pandas 2.* onwards")
+@pytest.mark.skipif(int(pd.__version__.split('.')[0]) == 1,
+                    reason="Only supported from Pandas 2.* onwards")
+@pytest.mark.skipif(int(pd.__version__.split('.')[0]) == 3,
+                    reason='''Bug to be fixed in Pandas 3.1 -
+                     https://github.com/pandas-dev/pandas/issues/63879''')
 def test_pyarrow_pandas_all_with_null_inf(kx):
 
     def make_t(keycol=False):
@@ -5500,7 +5518,7 @@ def test_all_timetypes(kx, q_port):
                     2000.01.01D01:01:01.001 2000.01.01D01:01:01.001001
                     2000.01.01D01:01:01.001001001)
                 ''')
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             df = td.pd(as_arrow=True)
             td_roundtrip = kx.toq(df)
             assert 'timestamp[ns][pyarrow]' == str(df.dtypes['a'])
@@ -5520,7 +5538,7 @@ def test_all_timetypes(kx, q_port):
 
         # month
         td = q('''([] a:2000.01 2000.12m)''')
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             df = td.pd(as_arrow=True)
             td_roundtrip = kx.toq(df)
             assert 'timestamp[s][pyarrow]' == str(df.dtypes['a'])
@@ -5530,7 +5548,7 @@ def test_all_timetypes(kx, q_port):
                 td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
                 assert all(td['a'] == td_a_roundtrip)
         df = td.pd()
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert 'datetime64[s]' == str(df.dtypes['a'])
         else:
             assert 'datetime64[ns]' == str(df.dtypes['a'])
@@ -5543,7 +5561,7 @@ def test_all_timetypes(kx, q_port):
 
         # date
         td = q('([] a:2000.01.01 2000.01.02)')
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             df = td.pd(as_arrow=True)
             td_roundtrip = kx.toq(df)
             assert 'timestamp[s][pyarrow]' == str(df.dtypes['a'])
@@ -5553,7 +5571,7 @@ def test_all_timetypes(kx, q_port):
                 td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
                 assert all(td['a'] == td_a_roundtrip)
         df = td.pd()
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert 'datetime64[s]' == str(df.dtypes['a'])
         else:
             assert 'datetime64[ns]' == str(df.dtypes['a'])
@@ -5569,7 +5587,7 @@ def test_all_timetypes(kx, q_port):
                 ([] a:1D 1D01 1D01:02 1D01:01:01 1D01:01:01.001 1D01:01:01.001001
                 1D01:01:01.001001001)
                 ''')
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             df = td.pd(as_arrow=True)
             td_roundtrip = kx.toq(df)
             assert 'duration[ns][pyarrow]' == str(df.dtypes['a'])
@@ -5589,7 +5607,7 @@ def test_all_timetypes(kx, q_port):
 
         # minute
         td = q('([] a:00:00 00:01 00:10 01:00 24:00)')
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             df = td.pd(as_arrow=True)
             td_roundtrip = kx.toq(df)
             assert 'duration[s][pyarrow]' == str(df.dtypes['a'])
@@ -5599,13 +5617,13 @@ def test_all_timetypes(kx, q_port):
                 td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
                 assert all(td['a'] == td_a_roundtrip)
         df = td.pd()
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert 'timedelta64[s]' == str(df.dtypes['a'])
         else:
             assert 'timedelta64[ns]' == str(df.dtypes['a'])
         td_roundtrip = kx.toq(df)
         if kx.licensed:
-            if kx.config.pandas_2:
+            if kx.config.pandas_gt1:
                 assert 'kx.SecondAtom' == str(td_roundtrip.dtypes['datatypes'][0])
             else:
                 assert 'kx.TimespanAtom' == str(td_roundtrip.dtypes['datatypes'][0])
@@ -5615,7 +5633,7 @@ def test_all_timetypes(kx, q_port):
 
         # second
         td = q('([] a:00:00:00 00:00:01 00:00:10 00:01:00 00:10:00 01:00:00 24:00:00)')
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             df = td.pd(as_arrow=True)
             td_roundtrip = kx.toq(df)
             assert 'duration[s][pyarrow]' == str(df.dtypes['a'])
@@ -5625,13 +5643,13 @@ def test_all_timetypes(kx, q_port):
                 td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
                 assert all(td['a'] == td_a_roundtrip)
         df = td.pd()
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert 'timedelta64[s]' == str(df.dtypes['a'])
         else:
             assert 'timedelta64[ns]' == str(df.dtypes['a'])
         td_roundtrip = kx.toq(df)
         if kx.licensed:
-            if kx.config.pandas_2:
+            if kx.config.pandas_gt1:
                 assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
             else:
                 assert 'kx.TimespanAtom' == str(td_roundtrip.dtypes['datatypes'][0])
@@ -5644,7 +5662,7 @@ def test_all_timetypes(kx, q_port):
                 ([] a:00:00:00.000 00:00:00.001 00:00:01.000 00:00:10.000
                 00:01:00.000 00:10:00.000 01:00:00.000 24:00:00.000)
                 ''')
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             df = td.pd(as_arrow=True)
             td_roundtrip = kx.toq(df)
             assert 'duration[ms][pyarrow]' == str(df.dtypes['a'])
@@ -5654,13 +5672,13 @@ def test_all_timetypes(kx, q_port):
                 td_a_roundtrip = kx.toq(td['a'].pd(as_arrow=True))
                 assert all(td['a'] == td_a_roundtrip)
         df = td.pd()
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert 'timedelta64[ms]' == str(df.dtypes['a'])
         else:
             assert 'timedelta64[ns]' == str(df.dtypes['a'])
         td_roundtrip = kx.toq(df)
         if kx.licensed:
-            if kx.config.pandas_2:
+            if kx.config.pandas_gt1:
                 assert str(td.dtypes['datatypes'][0]) == str(td_roundtrip.dtypes['datatypes'][0])
             else:
                 assert 'kx.TimespanAtom' == str(td_roundtrip.dtypes['datatypes'][0])
@@ -5760,23 +5778,152 @@ class Test_Column:
 
         assert all(tab.exec(kx.Column('a').time) == kx.TimeVector(kx.q('20:31:15.070 11:09:13.020'))) # noqa E:501
 
+    def test_column_bin(self, kx):
+        t = kx.q('([] n: 2 4)')
+        assert all(t.select(kx.Column('n').bin([1, 3, 5])) == kx.q('select 1 3 5 bin n from ([] n: 2 4)')) # noqa E:501
 
-def test_column_types(kx):
-    a = kx.Column(name='age', data=(1, 2, 3))
-    assert (a._name=='age' and a._data==(1, 2, 3))
+        with pytest.raises(kx.QError):
+            t.select(kx.Column('n').bin(['a', 'b', 'c']))
 
-    with pytest.raises(TypeError) as err:
-        kx.Column(data=(1, 2, 3))
-        assert "'name' cannot be None" in str(err)
+    def test_column_enlist(self, kx):
+        t = kx.q('([] n: 2 4)')
+        assert all(t.select(kx.Column('n').enlist(iterator='each')) == kx.q('select enlist each n from ([] n: 2 4)')) # noqa E:501
+        t2 = kx.q('([] n:((2 3);(4 5)))')
+        assert (t2.exec(kx.Column('n').enlist(iterator='each')) == kx.q('exec enlist each n from ([] n:((2 3);(4 5)))')).all() # noqa E:501
 
-    with pytest.raises(TypeError) as err:
-        kx.Column(age=5, data=(1, 2, 3))
-        assert "name can only be of type Str and pykx.SymbolAtom" in str(err)
+    def test_column_any(self, kx):
+        t1 = kx.q('([] n: 3#1b)')
+        assert all(t1.select(kx.Column('n').any()) == kx.q('select any n from ([] n: 3#1b)'))
 
+        t2 = kx.q('([] n: 3#0b)')
+        assert all(t2.select(kx.Column('n').any()) == kx.q('select any n from ([] n: 3#0b)'))
 
-def test_column_bin(kx):
-    t = kx.q('([] n: 2 4)')
-    assert all(t.select(kx.Column('n').bin([1, 3, 5])) == kx.q('select 1 3 5 bin n from ([] n: 2 4)')) # noqa E:501
+        t3 = kx.q('([] n: 0b, 0b, 1b, 0b)')
+        assert all(t3.select(kx.Column('n').any()) == kx.q('select any n from ([] n: 0b, 0b, 1b, 0b)')) # noqa E:501
 
-    with pytest.raises(kx.QError):
-        t.select(kx.Column('n').bin(['a', 'b', 'c']))
+    def test_column_all(self, kx):
+        t1 = kx.q('([] n: 3#1b)')
+        assert all(t1.select(kx.Column('n').all()) == kx.q('select all n from ([] n: 3#1b)'))
+
+        t2 = kx.q('([] n: 3#0b)')
+        assert all(t2.select(kx.Column('n').all()) == kx.q('select all n from ([] n: 3#0b)'))
+
+        t3 = kx.q('([] n: 0b, 0b, 1b, 0b)')
+        assert all(t3.select(kx.Column('n').all()) == kx.q('select all n from ([] n: 0b, 0b, 1b, 0b)')) # noqa E:501
+
+    def test_column_not(self, kx):
+        t1 = kx.q('([] n: 3#1b)')
+        assert all(t1.select(kx.Column('n')._not()) == kx.q('select not n from ([] n: 3#1b)'))
+
+        t2 = kx.q('([] n: 3#0b)')
+        assert all(t2.select(kx.Column('n')._not()) == kx.q('select not n from ([] n: 3#0b)'))
+
+        t3 = kx.q('([] n: 0b, 0b, 1b, 0b)')
+        assert all(t3.select(kx.Column('n')._not()) == kx.q('select not n from ([] n: 0b, 0b, 1b, 0b)')) # noqa E:501
+
+    def test_column_in(self, kx):
+        t = kx.q('([] n: til 5)')
+        assert (t.exec(kx.Column('n')._in(3)) == kx.q('exec n in 3 from ([] n: til 5)')).all()
+
+    def test_column_except(self, kx):
+        t = kx.q('([] n: til 5)')
+        assert (t.exec(kx.Column('n')._except(3)) == kx.q('exec n except 3 from ([] n: til 5)')).all() # noqa E:501
+
+    def test_column_hsym(self, kx):
+        t = kx.q('([] n: `a`b`c)')
+        assert (t.exec(kx.Column('n').hsym()) == kx.q('exec hsym n from ([] n : `a`b`c)')).all()
+
+    def test_column_raze(self, kx):
+        t = kx.q('([] n:(1 2;(3 4;5 6);7;8))')
+        assert (t.exec(kx.Column('n').raze()) == kx.q('exec raze n from ([] n:(1 2;(3 4;5 6);7;8))')).all() # noqa E:501
+        assert (t.exec(kx.Column('n').raze(iterator='over')) == kx.q('exec raze/[n] from ([] n:(1 2;(3 4;5 6);7;8))')).all() # noqa E:501
+
+    def test_column_type(self, kx):
+        t = kx.q('([] n:(1 2;(3 4;5 6);7;8))')
+        assert (t.exec(kx.Column('n').type(iterator='each')) == kx.q('exec type each n from ([] n:(1 2;(3 4;5 6);7;8))')).all() # noqa E:501
+
+    def test_column_key(self, kx):
+        d1 = kx.q('`a`b`c ! 1 2 3')
+        kx.q['d1'] = d1
+        d2 = kx.q('`d`e`f ! 4 5 6')
+        kx.q['d2'] = d2
+        t = kx.Table(data={'n': [d1, d2]})
+        assert all(t.select(kx.Column('n').key(iterator='each')) == kx.q('select key each n from ([] n:(d1;d2))')) # noqa E:501
+
+    def test_column_get(self, kx):
+        kx.q('`:tb1 set (`a`b`c)')
+        kx.q('`:tb2 set (1 2 3)')
+        t = kx.q('([] n: `:tb1`:tb2)')
+        assert (t.exec(kx.Column('n').get(iterator='each')) == kx.q('exec get each n from ([] n: `:tb1`:tb2)')).all() # noqa E:501
+        os.remove('tb1')
+        os.remove('tb2')
+
+    def test_column_read0(self, kx):
+        kx.q('`:t1.txt 0: enlist "hello"')
+        kx.q('`:t2.txt 0: enlist "goodbye"')
+        t = kx.q('([] n:`:t1.txt`:t2.txt)')
+        assert (t.exec(kx.Column('n').read0(iterator='each')) == kx.q('exec read0 each n from ([]n:`:t1.txt`:t2.txt)')).all() # noqa E:501
+        os.remove('t1.txt')
+        os.remove('t2.txt')
+
+    def test_column_read1(self, kx):
+        kx.q('`:t1.txt 0: enlist "hello"')
+        kx.q('`:t2.txt 0: enlist "goodbye"')
+        t = kx.q('([] n:`:t1.txt`:t2.txt)')
+        assert (t.exec(kx.Column('n').read1(iterator='each')) == kx.q('exec read1 each n from ([]n:`:t1.txt`:t2.txt)')).all() # noqa E:501
+        os.remove('t1.txt')
+        os.remove('t2.txt')
+
+    def test_column_next(self, kx):
+        t = kx.q('([] n:3 6 9 12)')
+        assert (t.exec(kx.Column('n').call('next')) == kx.q('exec next n from ([]n: 3 6 9 12)')).all() # noqa E:501
+
+    def test_column_prior(self, kx):
+        t = kx.q('([] n:1 2 3 3 2 1)')
+        assert t.exec(kx.Column('n').prior(kx.q('<')) == kx.q('000011b')).all()
+
+    def test_column_where(self, kx):
+        t = kx.q('([] a:101010b)')
+        assert (t.exec(kx.Column('a').where()) == kx.q('0 2 4')).all()
+
+    def test_column_types(self, kx):
+        a = kx.Column(name='age', data=(1, 2, 3))
+        assert (a._name=='age' and a._data==(1, 2, 3))
+
+        with pytest.raises(TypeError) as err:
+            kx.Column(data=(1, 2, 3))
+            assert "'name' cannot be None" in str(err)
+
+        with pytest.raises(TypeError) as err:
+            kx.Column(age=5, data=(1, 2, 3))
+            assert "name can only be of type Str and pykx.SymbolAtom" in str(err)
+
+    def test_column_data_str(self, kx):
+        t = kx.q('([] a:1 2 3)')
+        r = kx.q('([] a:1 2 3;n:`t`t`t)')
+        kx.q['s'] = 't'
+        kx.q['svec'] = ['t', 't', 't']
+        assert kx.q('~', r, t.update(kx.Column('n', data='t')))
+        assert kx.q('~', r, t.update(kx.Column('n', data=['t', 't', 't'])))
+        assert kx.q('~', r, t.update(kx.Column('n', data=kx.SymbolAtom('t'))))
+        assert kx.q('~', r, t.update(kx.Column('n', data=kx.SymbolVector(['t', 't', 't']))))
+        assert kx.q('~', r, t.update(kx.Column('n', data=kx.Variable('s'))))
+        assert kx.q('~', r, t.update(kx.Column('n', data=kx.Variable('svec'))))
+        assert kx.q('~', r, t.update(kx.Column('n').data('t')))
+        assert kx.q('~', r, t.update(kx.Column('n').data(['t', 't', 't'])))
+        assert kx.q('~', r, t.update(kx.Column('n').data(kx.SymbolAtom('t'))))
+        assert kx.q('~', r, t.update(kx.Column('n').data(kx.SymbolVector(['t', 't', 't']))))
+        assert kx.q('~', r, t.update(kx.Column('n').data(kx.Variable('s'))))
+        assert kx.q('~', r, t.update(kx.Column('n').data(kx.Variable('svec'))))
+
+    def test_column_getitem(self, kx):
+        t = kx.q('([] a:5 10 15 20)')
+        assert kx.q('~', kx.q('([] a:10 15)'), t.select(kx.Column('a')[[1, 2]]))
+        kx.q['myvar'] = [1, 2]
+        assert kx.q('~', kx.q('([] a:10 15)'), t.select(kx.Column('a')[kx.Variable('myvar')]))
+
+    def test_column_cast(self, kx):
+        t = kx.q('([] a:("this";"that"))')
+        assert kx.q('~', kx.q('([] a:`this`that)'), t.select(kx.Column('a').cast('symbol')))
+        t = kx.q('([] a:1 2 3)')
+        assert kx.q('~', kx.q('([] a:1 2 3i)'), t.select(kx.Column('a').cast('int')))

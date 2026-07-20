@@ -3,19 +3,19 @@ title: Issues and Limitations
 description: Known issues that occur when using python and limitations when using q embedded in python
 maintained by: KX Systems, Inc.
 date: Aug 2024
-tags: PyKX, issues, embedded
+tags: PyKX, issues, embedded, KDB-X Python
 ---
 
 # Issues and Limitations
 
-_This page details known issues and functional limitations when using PyKX either as q embedded in a python process via the `#!python import pykx` command, or as a python processes embedded in q via `#!q \l pykx.q`._
+_This page details known issues and functional limitations when using KDB-X Python either as q embedded in a python process via the `#!python import pykx` command, or as a python processes embedded in q via `#!q \l pykx.q`._
 
-## PyKX
+## KDB-X Python (`pykx`)
 ### Known issues
 * Enabling the NEP-49 NumPy allocators will often segfault when running in a multiprocess setting.
 * The timeout value is always set to 0 when using PYKX_Q_LOCK.
 * Enabling PYKX_ALLOCATOR and using PyArrow tables can cause segfaults.
-* Multiprocessing is not available on Windows. When using PyKX in a multiprocessing setup, PyKX must be imported and initialized within each subprocess where it is needed, regardless of the multiprocessing start method used (spawn, fork, or forkserver).
+* Multiprocessing is not available on Windows. When using KDB-X Python in a multiprocessing setup, KDB-X Python must be imported and initialized within each subprocess where it is needed, regardless of the multiprocessing start method used (spawn, fork, or forkserver).
 * Multithreading mode is not available on Windows.
 * `#!python kurl` functions require their `#!python options` dictionary to have mixed type values. Add a `#!python None` value to bypass: `#!python {'': None, ...}`
 * `#!python None` and `#!python pykx.Identity(pykx.q('::'))` do not pass through to single argument Python functions set under q as outlined in this example:
@@ -35,7 +35,7 @@ pykx.LongAtom(pykx.q('2'))
 >>> kx.toq(df, no_allocator=True)
 ```
 
-Or for PyKX under q you can use.
+Or for KDB-X Python under q you can use.
 ```q
 q) df: .pykx.pyeval"pd.read_parquet('nested_arrs.parquet')";
 q) .pykx.toq .pykx.noalloc df;
@@ -57,12 +57,12 @@ pykx.Identity(pykx.q('::'))
 Now, in a Python or q process attempt to connect to the above embedded q server.
 ```python
 >>> import pykx as kx
->>> q = kx.QConnection(port=5001) # Attempt to create a q connection to a PyKX embedded q instance
+>>> q = kx.QConnection(port=5001) # Attempt to create a q connection to a `pykx` embedded q instance
 # This process is now hung indefinitely as the embedded q server cannot respond
 ```
 
 ```q
-q)h:hopen`::5001 /Attempting to create an IPC connection to a PyKX embedded q instance
+q)h:hopen`::5001 /Attempting to create an IPC connection to a `pykx` embedded q instance
 /This process is now hung indefinitely as the embedded q server cannot respond
 ```
 
@@ -74,7 +74,7 @@ Timers in q rely on the main loop of the standalone executable so they will not 
 >>> kx.q('\t 1000') # Set timer to tick every 1000ms
 pykx.Identity(pykx.q('::')) # No output follows because the timer never ticks
 ```
-Attempting to use the timer callback function directly using PyKX will raise an AttributeError:
+Attempting to use the timer callback function directly using `pykx` will raise an AttributeError:
 ```python
 >>> kx.q.z.ts
 AttributeError: ts: .z.ts is not exposed through the context interface because there is no main loop in the embedded q process
@@ -111,7 +111,7 @@ q)(::)~{x}[] /x parameter received by lambda is the generic null ::
 1b
 ```
 
-Using `#!q ::` as an argument to PyKX functions presents some difficulties:
+Using `#!q ::` as an argument to `pykx` functions presents some difficulties:
 ```q
 q)f:.pykx.eval["lambda x: x";<]
 q)f[::] /the Python process cannot tell the difference between f[] and f[::] so throws an error
@@ -158,7 +158,7 @@ False
 ```
 
 **Cause:**  
-Pandas now checks the type of the `_mgr` (dataframes manager) property. PyKX uses a custom `_mgr` implementation for performance optimization.
+Pandas now checks the type of the `_mgr` (dataframes manager) property. KDB-X Python uses a custom `_mgr` implementation for performance optimization.
 
 ```python
 >>> type(df1._mgr)

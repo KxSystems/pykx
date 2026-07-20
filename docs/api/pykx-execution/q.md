@@ -1,17 +1,17 @@
 ---
-title: PyKX q functions and operators
-description: PyKX implementation of a subset of the q language's functions and operators
+title: KDB-X Python q functions and operators
+description: KDB-X Python implementation of a subset of the q language's functions and operators
 author: KX Systems
 date: September 2024
 tags: operators
 ---
 # q functions and operators
 
-_This page documents the PyKX implementations of a selection of keywords and operators available in q._
+_This page documents the KDB-X Python implementations of a selection of keywords and operators available in q._
 
-The functions listed here are accessible in PyKX as attributes of `#!python pykx.q`, or as attributes of `#!python pykx.QConnection` instances. Refer to [the q reference card in the q docs](https://code.kx.com/q/ref/#by-category) for more details about these functions as they are used in a q process. This page documents using them in Python via PyKX.
+The functions listed here are accessible in KDB-X Python as attributes of `#!python pykx.q`, or as attributes of `#!python pykx.QConnection` instances. Refer to [the q reference card in the q docs](https://code.kx.com/q/ref/#by-category) for more details about these functions as they are used in a q process. This page documents using them in Python via KDB-X Python.
 
-These functions take and return q objects, which are wrapped in PyKX as `#!python pykx.K` objects. Any arguments of other types are converted appropriately. Refer to [the PyKX wrappers documentation](../pykx-q-data/wrappers.md) for more information about `#!python pykx.K` objects.
+These functions take and return q objects, which are wrapped in KDB-X Python as `#!python pykx.K` objects. Any arguments of other types are converted appropriately. Refer to [the KDB-X Python wrappers documentation](../pykx-q-data/wrappers.md) for more information about `#!python pykx.K` objects.
 
 ## By Category
 
@@ -38,7 +38,7 @@ Some keywords listed on [the q reference card](https://code.kx.com/q/ref/#by-cat
 
  - functions that have names which would result in syntax errors in Python, such as `#!q not` and `#!q or`
 
-The unavailable functions can still be used in PyKX by executing q code with `#!python pykx.q`, i.e. `#!python pykx.q('not')` instead of `#!python pykx.q.not`. For the qSQL functions (`#!q select`, `#!q exec`, `#!q update`, and `#!q delete`) use [PyKX qSQL](../query.md).
+The unavailable functions can still be used in KDB-X Python by executing q code with `#!python pykx.q`, i.e. `#!python pykx.q('not')` instead of `#!python pykx.q.not`. For the qSQL functions (`#!q select`, `#!q exec`, `#!q update`, and `#!q delete`) use [KDB-X Python qSQL](../query.md).
 
 ## Environment
 
@@ -2784,7 +2784,7 @@ pykx.EnumVector(pykx.q('`d$`a`b`c`b`a`b`c'))
 
 ### [pad](https://code.kx.com/q/ref/pad/)
 
-Pad a supplied PyKX string (Python bytes) to the length supplied by the user.
+Pad a supplied KDB-X Python string (Python bytes) to the length supplied by the user.
 In the case that you are padding the front of a string use a negative value.
 
 ```python
@@ -2813,8 +2813,8 @@ pykx.BooleanVector(pykx.q('0111111111b'))
 
 ### [tok](https://code.kx.com/q/ref/tok/)
 
-Interpret a PyKX string as a data value(s), this should use a single upper case character byte or
-a non-positive PyKX short value.
+Interpret a KDB-X Python string as a data value(s), this should use a single upper case character byte or
+a non-positive KDB-X Python short value.
 See https://code.kx.com/q/ref/tok/ for more information on accepted lists for casting
 
 ```python

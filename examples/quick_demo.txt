@@ -1,4 +1,4 @@
-# PyKX Demo
+# KDB-X Python Demo
 
 # Note that here "K object" refers to an object for which
 # `isinstance(obj, pykx.K)` is `True`. "K objects" from q
@@ -82,8 +82,8 @@ kx.q.Q.addr('localhost')
 kx.q.z.h
 
 
-# By default PyKX allows users to define extensions modules
-# which are loaded in automatically from QHOME when PyKX is
+# By default KDB-X Python allows users to define extensions modules
+# which are loaded in automatically from QHOME when KDB-X Python is
 # initialised. To run this example add the script 
 # 'extension/extension.q' to QHOME and initialise the interface
 
