@@ -6,16 +6,6 @@ This changelog tracks all PyKX releases and their associated additions, fixes, a
 
 	For changes to PyKX within a q environment, refer to the [PyKX under q changelog](./underq-changelog.md).
 
-## PyKX 3.2.1
-
-**Release Date**
-
-2026-XX-XX
-
-**Fixes and Improvments**
-
-- Updated 4.1 qlibs to 2026.07.06 for all platforms.
-
 ## PyKX 3.2.0
 
 **Release Date**

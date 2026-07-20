@@ -315,11 +315,11 @@ This command should display the installed version of PyKX.
 | Mac ARM   | kdb+ 4.0   | libq.dylib  | 2025.02.18 |
 | Mac x86   | kdb+ 4.0   | libq.dylib  | 2025.02.18 |
 | Windows   | kdb+ 4.0   | q.dll/q.lib | 2025.02.18 |
-| Linux ARM | kdb+ 4.1   | libq.so     | 2026.07.06 |
-| Linux x86 | kdb+ 4.1   | libq.so     | 2026.07.06 |
-| Mac ARM   | kdb+ 4.1   | libq.dylib  | 2026.07.06 |
-| Mac x86   | kdb+ 4.1   | libq.dylib  | 2026.07.06 |
-| Windows   | kdb+ 4.1   | q.dll/q.lib | 2026.07.06 |
+| Linux ARM | kdb+ 4.1   | libq.so     | 2026.05.01 |
+| Linux x86 | kdb+ 4.1   | libq.so     | 2026.05.01 |
+| Mac ARM   | kdb+ 4.1   | libq.dylib  | 2026.05.01 |
+| Mac x86   | kdb+ 4.1   | libq.dylib  | 2026.05.01 |
+| Windows   | kdb+ 4.1   | q.dll/q.lib | 2026.05.01 |
 | Linux ARM | Unlicensed | libe.so     | 2023.11.22 |
 | Linux x86 | Unlicensed | libe.so     | 2023.11.22 |
 | Mac ARM   | Unlicensed | libe.so     | 2023.11.22 |

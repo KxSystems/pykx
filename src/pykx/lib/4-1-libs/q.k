@@ -68,7 +68,7 @@ show:{1 .Q.s x;};csv:"," / ";"  also \z 1 for "D"$"dd/mm/yyyy"
 
 parse:{$["\\"=*x;(system;1_x);-5!x]};eval:-6!;reval:-24!
 \d .Q  /def[`a`b`c!(0;0#0;`)]`b`c!(("23";"24");,"qwe")
-k:4.1;K:0Nd;host:-12!;addr:-13!;gc:-20!;ts:{-34!(x;y)};gz:-35!;ipc:{-40!(x;y)};w:{`used`heap`peak`wmax`mmap`mphy`syms`symw!(."\\w"),."\\w 0"}  / used: dpft en par chk ind fs fu fc
+k:4.1;K:0Nd;host:-12!;addr:-13!;gc:-20!;ts:{-34!(x;y)};gz:-35!;w:{`used`heap`peak`wmax`mmap`mphy`syms`symw!(."\\w"),."\\w 0"}  / used: dpft en par chk ind fs fu fc
 res:`abs`acos`asin`atan`avg`bin`binr`cor`cos`cov`delete`dev`div`do`enlist`exec`exit`exp`getenv`hopen`if`in`insert`last`like`log`max`min`prd`select`setenv`sin`sqrt`ss`sum`tan`update`var`wavg`while`within`wsum`xexp`from`by
 addmonths:{("d"$m+y)+x-"d"$m:"m"$x}
 f:{$[^y;"";y<0;"-",f[x;-y];y<1;1_f[x;10+y];9e15>j:"j"$y*prd x#10f;(x_j),".",(x:-x)#j:$j;$y]}
