@@ -3,16 +3,16 @@ title: Load an existing database
 description: How to load an existing database into a Python process
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, database, loading
+tags: KDB-X Python, q, database, loading
 ---
 
 # Load an existing database
 
 _This page explains how to load an existing database into a Python process._
 
-!!! tip "Tip: For the best experience, we recommend reading [Databases in PyKX](index.md) and [generate a database](db_gen.md) first."
+!!! tip "Tip: For the best experience, we recommend reading [Databases in KDB-X Python](index.md) and [generate a database](db_gen.md) first."
 
-By default, you can only load one database into a Python process when using PyKX. To automatically load a database when initializing the `#!python pykx.DB` class, set the database location as the path:
+By default, you can only load one database into a Python process when using KDB-X Python. To automatically load a database when initializing the `#!python pykx.DB` class, set the database location as the path:
 
 ```python
 >>> import pykx as kx

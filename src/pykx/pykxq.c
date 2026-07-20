@@ -506,8 +506,11 @@ EXPORT K get_attr(K f, K attr) {
     int gstate = PyGILState_Ensure();
     P p = get_py_ptr(f);
     P _attr = Py_BuildValue("s", attr->s);
-    K res = create_foreign(PyObject_GetAttr(p, _attr));
+    P __attr = PyObject_GetAttr(p, _attr);
+    K res = create_foreign(__attr);
     Py_XDECREF(_attr);
+    // INCREF is called in create_foreign, decref here to avoid object not being freed
+    Py_XDECREF(__attr);
     if ((k = k_py_error())) {
         PyGILState_Release(gstate);
         return k;

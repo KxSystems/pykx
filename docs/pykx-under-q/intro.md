@@ -1,32 +1,32 @@
 ---
-title:  PyKX within q 
-description: How to use PyKX in a q session
+title:  KDB-X Python within q 
+description: How to use KDB-X Python in a q session
 date: June 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, setup,
+tags: KDB-X Python, q, setup,
 ---
 
-# How to use PyKX within q
+# How to use KDB-X Python within q
 
-_This page provides details on how to run PyKX within a q session, including how to evaluate and execute Python code, how to interact with objects, and how to call a function._
+_This page provides details on how to run KDB-X Python within a q session, including how to evaluate and execute Python code, how to interact with objects, and how to call a function._
 
 !!! tip "Tip: For the best experience, we recommend reading [Why upgrade from embedPy](../pykx-under-q/upgrade.md) first." 
 
 ## Introduction
 
-PyKX is a Python-first interface to the programming language q and its underlying database kdb+. To overcome a few [limitations](../help/issues.md), PyKX allows you to run Python within q, similarly to [embedPy](https://github.com/kxsystems/embedpy). The ability to execute and manipulate Python objects within a q session helps two types of users in the following ways:
+KDB-X Python is a Python-first interface to the programming language q and its underlying database KDB-X. To overcome a few [limitations](../help/issues.md), KDB-X Python allows you to run Python within q, similarly to [embedPy](https://github.com/kxsystems/embedpy). The ability to execute and manipulate Python objects within a q session helps two types of users in the following ways:
 
- - kdb+/q users can build applications which embed machine learning/data science libraries in production q infrastructures.
+ - KDB-X/q users can build applications which embed machine learning/data science libraries in production q infrastructures.
  - Users of Python plotting libraries can visualize and explore the outcomes of their analyses.
 
 ## Getting started
 
 ### Prerequisites
 
-Before you run PyKX within q, make sure you:
+Before you run KDB-X Python within q, make sure you:
 
 1. Have access to a running `#!python q` environment. [Follow [the q installation guide](https://code.kx.com/q/learn/install/).]
-2. Have [installed](../getting-started/installing.md) the licensed version of PyKX.
+2. Have [installed](../getting-started/installing.md) the licensed version of KDB-X Python.
 
 ### Install
 
@@ -92,7 +92,7 @@ Use this library to complete a wide variety of tasks, from the simple execution 
 
 #### Evaluate Python code
 
-To evaluate Python code with PyKX, pass a string of Python code to a variety of PyKX functions as shown below.
+To evaluate Python code with KDB-X Python, pass a string of Python code to a variety of KDB-X Python functions as shown below.
 
 For example, if you want to evaluate and return the result to `#!python q`, use the function `#!python .pykx.qeval`:
 
@@ -134,7 +134,7 @@ q).pykx.pyexec"print(array)"
 [0 1 2 3]
 ```
 
-b) Use the PyKX console functionality
+b) Use the `pykx` console functionality
 
 This is useful when interacting within a q session and you need to prototype a functionality in Python:
 
@@ -188,7 +188,7 @@ q)f[1;2]
 3
 ```
 
-### Interact with PyKX objects
+### Interact with `pykx` objects
 
 #### Foreign objects
 
@@ -198,23 +198,23 @@ You can store foreign objects in variables just like any other q datatype, or as
 
 ??? "Serialization and IPC"
 
-	Kdb+ cannot serialize foreign objects, nor send them over IPC. Foreign objects live in the embedded Python memory space. To pass them over IPC, first you have to convert them to q.
+	KDB-X cannot serialize foreign objects, nor send them over IPC. Foreign objects live in the embedded Python memory space. To pass them over IPC, first you have to convert them to q.
 
-#### Create PyKX objects
+#### Create `pykx` objects
 
-q doesn't allow you to operate directly with foreign objects. Instead, Python objects are represented as PyKX objects, which wrap the underlying foreign objects. This helps to get and set attributes, index, call or convert the underlying foreign object to a q object.
+q doesn't allow you to operate directly with foreign objects. Instead, Python objects are represented as `pykx` objects, which wrap the underlying foreign objects. This helps to get and set attributes, index, call or convert the underlying foreign object to a q object.
 
-Use `#!python .pykx.wrap` to create a PyKX object from a foreign object.
+Use `#!python .pykx.wrap` to create a `pykx` object from a foreign object.
 
 ```q
 q)x
 foreign
 q)p:.pykx.wrap x
-q)p           /how a PyKX object looks
+q)p           /how a `pykx` object looks
 {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 ```
 
-To retrieve PyKX objects directly from Python, choose between the following functions:
+To retrieve `pykx` objects directly from Python, choose between the following functions:
 
 **Function**   | **Argument**                                     | **Example**
 ---------------|--------------------------------------------------|-----------------------
@@ -229,7 +229,7 @@ To retrieve PyKX objects directly from Python, choose between the following func
 
 #### Convert data
 
-For `#!python obj`, a PyKX object representing Python data, to obtain the underlying data (as foreign object or q) use:
+For `#!python obj`, a `pykx` object representing Python data, to obtain the underlying data (as foreign object or q) use:
 
 ```q
 obj`. / get data as foreign
@@ -258,14 +258,14 @@ Python `#!python None` maps to the q identity function `#!python ::` when conver
 
 #### Get attributes and properties
 
-Given `#!python obj`, a PyKX object representing a Python object, you can get an attribute or property by using:
+Given `#!python obj`, a `pykx` object representing a Python object, you can get an attribute or property by using:
 
 ```q
 obj`:attr         / equivalent to obj.attr in Python
 obj`:attr1.attr2  / equivalent to obj.attr1.attr2 in Python
 ```
 
-These expressions return PyKX objects, allowing you to chain operations together:
+These expressions return `pykx` objects, allowing you to chain operations together:
 
 ```q
 obj[`:attr1]`:attr2  / equivalent to obj.attr1.attr2 in Python
@@ -292,7 +292,7 @@ q)obj[`:y]`
 
 #### Set attributes and properties
 
-Given `#!python obj`, a PyKX object representing a Python object, you can set an attribute or property by using:
+Given `#!python obj`, a `pykx` object representing a Python object, you can set an attribute or property by using:
 
 ```q
 obj[:;`:attr;val]  / equivalent to obj.attr=val in Python
@@ -315,7 +315,7 @@ q)obj[`:y]`
 
 #### How to index
 
-Given `#!python lst`, a PyKX object representing an indexable container object in Python, you can access the element at index `#!python i` by using:
+Given `#!python lst`, a `pykx` object representing an indexable container object in Python, you can access the element at index `#!python i` by using:
 
 ```q
 lst[@;i]    / equivalent to lst[i] in Python
@@ -327,7 +327,7 @@ Set the element at index `#!python i` (to object `#!pythonx`) with this command:
 lst[=;i;x]  / equivalent to lst[i]=x in Python
 ```
 
-These expressions return PyKX objects, for instance:
+These expressions return `pykx` objects, for instance:
 
 ```q
 q)lst:.pykx.eval"[True,2,3.0,'four']"
@@ -351,39 +351,39 @@ q)lst`
 
 #### Get methods
 
-Given `#!python obj`, a PyKX object representing a Python object, you can access a method by using:
+Given `#!python obj`, a `pykx` object representing a Python object, you can access a method by using:
 
 ```q
 obj`:method  / equivalent to obj.method in Python
 ```
 
-When calling PyKX objects representing Python methods, the return of evaluation is a PyKX object. For example:
+When calling `pykx` objects representing Python methods, the return of evaluation is a `pykx` object. For example:
 
 ```q
 q)np:.pykx.import`numpy
 q)np`:arange
 {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
-q)arange:np`:arange                   / callable returning PyKX object
+q)arange:np`:arange                   / callable returning `pykx` object
 q)arange 12
 {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 q)arange[12]`
 0 1 2 3 4 5 6 7 8 9 10 11
 ```
 
-#### PyKX function API
+#### KDB-X Python function API
 
 Use the function API to achieve the following:
 
-- Call PyKX objects (to get PyKX objects).
-- Declare PyKX objects callable (to get q or `#!python foreign` data).
+- Call `pykx` objects (to get `pykx` objects).
+- Declare `pykx` objects callable (to get q or `#!python foreign` data).
 
-The default return is a PyKX object. For q or foreign return type, you need to specify it. 
+The default return is a `pykx` object. For q or foreign return type, you need to specify it. 
 
-Given `#!python func`, a `#!python PyKX` object representing a callable Python function or method, you can carry out the following operations:
+Given `#!python func`, a `#!python KDB-X Python` object representing a callable Python function or method, you can carry out the following operations:
 
 ```q
-func                   / func is callable by default (returning PyKX)
-func arg               / call func(arg) (returning PyKX)
+func                   / func is callable by default (returning KDB-X Python)
+func arg               / call func(arg) (returning KDB-X Python)
 func[<]                / declare func callable (returning q)
 func[<]arg             / call func(arg) (returning q)
 func[<;arg]            / equivalent
@@ -394,10 +394,10 @@ func[>;arg]            / equivalent
 
 !!! info "How to chain operations?" 
     
-    To chain together sequences of operations, return another PyKX object from a function or method call. Alternatively, call `.pykx.import`, `.pykx.get` and `.pykx.eval`.
+    To chain together sequences of operations, return another `pykx` object from a function or method call. Alternatively, call `.pykx.import`, `.pykx.get` and `.pykx.eval`.
 
 
-#### PyKX examples
+#### KDB-X Python examples
 
 === "Example #1"
 
@@ -494,17 +494,17 @@ func[>;arg]            / equivalent
 
 #### Function argument types
 
-PyKX supports data type conversions between q and Python for Python native objects, NumPy objects, Pandas objects, PyArrow objects, and PyKX objects.
+KDB-X Python supports data type conversions between q and Python for Python native objects, NumPy objects, Pandas objects, PyArrow objects, and `pykx` objects.
 
 By default, when passing a q object to a callable function, it's converted to the most "natural" analogous type, as detailed below:
 
-- PyKX/q generic list objects become Python lists.
-- PyKX/q table/keyed table objects become Pandas equivalent DataFrames.
-- All other PyKX/q objects become their analogous NumPy equivalent types.
+- `pykx`/q generic list objects become Python lists.
+- `pykx`/q table/keyed table objects become Pandas equivalent DataFrames.
+- All other `pykx`/q objects become their analogous NumPy equivalent types.
 
 !!! Warning
 
-	Prior to PyKX 2.1.0, all conversions from q objects to Python would convert to their NumPy equivalent. To achieve this now, set the environment variable `PYKX_DEFAULT_CONVERSION="np"`
+	Prior to KDB-X Python 2.1.0, all conversions from q objects to Python would convert to their NumPy equivalent. To achieve this now, set the environment variable `PYKX_DEFAULT_CONVERSION="np"`
 
 For function/method calls, control the default behavior of the conversions by setting `#!python .pykx.util.defaultConv`:
 
@@ -514,7 +514,7 @@ q).pykx.util.defaultConv
 ```
 You can apply one of the following values:
 
-|**Python type**|Default|Python|NumPy|Pandas|PyArrow|PyKX|
+|**Python type**|Default|Python|NumPy|Pandas|PyArrow|KDB-X Python|
 |---------------|-------|------|-----|------|-------|----|
 |**Value**:     |"default"|"py"|"np"|"pd"|"pa"|"k"|  
 
@@ -566,7 +566,7 @@ In the example below, we start with NumPy and update the default types across al
     q).pykx.typepy ([]100?1f;100?1f);
     "<class 'pyarrow.lib.Table'>"
     ```
-=== "PyKX"
+=== "KDB-X Python"
 
     ```q
     q).pykx.util.defaultConv:"k"
@@ -591,7 +591,7 @@ q)typeFunc[til 10].pykx.topd til 10;               // Pass in the second argumen
 q)typeFunc[.pykx.topa([]100?1f);til 10];           // Pass in first argument as PyArrow Table
 <class 'pyarrow.lib.Table'>
 <class 'numpy.ndarray'>
-q)typeFunc[.pykx.tok til 10;.pykx.tok ([]100?1f)]; // Pass in two PyKX objects
+q)typeFunc[.pykx.tok til 10;.pykx.tok ([]100?1f)]; // Pass in two `pykx` objects
 <class 'pykx.wrappers.LongVector'>
 <class 'pykx.wrappers.Table'>
 ```
@@ -619,9 +619,9 @@ Python allows you to call functions with:
 -   A mixture of positional and keyword arguments
 -   Implicit (default) arguments
 
-This is available in the PyKX function-call interface, as detailed below:
+This is available in the KDB-X Python function-call interface, as detailed below:
 
--   Callable PyKX objects are variadic (they accept a variable number of arguments).
+-   Callable `pykx` objects are variadic (they accept a variable number of arguments).
 -   Default arguments are applied where no explicit arguments are given.
 -   Individual keyword arguments are specified using the (infix) `#!python pykw` operator.
 -   A list of positional arguments can be passed using `#!python pyarglist` (like Python \*args).
@@ -730,9 +730,9 @@ func()       #call with no arguments
 func(None)   #call with argument None
 ```
 
-!!! warning "PyKX function called with `::` calls Python with no arguments"
+!!! warning "KDB-X Python function called with `::` calls Python with no arguments"
 
-    Although `::` in q corresponds to `None` in Python, if a PyKX function is called with `::` as its only argument, the corresponding Python function will be called with _no_ arguments.
+    Although `::` in q corresponds to `None` in Python, if a KDB-X Python function is called with `::` as its only argument, the corresponding Python function will be called with _no_ arguments.
 
 To call a Python function with `#!python None` as its sole argument, retrieve `#!python None` as a foreign object in q and pass that as the argument:
 
@@ -763,7 +763,7 @@ None
 
 #### Print or return
 
-`#!python .pykx.repr` returns the string representation of a Python object, either PyKX or foreign. You can print this representation to `#!python stdout` by using `#!python .pykx.print`. Here's how to use this function with a q object:
+`#!python .pykx.repr` returns the string representation of a Python object, either KDB-X Python or foreign. You can print this representation to `#!python stdout` by using `#!python .pykx.print`. Here's how to use this function with a q object:
 
 ```q
 q)x:.pykx.eval"{'a':1,'b':2}"

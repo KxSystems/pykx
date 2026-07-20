@@ -1,6 +1,6 @@
 # Licenses
 
-All files contained within the [PyKX repository](https://github.com/kxsystems/pykx) are not covered by a single license. The following outlines the differences.
+All files contained within the [PyKX Python repository](https://github.com/kxsystems/pykx) are not covered by a single license. The following outlines the differences.
 
 1. All files and folders contained within the source code directory 'src/pykx/q.so/' are licensed under the terms of the 'Software License for q.so' which are included below
 2. All other files within this repository are licensed under the "Apache 2.0" license include below
@@ -63,8 +63,8 @@ END OF TERMS AND CONDITIONS
 
 Software License for q.so 
 
-Version Number: 1.0 
-Date Last Revised: April 2023 
+Version Number: 1.1
+Date Last Revised: June 2026 
 
 Software License Agreement for use of q.so (“Agreement”) 
 
@@ -76,7 +76,7 @@ This Agreement is made between KX Systems, Inc. (“KX” or “we”) and the E
 
  1. LICENSE GRANTS 
 
-1.1 Grant of License. KX hereby grants End User a non-transferable, non-exclusive license, without right of sublicense, to install and use the Software solely for the purpose of compiling and running the PyKX software made available by KX under separate licensing terms. End User will not attempt to circumvent any restrictions imposed on the Software or use the Software for any purpose other than stated above. If End User is using the PyKX software under the terms of a commercial licence from KX, the End User must obtain a separate licence from KX for the use of the Software. 
+1.1 Grant of License. KX hereby grants End User a non-transferable, non-exclusive license, without right of sublicense, to install and use the Software solely for the purpose of compiling and running the PyKX or KDB-X software made available by KX under separate licensing terms. End User will not attempt to circumvent any restrictions imposed on the Software or use the Software for any purpose other than stated above. If End User is using the PyKX or KDB-X software under the terms of a commercial licence from KX, the End User must obtain a separate licence from KX for the use of the Software. 
 
 1.2 Software Use Restrictions. End User may not: (a) modify any part of the Software or create derivative works thereof, (b) sell, lease, license or distribute the Software to any third party, (c) attempt to decompile, disassemble or reverse engineer the Software, (d) copy the Software, except for purposes of installing and executing it within the limitations set out at clause 1.1, (e) use or attempt to use the Software in any way that is unlawful or fraudulent or has any unlawful or fraudulent purpose or effect, (f) use or attempt to use the Software in any way that would breach the license granted herein. 
 

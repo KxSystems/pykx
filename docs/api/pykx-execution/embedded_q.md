@@ -1,4 +1,4 @@
-# PyKX Execution Classes
+# KDB-X Python Execution Classes
 
 _This page documents the base class for all interfaces between Python and the embedded q process._
 

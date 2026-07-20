@@ -1,7 +1,7 @@
 ---
-site_name: 'PyKX'
+site_name: 'KDB-X Python Documentation'
 site_author: 'KX'
-site_description: 'PyKX Documentation'
+site_description: 'KDB-X Python Documentation'
 site_url: 'https://code.kx.com/pykx'
 copyright: '© 2026 KX Systems, Inc. KX, KDB-X, and kdb+ are registered trademarks of KX Systems, Inc., a subsidiary of KX Software Limited.'
 site_dir: 'public'
@@ -9,7 +9,7 @@ dev_addr: 'localhost:8080'
 
 use_directory_urls: false
 
-# Keep commented out until PyKX is open-source
+# Keep commented out until KDB-X Python is open-source
 repo_url: 'https://github.com/kxsystems/pykx'
 edit_uri: 'edit/main/docs/'
 
@@ -147,7 +147,56 @@ plugins:
         - examples/db-management.ipynb
         - examples/streaming/Evolving System.ipynb
         - examples/charting.ipynb
-
+  - redirects:
+      redirect_maps:
+        'api/console.md': 'api/pykx-execution/console.md'
+        'api/ctx.md': 'api/pykx-execution/ctx.md'
+        'api/embedded_q.md': 'api/pykx-execution/embedded_q.md'
+        'api/pykx-save-load/read.md': 'api/pykx-save-load/fileio.md'
+        'api/pykx-save-load/write.md': 'api/pykx-save-load/fileio.md'
+        'api/pykx_under_q.md': 'api/pykx-execution/ctx.md'
+        'api/q/q.md': 'api/pykx-execution/q.md'
+        'api/read.md': 'api/pykx-save-load/fileio.md'
+        'api/toq.md': 'api/pykx-q-data/toq.md'
+        'api/type_conversions.md': 'api/pykx-q-data/type_conversions.md'
+        'api/wrappers.md': 'api/pykx-q-data/wrappers.md'
+        'api/write.md': 'api/pykx-save-load/fileio.md'
+        'beta-features/compress-encypt.md': 'user-guide/advanced/compress-encrypt.md'
+        'beta-features/db-management.md': 'user-guide/advanced/database/index.md'
+        'beta-features/remote-functions.md': 'user-guide/advanced/remote-functions.md'
+        'beta-features/streamlit.md': 'user-guide/advanced/streamlit.md'
+        'beta-features/threading.md': 'user-guide/advanced/threading.md'
+        'changelog.md': 'release-notes/changelog.md'
+        'comparisons.md': 'getting-started/what_is_pykx.md'
+        'evaluating.md': 'user-guide/fundamentals/evaluating.md'
+        'examples/threaded_execution/index.md': 'examples/threaded_execution/threading.md'
+        'examples/threaded_execution/threaded_execution.md': 'examples/threaded_execution/threading.md'
+        'extras/comparisons.md': 'getting-started/what_is_pykx.md'
+        'extras/faq.md': 'help/faq.md'
+        'extras/known_issues.md': 'help/issues.md'
+        'faq.md': 'help/faq.md'
+        'getting-started/interface_overview.md': 'getting-started/what_is_pykx.md'
+        'getting-started/q_magic_command.md': 'examples/jupyter-integration.ipynb'
+        'indexing.md': 'user-guide/fundamentals/indexing.md'
+        'installing.md': 'getting-started/installing.md'
+        'interface_overview.md': 'getting-started/what_is_pykx.md'
+        'known_issues.md': 'help/issues.md'
+        'licenses.md': 'license.md'
+        'limitations.md': 'help/issues.md'
+        'modes.md': 'user-guide/advanced/modes.md'
+        'nulls_and_infinities.md': 'user-guide/fundamentals/nulls_and_infinities.md'
+        'parallelization.md': 'user-guide/advanced/performance.md'
+        'performance.md': 'user-guide/advanced/performance.md'
+        'pykx-under-q/known_issues.md': 'help/issues.md'
+        'troubleshooting.md': 'help/troubleshooting.md'
+        'user-guide/advanced/environment_variables.md': 'user-guide/configuration.md'
+        'user-guide/advanced/limitations.md': 'help/issues.md'
+        'user-guide/advanced/running_under_q.md': 'pykx-under-q/intro.md'
+        'user-guide/fundamentals/querying.md': 'user-guide/fundamentals/query/index.md'
+        'user-guide/index.md': 'index.md'
+        '1.0/licenses.md': 'license.md'
+        '1.5/api/type_conversion.md': 'api/pykx-q-data/type_conversions.md'
+        '3.0/pykx-under-q/type_conversions.md': 'api/pykx-q-data/type_conversions.md'      
 
 theme:
   name: material
@@ -188,7 +237,7 @@ nav:
       - Install: getting-started/installing.md
       - Quickstart guide: getting-started/quickstart.md
   - Learn:
-    - What is PyKX?: getting-started/what_is_pykx.md
+    - What is KDB-X Python?: getting-started/what_is_pykx.md
     - Objects and attributes: learn/objects.md
     - Databases: user-guide/advanced/database/index.md
     - Modes of operation: user-guide/advanced/modes.md
@@ -197,7 +246,7 @@ nav:
     - Glossary: extras/glossary.md
     - Blogs, articles, videos: blogs.md
   - How to:
-    - Configure PyKX: user-guide/configuration.md
+    - Configure KDB-X Python: user-guide/configuration.md
     - Interact with data:
       - Create objects: user-guide/fundamentals/creating.md
       - Use objects: user-guide/fundamentals/evaluating.md
@@ -231,7 +280,7 @@ nav:
     - Import existing q functions: user-guide/advanced/context_interface.md
     - Run remote functions: user-guide/advanced/remote-functions.md
     - Serialize data: user-guide/advanced/serialization.md
-    - Use PyKX in subprocesses: user-guide/advanced/subprocess.md
+    - Use KDB-X Python in subprocesses: user-guide/advanced/subprocess.md
     - Run q code multithreaded: user-guide/advanced/threading.md
     - Manage your license: user-guide/advanced/license.md
     - Use Python in a q process: pykx-under-q/intro.md
@@ -258,11 +307,12 @@ nav:
       - Utility functions: api/util.md
       - Reimporter module: api/reimporting.md
       - License management: api/license.md
-      - PyKX under q: pykx-under-q/api.md
+      - Module importing: api/module.md
+      - KDB-X Python under q: pykx-under-q/api.md
     - Data types and conversions:
-      - Python to PyKX: api/pykx-q-data/toq.md
+      - Python to KDB-X: api/pykx-q-data/toq.md
       - Wrappers: api/pykx-q-data/wrappers.md
-      - PyKX to Python: api/pykx-q-data/type_conversions.md
+      - KDB-X to Python: api/pykx-q-data/type_conversions.md
     - Pandas API: user-guide/advanced/Pandas_API.ipynb
     - Exceptions: api/exceptions.md
   - Integrations:
@@ -271,29 +321,29 @@ nav:
     - Python charting libraries: examples/charting.ipynb
     - Jupyter Integration: examples/jupyter-integration.ipynb
   - Examples:
-    - PyKX Introduction Notebook: examples/interface-overview.ipynb
+    - KDB-X Python Introduction Notebook: examples/interface-overview.ipynb
     - Subscriber: examples/subscriber/readme.md
     - Compress and encrypt: examples/compress_and_encrypt/readme.md
     - Database creation and management: examples/db-management.ipynb
     - IPC: examples/ipc/README.md
-    - PyKX as a server: examples/server/server.md
+    - KDB-X Python as a server: examples/server/server.md
     - Real-time streaming: examples/streaming/index.md
     - Multithreaded execution: examples/threaded_execution/threading.md
     - Asynchronous Queries: examples/AsynchronousQueries/async_querying.md
   - Releases:
     - Release notes:
-      - PyKX: release-notes/changelog.md
-      - PyKX under q: release-notes/underq-changelog.md
+      - KDB-X Python: release-notes/changelog.md
+      - KDB-X Python under q: release-notes/underq-changelog.md
       - Deprecations: release-notes/deprecations.md
-    - 2.x -> 3.x Upgrade : upgrades/2030.md
+    - 3.* to 4.* Migration : upgrades/3040.md
+    - 2.* to 3.* Upgrade : upgrades/2030.md
     - Beta features:
       - Introduction: beta-features/index.md
       - PyTorch Conversions: beta-features/torch.md
   - Help and Support:
     - Troubleshooting: help/troubleshooting.md
     - FAQ: help/faq.md
-    - PyKX support: help/support.md
+    - KDB-X Python support: help/support.md
     - Issues and limitations: help/issues.md
-    - PyKX license: license.md
+    - KDB-X Python license: license.md
     - Contributors: contributors.md
-

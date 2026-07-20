@@ -12,7 +12,7 @@ class PandasResetIndex:
     def reset_index(self, levels=None, *, drop=False, inplace=False,
                     col_level=0, col_fill='', allow_duplicates=False,
                     names=None):
-        """Reset keys/index of a PyKX Table"""
+        """Reset keys/index of a `pykx.Table`"""
         if col_level != 0:
             raise QError("'col_level' not presently supported")
         if col_fill != '':

@@ -1,16 +1,16 @@
 ---
-title:  PyKX IPC interface
+title: KDB-X Python IPC interface
 description: IPC interface example 
 date: October 2024
 author: KX Systems, Inc.,
-tags: compression, encryption, PyKX
+tags: compression, encryption, PyKX, KDB-X Python
 ---
 
 # IPC interface example
 
-_This example provides a quickstart for interfacing with external q processes using PyKX._
+_This example provides a quickstart for interfacing with external q processes using KDB-X Python (`pykx`)._
 
-This example should work whether or not a `#!python k4.lic` file is present. The purpose is to show the flexibility of this interface for users who had previously used PyKX or are familiar with qPython.
+This example should work whether or not a `#!python k4.lic` file is present. The purpose is to show the flexibility of this interface for users who had previously used KDB-X Python (`pykx`) or are familiar with qPython.
 
 To follow along, feel free to download this <a href="./archive.zip" download>zip archive</a> that contains a copy of the Python script and this writeup.
 
@@ -40,7 +40,7 @@ q)
 $ q tick/feed.q
 q)
 
-// Start the q process to receive data from PyKX
+// Start the q process to receive data from `pykx`
 $ q -p 5130
 q)
 ```

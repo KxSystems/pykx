@@ -1,10 +1,10 @@
-# PyKX to Pythonic data type mapping
+# KDB-X Python to Pythonic data type mapping
 
 A breakdown of each of the `pykx.K` types and their analogous `Python`, `NumPy`, `Pandas`, and `PyArrow` types.
 
 ??? "Cheat Sheet: `Python`, `NumPy`, `PyArrow`"
 
-	| PyKX type                       | Python type | Numpy dtype     | PyArrow type   |
+	| KDB-X Python type                       | Python type | Numpy dtype     | PyArrow type   |
 	| ------------------------------- | ----------- | --------------- | -------------- |
 	| [List](#pykxlist)               | list        | object          | Not Supported  |
 	| [Boolean](#pykxbooleanatom)     | bool        | bool            | Not Supported  |
@@ -31,7 +31,7 @@ A breakdown of each of the `pykx.K` types and their analogous `Python`, `NumPy`,
 
 	**Note:** Creating PyArrow backed Pandas objects uses `as_arrow=True` using NumPy arrays as an intermediate data format.
 
-	| PyKX type                       | Pandas 1.\* dtype | Pandas 2.\* dtype | Pandas 2.\* as_arrow=True dtype |
+	| KDB-X Python type                       | Pandas 1.\* dtype | Pandas 2.\* dtype | Pandas 2.\* as_arrow=True dtype |
 	| ------------------------------- | ----------------- | ----------------- | ------------------------------- |
 	| [List](#pykxlist)               | object            | object            | object                          |
 	| [Boolean](#pykxbooleanatom)     | bool              | bool              | bool[pyarrow]                   |

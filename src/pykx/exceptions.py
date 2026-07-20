@@ -1,7 +1,7 @@
-"""PyKX exceptions and warnings.
+"""KDB-X Python exceptions and warnings.
 
 Standard Python exceptions (e.g. `TypeError`, `ValueError`, etc.) are used as convention dictates,
-but for PyKX and q specific issues custom exceptions are used.
+but for KDB-X Python and q specific issues custom exceptions are used.
 """
 
 __all__ = [
@@ -22,12 +22,12 @@ def __dir__():
 
 
 class PyKXWarning(Warning):
-    """Warning type for PyKX-specific warnings."""
+    """Warning type for KDB-X Python-specific warnings."""
     pass
 
 
 class PyKXException(Exception):
-    """Base exception type for PyKX-specific exceptions."""
+    """Base exception type for KDB-X Python-specific exceptions."""
     pass
 
 

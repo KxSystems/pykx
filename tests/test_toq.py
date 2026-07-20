@@ -7,7 +7,7 @@ from platform import system
 from sys import getrefcount
 from uuid import UUID, uuid4
 
-# Do not import Pandas, PyArrow, or PyKX here - use the pd/pa/kx fixtures instead!
+# Do not import Pandas, PyArrow, or KDB-X Python here - use the pd/pa/kx fixtures instead!
 import numpy as np
 import pandas as pd
 import pytest
@@ -421,7 +421,7 @@ def test_from_datetime64_smsusns(kx):
         assert (kx.toq(df) == kx.toq(kx.toq(df).pd())).all().all()
         assert (kx.toq(df, handle_nulls=True)
                 == kx.toq(kx.toq(df, handle_nulls=True).pd(), handle_nulls=True)).all().all()
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert (kx.toq(df) == kx.toq(kx.toq(df).pd(as_arrow=True))).all().all()
             assert (kx.toq(df, handle_nulls=True)
                     == kx.toq(kx.toq(df, handle_nulls=True).pd(as_arrow=True),
@@ -443,7 +443,7 @@ def test_from_datetime64_smsusns(kx):
         assert (kx.toq(df) == kx.toq(kx.toq(df).pd())).all().all()
         assert (kx.toq(df, handle_nulls=True)
                 == kx.toq(kx.toq(df, handle_nulls=True).pd(), handle_nulls=True)).all().all()
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert (kx.toq(df) == kx.toq(kx.toq(df).pd(as_arrow=True))).all().all()
             assert (kx.toq(df, handle_nulls=True)
                     == kx.toq(kx.toq(df, handle_nulls=True).pd(as_arrow=True),
@@ -465,7 +465,7 @@ def test_from_datetime64_smsusns(kx):
         assert (kx.toq(df) == kx.toq(kx.toq(df).pd())).all().all()
         assert (kx.toq(df, handle_nulls=True)
                 == kx.toq(kx.toq(df, handle_nulls=True).pd(), handle_nulls=True)).all().all()
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert (kx.toq(df) == kx.toq(kx.toq(df).pd(as_arrow=True))).all().all()
             assert (kx.toq(df, handle_nulls=True)
                     == kx.toq(kx.toq(df, handle_nulls=True).pd(as_arrow=True),
@@ -487,7 +487,7 @@ def test_from_datetime64_smsusns(kx):
         assert (kx.toq(df) == kx.toq(kx.toq(df).pd())).all().all()
         assert (kx.toq(df, handle_nulls=True)
                 == kx.toq(kx.toq(df, handle_nulls=True).pd(), handle_nulls=True)).all().all()
-        if kx.config.pandas_2:
+        if kx.config.pandas_gt1:
             assert (kx.toq(df) == kx.toq(kx.toq(df).pd(as_arrow=True))).all().all()
             assert (kx.toq(df, handle_nulls=True)
                     == kx.toq(kx.toq(df, handle_nulls=True).pd(as_arrow=True),
@@ -1631,7 +1631,7 @@ def test_pyarrow(kx):
 
     test_pa(pa.array([1], pa.duration('ms')), kx.q('0D00:00:00.001000000'),
             kx.q('0D00:00:00.001000000'))
-    if kx.config.pandas_2:
+    if kx.config.pandas_gt1:
         test_pa(pa.array([1, 2], pa.duration('ms')), kx.q('00:00:00.001 00:00:00.002'),
                 kx.q('0D00:00:00.001000000'))
     else:
@@ -1645,7 +1645,7 @@ def test_pyarrow(kx):
 
     test_pa(pa.array([1], pa.duration('s')), kx.q('0D00:00:01.000000000'),
             kx.q('0D00:00:01.000000000'))
-    if kx.config.pandas_2:
+    if kx.config.pandas_gt1:
         test_pa(pa.array([1, 2], pa.duration('s')), kx.q('00:00:01 00:00:02'),
                 kx.q('0D00:00:01.000000000'))
     else:
@@ -1686,7 +1686,7 @@ def test_pyarrow(kx):
 
 
 def test_pandas_timedelta(kx):
-    if kx.config.pandas_2:
+    if kx.config.pandas_gt1:
         assert kx.toq(kx.q('16:36').pd()) == kx.q('16:36:00')
         assert kx.toq(kx.q('16:36:29').pd()) == kx.q('16:36:29')
         assert kx.toq(kx.q('16:36:29.214').pd()) == kx.q('16:36:29.214')

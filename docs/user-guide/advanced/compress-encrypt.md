@@ -1,30 +1,30 @@
 ---
-title:  PyKX compress and encrypt
-description: How to compress and encrypt data in PyKX
+title:  KDB-X Python compress and encrypt
+description: How to compress and encrypt data in KDB-X Python
 date: October 2024
 author: KX Systems, Inc.,
-tags: compression, encryption, PyKX
+tags: compression, encryption, KDB-X Python
 ---
 
 # Compress and encrypt data
-_This page explains how to compress and encrypt data in PyKX._
+_This page explains how to compress and encrypt data in KDB-X Python._
 
-With the volumes of sensitive data being produced within real-time applications today the ability to securely store this data and quickly access it can be challenging. PyKX provides several utilities, in the form of class objects, for the management of how data is compressed and encrypted when being persisted.
+With the volumes of sensitive data being produced within real-time applications today the ability to securely store this data and quickly access it can be challenging. KDB-X Python provides several utilities, in the form of class objects, for the management of how data is compressed and encrypted when being persisted.
 
 ### Compress
 
-PyKX supports the compression of data to disk, allowing you to reduce disk space required for your persisted historical data. PyKX gives you a variety of compression/decompression options through the following algorithms:
+KDB-X Python supports the compression of data to disk, allowing you to reduce disk space required for your persisted historical data. KDB-X Python gives you a variety of compression/decompression options through the following algorithms:
 
 - [`#!python gzip`](https://en.wikipedia.org/wiki/Gzip)
 - [`#!python snappy`](https://en.wikipedia.org/wiki/Snappy_(compression))
 - [`#!python zstd`](https://en.wikipedia.org/wiki/Zstd)
 - [`#!python LZ4HC`](https://en.wikipedia.org/wiki/LZ4_(compression_algorithm))
 
-In addition to this, you can compress data to KX's own qIPC format. For full information, go to [KX file compression within kdb+/q](https://code.kx.com/q/kb/file-compression/).
+In addition to this, you can compress data to KX's own qIPC format. For full information, go to [KX file compression within KDB-X/q](https://code.kx.com/q/kb/file-compression/).
 
 ### Encrypt
 
-PyKX supports Data At Rest Encryption (DARE) with an explicit requirement on at least OpenSSL v1.0.2. To find out which version of OpenSSL is available to you via PyKX, use the following:
+KDB-X Python supports Data At Rest Encryption (DARE) with an explicit requirement on at least OpenSSL v1.0.2. To find out which version of OpenSSL is available to you via KDB-X Python, use the following:
 
 ```python
 >>> import pykx as kx
@@ -41,7 +41,7 @@ SSL_VERIFY_SERVER| YES
 '))
 ```
 
-The encryption provided by this functionality is Transparent Disk Encryption (TDE). TDE protects data at rest by encrypting database files on the hard drive and as a result on backup media. Encrypting your data with PyKX is fully transparent to queries requiring no change to the logic used when querying data but results in a time penalty.
+The encryption provided by this functionality is Transparent Disk Encryption (TDE). TDE protects data at rest by encrypting database files on the hard drive and as a result on backup media. Encrypting your data with KDB-X Python is fully transparent to queries requiring no change to the logic used when querying data but results in a time penalty.
 
 To use this functionality, you must have a password-protected master key available, ideally with a unique password of high-entropy. For more information on the generation of a master key and a password, go to the [DARE configuration](https://code.kx.com/q/kb/dare/#configuration) section.
 
@@ -55,7 +55,7 @@ This walkthrough demonstrates the following steps:
 
 ### Generate compression objects
 
-With PyKX, you can create compression and encryption class objects to set global configurations or use in specific individual functions. These respectively are supported via the `#!python kx.Compress` and `#!python kx.Encrypt` classes. For this section we will deal only with compression.
+With KDB-X Python, you can create compression and encryption class objects to set global configurations or use in specific individual functions. These respectively are supported via the `#!python kx.Compress` and `#!python kx.Encrypt` classes. For this section we will deal only with compression.
 
 The full list of algorithms is part of the `#!python kx.CompressionAlgorithm` enumeration: 
 
@@ -126,7 +126,7 @@ In cases where your are dealing with data security is important or where data is
 
 ### Persist database partitions with various configurations
 
-Not all data is created equally, in time-series applications such as algorithmic trading it is often the case that older data is less valuable than newer data. As a result, when backfilling historical data, you may more aggressively compress older datasets. The PyKX compression logic allows you to persist different partitions within a historical database to different levels.
+Not all data is created equally, in time-series applications such as algorithmic trading it is often the case that older data is less valuable than newer data. As a result, when backfilling historical data, you may more aggressively compress older datasets. The KDB-X Python compression logic allows you to persist different partitions within a historical database to different levels.
 
 1. Create a database with the most recent data uncompressed
 
@@ -200,7 +200,7 @@ zipLevel          | 10i
 
 Global initialization of compression and encryption allows all data that is persisted within, from a process, to be compressed. This can be useful when completing large batch operations on data where being specific about per partition/per file operations isn't necessary. In the below section we will deal with compression and encryption separately.
 
-PyKX uses compression settings that are globally readable via `#!python kx.q.z.zd`. When unset, this value returns a PyKX Identity value as follows:
+KDB-X Python uses compression settings that are globally readable via `#!python kx.q.z.zd`. When unset, this value returns a KDB-X Python Identity value as follows:
 
 ```python
 >>> kx.q.z.zd

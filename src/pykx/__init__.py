@@ -21,7 +21,7 @@ else: # nocov
     pass
 
 
-# List of beta features available in the current PyKX version
+# List of beta features available in the current KDB-X Python version
 beta_features = []
 
 
@@ -49,7 +49,7 @@ if platform.system() == 'Windows': # nocov
     if platform.python_version_tuple()[:2] >= ('3', '8'):
         os.add_dll_directory(pykx_platlib_dir)
 
-# Cache initialised signal values prior to PyKX loading
+# Cache initialised signal values prior to KDB-X Python loading
 _signal_list = [
     'signal.SIGINT',
     'signal.SIGTERM',
@@ -241,7 +241,7 @@ class Q(metaclass=ABCMeta):
             )])
         if " " in str(path) and not suppress_warnings:
             warn("""Space detected in path being loaded.
-                     PyKX will change directory to the path parent and then load directly before returning to current working directory.
+                     KDB-X Python will change directory to the path parent and then load directly before returning to current working directory.
                      To turn off this warning set PYKX_SUPPRESS_WARNINGS to True.""", exceptions.PyKXWarning) # noqa: E501
         if name is None: # defaults to filename at end of path sans extension
             name = path.stem
@@ -293,6 +293,7 @@ from .read import QReader
 from .system import SystemCommands
 from .write import QWriter
 from .reimporter import PyKXReimport
+from .module import use
 
 from . import config
 from . import console
@@ -354,6 +355,9 @@ from .help import _init as _help_init
 _help_init(q)
 qhelp = help.qhelp
 
+from .module import _init as _module_init
+_module_init(q)
+
 if k_allocator:
     from . import _numpy as _pykx_numpy_cext
 
@@ -362,11 +366,9 @@ def merge_asof(left, *args, **kwargs):
     return left.merge_asof(*args, **kwargs)
 
 
-if sys.version_info[1] < 8:
+if sys.version_info[1] < 9:
     warn(
-        'Python 3.7 has reach its end of life period and is no longer supported.'
-        'Please consider upgrading to Python 3.8, as PyKX will no longer support issues for this '
-        'Python version.',
+        'Python 3.9 is the minimum support version. Please upgrade.',
         exceptions.PyKXWarning
     )
 
@@ -374,7 +376,7 @@ if sys.version_info[1] < 8:
 def install_into_QHOME(overwrite_embedpy=False,
                        to_local_folder=False,
                        cloud_libraries=False) -> None:
-    """Copies the embedded Python functionality of PyKX into `$QHOME`.
+    """Copies the embedded Python functionality of KDB-X Python into `$QHOME`.
 
         Parameters:
             overwrite_embedpy: If embedPy had previously been installed replace it otherwise
@@ -404,7 +406,7 @@ def install_into_QHOME(overwrite_embedpy=False,
         return
 
     p = Path(dest)/'p.k'
-    c_files = ['kurl.q_', 'kurl.sidecar.q_', 'objstor.q_', 'qlog.q_', 'rest.q_', 'bq.q_', 's.k_']
+    c_files = ['kurl.q_', 'kurl.sidecar.q_', 'objstor.q_', 'qlog.q_', 'rest.q_', 'bq.q_']
 
     if not p.exists() or overwrite_embedpy:
         shutil.copy(Path(__file__).parent/'p.k', p)
@@ -413,6 +415,7 @@ def install_into_QHOME(overwrite_embedpy=False,
     if cloud_libraries:
         for i in c_files:
             shutil.copy(Path(__file__).parent/'lib'/i, Path(dest)/i)
+        shutil.copy(Path(__file__).parent/'lib'/'sql.k_', Path(dest)/'s.k_')
     shutil.copy(Path(__file__).parent/'pykx.q', dest)
     shutil.copy(Path(__file__).parent/'pykx_init.q_', dest)
     if platform.system() == 'Windows':
@@ -422,10 +425,10 @@ def install_into_QHOME(overwrite_embedpy=False,
 
 
 def activate_numpy_allocator() -> None:
-    """Sets the allocator used for Numpy array data to one optimized for use with PyKX.
+    """Sets the allocator used for Numpy array data to one optimized for use with KDB-X Python.
 
-    This will only change the default allocator if the environment variable `PYKX_ALLOCATOR` is set
-    to 1 or if the flag `--pykxalloc` is present in the QARGS environment variable.
+    This will only change the default allocator if the environment variable `PYKX_NO_ALLOCATOR`
+    is not set to 1 or if the flag `--pykxnoalloc` is not present in the QARGS environment variable.
 
     The name of the allocator set by this function is `'pykx_allocator'`.
 
@@ -434,7 +437,8 @@ def activate_numpy_allocator() -> None:
 
     Refer to NEP 49 for details about custom Numpy allocators: https://numpy.org/neps/nep-0049.html
 
-    The custom allocator set by PyKX allocates Numpy array data into the embedded q memory space.
+    The custom allocator set by KDB-X Python allocates Numpy array data into the embedded q memory
+    space.
     Numpy arrays created with this allocator can be converted into a q vector without copying the
     data.
 
@@ -452,12 +456,12 @@ def activate_numpy_allocator() -> None:
     is deallocated, it decrements the refcount of the q vector.
 
     If the installed version of Numpy support custom allocators (i.e. is greater than or equal to
-    version `1.22.0`), and the active Numpy allocator when PyKX is imported is the default
-    allocator, PyKX will automatically call this function.
+    version `1.22.0`), and the active Numpy allocator when KDB-X Python is imported is the default
+    allocator, KDB-X Python will automatically call this function.
 
     Note that Numpy arrays created with an allocator other than `'pykx_allocator'` (e.g. before
-    PyKX has been imported) will not gain the benefits enabled by this allocator. The name of the
-    allocator used by a given array `x` can be retrieved by running
+    KDB-X Python has been imported) will not gain the benefits enabled by this allocator.
+    The name of the allocator used by a given array `x` can be retrieved by running
     `numpy.core.multiarray.get_handler_name(x)`.
     """
     if k_allocator:
@@ -476,11 +480,11 @@ if k_allocator:
 
 
 def deactivate_numpy_allocator():
-    """Deactivate the PyKX Numpy allocator.
+    """Deactivate the KDB-X Python Numpy allocator.
 
-    If the PyKX Numpy allocator has not been activated then this function has no effect. Otherwise,
-    it replaces the PyKX Numpy allocator with the allocator that was in use when it was first
-    activated.
+    If the KDB-X Python Numpy allocator has not been activated then this function has no effect.
+    Otherwise, it replaces the KDB-X Python Numpy allocator with the allocator that was in use
+    when it was first activated.
     """
     if k_allocator:
         _pykx_numpy_cext.deactivate_pykx_allocators()
@@ -489,7 +493,7 @@ def deactivate_numpy_allocator():
 try:
     # If we are running under IPython/Jupyter...
     ipython = get_ipython()  # noqa
-    # Load the PyKX extension for Jupyter Notebook.
+    # Load the KDB-X Python extension for Jupyter Notebook.
     ipython.extension_manager.load_extension('pykx.nbextension')
 
     if config.jupyterq:
@@ -503,7 +507,7 @@ shutdown_thread = core.shutdown_thread
 if licensed:
     days_to_expiry = q('"D"$', q.z.l[1]) - q.z.D
     if days_to_expiry < 10:
-        logging.warning(f'PyKX license set to expire in {int(days_to_expiry)} days, '
+        logging.warning(f'KDB-X Python license set to expire in {int(days_to_expiry)} days, '
                         'please consider installing an updated license')
 
 __all__ = sorted([
@@ -538,6 +542,7 @@ __all__ = sorted([
     'config',
     'util',
     'q',
+    'use',
     'shutdown_thread',
     'PyKXReimport',
     'help',

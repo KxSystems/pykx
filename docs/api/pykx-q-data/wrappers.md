@@ -1,4 +1,4 @@
-# PyKX type wrappers
+# KDB-X Python type wrappers
 
 ::: pykx.wrappers
     selection:

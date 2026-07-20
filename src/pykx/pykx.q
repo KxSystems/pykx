@@ -1,4 +1,4 @@
-// pykx.q - PyKX functionality for operation within a q process
+// pykx.q - KDB-X Python functionality for operation within a q process
 //
 // @namespace .pykx
 // @category api
@@ -6,16 +6,16 @@
 
 if[`e in key`.p;
   if[not"{.pykx.pyexec x}"~string get `.p.e;
-   -1"Warning: Detected invalid '.p.e' function definition expected for PyKX.\n",
+   -1"Warning: Detected invalid '.p.e' function definition expected for KDB-X Python.\n",
    "Have you loaded another Python integration first?\n\n",
-   "Please consider full installation of PyKX under q following instructions at:\n",
+   "Please consider full installation of KDB-X Python under q following instructions at:\n",
    "https://code.kx.com/pykx/pykx-under-q/intro.html#install.\n";
-   '"Unable to load PyKX, see logged output for more information"
+   '"Unable to load KDB-X Python, see logged output for more information"
   ]
  ]
 
 // @private
-// @desc Process context prior to PyKX initialization
+// @desc Process context prior to KDB-X Python initialization
 .pykx.util.prevCtx:system"d";
 
 \d .pykx
@@ -28,7 +28,7 @@ if[`e in key`.p;
 util.getLoadDir:{@[{"/"sv -1_"/"vs ssr[;"\\";"/"](-3#get .z.s)0};`;""]}
 
 // @private
-// @desc Operating system within which PyKX under q is loaded
+// @desc Operating system within which KDB-X Python under q is loaded
 //
 // @type {char}
 util.os:first string .z.o;
@@ -56,7 +56,7 @@ util.loadfile:{[folder;file]
   }
 
 // @private
-// @desc Retrieval of PyKX initialization directory on first initialization
+// @desc Retrieval of KDB-X Python initialization directory on first initialization
 if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
   util.whichPython:$[count pykxExecutable:getenv`PYKX_EXECUTABLE;pykxExecutable;()];
   util.dirCommand:"-c \"import pykx; print('PYKX_DIR: ' + str(pykx.config.pykx_dir))\"";
@@ -70,7 +70,7 @@ if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
   ];
 
 // @private
-// @desc Allow a user to force PyKX to use the location of libpython
+// @desc Allow a user to force KDB-X Python to use the location of libpython
 //       found by the Python library find_libpython
 if[(lower getenv`PYKX_USE_FIND_LIBPYTHON) in ("true";enlist"1");
     libpython_path:first system util.whichPython," -c\"from find_libpython import find_libpython;print(find_libpython())\"";
@@ -79,8 +79,7 @@ if[(lower getenv`PYKX_USE_FIND_LIBPYTHON) in ("true";enlist"1");
 
 // @private
 // @desc
-// Environment variable denoting that pythonic invocations of PyKX should the
-// PyKX act as of in a q process, as q symbols are already defined in the process.
+// Environment variable denoting that KDB-X loaded in a q process
 setenv[`PYKX_UNDER_Q;"true"];
 
 // @private
@@ -97,7 +96,7 @@ if["true"~getenv`PYKX_UNDER_PYTHON;
   ];
 
 // @private
-// @desc Load PyKX initialization script if not previously initialised
+// @desc Load KDB-X Python initialization script if not previously initialised
 if[not "true"~lower getenv`PYKX_LOADED_UNDER_Q;
   util.pyEnvInfo:("None"; "None"; "");
   if[0=count getenv`PYKX_Q_LOADED_MARKER;
@@ -127,7 +126,7 @@ if[not `debug in key `.pykx;
 preinit[];
 
 // @private
-// @desc Validate that PyKX was installed, failover will initialise pykxDir to "/pykx"
+// @desc Validate that KDB-X Python was installed, failover will initialise pykxDir to "/pykx"
 if[pykxDir~"/pykx";
   '"Failed to find pykx - ensure your Python environment is properly configured and activated"
   ];
@@ -151,7 +150,7 @@ util.CFunctions:flip `qname`cname`args!flip (
 
 // @private
 // @desc
-// Load defined C functions to PyKX for later use
+// Load defined C functions to KDB-X Python for later use
 {.Q.dd[`.pykx;x`qname]set util.load x`cname`args}each util.CFunctions;
 
 // @private
@@ -673,7 +672,7 @@ topt:{x y}(`..torch;;)
 // @name .pykx.tok
 // @category api
 // @overview
-// _Tag a q object to be indicate conversion to a Pythonic PyKX object when called in Python_
+// _Tag a q object to be indicate conversion to a Pythonic `pykx` object when called in Python_
 //
 // ```q
 // .pykx.tok[qObject]
@@ -683,16 +682,16 @@ topt:{x y}(`..torch;;)
 //
 // name      | type    | description |
 // ----------|---------|-------------|
-// `qObject` | `any`   | A q object which is to be defined as a PyKX object in Python. |
+// `qObject` | `any`   | A q object which is to be defined as a `pykx` object in Python. |
 //
 // **Return:**
 //
 // type         | description
 // -------------|------------
-// `projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a PyKX type object. |
+// `projection` | A projection which is used to indicate that once the q object is passed to Python for evaluation is should be treated as a `pykx` type object. |
 //
 // ```q
-// // Denote that a q object once passed to Python should be managed as a PyKX object
+// // Denote that a q object once passed to Python should be managed as a `pykx` object
 // q).pykx.tok til 10
 // enlist[`..k;;][0 1 2 3 4 5 6 7 8 9]
 //
@@ -700,7 +699,7 @@ topt:{x y}(`..torch;;)
 // q).pykx.typepy til 10
 // "<class 'numpy.ndarray'>"
 //
-// // Pass a q object to Python treating the Python object as a PyKX object
+// // Pass a q object to Python treating the Python object as a `pykx` object
 // q).pykx.typepy .pykx.tok til 10
 // "<class 'pykx.wrappers.LongVector'>"
 // ```
@@ -745,7 +744,7 @@ toraw: {x y}(`..raw;;)
 // @name .pykx.todefault
 // @category api
 // @overview
-// _Tag a q object to indicate it should use the PyKX default conversion when called in Python_
+// _Tag a q object to indicate it should use the `pykx` default conversion when called in Python_
 //
 // ```q
 // .pykx.todefault[qObject]
@@ -772,7 +771,7 @@ toraw: {x y}(`..raw;;)
 // q).pykx.todefault til 10
 // enlist[`..numpy;;][0 1 2 3 4 5 6 7 8 9]
 //
-// // Pass a q list to Python treating the Python object as PyKX default
+// // Pass a q list to Python treating the Python object as `pykx` default
 // q).pykx.typepy .pykx.todefault (til 10;til 10)
 // "<class 'list'>"
 //
@@ -929,7 +928,7 @@ setdefault:{
 // @name .pykx.toq
 // @category api
 // @overview
-// _Convert an (un)wrapped `PyKX` foreign object into an analogous q type._
+// _Convert an (un)wrapped `pykx` foreign object into an analogous q type._
 //
 // ```q
 // .pykx.toq[pythonObject]
@@ -948,19 +947,19 @@ setdefault:{
 // `any` | A q object converted from Python
 //
 // ```q
-// // Convert a wrapped PyKX foreign object to q
+// // Convert a wrapped `pykx` foreign object to q
 // q)show a:.pykx.eval["1+1"]
 // {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 // q).pykx.toq a
 // 2
 //
-// // Convert an unwrapped PyKX foreign object to q
+// // Convert an unwrapped `pykx` foreign object to q
 // q)show b:a`.
 // foreign
 // q).pykx.toq b
 // 2
 //
-// // Convert a PyKX conversion object back to q
+// // Convert a `pykx` conversion object back to q
 // q).pykx.toq .pykx.topd ([]5?1f;5?`a`b`c)
 //
 // x         x1
@@ -984,7 +983,7 @@ py2q:toq:{
 // @name .pykx.toq0
 // @category api
 // @overview
-// _Convert an (un)wrapped `PyKX` foreign object into an analogous q type._
+// _Convert an (un)wrapped `pykx` foreign object into an analogous q type._
 //
 // ```q
 // .pykx.toq0[pythonObject;strAsChar]
@@ -1004,13 +1003,13 @@ py2q:toq:{
 // `any` | A q object converted from Python
 //
 // ```q
-// // Convert a wrapped PyKX foreign object to q
+// // Convert a wrapped `pykx` foreign object to q
 // q)show a:.pykx.eval["1+1"]
 // {[f;x].pykx.util.pykx[f;x]}[foreign]enlist
 // q).pykx.toq0 a
 // 2
 //
-// // Convert an unwrapped PyKX foreign object to q
+// // Convert an unwrapped `pykx` foreign object to q
 // q)show b:a`.
 // foreign
 // q).pykx.toq0 b
@@ -1357,7 +1356,7 @@ print:{
 // @name .pykx.version
 // @category api
 // @overview
-// _Retrieve the version of PyKX presently being used by a q process_
+// _Retrieve the version of KDB-X Python presently being used by a q process_
 //
 // ```q
 // .pykx.version[]
@@ -1367,7 +1366,7 @@ print:{
 //
 // type     | description
 // ---------|------------
-// `string` | The version number of PyKX installed within the users q session
+// `string` | The version number of KDB-X Python installed within the users q session
 //
 // ```q
 // q).pykx.version[]
@@ -1673,7 +1672,7 @@ qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not con
 // @name .pykx.safeReimport
 // @category api
 // @overview
-// _Isolated execution of a q function which relies on importing PyKX_
+// _Isolated execution of a q function which relies on importing KDB-X Python_
 //
 // ```q
 // .pykx.safeReimport[qFunction]
@@ -1688,7 +1687,7 @@ qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not con
 //
 // name         | type       | description
 // -------------|------------|-------------
-// `qFunction`  | `function` | A function which is to be run following unsetting of PyKX environment variables and prior to their reset
+// `qFunction`  | `function` | A function which is to be run following unsetting of KDB-X Python environment variables and prior to their reset
 //
 // **Returns:**
 //
@@ -1698,7 +1697,7 @@ qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not con
 //
 // **Example:**
 //
-// Initializing a Python process which imports PyKX
+// Initializing a Python process which imports KDB-X Python
 //
 // ```q
 // q)\l pykx.q
@@ -1812,7 +1811,7 @@ loadPy:{[file]
 //
 // ```q
 // q).pykx.debugInfo[]
-// "**** PyKX information ****"
+// "**** KDB-X Python under q Information ****"
 // "pykx.args: ()"
 // "pykx.qhome: /usr/local/anaconda3/envs/qenv/q"
 // "pykx.qlic: /usr/local/anaconda3/envs/qenv/q"
@@ -1820,7 +1819,7 @@ loadPy:{[file]
 // ..
 // ```
 debugInfo:{
-  pykxQHeader:enlist"**** PyKX under q Information ****";
+  pykxQHeader:enlist"**** KDB-X Python under q Information ****";
   pykxQInfo  :{string[x 0],": ",x 1}each flip(key;value)@\:.pykx.debug;
   pykxPythonInfo:"\n" vs string .pykx.import[`pykx;`:util.debug_environment][pykwargs enlist[`return_info]!enlist 1b]`;
   pykxPythonInfo,pykxQHeader,pykxQInfo
@@ -1845,7 +1844,7 @@ debugInfo:{
 // **Example:**
 //
 // ```q
-// Enter PyKX console and evaluate Python code
+// Enter Python console and evaluate Python code
 // q).pykx.console[]
 // >>> 1+1
 // 2
@@ -1854,7 +1853,7 @@ debugInfo:{
 // >>> quit()
 // q)
 //
-// // Enter PyKX console setting q objects using PyKX
+// // Enter Python console setting q objects
 // q).pykx.console[]
 // >>> import pykx as kx
 // >>> kx.q['table'] = kx.q('([]2?1f;2?0Ng;2?`3)'
@@ -1865,7 +1864,7 @@ debugInfo:{
 // 0.439081  49f2404d-5aec-f7c8-abba-e2885a580fb6 mil
 // 0.5759051 656b5e69-d445-417e-bfe7-1994ddb87915 igf
 //
-// // Enter PyKX console setting Python objects using PyKX
+// // Enter Python console setting Python objects
 // q).pykx.console[]
 // >>> a = list(range(5))
 // >>> quit()
@@ -1878,18 +1877,22 @@ console:{if[.z.o like "w*";'".pykx.console is not available on Windows"];
   "__pykx_console__ = InteractiveConsole(globals())";
   "__pykx_console__.push('import sys')";
   "__pykx_console__.push('quit = sys.exit')";
-  "__pykx_console__.push('exit = sys.exit')";
-  "try:";
-  "    line = __pykx_console__.interact(banner='', exitmsg='')";
-  "except SystemExit:";
-  "    pykx._pykx_helpers.clean_errors()")
+  "__pykx_console__.push('exit = sys.exit')");
+  c:(1b;"");
+  1 ">>> ";
+  while[c 0;
+    c:@[{(1b;pyexec x)};
+        "print('... ', end='') if __pykx_console__.push('",(read0 0),"') else print('>>> ', end='')";
+        {pyexec"pykx._pykx_helpers.clean_errors()";
+         $[x~"SystemExit()";(0b;"");(1b;x)]}]];
+  if[count c 1;'c 1];
  };
 
 // @private
 // @desc
 // Set the execution function used when loading files with the extension `*.p`
 // or when using the following syntax `p)<python code>` within a q session
-.p.e:{.pykx.pyexec x}     // If changing this line please ensure you have updated the check used at the beginning of this file to warn users about PyKX being loaded with other Python libraries
+.p.e:{.pykx.pyexec x}     // If changing this line please ensure you have updated the check used at the beginning of this file to warn users about KDB-X Python being loaded with other Python libraries
 
 // @private
 // @desc
@@ -1898,8 +1901,8 @@ setdefault {$[""~c:getenv`PYKX_DEFAULT_CONVERSION;"default";c]}[];
 
 // @private
 // @desc
-// Finalise loading of PyKX functionality setting environment variables
-// needed to ensure loading PyKX multiple times does not result in unexpected errors
+// Finalise loading of KDB-X Python functionality setting environment variables
+// needed to ensure loading KDB-X Python multiple times does not result in unexpected errors
 finalise[];
 
 // @private
@@ -1917,7 +1920,7 @@ finalise[];
 //
 // type   | description
 // -------|------------
-// `list` | A list of strings denoting the available extensions in your version of PyKX
+// `list` | A list of strings denoting the available extensions in your version of KDB-X Python
 //
 // **Example:**
 //
@@ -1933,7 +1936,7 @@ listExtensions:{-2 _/:lst where like[;"*.q"]lst:string key hsym`$pykxDir,"/exten
 // @name .pykx.loadExtension
 // @category api
 // @overview
-// _Loading of a PyKX extension_
+// _Loading of a KDB-X Python extension_
 //
 // ```q
 // .pykx.loadExtension[ext]
@@ -2012,3 +2015,4 @@ loadExtension:{[ext]
 // @desc Restore context used at initialization of script
 system"d ",string .pykx.util.prevCtx;
 
+k).Q.pykxld:{x:("#!"~2#*x)_x:-1!'x;+(1+*:'i;)@"\n"/:'x i:(&|1^\|0N 0 1@"/ "?*:'(v:x i),'"/")_i:&~|':(b?-1)#b:+\-/x~\:/:+,"/\\"}

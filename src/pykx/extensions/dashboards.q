@@ -1,4 +1,4 @@
-// dash.q - PyKX functionality for integration with KX Dashboards Integration
+// dash.q - KDB-X Python functionality for integration with KX Dashboards Integration
 
 \d .pykx
 
@@ -57,7 +57,7 @@ if[dash.available[];
 // ```
 dash.util.getFunction:{[pyCode]
   if[not dash.available[];
-    '"Required libraries for PyKX Dashboards integration not found: ",", " sv string where not .pykx.dash.util.lib;
+    '"Required libraries for KDB-X Python Dashboards integration not found: ",", " sv string where not .pykx.dash.util.lib;
     ];
   funcName:@[.pykx.get[`$"_pykx_func_parse";<];
     .pykx.topy pyCode;

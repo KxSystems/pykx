@@ -1,15 +1,15 @@
 ---
 title: NumPy Integration
-description: Integrate PyKX with NumPy
+description: Integrate KDB-X Python with NumPy
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, NumPy
+tags: PyKX,  KDB-X Python, NumPy
 ---
 
 # NumPy Integration
-_This page explains how to integrate PyKX with NumPy._
+_This page explains how to integrate KDB-X Python with NumPy._
 
-PyKX is designed for advanced integration with NumPy. This integration is built on three pillars: 
+KDB-X Python is designed for advanced integration with NumPy. This integration is built on three pillars: 
 
 - [NEP-49](https://numpy.org/neps/nep-0049-data-allocation-strategies.html)
 - the NumPy [array interface](https://numpy.org/doc/stable/reference/arrays.interface.html)
@@ -17,24 +17,25 @@ PyKX is designed for advanced integration with NumPy. This integration is built 
 
 ## Support for NEP-49 and 0-copy data transfer from Numpy to q (when possible)
 
-To use NEP-49 and benefit from 0-copy data transfers from NumPy to q, you need to set the `#!python PYKX_ALLOCATOR=1` environment variable before importing PyKX. 
-Once enabled, PyKX leverages NEP-49 to replace NumPy's memory allocator with the q/k memory allocator. This makes NumPy arrays directly available to q (by passing only a pointer) and accelerates the conversion time from NumPy arrays to q significantly.
+NEP-49 is used to benefit from 0-copy data transfers from NumPy to q.
+NEP-49 replaces NumPy's memory allocator with the q/k memory allocator. This makes NumPy arrays directly available to q (by passing only a pointer) and accelerates the conversion time from NumPy arrays to q significantly.
+With NEP-49 (default)
 
-Without NEP-49 (`#!python PYKX_ALLOCATOR=0`):
-```python
-In [1]: arr = np.random.rand(1000000)
-In [2]: %timeit kx.toq(arr)
-421 µs ± 9.42 µs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
-```
-
-With NEP-49 (`#!python PYKX_ALLOCATOR=1`):
 ```python
 In [1]: arr = np.random.rand(1000000)
 In [2]: %timeit kx.toq(arr)
 5.4 µs ± 150 ns per loop (mean ± std. dev. of 7 runs, 100,000 loops each)
 ```
 
-In the example above, transferring a NumPy array of one million `#!python float64` numbers runs 80x faster with NEP-49 enabled (`#!python PYKX_ALLOCATOR=1`).
+Without NEP-49 (`#!python PYKX_NO_ALLOCATOR=True`):
+
+```python
+In [1]: arr = np.random.rand(1000000)
+In [2]: %timeit kx.toq(arr)
+421 µs ± 9.42 µs per loop (mean ± std. dev. of 7 runs, 1,000 loops each)
+```
+
+In the example above, transferring a NumPy array of one million `#!python float64` numbers runs 80x faster with NEP-49 enabled.
 
 !!! Note
 
@@ -44,7 +45,7 @@ In the example above, transferring a NumPy array of one million `#!python float6
 
 ## Support for NumPy array interface and universal functions on pykx/q vectors
 
-PyKX vectors implement the NumPy array interface and are compatible with universal functions. This means all those NumPy functions (and more) can be used directly on PyKX vectors and hence, on q vectors.
+`pykx` vectors implement the NumPy array interface and are compatible with universal functions. This means all those NumPy functions (and more) can be used directly on `pykx` vectors and hence, on q vectors.
 
 Here are several helpful links related to universal functions that you can use with this:
 
@@ -110,7 +111,7 @@ qb = kx.toq(b)
 We can use IPython to load this script and benchmark the different implementations with `#!python %timeit`. We will also compare to `#!python np.gcd`, the NumPy ufunc for GCD calculation.
 
 ```bash
-$ PYKX_ALLOCATOR=1 ipython -i test_numpy_ufuncs.py
+$ ipython -i test_numpy_ufuncs.py
 ```
 
 ```python

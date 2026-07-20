@@ -29,7 +29,7 @@ feature Documentation examples/walkthroughs
             obj:.pykx.eval"obj(2, 3)";
             all(2~obj[`:x]`;3~obj[`:y]`)
 
-        expect indexing of PyKX objects to be supported
+        expect indexing of KDB-X Python objects to be supported
             lst:.pykx.eval"[True, 2, 3.0, 'four']";
             all(
                 1b~lst[@;0]`;
@@ -37,7 +37,7 @@ feature Documentation examples/walkthroughs
                 (3f;2;1b;`four)~lst'[@;;`]2 1 0 3
                 )
 
-        expect setting of PyKX objects in Python lists to be supported
+        expect setting of KDB-X Python objects in Python lists to be supported
             lst:.pykx.eval"[True, 2, 3.0, 'four']";
             lst[=;0;0b];
             lst[=;-1;`last];
@@ -88,7 +88,7 @@ feature Documentation examples/walkthroughs
             b:.pykx.toq a;
             .qu.compare[b;2]
         
-        expect the conversion of unwrapped PyKX foreign objects into q 
+        expect the conversion of unwrapped KDB-X Python foreign objects into q 
             a:.pykx.eval["1+1"];
             b:a`.;
             c:.pykx.toq b;

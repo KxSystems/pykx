@@ -1,4 +1,4 @@
-# PyKX Column Objects
+# KDB-X Python Column Objects
 
 ::: pykx.wrappers.Column
 

@@ -1,10 +1,10 @@
-# PyKX Utilities
+# KDB-X Python Utilities
 
-The purpose of this page is to provide users with documentation for utility functions located within various modules within PyKX. 
+The purpose of this page is to provide users with documentation for utility functions located within various modules within KDB-X Python. 
 
 !!! Note
 
-	This functionality presently is not located in a centralized module but it is expected that with the next major release version of PyKX 3.0.0 they 
+	This functionality presently is not located in a centralized module but it is expected that with the next major release version of KDB-X Python 3.0.0 they 
 
 ## `pykx.ssl_info`
 
@@ -12,13 +12,13 @@ The purpose of this page is to provide users with documentation for utility func
 pykx.ssl_info()
 ```
 
-View information relating to the TLS Settings used by PyKX from your process
+View information relating to the TLS Settings used by KDB-X Python from your process
 
 **Returns:**
 
 | Type              | Description                                          |
 |-------------------|------------------------------------------------------|
-| `pykx.Dictionary` | A dictionary outlining the TLS settings used by PyKX |
+| `pykx.Dictionary` | A dictionary outlining the TLS settings used by KDB-X Python |
 
 **Example:**
 
@@ -84,7 +84,7 @@ pykx.util.debug_environment(detailed=False, return_info=False)
 ```python
 >>> import pykx as kx
 >>> kx.util.debug_environment()
-**** PyKX information ****
+**** KDB-X Python information ****
 pykx.args: ()
 pykx.qhome: /usr/local/anaconda3/envs/qenv/q
 pykx.qlic: /usr/local/anaconda3/envs/qenv/q
@@ -105,21 +105,20 @@ find_libpython: /usr/local/anaconda3/lib/libpython3.8.dylib
 **** Platform information ****
 platform.platform: macOS-10.16-x86_64-i386-64bit
 
-**** PyKX Configuration Variables ****
+**** KDB-X Python Configuration Variables ****
 PYKX_IGNORE_QHOME: False
 PYKX_KEEP_LOCAL_TIMES: False
-PYKX_ALLOCATOR: False
+PYKX_NO_ALLOCATOR: False
 PYKX_GC: False
 PYKX_LOAD_PYARROW_UNSAFE: False
 PYKX_MAX_ERROR_LENGTH: 256
-PYKX_NOQCE: False
+PYKX_QCE: False
 PYKX_RELEASE_GIL: False
 PYKX_Q_LIB_LOCATION: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib
 PYKX_Q_LOCK: False
 PYKX_SKIP_UNDERQ: False
 PYKX_Q_EXECUTABLE: /usr/local/anaconda3/envs/qenv/q/m64/q
 PYKX_THREADING: False
-PYKX_4_1_ENABLED: False
 PYKX_QDEBUG: False
 PYKX_DEBUG_INSIGHTS_LIBRARIES: False
 PYKX_DEFAULT_CONVERSION:
@@ -131,13 +130,13 @@ PYKX_DIR: /usr/local/anaconda3/lib/python3.8/site-packages/pykx
 PYKX_USE_FIND_LIBPYTHON:
 PYKX_UNLICENSED:
 PYKX_LICENSED:
-PYKX_4_1_ENABLED:
 
 **** q Environment Variables ****
 QARGS: 
 QHOME: /usr/local/anaconda3/lib/python3.8/site-packages/pykx/lib
 QLIC: /usr/local/anaconda3/envs/qenv/q
 QINIT: 
+QCFG: 
 
 **** License information ****
 pykx.qlic directory: True

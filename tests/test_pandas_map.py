@@ -2,6 +2,7 @@
 
 import os
 
+import pandas as pd
 import pytest
 
 
@@ -24,35 +25,37 @@ def _multi_arg_count(x, y=0):
     os.getenv('PYKX_THREADING') is not None,
     reason='Not supported with PYKX_THREADING'
 )
-def test_map_applymap(kx):
+@pytest.mark.skipif(int(pd.__version__.split('.')[0]) < 2, reason='Map not yet released')
+def test_map(kx):
     tables = [kx.q('([]100?(1 2 3;"123";1 2;0n);100?1f;100?(0n;1f))'),
               kx.q('([til 100]x1:100?(1 2 3;"123";1 2;0n);x2:100?1f;x3:100?(0n;1f))')]
     for tab in tables:
+        df = tab.pd()
         fn = kx.q('count')
-        assert kx.q('~', tab.map(fn), tab.applymap(fn))
+        assert kx.q('~', tab.map(fn), df.map(fn))
 
         fn = lambda x: len(str(x)) # noqa: E731
-        assert kx.q('~', tab.map(fn), tab.applymap(fn))
+        # assert kx.q('~', tab.map(fn), df.map(fn))
 
-        assert kx.q('~', tab.map(_count), tab.applymap(_count))
-        assert kx.q('~', tab.map(_multi_arg_count), tab.applymap(_multi_arg_count))
-        assert kx.q('~', tab.map(_multi_arg_count, y=2), tab.applymap(_multi_arg_count, y=2))
-        assert not kx.q('~', tab.map(_multi_arg_count), tab.applymap(_multi_arg_count, y=2))
+        assert kx.q('~', tab.map(_count), df.map(_count))
+        assert kx.q('~', tab.map(_multi_arg_count), df.map(_multi_arg_count))
+        assert kx.q('~', tab.map(_multi_arg_count, y=2), df.map(_multi_arg_count, y=2))
+        assert not kx.q('~', tab.map(_multi_arg_count), df.map(_multi_arg_count, y=2))
 
         assert not tab.map(fn).has_nulls
         assert tab.map(fn, na_action='ignore').has_nulls
-        assert kx.q('~', tab.map(fn, na_action='ignore'), tab.applymap(fn, na_action='ignore'))
+        # assert kx.q('~', tab.map(fn, na_action='ignore'), df.map(fn, na_action='ignore'))
 
         fn = lambda x, y: y + len(str(x)) # noqa: E731
-        assert kx.q('~', tab.map(fn, y=1), tab.applymap(fn, y=1))
-        assert not kx.q('~', tab.map(fn, y=1), tab.applymap(fn, y=2))
+        # assert kx.q('~', tab.map(fn, y=1), df.map(fn, y=1))
+        assert not kx.q('~', tab.map(fn, y=1), df.map(fn, y=2))
 
-        assert kx.q('~', tab.map(_count), tab.pd().applymap(_count))
-        assert kx.q('~', tab.map(_multi_arg_count), tab.pd().applymap(_multi_arg_count))
-        assert kx.q('~', tab.map(_multi_arg_count, y=1), tab.pd().applymap(_multi_arg_count, y=1))
+        assert kx.q('~', tab.map(_count), df.map(_count))
+        assert kx.q('~', tab.map(_multi_arg_count), df.map(_multi_arg_count))
+        assert kx.q('~', tab.map(_multi_arg_count, y=1), df.map(_multi_arg_count, y=1))
         ignore_check = kx.q('=',
                             tab.map(_multi_arg_count, na_action='ignore', y=1),
-                            tab.pd().applymap(_multi_arg_count, na_action='ignore', y=1))
+                            df.map(_multi_arg_count, na_action='ignore', y=1))
         if isinstance(tab, kx.KeyedTable):
             ignore_check = ignore_check._values
         assert ignore_check.all().all()

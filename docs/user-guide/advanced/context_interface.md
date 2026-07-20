@@ -1,20 +1,20 @@
 ---
 title:  Import existing q functions
-description: How to use q functions in a Pythonic way in PyKX
+description: How to use q functions in a Pythonic way in KDB-X Python
 date: October 2024
 author: KX Systems, Inc.,
-tags: interface, q, PyKX
+tags: interface, q, KDB-X Python
 ---
 
 # Import existing q functions
 
-For you and many users of PyKX the q programming language may not be your primary language of choice when developing analytics and applications. There are a number of circumstances under which access to q functionality or the ability to use functions written in q may be critical to your use-case:
+For you and many users of KDB-X Python the q programming language may not be your primary language of choice when developing analytics and applications. There are a number of circumstances under which access to q functionality or the ability to use functions written in q may be critical to your use-case:
 
-- When dealing with large volumes of kdb+ data or operations where vector analytic performance is of paramount importance.
+- When dealing with large volumes of KDB-X data or operations where vector analytic performance is of paramount importance.
 - When you wish to make use of existing q code/libraries in a Python first way.
 - When you need access to functions of the q language directly.
 
-The below sections make use of what is known as "The Context Interface". In q, a context (known as a namespace when at the top level) is an organizational structure which is used to organize code into libraries/common utilities. For more information on contexts/namespaces in q please refer to [Chapter 12 of Q for Mortals](https://code.kx.com/q4m3/12_Workspace_Organization/). PyKX exposes these contexts as special [`kx.QContext`](../../api/pykx-execution/ctx.md#pykx.ctx.QContext) objects. These context objects have attributes for their members, which can either be sub-contexts or K objects. For example:
+The below sections make use of what is known as "The Context Interface". In q, a context (known as a namespace when at the top level) is an organizational structure which is used to organize code into libraries/common utilities. For more information on contexts/namespaces in q please refer to [Chapter 12 of Q for Mortals](https://code.kx.com/q4m3/12_Workspace_Organization/). KDB-X Python exposes these contexts as special [`kx.QContext`](../../api/pykx-execution/ctx.md#pykx.ctx.QContext) objects. These context objects have attributes for their members, which can either be sub-contexts or K objects. For example:
 
 * `#!python pykx.q.Q` is a KdbContext instance for the builtin `#!q .Q` context/namespace
 * `#!python pykx.q.ctxA.ctxB` is a KdbContext instance for the `#!q .ctxA.ctxB` context
@@ -22,7 +22,7 @@ The below sections make use of what is known as "The Context Interface". In q, a
 
 ## Use the in-built q functionality
 
-When you start a q process there are 4 namespaces loaded which provide useful functionality to users of PyKX.
+When you start a q process there are 4 namespaces loaded which provide useful functionality to users of KDB-X Python.
 
 | **Namespace** | **Contents**                                                    | **Link**                                |
 | :------------ | :-------------------------------------------------------------- | :-------------------------------------- |
@@ -48,7 +48,7 @@ As can be seen above, just as in q, the .q context is accessible at the top-leve
 
 ## Using executed q code Python first
 
-Much of the code you write or need to access will come from executed code locally in your process or will be contained in scripts which you have access to. The flow chart below shows the hierarchy of search/loading that happens when PyKX cannot find a requested context.
+Much of the code you write or need to access will come from executed code locally in your process or will be contained in scripts which you have access to. The flow chart below shows the hierarchy of search/loading that happens when KDB-X Python cannot find a requested context.
 
 ```mermaid
 graph LR
@@ -116,7 +116,7 @@ If the namespace/context you are requesting doesn't exist in the `q` memory spac
 	15. `/opt/kdb/script.k`
 	16. `/opt/kdb/script.k_`
 
-To show the script search logic in action you can first write a file to the `#!python kx.qhome` location used by PyKX containing a namespace matching the name of the script
+To show the script search logic in action you can first write a file to the `#!python kx.qhome` location used by KDB-X Python containing a namespace matching the name of the script
 
 ```python
 >>> demo_extension_source = '''
@@ -170,7 +170,7 @@ c| 0.9830794 4.433333 0
 '))
 ```
 
-## Extend where PyKX searches for scripts
+## Extend where KDB-X Python searches for scripts
 
 In addition to the default search locations you can add additional locations to be searched through appending of additional search paths to the `kx.q.paths` list which is used in the search.
 
@@ -188,7 +188,7 @@ Traceback (most recent call last):
 <pykx.ctx.QContext of .my_context with [func]>
 ```
 
-If PyKX fails to find a script an `#!python AttributeError` will be raised, the expanding section below provides an example of this
+If KDB-X Python fails to find a script an `#!python AttributeError` will be raised, the expanding section below provides an example of this
 
 ??? Note "Failed to find a script"
 
@@ -249,7 +249,7 @@ The following shows an example of the retrieval of a function from a context vs 
 
 ## Use Contexts via IPC
 
-The context interface is also supported against remote processes thus allowing you to run analytic operations Python first against a remote kdb+/q server. The syntax and operational restrictions outlined in the previous sections also exist for the IPC instance which you can call as follows
+The context interface is also supported against remote processes thus allowing you to run analytic operations Python first against a remote KDB-X/q server. The syntax and operational restrictions outlined in the previous sections also exist for the IPC instance which you can call as follows
 
 ```python
 >>> with kx.SyncQConnection(port=5050) as conn:

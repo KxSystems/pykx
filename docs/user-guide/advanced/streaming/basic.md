@@ -1,14 +1,14 @@
 ---
 title: Basic Streaming Ingest
-description: How to start basic data ingest with PyKX
+description: How to start basic data ingest with KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, streaming, simple
+tags: KDB-X Python, q, streaming, simple
 ---
 
 # Basic streaming ingest
 
-_This page outlines the steps required to create a high-velocity data ingest infrastructure using PyKX._
+_This page outlines the steps required to create a high-velocity data ingest infrastructure using KDB-X Python._
 
 !!! warning "Disclaimer"
 
@@ -22,7 +22,7 @@ The most fundamental task in managing high-velocity data is consuming and persis
 2. Maintain a record of the most recent data available and allow users/analytics to access it.
 3. Persist and make available data from previous days to facilitate more complex analytics.
 
-These steps are managed by three separate processes known as the Tickerplant, Real-Time Database (RDB), and Historical Database (HDB). In combination, these processes form the 'basic' building block of any ingest workflow using PyKX. We will break these processes down in more depth later. For now, let's visualize one of their simplest arrangement:
+These steps are managed by three separate processes known as the Tickerplant, Real-Time Database (RDB), and Historical Database (HDB). In combination, these processes form the 'basic' building block of any ingest workflow using KDB-X Python. We will break these processes down in more depth later. For now, let's visualize one of their simplest arrangement:
 
 ![basic](../images/simple-no-feed.png)
 
@@ -52,7 +52,7 @@ The call to `#!python kx.tick.BASIC` above provides several keyword arguments wh
 
 1. `#!python tables`: Provides a dictionary mapping the names of tables to be ingested and persisted to their schema. This is the only parameter required for initializing the basic infrastructure.
 2. `#!python log_directory`: Generates a directory (if not currently available) and persists a log of each incoming message to a log-file associated with today's date.
-3. `#!python database`: If omitted, the HDB process outlined above will not be initialized. The `#!python database` denoted here should point to a directory containing a partitioned kdb+ database, for more information on this form of database see [here](../database/index.md).
+3. `#!python database`: If omitted, the HDB process outlined above will not be initialized. The `#!python database` denoted here should point to a directory containing a partitioned KDB-X database, for more information on this form of database see [here](../database/index.md).
 
 For a full breakdown of the BASIC API functionality go [here](../../../api/tick.md#pykx.tick.BASIC).
 
@@ -84,7 +84,7 @@ The role of a tickerplant is to coordinate the following actions within the life
 
 Should the Tickerplant process be killed and need to recover or data be replayed to repopulate the Database at a later point, the log file is centrally important. When the tickerplant receives messages, it persists each of them to the disk, in a file named `#!python log<current date>` within a user-specified directory. 
 
-Data is logged as a list with the first argument being the function which should be executed on log replay and the remaining elements being the arguments to this function. Within the PyKX streaming workflows, the function called is `#!python .u.upd` and it takes two arguments: `#!python table_name` and `#!python message`. As such, our log file may consist of the following information (in human readable form below).
+Data is logged as a list with the first argument being the function which should be executed on log replay and the remaining elements being the arguments to this function. Within the KDB-X Python streaming workflows, the function called is `#!python .u.upd` and it takes two arguments: `#!python table_name` and `#!python message`. As such, our log file may consist of the following information (in human readable form below).
 
 ```q
 (`.u.upd;`trade;(0D11:31:30.758665000;`AAPL;42.0))
@@ -100,11 +100,11 @@ A Real-Time Database (RDB) stores today’s data in-memory and writes it to the 
 
 ### Historical Databases
 
-The Historical Database (HDB) contains data for all available days of processed data before the current day. This data is stored on-disk and loaded into the process as a memory-mapped dataset. Interactions with this data and its management are more complex than in-memory data. You can manage this data in the [Database API for PyKX](../database/index.md) and you can also [query](../../fundamentals/query/index.md) it.
+The Historical Database (HDB) contains data for all available days of processed data before the current day. This data is stored on-disk and loaded into the process as a memory-mapped dataset. Interactions with this data and its management are more complex than in-memory data. You can manage this data in the [Database API for KDB-X Python](../database/index.md) and you can also [query](../../fundamentals/query/index.md) it.
 
 !!! info "Important"
 
-    PyKX allows to load only one database at a time on an HDB. The HDB connecting to an RDB/RTE should have the same tables defined to avoid issues with missing partitions.
+    KDB-X Python allows to load only one database at a time on an HDB. The HDB connecting to an RDB/RTE should have the same tables defined to avoid issues with missing partitions.
 
 ## Next steps
 

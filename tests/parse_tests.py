@@ -8,6 +8,7 @@ import test_console
 import test_ctx
 import test_exceptions
 import test_ipc
+import test_module
 import test_pandas_api
 import test_pykx
 import test_q_foreign
@@ -182,21 +183,21 @@ class ParseTestSuite:
                     if not any('(unlicensed_only' in x for x in func.decorators):
                         ipc_licensed.append(func)
                         embedded.append(func)
-                        if any(['nep' in x for x in func.decorators]) and py_minor_version >= 8:
+                        if any(['nep' in x for x in func.decorators]):
                             nep_licensed.append(func)
                         added = True
                     if not any('(licensed_only' in x for x in func.decorators):
                         ipc_unlicensed.append(func)
-                        if any(['nep' in x for x in func.decorators]) and py_minor_version >= 8:
+                        if any(['nep' in x for x in func.decorators]):
                             nep_unlicensed.append(func)
                         added = True
 
                 if any(['.unlicensed' in x for x in func.decorators]):
                     if not any('(unlicensed_only' in x for x in func.decorators):
-                        if any(['nep' in x for x in func.decorators]) and py_minor_version >= 8:
+                        if any(['nep' in x for x in func.decorators]):
                             nep_licensed.append(func)
                         licensed.append(func)
-                    if any(['nep' in x for x in func.decorators]) and py_minor_version >= 8:
+                    if any(['nep' in x for x in func.decorators]):
                         nep_unlicensed.append(func)
                     unlicensed.append(func)
                     added = True
@@ -204,7 +205,7 @@ class ParseTestSuite:
                     pandas_licensed.append(func)
                     added = True
                 if not added:
-                    if any(['nep' in x for x in func.decorators]) and py_minor_version >= 8:
+                    if any(['nep' in x for x in func.decorators]):
                         nep_licensed.append(func)
                     embedded.append(func)
 
@@ -227,6 +228,7 @@ tests = ParseTestSuite([
     test_console,
     test_exceptions,
     test_ipc,
+    test_module,
     test_q_future,
     test_query,
     test_util,
@@ -246,11 +248,11 @@ files = [
     ('win_tests/embedded/embedded_tests.py', 5, ''),
     ('win_tests/pandas_lic/pandas_licensed_tests.py', 8, '--pandas-api')
 ]
-if py_minor_version >= 8:
-    files.extend([
-        ('win_tests/nep_lic/nep_licensed_tests.py', 6, '--pykxalloc --pykxgc'),
-        ('win_tests/nep_unlic/nep_unlicensed_tests.py', 7, '--unlicensed --pykxalloc')]
-    )
+
+files.extend([
+    ('win_tests/nep_lic/nep_licensed_tests.py', 6, '--pykxgc'),
+    ('win_tests/nep_unlic/nep_unlicensed_tests.py', 7, '--unlicensed')]
+)
 
 if not os.path.exists('win_tests'):
     os.makedirs('win_tests')

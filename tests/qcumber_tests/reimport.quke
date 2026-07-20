@@ -10,7 +10,7 @@ feature pykx.q
 	expect an error if embedPy is already loaded
 	    .p.e:{"not the pykx version"};
 	    err:@[{system"l pykx.q"};`;{x}];
-	   .qu.compare["Unable to load PyKX, see logged output for more information";err];
+	   .qu.compare["Unable to load KDB-X Python, see logged output for more information";err];
     
 
 feature .pykx.safeReimport

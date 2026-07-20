@@ -1,19 +1,19 @@
 ---
 title: Generating and extending a database
-description: Introduction to the PyKX database creation and management functionality 
+description: Introduction to the KDB-X Python database creation and management functionality 
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, database, maintenance, management, generation
+tags: KDB-X Python, q, database, maintenance, management, generation
 ---
 
 
 # Generate and extend a database
 
-_This page explains how to create and expand databases using PyKX._
+_This page explains how to create and expand databases using KDB-X Python._
 
-!!! tip "Tip: For the best experience, we recommend reading [Databases in PyKX](index.md) first. If you already have access to a database and only need to load it, you can skip this page and jump right to [load database](db_loading.md)."
+!!! tip "Tip: For the best experience, we recommend reading [Databases in KDB-X Python](index.md) first. If you already have access to a database and only need to load it, you can skip this page and jump right to [load database](db_loading.md)."
 
-Before leveraging the performance of PyKX when querying on-disk data, you need to create a [persisted database](../../../extras/glossary.md#persisted-database). In the following sections we complete the following:
+Before leveraging the performance of KDB-X Python when querying on-disk data, you need to create a [persisted database](../../../extras/glossary.md#persisted-database). In the following sections we complete the following:
 
 1. [Create a new database](#1-create-database) containing a single table `#!python trade` and multiple days of data.
 1. [Add a new day worth of data](#2-add-new-database-partition) for `#!python today` to the database for the `#!python trade` table.
@@ -22,11 +22,11 @@ Before leveraging the performance of PyKX when querying on-disk data, you need t
 
 !!! note "Bring your own data"
 
-	The below example makes use of randomly-generated data using PyKX, where we use `#!python trade` or `#!python quote` tables generated in that manner. You can replace them with an equivalent Pandas/PyArrow table which will be converted to a PyKX table before being persisted.
+	The below example makes use of randomly-generated data using KDB-X Python, where we use `#!python trade` or `#!python quote` tables generated in that manner. You can replace them with an equivalent Pandas/PyArrow table which will be converted to a `pykx` table before being persisted.
 
 ## 1. Create database
 
-For more information on database structures, see the linked section on [what is a database](index.md#whats-a-pykx-database). With PyKX, use the `#!python pykx.DB` class for all database interactions in Python. This class lets you create, expand, and maintain on-disk splayed/partitioned databases. First, we need to create a database.
+For more information on database structures, see the linked section on [what is a database](index.md#whats-a-pykx-database). With KDB-X Python, use the `#!python pykx.DB` class for all database interactions in Python. This class lets you create, expand, and maintain on-disk splayed/partitioned databases. First, we need to create a database.
 
 In the next cell, we create a `#!python trade` table with data from multiple days in the chat.
 
@@ -115,7 +115,7 @@ Note that in comparison to the original database creation logic, we do not have 
 
 === "Encrypt persisted data"
 
-	In the below example, we encrypt the data persisted for the added partition. For further details on how encryption works within PyKX see [here](../compress-encrypt.md) or look at the API reference [here](../../../api/compress.md).
+	In the below example, we encrypt the data persisted for the added partition. For further details on how encryption works within KDB-X Python see [here](../compress-encrypt.md) or look at the API reference [here](../../../api/compress.md).
 
 	```python
 	>>> encrypt = kx.Encrypt('/path/to/mykey.key', 'mySuperSecretPassword')

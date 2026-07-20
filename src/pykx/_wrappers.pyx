@@ -133,7 +133,7 @@ cpdef inline deserialize(x):
 
     if 0 == core.okx(buff):
         core.r0(buff)
-        raise QError('Failed to deserialize supplied non PyKX IPC serialized format object')
+        raise QError('Failed to deserialize supplied non pykx IPC serialized format object')
     cdef core.K kx = core.ee(core.d9(buff))
     core.r0(buff)
     return factory(<uintptr_t>kx, False)
@@ -471,6 +471,17 @@ cdef object q_table_type(core.K val):
     return wrapper
 
 
+cdef object q_foreign_type(core.K val):
+    cdef core.K x
+    x = core.k(0, <char* const>'.Q.qO', core.r1(val), NULL)
+    if x.t == -1 and x.g == 1:      # x == 1b
+        wrapper = wrappers.VirtualTable
+    else:
+        wrapper = wrappers.Foreign
+    core.r0(x)
+    return wrapper
+
+
 cdef extern from 'include/vector_conversion.h':
     object symbol_vector_to_py(core.K s, int raw)
     object char_vector_to_py(core.K s)
@@ -540,6 +551,8 @@ cdef inline object select_wrapper(core.K k):
         key_ktype = (<core.K*>k.G0)[0].t
         value_ktype = (<core.K*>k.G0)[1].t
         wrapper = wrappers.KeyedTable if key_ktype == 98 and value_ktype == 98 else wrappers.Dictionary
+    elif wrapper is wrappers._k_foreign_type:
+        wrapper = q_foreign_type(k) if licensed else wrappers.Foreign
     return wrapper
 
 

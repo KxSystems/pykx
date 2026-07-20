@@ -1,36 +1,36 @@
 ---
 title: Communicate via IPC
-description: Use PyKX via IPC
+description: Use KDB-X Python via IPC
 date: June 2024
 author: KX Systems, Inc.,
-tags: PyKX, IPC, 
+tags: KDB-X Python, IPC, 
 ---
 
 # Communicate via IPC
 
-_This page explains how to use PyKX to communicate with q processes via IPC._
+_This page explains how to use KDB-X Python to communicate with q processes via IPC._
 
-Interprocess Communication (IPC) forms a central mechanism by which you can connect to and query existing kdb+/q infrastructures.
+Interprocess Communication (IPC) forms a central mechanism by which you can connect to and query existing KDB-X/q infrastructures.
 
 The processes to which users are connecting and running queries often connect into a central server/gateway that contains vast amounts of historical data.
 
-There are 4 main types of IPC connections in PyKX.
+There are 4 main types of IPC connections in KDB-X Python.
 
 | **Connection Name**                                                   | **When it's often used**                                                                                                                   |
 | :-------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------- |
 | [`kx.SyncQConnection`](../../api/ipc.md#pykx.ipc.SyncQConnection)     | When you need to retrieve data from a server.                                                                                              |
 | [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection)   | When you need to integrate with Python's `asyncio` library or when integration running queries on an event loop.                           |
-| [`kx.SecureQConnection`](../../api/ipc.md#pykx.ipc.SecureQConnection) | When you need to connect to a kdb+/q server which has TLS enabled.                                                                         |
+| [`kx.SecureQConnection`](../../api/ipc.md#pykx.ipc.SecureQConnection) | When you need to connect to a KDB-X/q server which has TLS enabled.                                                                         |
 | [`kx.RawQConnection`](../../api/ipc.md#pykx.ipc.RawQConnection)       | Used when more fine-grained control is required by a user to handle when messages are read, also used if emulating a q server from Python. |
 
 In the below sections you will learn more about these connections and how to
 
-- Establish a connection to an existing kdb+/q process
-- Run analytics/queries on existing kdb+/q processes
+- Establish a connection to an existing KDB-X/q process
+- Run analytics/queries on existing KDB-X/q processes
 - Reconnect to a process
 - Execute a local file
 - Integrate with Python asynchronous frameworks
-- Create your own IPC Server using PyKX 
+- Create your own IPC Server using KDB-X Python 
 
 !!! Note "To run the examples"
 
@@ -225,7 +225,7 @@ For more information on the context interface and how to use your q code Python 
 
 ### Run a local Python function on a server
 
-While not explicitly part of the IPC module of PyKX the ability to run your local Python functions on remote servers makes use of the IPC logic provided by PyKX heavily. Outlined in full detail [here](remote-functions.md), this functionality works by sending across to your server instructions to import relevant libraries, evaluate the function being run and pass data to this function for execution.
+While not explicitly part of the IPC module of KDB-X Python the ability to run your local Python functions on remote servers makes use of the IPC logic provided by KDB-X Python heavily. Outlined in full detail [here](remote-functions.md), this functionality works by sending across to your server instructions to import relevant libraries, evaluate the function being run and pass data to this function for execution.
 
 In the examples below we can see the registration and use of these functions in practice where the `#!python kx.remote.session` objects are a form of IPC connection. In each case the function is defined in your local session but executed remotely:
 
@@ -265,11 +265,11 @@ In the examples below we can see the registration and use of these functions in 
 	pykx.LongAtom(pykx.q('30'))
 	```
 
-## Reconnect to a kdb+ server
+## Reconnect to a KDB-X server
 
 When a server with active connections becomes unavailable, restarts, or suffers an outage, all active connections will need to reconnect whenever the server recovers. This could mean closing an existing stale connection and reconnecting using the same credentials.
 
-PyKX allows you to manually configure reconnection attempts for clients connecting to servers using the #!python reconnection_attempts keyword argument. The following example shows the output of when attempting to make use of a connection which has been cancelled and is subsequently re-established:
+KDB-X Python allows you to manually configure reconnection attempts for clients connecting to servers using the #!python reconnection_attempts keyword argument. The following example shows the output of when attempting to make use of a connection which has been cancelled and is subsequently re-established:
 
 ```python
 >>> conn = kx.SyncQConnection(port=5050, reconnection_attempts=5)
@@ -364,7 +364,7 @@ pykx.Identity(pykx.q('::'))
 
 ### Integrate with Python Async libraries
 
-To make integrate with Python's async libraries such as `#!python asyncio` with `#!python PyKX`, you must use a [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection). When calling an instance of an [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection), the query is sent to the `#!python q` server and control is immediately handed back to the running Python program. The `#!python __call__` function returns a [`kx.QFuture`](../../api/ipc.md#pykx.ipc.QFuture) instance that can later be awaited on to block until it receives a result.
+To make integrate with Python's async libraries such as `#!python asyncio` with `#!python KDB-X Python`, you must use a [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection). When calling an instance of an [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection), the query is sent to the `#!python q` server and control is immediately handed back to the running Python program. The `#!python __call__` function returns a [`kx.QFuture`](../../api/ipc.md#pykx.ipc.QFuture) instance that can later be awaited on to block until it receives a result.
 
 If you're using a third-party library that runs an eventloop to manage asynchronous calls, ensure you use the `#!python event_loop` keyword argument to pass the event loop into the [`kx.AsyncQConnection`](../../api/ipc.md#pykx.ipc.AsyncQConnection) instance. This allows the eventloop to properly manage the returned [`kx.QFuture`](../../api/ipc.md#pykx.ipc.QFuture) objects and its lifecycle.
 
@@ -382,9 +382,9 @@ async with kx.AsyncQConnection('localhost', 5001, event_loop=asyncio.get_event_l
     await fut # await the future object to get the result
 ```
 
-## Create your own IPC Server using PyKX
+## Create your own IPC Server using KDB-X Python
 
-There are several cases where providing the ability for users to open IPC connections to Python processes via the q native IPC protocol provides advantages. In particular if you are looking to manage infrastructure in Python which kdb+ users are likely to communicate with using q.
+There are several cases where providing the ability for users to open IPC connections to Python processes via the q native IPC protocol provides advantages. In particular if you are looking to manage infrastructure in Python which KDB-X users are likely to communicate with using q.
 
 The [`server.py`](scripts/server.py) file that you may have called at the start of this page makes use of this functionality and specifically uses a [`kx.RawQConnection`](../../api/ipc.md#pykx.ipc.RawQConnection) to allow connections to be made, this script is defined in plain text as follows:
 
@@ -416,7 +416,7 @@ def qval_async(query):
 async def main():
     kx.q.z.pg = qval_sync
     kx.q.z.ps = qval_async
-    kx.q('@[system"l ",;"s.k_";{show "Failed to load SQL"}]')
+    kx.q('@[value;"s) ";{show "Failed to load SQL"}]')
     kx.q('tab:([]1000?`a`b`c;1000?1f;1000?10)')
     async with kx.RawQConnection(port=port, as_server=True, conn_gc_time=20.0) as q:
         print('Server Initialized')

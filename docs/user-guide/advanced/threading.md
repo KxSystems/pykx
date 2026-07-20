@@ -1,25 +1,25 @@
 ---
 title: Multithreaded Execution
-description: Learn how multithreaded integration for PyKX works
+description: Learn how multithreaded integration for KDB-X Python works
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, threading, python, asyncio, multithreaded, noupdate
+tags: KDB-X Python, q, threading, python, asyncio, multithreaded, noupdate
 ---
 
 # Multithreaded execution
 
 _This page explains how to execute q code on multiple threads._
 
-When used in its default configuration, PyKX does not support multithreaded execution of q code on Python threads. This limitation arises because only the main thread (the one importing PyKX and loading `#!python libq`) can modify the state in PyKX’s assigned memory.
+When used in its default configuration, KDB-X Python does not support multithreaded execution of q code on Python threads. This limitation arises because only the main thread (the one importing KDB-X Python and loading `#!python libq`) can modify the state in KDB-X Python’s assigned memory.
 
-As a result, PyKX’s integration with Python’s multithreading libraries, such as [`#!python threading`](https://docs.python.org/3/library/threading.html), [`#!python asyncio`](https://docs.python.org/3/library/asyncio.html), is restricted. This also affects other Python libraries that utilize multiple threads simultaneously, including [`#!python streamlit`](https://streamlit.io/), which uses multiple threads to manage data caching. Read more information about [PyKX’s integration with Streamlit](streamlit.md).
+As a result, KDB-X Python’s integration with Python’s multithreading libraries, such as [`#!python threading`](https://docs.python.org/3/library/threading.html), [`#!python asyncio`](https://docs.python.org/3/library/asyncio.html), is restricted. This also affects other Python libraries that utilize multiple threads simultaneously, including [`#!python streamlit`](https://streamlit.io/), which uses multiple threads to manage data caching. Read more information about [KDB-X Python’s integration with Streamlit](streamlit.md).
 
-Use cases for multithreading with PyKX:
+Use cases for multithreading with KDB-X Python:
 
 - **Upserting Data**: Insert or update data in a global table from multiple sources.
 - **Querying Multiple Processes**: Open `#!python QConnection` instances to query several processes simultaneously and combine their results.
 
-If you don’t configure PyKX for multithreading, you might encounter a `#!python noupdate` error. To avoid this, consider enabling the feature described here. This feature allows multithreading by creating a background thread that `#!python loads` libq. 
+If you don’t configure KDB-X Python for multithreading, you might encounter a `#!python noupdate` error. To avoid this, consider enabling the feature described here. This feature allows multithreading by creating a background thread that `#!python loads` libq. 
 
 All calls to q from other threads are run on this background thread, created using `#!python libpthread` for minimal overhead. This setup enables safe state modification in multithreaded programs with minimal performance impact.
 
@@ -34,7 +34,7 @@ Before globally enabling this functionality, consider the following:
 
 ## How to enable multithreaded execution
 
-By default, PyKX doesn't start with multithreading support enabled. To enable this feature, you must set `#!python PYKX_THREADING=True` during [configuration](../configuration.md). You can do this either as an environment variable or by adding this configuration to a `#!python .pykx-config` file as outlined [here](../configuration.md#configuration-file).
+By default, KDB-X Python doesn't start with multithreading support enabled. To enable this feature, you must set `#!python PYKX_THREADING=True` during [configuration](../configuration.md). You can do this either as an environment variable or by adding this configuration to a `#!python config-pykx` file as outlined [here](../configuration.md#configuration-file).
 
 ## Example usage
 

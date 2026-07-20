@@ -1,18 +1,18 @@
 ---
-title: Manage a PyKX Database
+title: Manage a KDB-X Python Database
 description: How to modify an existing database
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, database, loading
+tags: KDB-X Python, q, database, loading
 ---
 
 # Manage a database
 
-_This page explains how to modify databases generated in PyKX._
+_This page explains how to modify databases generated in KDB-X Python._
 
-!!! tip "Tip: For the best experience, we recommend reading [Databases in PyKX](index.md), [Generate a database](db_gen.md) and [Load a database](db_loading.md) first."
+!!! tip "Tip: For the best experience, we recommend reading [Databases in KDB-X Python](index.md), [Generate a database](db_gen.md) and [Load a database](db_loading.md) first."
 
-With PyKX, you can use various methods to modify your on-disk database. These changes can take many forms:
+With KDB-X Python, you can use various methods to modify your on-disk database. These changes can take many forms:
 
 - Add new columns to the database
 - Apply functions to existing columns

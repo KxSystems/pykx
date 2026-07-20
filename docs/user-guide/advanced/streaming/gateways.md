@@ -3,7 +3,7 @@ title: Managing query routing
 description: How to manage what and how users can query data
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, query, routing, analytics
+tags: KDB-X Python, q, query, routing, analytics
 ---
 
 # Manage query routing
@@ -22,7 +22,7 @@ When providing users with access to data within your system, you must consider t
 
 A `#!python Gateway` process can handle each of these. The gateway is responsible for defining the processes that can be queried within your system and regulates via user-configured logic what is required for a user to establish a connection to the gateway.
 
-PyKX provides a simplistic gateway which allows connections to multiple processes and supports synchronous queries against your processes. Although it doesn't scale to large numbers of high traffic use-cases, it provides a starting infrastructure suitable for small teams of developers.
+KDB-X Python provides a simplistic gateway which allows connections to multiple processes and supports synchronous queries against your processes. Although it doesn't scale to large numbers of high traffic use-cases, it provides a starting infrastructure suitable for small teams of developers.
 
 !!! note "Have your say"
 

@@ -74,10 +74,10 @@ def _unlicensed_call(handle: int, query: bytes, parameters: List[K], wait: bool)
     
 
 cpdef ssl_info():
-    """View information relating to the TLS settings used by PyKX from your process
+    """View information relating to the TLS settings used by KDB-X Python from your process
 
     Returns:
-        A dictionary outlining the TLS settings used by PyKX
+        A dictionary outlining the TLS settings used by KDB-X Python
 
     Example:
 

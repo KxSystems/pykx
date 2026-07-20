@@ -22,7 +22,7 @@ def test_sql(q):
         # assign python q object to named entity
         q['qtab'] = q['stab'] = qtab
 
-        assert q('.s.e"select * from qtab"').py() == q.sql("select * from $1", q('stab')).py()
+        assert q.sql("select * from $1", q('stab')).py() == q('.s.e"select * from qtab"').py()
 
         assert q('.s.e"select col1 from qtab where col2>0.5"').py() \
             == q.sql("select col1 from $1 where col2 > $2", q('stab'), q('0.5f')).py()

@@ -1,5 +1,5 @@
 /*
-	Title: PyKX extra CSS for code.kx.com in MkDocs
+	Title: KDB-X Python extra CSS for code.kx.com in MkDocs
  */
 
 /* countermand MkDocs insertion of href attribute after link anchor
@@ -254,7 +254,6 @@
     background-color: transparent;
     margin-top: 0;
   }
-
   [data-md-color-scheme="kx-light"] .md-header {
     background-color: #194387;
     color: white;

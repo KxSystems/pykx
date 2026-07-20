@@ -5,7 +5,7 @@ author: KX Systems
 date: September 2024
 tags: console,repl
 ---
-# PyKX Console
+# KDB-X Python Console
 
 _This page documents the use of the emulated q console available during use of a Python repl._
 

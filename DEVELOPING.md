@@ -1,15 +1,15 @@
 # Development Guidelines
 
-This document is for developers of PyKX, and strives to clarify some otherwise unspoken assumptions regarding PyKX, and to provide some guidelines for its development.
+This document is for developers of KDB-X Python, and strives to clarify some otherwise unspoken assumptions regarding KDB-X Python, and to provide some guidelines for its development.
 
 
 ## Goals
 
-PyKX aims to provide a Python-first interface to q. This means that the API should be as Pythonic as possible while ideally still being able to efficiently perform any task that one could be done with q itself.
+KDB-X Python aims to provide a Python-first interface to q. This means that the API should be as Pythonic as possible while ideally still being able to efficiently perform any task that one could be done with q itself.
 
-The primary target audience of this package is naive Python users. These would be data scientists, and the majority of programmers who have at least a passing familiarity with Python. These users will rely heavily on the documentation, and examples. They will not be familiar with any advanced Python concepts, or even have a working knowledge of the [Python object model](https://docs.python.org/3/reference/datamodel.html). Additionally, and more importantly for any developers of PyKX who are primarily q programmers, these users will not be familiar with any q-isms, or vector languages in general. The closest thing most of the will have experienced to a vector language is the Python package [Numpy](https://numpy.org/), and as such we can expect that many of them will use PyKX primarily as a way to convert query results from their q database to Numpy arrays.
+The primary target audience of this package is naive Python users. These would be data scientists, and the majority of programmers who have at least a passing familiarity with Python. These users will rely heavily on the documentation, and examples. They will not be familiar with any advanced Python concepts, or even have a working knowledge of the [Python object model](https://docs.python.org/3/reference/datamodel.html). Additionally, and more importantly for any developers of KDB-X Python who are primarily q programmers, these users will not be familiar with any q-isms, or vector languages in general. The closest thing most of the will have experienced to a vector language is the Python package [Numpy](https://numpy.org/), and as such we can expect that many of them will use KDB-X Python primarily as a way to convert query results from their q database to Numpy arrays.
 
-Other kinds of users who should also be considered include skilled q users, and skilled Python users. For them we try to include extra opt-in features which are entirely unnecessary to get the core experience of PyKX. For example the q console is, in part, provided for skilled q users, and it does not follow any Python conventions.
+Other kinds of users who should also be considered include skilled q users, and skilled Python users. For them we try to include extra opt-in features which are entirely unnecessary to get the core experience of KDB-X Python. For example the q console is, in part, provided for skilled q users, and it does not follow any Python conventions.
 
 
 ## What does Pythonic means?
@@ -74,7 +74,7 @@ Other miscellaneous Pythonic tips include:
 
 ## API Development Considerations
 
-It's easy to provide new functions/methods, decide on argument order, calling conventions, etc., but it's terribly difficult to change those decisions after PyKX has been released. For this reason we should err on the side of not releasing such changes until we're confident that we have made the best decision, and that we probably won't want to change it in the future.
+It's easy to provide new functions/methods, decide on argument order, calling conventions, etc., but it's terribly difficult to change those decisions after KDB-X Python has been released. For this reason we should err on the side of not releasing such changes until we're confident that we have made the best decision, and that we probably won't want to change it in the future.
 
 
 ## Cython Tips

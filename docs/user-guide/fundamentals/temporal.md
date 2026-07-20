@@ -1,16 +1,16 @@
 ---
-title: Convert temporal data types in PyKX 
-description: How to convert temporal data types in PyKX
+title: Convert temporal data types in KDB-X Python 
+description: How to convert temporal data types in KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, data, convert
+tags: KDB-X Python, data, convert
 ---
 
-# Convert temporal data types in PyKX 
+# Convert temporal data types in KDB-X Python 
 
-_This page provides details on how to convert temporal data types in PyKX._
+_This page provides details on how to convert temporal data types in KDB-X Python._
 
-Converting temporal data types in PyKX involves handling timestamp/datetime types and duration types.
+Converting temporal data types in KDB-X Python involves handling timestamp/datetime types and duration types.
 
 ### Timestamp/Datetime types
 
@@ -100,11 +100,11 @@ d
 
     * In NumPy further data types exist `datetime64[us]`, `datetime64[ms]`, `datetime64[s]` which due to their lower precision have a wider range of dates they can represent. When converted using to q using `toq` these all present as q `Timestamp` type and as such only dates within the range this data type can represent should be converted.
 
-    * Pandas 2.* changes behavior and conversions should be reviewed as part of an upgrade of this package. [PyKX to Pythonic data type mapping](../../api/pykx-q-data/type_conversions.md) includes examples showing differences seen when calling `.pd()`.
+    * Pandas 2.* changes behavior and conversions should be reviewed as part of an upgrade of this package. [KDB-X Python to Pythonic data type mapping](../../api/pykx-q-data/type_conversions.md) includes examples showing differences seen when calling `.pd()`.
 
 ### Duration types
 
-Duration types do not have the issue of epoch offsets, but some range limitations exist when converting between Python and PyKX.
+Duration types do not have the issue of epoch offsets, but some range limitations exist when converting between Python and KDB-X Python.
 
 `#!python kx.SecondVector` and `#!python kx.MinuteVector` convert to `#!python timedelta64[s]`:
 

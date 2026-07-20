@@ -1,4 +1,4 @@
-# Reading and Writing files with PyKX
+# Reading and Writing files with KDB-X Python
 
 ::: pykx.read
 

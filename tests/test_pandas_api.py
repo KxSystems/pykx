@@ -1,6 +1,5 @@
 """Tests for the Pandas API."""
 
-import sys
 import os
 
 import numpy as np
@@ -559,380 +558,377 @@ def test_table_inner_merge(kx, q):
 
 
 def test_table_left_merge(kx, q):
-    if sys.version_info.minor > 7:
-        # Merge on keys
-        df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
-        df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        assert df1.merge(
-            df2,
+    # Merge on keys
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    assert df1.merge(
+        df2,
+        left_on='lkey',
+        right_on='rkey',
+        how='left'
+    ).equals(
+        tab1.merge(
+            tab2,
             left_on='lkey',
             right_on='rkey',
             how='left'
-        ).equals(
-            tab1.merge(
-                tab2,
-                left_on='lkey',
-                right_on='rkey',
-                how='left'
-            ).pd()
-        )
+        ).pd()
+    )
 
-        # Merge on keys KeyedTable
-        df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
-        df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
-        tab1 = q('{1!x}', kx.toq(df1))
-        tab2 = q('{1!x}', kx.toq(df2))
-        assert df1.merge(
-            df2,
+    # Merge on keys KeyedTable
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = q('{1!x}', kx.toq(df1))
+    tab2 = q('{1!x}', kx.toq(df2))
+    assert df1.merge(
+        df2,
+        left_on='lkey',
+        right_on='rkey',
+        how='left'
+    ).equals(
+        q('{0!x}', tab1.merge(
+            tab2,
             left_on='lkey',
             right_on='rkey',
             how='left'
-        ).equals(
-            q('{0!x}', tab1.merge(
-                tab2,
-                left_on='lkey',
-                right_on='rkey',
-                how='left'
-            )).pd()
-        )
+        )).pd()
+    )
 
-        # Merge on differing keys
-        df1 = pd.DataFrame({'a': ['foo', 'bar'], 'b': [1, 2]})
-        df2 = pd.DataFrame({'a': ['foo', 'baz'], 'c': [3, 4]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        tab_res = tab1.merge(tab2, on='a', how='left').pd()
-        assert str(tab_res.at[1, 'c']) == '--'
-        tab_res.at[1, 'c'] = np.nan
-        assert df1.merge(df2, on='a', how='left').equals(tab_res)
+    # Merge on differing keys
+    df1 = pd.DataFrame({'a': ['foo', 'bar'], 'b': [1, 2]})
+    df2 = pd.DataFrame({'a': ['foo', 'baz'], 'c': [3, 4]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    tab_res = tab1.merge(tab2, on='a', how='left').pd()
+    assert str(tab_res.at[1, 'c']) == '--'
+    tab_res.at[1, 'c'] = np.nan
+    assert df1.merge(df2, on='a', how='left').equals(tab_res)
 
-        # Merge on same indexes
-        df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
-        df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        assert df1.merge(
-            df2,
+    # Merge on same indexes
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    assert df1.merge(
+        df2,
+        left_index=True,
+        right_index=True,
+        how='left'
+    ).equals(
+        tab1.merge(
+            tab2,
             left_index=True,
             right_index=True,
             how='left'
-        ).equals(
-            tab1.merge(
-                tab2,
-                left_index=True,
-                right_index=True,
-                how='left'
-            ).pd()
-        )
+        ).pd()
+    )
 
-        # Merge on different indexes
-        df1 = pd.DataFrame(
-            {
-                'lkey': ['foo', 'bar', 'baz', 'foo'],
-                'value': [1, 2, 3, 5]
-            },
-            index=[4, 3, 2, 1]
-        )
-        df2 = pd.DataFrame(
-            {
-                'rkey': ['foo', 'bar', 'baz', 'foo'],
-                'value': [5, 6, 7, 8]
-            },
-            index=[0, 1, 2, 3]
-        )
-        tab1 = q('{`idx xcols update idx: reverse 1 + til count x from x}', tab1)
-        tab1 = q('{1!x}', tab1)
-        tab2 = kx.q.qsql.update(tab2, {'idx': 'til count i'}, inplace=True)
-        tab2 = tab2.set_index('idx')
-        res = tab1.merge(tab2, left_index=True, right_index=True, how='left')
-        assert isinstance(res, kx.KeyedTable)
-        df_res = df1.merge(df2, left_index=True, right_index=True, how='left')
-        # assert our index does match properly before removing it
-        assert q('0!', res)['idx'].py() == list(df_res.index)
-        # We have idx as a column so we have to remove it to be equal as it won't convert
-        # to the pandas index column automatically
-        res = q('{(enlist `idx)_(0!x)}', res).pd()
-        df_res = df_res.reset_index() # Reset pandas index to default, we already checked it
-        df_res.pop('index')
-        res.at[0, 'rkey'] = np.nan
-        res.at[0, 'value_y'] = np.nan
-        assert df_res.equals(res)
+    # Merge on different indexes
+    df1 = pd.DataFrame(
+        {
+            'lkey': ['foo', 'bar', 'baz', 'foo'],
+            'value': [1, 2, 3, 5]
+        },
+        index=[4, 3, 2, 1]
+    )
+    df2 = pd.DataFrame(
+        {
+            'rkey': ['foo', 'bar', 'baz', 'foo'],
+            'value': [5, 6, 7, 8]
+        },
+        index=[0, 1, 2, 3]
+    )
+    tab1 = q('{`idx xcols update idx: reverse 1 + til count x from x}', tab1)
+    tab1 = q('{1!x}', tab1)
+    tab2 = kx.q.qsql.update(tab2, {'idx': 'til count i'}, inplace=True)
+    tab2 = tab2.set_index('idx')
+    res = tab1.merge(tab2, left_index=True, right_index=True, how='left')
+    assert isinstance(res, kx.KeyedTable)
+    df_res = df1.merge(df2, left_index=True, right_index=True, how='left')
+    # assert our index does match properly before removing it
+    assert q('0!', res)['idx'].py() == list(df_res.index)
+    # We have idx as a column so we have to remove it to be equal as it won't convert
+    # to the pandas index column automatically
+    res = q('{(enlist `idx)_(0!x)}', res).pd()
+    df_res = df_res.reset_index() # Reset pandas index to default, we already checked it
+    df_res.pop('index')
+    res.at[0, 'rkey'] = np.nan
+    res.at[0, 'value_y'] = np.nan
+    assert df_res.equals(res)
 
-        df1 = pd.DataFrame(
-            {'key': ['foo', 'bar', 'baz', 'foo', 'quz'], 'value': [1, 2, 3, 5, None]}
-        )
-        df2 = pd.DataFrame({'key': ['foo', 'bar', 'baz', 'foo', None], 'value': [5, 6, 7, 8, 99]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
+    df1 = pd.DataFrame(
+        {'key': ['foo', 'bar', 'baz', 'foo', 'quz'], 'value': [1, 2, 3, 5, None]}
+    )
+    df2 = pd.DataFrame({'key': ['foo', 'bar', 'baz', 'foo', None], 'value': [5, 6, 7, 8, 99]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
 
-        df_res = df1.merge(df2, on='key', how='left')
-        res = tab1.merge(tab2, on='key', how='left').pd()
-        assert str(res.at[6, 'value_y']) == '--'
-        res.at[6, 'value_y'] = np.nan
-        assert df_res.equals(res)
+    df_res = df1.merge(df2, on='key', how='left')
+    res = tab1.merge(tab2, on='key', how='left').pd()
+    assert str(res.at[6, 'value_y']) == '--'
+    res.at[6, 'value_y'] = np.nan
+    assert df_res.equals(res)
 
 
 def test_table_right_merge(kx, q):
-    if sys.version_info.minor > 7:
-        # Merge on keys
-        df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
-        df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        assert df1.merge(
-            df2,
+    # Merge on keys
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    assert df1.merge(
+        df2,
+        left_on='lkey',
+        right_on='rkey',
+        how='right'
+    ).equals(
+        tab1.merge(
+            tab2,
             left_on='lkey',
             right_on='rkey',
             how='right'
-        ).equals(
-            tab1.merge(
-                tab2,
-                left_on='lkey',
-                right_on='rkey',
-                how='right'
-            ).pd()
-        )
+        ).pd()
+    )
 
-        # Merge on keys KeyedTable
-        df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
-        df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
-        tab1 = q('{1!x}', kx.toq(df1))
-        tab2 = q('{1!x}', kx.toq(df2))
-        assert df1.merge(
-            df2,
+    # Merge on keys KeyedTable
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = q('{1!x}', kx.toq(df1))
+    tab2 = q('{1!x}', kx.toq(df2))
+    assert df1.merge(
+        df2,
+        left_on='lkey',
+        right_on='rkey',
+        how='right'
+    ).equals(
+        q('{0!x}', tab1.merge(
+            tab2,
             left_on='lkey',
             right_on='rkey',
             how='right'
-        ).equals(
-            q('{0!x}', tab1.merge(
-                tab2,
-                left_on='lkey',
-                right_on='rkey',
-                how='right'
-            )).pd()
-        )
+        )).pd()
+    )
 
-        # Merge on differing keys
-        df1 = pd.DataFrame({'a': ['foo', 'bar'], 'b': [1, 2]})
-        df2 = pd.DataFrame({'a': ['foo', 'baz'], 'c': [3, 4]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        tab_res = tab1.merge(tab2, on='a', how='right').pd()
-        assert str(tab_res.at[1, 'b']) == '--'
-        tab_res.at[1, 'b'] = np.nan
-        assert df1.merge(df2, on='a', how='right').equals(tab_res)
+    # Merge on differing keys
+    df1 = pd.DataFrame({'a': ['foo', 'bar'], 'b': [1, 2]})
+    df2 = pd.DataFrame({'a': ['foo', 'baz'], 'c': [3, 4]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    tab_res = tab1.merge(tab2, on='a', how='right').pd()
+    assert str(tab_res.at[1, 'b']) == '--'
+    tab_res.at[1, 'b'] = np.nan
+    assert df1.merge(df2, on='a', how='right').equals(tab_res)
 
-        # Merge on same indexes
-        df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
-        df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        assert df1.merge(
-            df2,
+    # Merge on same indexes
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    assert df1.merge(
+        df2,
+        left_index=True,
+        right_index=True,
+        how='right'
+    ).equals(
+        tab1.merge(
+            tab2,
             left_index=True,
             right_index=True,
             how='right'
-        ).equals(
-            tab1.merge(
-                tab2,
-                left_index=True,
-                right_index=True,
-                how='right'
-            ).pd()
-        )
+        ).pd()
+    )
 
-        # Merge on different indexes
-        df1 = pd.DataFrame(
-            {
-                'lkey': ['foo', 'bar', 'baz', 'foo'],
-                'value': [1, 2, 3, 5]
-            },
-            index=[4, 3, 2, 1]
-        )
-        df2 = pd.DataFrame(
-            {
-                'rkey': ['foo', 'bar', 'baz', 'foo'],
-                'value': [5, 6, 7, 8]
-            },
-            index=[0, 1, 2, 3]
-        )
-        tab1 = q('{`idx xcols update idx: reverse 1 + til count x from x}', tab1)
-        tab1 = q('{1!x}', tab1)
-        tab2 = kx.q.qsql.update(tab2, {'idx': 'til count i'}, inplace=True)
-        tab2 = tab2.set_index('idx')
-        res = tab1.merge(tab2, left_index=True, right_index=True, how='right')
-        assert isinstance(res, kx.KeyedTable)
-        df_res = df1.merge(df2, left_index=True, right_index=True, how='right')
-        # assert our index does match properly before removing it
-        assert q('0!', res)['idx'].py() == list(df_res.index)
-        # We have idx as a column so we have to remove it to be equal as it won't convert
-        # to the pandas index column automatically
-        res = q('{(enlist `idx)_(0!x)}', res).pd()
-        df_res = df_res.reset_index() # Reset pandas index to default, we already checked it
-        df_res.pop('index')
-        res.at[0, 'lkey'] = np.nan
-        res.at[0, 'value_x'] = np.nan
-        assert df_res.equals(res)
+    # Merge on different indexes
+    df1 = pd.DataFrame(
+        {
+            'lkey': ['foo', 'bar', 'baz', 'foo'],
+            'value': [1, 2, 3, 5]
+        },
+        index=[4, 3, 2, 1]
+    )
+    df2 = pd.DataFrame(
+        {
+            'rkey': ['foo', 'bar', 'baz', 'foo'],
+            'value': [5, 6, 7, 8]
+        },
+        index=[0, 1, 2, 3]
+    )
+    tab1 = q('{`idx xcols update idx: reverse 1 + til count x from x}', tab1)
+    tab1 = q('{1!x}', tab1)
+    tab2 = kx.q.qsql.update(tab2, {'idx': 'til count i'}, inplace=True)
+    tab2 = tab2.set_index('idx')
+    res = tab1.merge(tab2, left_index=True, right_index=True, how='right')
+    assert isinstance(res, kx.KeyedTable)
+    df_res = df1.merge(df2, left_index=True, right_index=True, how='right')
+    # assert our index does match properly before removing it
+    assert q('0!', res)['idx'].py() == list(df_res.index)
+    # We have idx as a column so we have to remove it to be equal as it won't convert
+    # to the pandas index column automatically
+    res = q('{(enlist `idx)_(0!x)}', res).pd()
+    df_res = df_res.reset_index() # Reset pandas index to default, we already checked it
+    df_res.pop('index')
+    res.at[0, 'lkey'] = np.nan
+    res.at[0, 'value_x'] = np.nan
+    assert df_res.equals(res)
 
-        df1 = pd.DataFrame(
-            {'key': ['foo', 'bar', 'baz', 'foo', 'quz'], 'value': [1, 2, 3, 5, None]}
-        )
-        df2 = pd.DataFrame({'key': ['foo', 'bar', 'baz', 'foo', None], 'value': [5, 6, 7, 8, 99]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
+    df1 = pd.DataFrame(
+        {'key': ['foo', 'bar', 'baz', 'foo', 'quz'], 'value': [1, 2, 3, 5, None]}
+    )
+    df2 = pd.DataFrame({'key': ['foo', 'bar', 'baz', 'foo', None], 'value': [5, 6, 7, 8, 99]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
 
-        df_res = df1.merge(df2, on='key', how='right')
-        res = tab1.merge(tab2, on='key', how='right').pd()
-        assert str(res.at[6, 'key']) == ''
-        res.at[6, 'key'] = None
-        assert df_res.equals(res)
+    df_res = df1.merge(df2, on='key', how='right')
+    res = tab1.merge(tab2, on='key', how='right').pd()
+    assert str(res.at[6, 'key']) == ''
+    res.at[6, 'key'] = None
+    assert df_res.equals(res)
 
 
 def test_table_outer_merge(kx, q):
-    if sys.version_info.minor > 7:
-        # Merge on keys
-        df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
-        df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        assert df1.merge(
-            df2,
+    # Merge on keys
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    assert df1.merge(
+        df2,
+        left_on='lkey',
+        right_on='rkey',
+        how='outer',
+        sort=True
+    ).equals(
+        tab1.merge(
+            tab2,
             left_on='lkey',
             right_on='rkey',
             how='outer',
             sort=True
-        ).equals(
-            tab1.merge(
-                tab2,
-                left_on='lkey',
-                right_on='rkey',
-                how='outer',
-                sort=True
-            ).pd()
-        )
+        ).pd()
+    )
 
-        # Merge on keys KeyedTable
-        df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
-        df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
-        tab1 = q('{1!x}', kx.toq(df1))
-        tab2 = q('{1!x}', kx.toq(df2))
-        assert df1.merge(
-            df2,
+    # Merge on keys KeyedTable
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = q('{1!x}', kx.toq(df1))
+    tab2 = q('{1!x}', kx.toq(df2))
+    assert df1.merge(
+        df2,
+        left_on='lkey',
+        right_on='rkey',
+        how='outer',
+        sort=True
+    ).equals(
+        q('{0!x}', tab1.merge(
+            tab2,
             left_on='lkey',
             right_on='rkey',
             how='outer',
             sort=True
-        ).equals(
-            q('{0!x}', tab1.merge(
-                tab2,
-                left_on='lkey',
-                right_on='rkey',
-                how='outer',
-                sort=True
-            )).pd()
-        )
+        )).pd()
+    )
 
-        # Merge on differing keys
-        df1 = pd.DataFrame({'a': ['foo', 'bar'], 'b': [1, 2]})
-        df2 = pd.DataFrame({'a': ['foo', 'baz'], 'c': [3, 4]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        tab_res = tab1.merge(tab2, on='a', how='outer', sort=True).pd()
-        assert str(tab_res.at[0, 'c']) == '--'
-        tab_res.at[0, 'c'] = np.nan
-        assert str(tab_res.at[1, 'b']) == '--'
-        tab_res.at[1, 'b'] = np.nan
-        assert df1.merge(df2, on='a', how='outer', sort=True).equals(tab_res)
+    # Merge on differing keys
+    df1 = pd.DataFrame({'a': ['foo', 'bar'], 'b': [1, 2]})
+    df2 = pd.DataFrame({'a': ['foo', 'baz'], 'c': [3, 4]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    tab_res = tab1.merge(tab2, on='a', how='outer', sort=True).pd()
+    assert str(tab_res.at[0, 'c']) == '--'
+    tab_res.at[0, 'c'] = np.nan
+    assert str(tab_res.at[1, 'b']) == '--'
+    tab_res.at[1, 'b'] = np.nan
+    assert df1.merge(df2, on='a', how='outer', sort=True).equals(tab_res)
 
-        # Merge on same indexes
-        df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
-        df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        assert df1.merge(
-            df2,
+    # Merge on same indexes
+    df1 = pd.DataFrame({'lkey': ['foo', 'bar', 'baz', 'foo'], 'value': [1, 2, 3, 5]})
+    df2 = pd.DataFrame({'rkey': ['foo', 'bar', 'baz', 'foo'], 'value': [5, 6, 7, 8]})
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    assert df1.merge(
+        df2,
+        left_index=True,
+        right_index=True,
+        how='outer'
+    ).equals(
+        tab1.merge(
+            tab2,
             left_index=True,
             right_index=True,
             how='outer'
-        ).equals(
-            tab1.merge(
-                tab2,
-                left_index=True,
-                right_index=True,
-                how='outer'
-            ).pd()
-        )
-        assert df1.merge(
-            df2,
+        ).pd()
+    )
+    assert df1.merge(
+        df2,
+        left_index=True,
+        right_index=True,
+        how='outer',
+        sort=True
+    ).equals(
+        tab1.merge(
+            tab2,
             left_index=True,
             right_index=True,
             how='outer',
             sort=True
-        ).equals(
-            tab1.merge(
-                tab2,
-                left_index=True,
-                right_index=True,
-                how='outer',
-                sort=True
-            ).pd()
-        )
+        ).pd()
+    )
 
-        # Merge on different indexes
-        df1 = pd.DataFrame(
-            {
-                'lkey': ['foo', 'bar', 'baz', 'foo'],
-                'value': [1, 2, 3, 5]
-            },
-            index=[4, 3, 2, 1]
-        )
-        df2 = pd.DataFrame(
-            {
-                'rkey': ['foo', 'bar', 'baz', 'foo'],
-                'value': [5, 6, 7, 8]
-            },
-            index=[0, 1, 2, 3]
-        )
-        tab1 = q('{`idx xcols update idx: reverse 1 + til count x from x}', tab1)
-        tab1 = q('{1!x}', tab1)
-        tab2 = q('{`idx xcols update idx: til count x from x}', tab2)
-        tab2 = q('{1!x}', tab2)
-        res = tab1.merge(tab2, left_index=True, right_index=True, how='outer')
-        assert isinstance(res, kx.KeyedTable)
-        df_res = df1.merge(df2, left_index=True, right_index=True, how='outer')
-        # assert our index does match properly before removing it
-        assert q('0!', res)['idx'].py() == list(df_res.index)
-        # We have idx as a column so we have to remove it to be equal as it won't convert
-        # to the pandas index column automatically
-        res = q('{(enlist `idx)_(0!x)}', res).pd()
-        df_res = df_res.reset_index() # Reset pandas index to default, we already checked it
-        df_res.pop('index')
-        res.at[0, 'lkey'] = np.nan
-        res.at[0, 'value_x'] = np.nan
-        res.at[4, 'rkey'] = np.nan
-        res.at[4, 'value_y'] = np.nan
-        assert df_res.equals(res)
+    # Merge on different indexes
+    df1 = pd.DataFrame(
+        {
+            'lkey': ['foo', 'bar', 'baz', 'foo'],
+            'value': [1, 2, 3, 5]
+        },
+        index=[4, 3, 2, 1]
+    )
+    df2 = pd.DataFrame(
+        {
+            'rkey': ['foo', 'bar', 'baz', 'foo'],
+            'value': [5, 6, 7, 8]
+        },
+        index=[0, 1, 2, 3]
+    )
+    tab1 = q('{`idx xcols update idx: reverse 1 + til count x from x}', tab1)
+    tab1 = q('{1!x}', tab1)
+    tab2 = q('{`idx xcols update idx: til count x from x}', tab2)
+    tab2 = q('{1!x}', tab2)
+    res = tab1.merge(tab2, left_index=True, right_index=True, how='outer')
+    assert isinstance(res, kx.KeyedTable)
+    df_res = df1.merge(df2, left_index=True, right_index=True, how='outer')
+    # assert our index does match properly before removing it
+    assert q('0!', res)['idx'].py() == list(df_res.index)
+    # We have idx as a column so we have to remove it to be equal as it won't convert
+    # to the pandas index column automatically
+    res = q('{(enlist `idx)_(0!x)}', res).pd()
+    df_res = df_res.reset_index() # Reset pandas index to default, we already checked it
+    df_res.pop('index')
+    res.at[0, 'lkey'] = np.nan
+    res.at[0, 'value_x'] = np.nan
+    res.at[4, 'rkey'] = np.nan
+    res.at[4, 'value_y'] = np.nan
+    assert df_res.equals(res)
 
-        df1 = pd.DataFrame(
-            {'key': ['foo', 'bar', 'baz', 'foo', 'quz'], 'value': [1, 2, 3, 5, None]}
-        )
-        df2 = pd.DataFrame(
-            {
-                'key': ['foo', 'bar', 'baz', 'foo', None],
-                'value': [5.0, 6.0, 7.0, 8.0, 99.0]
-            }
-        )
-        tab1 = kx.toq(df1)
-        tab2 = kx.toq(df2)
-        df_res = df1.merge(df2, on='key', how='outer')
-        res = tab1.merge(tab2, on='key', how='outer').pd()
-        assert res.at[7, 'key'] == ''
-        res.at[7, 'key'] = None
-        res.sort_values(['key'], inplace=True, ignore_index=True)
-        df_res.sort_values(['key'], inplace=True, ignore_index=True)
-        assert df_res.equals(res)
+    df1 = pd.DataFrame(
+        {'key': ['foo', 'bar', 'baz', 'foo', 'quz'], 'value': [1, 2, 3, 5, None]}
+    )
+    df2 = pd.DataFrame(
+        {
+            'key': ['foo', 'bar', 'baz', 'foo', None],
+            'value': [5.0, 6.0, 7.0, 8.0, 99.0]
+        }
+    )
+    tab1 = kx.toq(df1)
+    tab2 = kx.toq(df2)
+    df_res = df1.merge(df2, on='key', how='outer')
+    res = tab1.merge(tab2, on='key', how='outer').pd()
+    assert res.at[7, 'key'] == ''
+    res.at[7, 'key'] = None
+    res.sort_values(['key'], inplace=True, ignore_index=True)
+    df_res.sort_values(['key'], inplace=True, ignore_index=True)
+    assert df_res.equals(res)
 
 
 def test_merge_sort(kx, q):
@@ -1113,10 +1109,10 @@ def test_df_astype_value_errors(kx, q):
                        match=r"Column name passed in dictionary not present in df table"):
         raise df.astype({'c100': kx.ShortVector})
     with pytest.raises(kx.QError,
-                       match=r'Value passed does not match PyKX wrapper type'):
+                       match=r'Value passed does not match pykx wrapper type'):
         raise df.astype({'c1': 'nomatchvalue'})
     with pytest.raises(kx.QError,
-                       match=r'Value passed does not match PyKX wrapper type'):
+                       match=r'Value passed does not match pykx wrapper type'):
         raise df.astype('nomatchvalue')
     df = q('''([] c1:("abc";"def";"ghi");c2:(1 2 3;4 5 6;7 8 9))''')
     with pytest.raises(ValueError,
@@ -1878,113 +1874,115 @@ def test_median(kx, q):
 
 
 def test_mode(kx, q): # noqa
-    if sys.version_info.minor > 7:
-        def compare_q_to_pd(tab, df):
-            if 'idx' in q.cols(tab):
-                tab.pop('idx')
-            tab = tab.pd()
-            for i in range(len(tab)):
-                for c in tab.columns:
-                    df_c = c
-                    try:
-                        df_c = int(c)
-                    except BaseException:
-                        pass
-                    if str(tab.at[i, c]) == '--':
-                        tab.at[i, c] = np.nan
-                    if str(tab.at[i, c]) == '':
-                        tab.at[i, c] = 'nan'
-                    if str(tab.at[i, c]) == 'nan' and str(df.at[i, df_c]) == 'nan':
-                        continue
-                    if tab.at[i, c] != df.at[i, df_c]:
-                        return False
-            return True
+    def compare_q_to_pd(tab, df):
+        if 'idx' in q.cols(tab):
+            tab.pop('idx')
+        tab = tab.pd()
+        for i in range(len(tab)):
+            for c in tab.columns:
+                df_c = c
+                try:
+                    df_c = int(c)
+                except BaseException:
+                    pass
+                if str(tab.at[i, c]) == '--':
+                    tab.at[i, c] = np.nan
+                if str(tab.at[i, c]) == '':
+                    tab.at[i, c] = 'nan'
+                if str(tab.at[i, c]) == 'nan' and str(df.at[i, df_c]) == 'nan':
+                    continue
+                if tab.at[i, c] != df.at[i, df_c]:
+                    return False
+        return True
 
-        df = pd.DataFrame(
-            {
-                'a': [1, 2, 2, 4],
-                'b': [1, 2, 6, 7],
-                'c': [7, 8, 9, 10],
-                'd': [7, 11, 14, 14]
-            }
-        )
-        tab = kx.toq(df)
-        p_m = df.mode()
-        q_m = tab.mode()
-        assert compare_q_to_pd(q_m, p_m)
+    df = pd.DataFrame(
+        {
+            'a': [1, 2, 2, 4],
+            'b': [1, 2, 6, 7],
+            'c': [7, 8, 9, 10],
+            'd': [7, 11, 14, 14]
+        }
+    )
+    tab = kx.toq(df)
+    p_m = df.mode()
+    q_m = tab.mode()
+    assert compare_q_to_pd(q_m, p_m)
 
-        p_m = df.mode(axis=1)
-        q_m = tab.mode(axis=1)
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode(axis=1)
+    q_m = tab.mode(axis=1)
+    assert compare_q_to_pd(q_m, p_m)
 
-        q['tab'] = kx.toq(df)
-        tab = q('1!`idx xcols update idx: til count tab from tab')
+    q['tab'] = kx.toq(df)
+    tab = q('1!`idx xcols update idx: til count tab from tab')
 
-        p_m = df.mode()
-        q_m = tab.mode()
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode()
+    q_m = tab.mode()
+    assert compare_q_to_pd(q_m, p_m)
 
-        p_m = df.mode(axis=1)
-        q_m = tab.mode(axis=1)
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode(axis=1)
+    q_m = tab.mode(axis=1)
+    assert compare_q_to_pd(q_m, p_m)
 
-        df = pd.DataFrame(
-            {
-                'a': [1, 2, 2, 4],
-                'b': [1, 2, 6, 7],
-                'c': [7, 8, 9, 10],
-                'd': ['foo', 'bar', 'baz', 'foo']
-            }
-        )
-        tab = kx.toq(df)
-        p_m = df.mode()
-        q_m = tab.mode()
-        assert compare_q_to_pd(q_m, p_m)
+    df = pd.DataFrame(
+        {
+            'a': [1, 2, 2, 4],
+            'b': [1, 2, 6, 7],
+            'c': [7, 8, 9, 10],
+            'd': ['foo', 'bar', 'baz', 'foo']
+        }
+    )
+    tab = kx.toq(df)
+    p_m = df.mode()
+    q_m = tab.mode()
+    assert compare_q_to_pd(q_m, p_m)
 
-        p_m = df.mode(axis=1, numeric_only=True)
-        q_m = tab.mode(axis=1, numeric_only=True)
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode(axis=1, numeric_only=True)
+    q_m = tab.mode(axis=1, numeric_only=True)
+    assert compare_q_to_pd(q_m, p_m)
 
-        df = pd.DataFrame({
-            'x': [0, 1, 2, 3, 4, 5, 6, 7, np.nan, np.nan],
-            'y': [10, 11, 12, 13, 14, 15, 16, 17, 18, np.nan],
-            'z': ['a', 'b', 'c', 'd', 'd', 'e', 'e', 'f', 'g', 'h']
-        })
-        tab = kx.toq(df)
+    df = pd.DataFrame({
+        'x': [0, 1, 2, 3, 4, 5, 6, 7, np.nan, np.nan],
+        'y': [10, 11, 12, 13, 14, 15, 16, 17, 18, np.nan],
+        'z': ['a', 'b', 'c', 'd', 'd', 'e', 'e', 'f', 'g', 'h']
+    })
+    tab = kx.toq(df)
 
-        p_m = df.mode()
-        q_m = tab.mode()
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode()
+    q_m = tab.mode()
+    assert compare_q_to_pd(q_m, p_m)
 
-        p_m = df.mode(axis=1, numeric_only=True)
-        q_m = tab.mode(axis=1, numeric_only=True)
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode(axis=1, numeric_only=True)
+    q_m = tab.mode(axis=1, numeric_only=True)
+    assert compare_q_to_pd(q_m, p_m)
 
-        p_m = df.mode(numeric_only=True)
-        q_m = tab.mode(numeric_only=True)
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode(numeric_only=True)
+    q_m = tab.mode(numeric_only=True)
+    assert compare_q_to_pd(q_m, p_m)
 
-        p_m = df.mode(axis=1, numeric_only=True)
-        q_m = tab.mode(axis=1, numeric_only=True)
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode(axis=1, numeric_only=True)
+    q_m = tab.mode(axis=1, numeric_only=True)
+    assert compare_q_to_pd(q_m, p_m)
 
-        p_m = df.mode(dropna=False)
-        q_m = tab.mode(dropna=False)
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode(dropna=False)
+    q_m = tab.mode(dropna=False)
+    assert compare_q_to_pd(q_m, p_m)
 
-        p_m = df.mode(axis=1, dropna=False, numeric_only=True)
-        q_m = tab.mode(axis=1, dropna=False, numeric_only=True)
-        assert compare_q_to_pd(q_m, p_m)
+    p_m = df.mode(axis=1, dropna=False, numeric_only=True)
+    q_m = tab.mode(axis=1, dropna=False, numeric_only=True)
+    assert compare_q_to_pd(q_m, p_m)
 
 
 def test_table_merge_asof(kx, q):
-    left = pd.DataFrame({"a": [1, 5, 10], "left_val": ["a", "b", "c"]})
-    right = pd.DataFrame({"a": [1, 2, 3, 6, 7], "right_val": [1, 2, 3, 6, 7]})
+    left = pd.DataFrame({"a": [1, 5, 10], "b": ["a", "a", "b"], "left_val": ["a", "b", "c"]})
+    right = pd.DataFrame({"a": [1, 2, 3, 6, 7], "b": ["a", "a", "b", "b", "a"],
+                         "right_val": [1, 2, 3, 6, 7]})
     qleft = kx.toq(left)
     qright = kx.toq(right)
 
     assert (pd.merge_asof(left, right, on='a')
             == kx.merge_asof(qleft, qright, on='a').pd()).all().all()
+    assert (pd.merge_asof(left, right, on='a', by="b")
+            == kx.merge_asof(qleft, qright, on='a', by="b").pd()).all().all()
     assert (pd.merge_asof(left, right, on='a')
             == qleft.merge_asof(qright, on='a').pd()).all().all()
     assert (pd.merge_asof(left, right, on='a')
@@ -2347,28 +2345,34 @@ def test_pandas_groupby(kx, q):
         df.groupby(['Animal']).mean()
         == tab.groupby(['Animal']).mean().pd()
     )
-    assert all(
-        df.groupby(['Animal'], as_index=False).mean()
-        == tab.groupby(['Animal'], as_index=False).mean().pd()
-    )
+    # Grouping used not in columns - dropped in Pandas 3.0
+    if not kx.config.pandas_gt2:
+        assert all(
+            df.groupby(['Animal'], as_index=False).mean()
+            == tab.groupby(['Animal'], as_index=False).mean().pd()
+        )
 
     assert all(
         df.groupby(level=[1]).mean()
         == tab.groupby(level=[1]).mean().pd()
     )
-    assert all(
-        df.groupby(level=1, as_index=False).mean()
-        == tab.groupby(level=1, as_index=False).mean().pd()
-    )
+    # Grouping used not in columns - dropped in Pandas 3.0
+    if not kx.config.pandas_gt2:
+        assert all(
+            df.groupby(level=1, as_index=False).mean()
+            == tab.groupby(level=1, as_index=False).mean().pd()
+        )
 
-    assert all(
-        df.groupby(level=[0, 1]).mean()
-        == tab.groupby(level=[0, 1]).mean().pd()
-    )
-    assert all(
-        df.groupby(level=[0, 1], as_index=False).mean()
-        == tab.groupby(level=[0, 1], as_index=False).mean().pd()
-    )
+    # Grouping used not in columns - dropped in Pandas 3.0
+    if not kx.config.pandas_gt2:
+        assert all(
+            df.groupby(level=[0, 1]).mean()
+            == tab.groupby(level=[0, 1]).mean().pd()
+        )
+        assert all(
+            df.groupby(level=[0, 1], as_index=False).mean()
+            == tab.groupby(level=[0, 1], as_index=False).mean().pd()
+        )
 
 
 def test_keyed_loc_fixes(q):
@@ -2658,3 +2662,13 @@ def test_merge_qjoin_errors(kx):
                        match=r"Right Join requires a keyed table"
                        " for the left dataset."):
         assert tab1.merge(tab2, how='right', q_join=True)
+
+
+def test_fills(kx, q):
+    t = q('([] n:0N 2 3 0N 0N 7 0N;b:``h`h```j`;g:0N 1 0N 2 0N 3 0N)')
+    assert kx.q('~', t.fills(), kx.q('fills', t))
+
+
+def test_ungroup(kx, q):
+    t = q('([] n:1 2 3;nn:(1 1;2 2 2;3 3 3))')
+    assert kx.q('~', t.ungroup(), kx.q('ungroup', t))

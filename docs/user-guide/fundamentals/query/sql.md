@@ -1,41 +1,19 @@
 ---
-title: Querying data using SQL with PyKX
-description: Introduction to querying data using SQL with PyKX
+title: Querying data using SQL with KDB-X Python
+description: Introduction to querying data using SQL with KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, query, historical, SQL, qSQL
+tags: KDB-X Python, q, query, historical, SQL, qSQL
 ---
 
-# Querying data using SQL with PyKX
+# Querying data using SQL with KDB-X Python
 
-_This page explains how to query your data with PyKX using SQL._
+_This page explains how to query your data with KDB-X Python using SQL._
 
-PyKX exposes a wrapper around the [KX Insights Core ANSI SQL interface](https://code.kx.com/insights/core/sql.html).
+KDB-X Python exposes a wrapper around the [KX Insights Core ANSI SQL interface](https://code.kx.com/insights/core/sql.html).
 This allows SQL to be used to query in-memory and on-disk data.
 
 The interface is accessed through the `kx.q.sql` class or via the `sql` method on table type objects. Full documentation of the class is included [here](../../../api/query.md#pykx.query.SQL).
-
-## Loading the SQL interface
-
-When you `import pykx as kx` an attempt will be made to load the SQL interface. If this fails you will see:
-
-```python
-WARN: Failed to load KX Insights Core library 's.k'.
-```
-
-To debug this you can set the [configuration option](../../configuration.md) `PYKX_DEBUG_INSIGHTS_LIBRARIES` before importing PyKX:
-
-```python
-import os
-os.environ['PYKX_DEBUG_INSIGHTS_LIBRARIES'] = 'true'
-import pykx as kx
-```
-
-This will print a more detailed error message, for example:
-
-```python
-PyKXWarning: Failed to load KX Insights Core library 's.k': s.k_. OS reports: No such file or directory
-```
 
 ## Querying tables using SQL
 
@@ -129,4 +107,4 @@ Now that you have learnt the fundamentals of how to query your data using the SQ
 For some further reading, here are some related topics:
 
 - If you don't have a historical database available see [here](../../advanced/database/index.md).
-- To learn about creating PyKX Table objects see [here](../../../examples/interface-overview.ipynb).
+- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.ipynb).

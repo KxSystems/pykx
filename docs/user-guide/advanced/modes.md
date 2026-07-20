@@ -1,30 +1,30 @@
 ---
-title:  PyKX modes of operation
-description: Operating PyKX in Python and q
+title:  KDB-X Python modes of operation
+description: Operating KDB-X Python in Python and q
 date: June 2024
 author: KX Systems, Inc.,
-tags: PyKX, q language, Python, licensed, unlincensed,
+tags: KDB-X Python, q language, Python, licensed, unlincensed,
 ---
 
 # Modes of operation
 
-_This page explains how to operate PyKX in Python and q, with or without a KDB Insights license._
+_This page explains how to operate KDB-X Python, with or without a license._
 
-PyKX can operate in different modes. Each mode has its limitations and requirements, so we're breaking them down into the following:
+KDB-X Python can operate in different modes. Each mode has its limitations and requirements, so we're breaking them down into the following:
 
-1. PyKX within Python
+1. KDB-X Python within Python
      - 1.a Unlicensed
      - 1.b Licensed
-2. PyKX within q with a kdb Insights license
+2. KDB-X Python within q - licensed
 
-## 1. PyKX within Python
+## 1. KDB-X Python within Python
 
-The purpose of operating PyKX within a Python session is to replace [qPython](https://github.com/exxeleron/qPython) and [PyQ](https://github.com/kxsystems/pyq). Within Python, PyKX has two modes of operation:
+The purpose of operating KDB-X Python within a Python session is to replace [qPython](https://github.com/exxeleron/qPython) and [PyQ](https://github.com/kxsystems/pyq). Within Python, KDB-X Python has two modes of operation:
 
-- `#!python Licensed` (this means you have a kdb Insights license with PyKX enabled)
-- `#!python Unlicensed` (this means you don't have a kdb Insights license or a license in which PyKX is not enabled)
+- `#!python Licensed` (this means you have a license with KDB-X Python enabled)
+- `#!python Unlicensed` (this means you don't have a license or a license in which KDB-X Python is not enabled)
 
-The main difference between the two is that the `#!python Unlicensed` mode is for IPC-based communication. This mean that it allows to create IPC connections and convert data from Pythonic representations to PyKX objects. 
+The main difference between the two is that the `#!python Unlicensed` mode is for IPC-based communication. This mean that it allows to create IPC connections and convert data from Pythonic representations to `pykx` objects. 
 
 The following table outlines more key differences:
 
@@ -33,19 +33,19 @@ The following table outlines more key differences:
 | Convert objects from q to Pythonic types and vice-versa                      | :material-check:      | :material-check:       |
 | Query synchronously and asynchronously a q server via IPC                    | :material-check:      | :material-check:       |
 | Query synchronously and asynchronously a q server with TLS enabled           | :material-check:      | :material-close:       |
-| Interact with PyKX tables via a Pandas like API                              | :material-check:      | :material-close:       |
+| Interact with `pykx` tables via a Pandas like API                              | :material-check:      | :material-close:       |
 | Run arbitrary q code within a Python session                                 | :material-check:      | :material-close:       |
-| Display PyKX/q objects within a Python session                               | :material-check:      | :material-close:       |
-| Load kdb+ Databases within a Python session                                  | :material-check:      | :material-close:       |
+| Display `pykx`/q objects within a Python session                               | :material-check:      | :material-close:       |
+| Load KDB-X Databases within a Python session                                  | :material-check:      | :material-close:       |
 | Read/write JSON, CSV and q formats to/from disk                              | :material-check:      | :material-close:       |
 | Access to Python classes for SQL, schema creation, custom data conversion    | :material-check:      | :material-close:       |
-| Run Python within a q session using PyKX under q                             | :material-check:      | :material-close:       |
+| Run Python within a q session using KDB-X Python under q                             | :material-check:      | :material-close:       |
 | Full support for nulls, infinities, data slicing and casting                 | :material-check:      | :material-close:       |
 | Production support                                                           | :material-check:      | :material-close:       |
 
 ### 1.a Running in Unlicensed mode
 
-Unlicensed mode is a feature-limited mode of operation for PyKX. Its aim is to replace qPython, which has the benefit of not requiring a valid q license (except for the q license required to run the remote q process that PyKX connects to in this mode).
+Unlicensed mode is a feature-limited mode of operation for KDB-X Python. Its aim is to replace qPython, which has the benefit of not requiring a valid q license (except for the q license required to run the remote q process that KDB-X Python connects to in this mode).
 
 This mode cannot run q embedded within it. Also, it lacks the ability to run q code within the local Python process or any functionality that depends on running q code. Despite this limitation, it provides the following features (which are all also available in licensed mode):
 
@@ -55,12 +55,12 @@ This mode cannot run q embedded within it. Also, it lacks the ability to run q c
 
 ### 1.b Running in Licensed mode
 
-Licensed mode is the standard way to operate PyKX, wherein it's running under a Python process [with a valid q license](../../getting-started/installing.md#2-install-a-kdb-insights-license). This modality aims to replace PyQ as the Python-first library for KX. All PyKX features are available in this mode.
+Licensed mode is the standard way to operate KDB-X Python, wherein it's running under a Python process [with a valid q license](../../getting-started/installing.md#2-install-a-license). This modality aims to replace PyQ as the Python-first library for KX. All KDB-X Python features are available in this mode.
 
-The differences provided through operating with a valid kdb Insights license are:
+The differences provided through operating with a valid license are:
 
-1. You can execute PyKX/q functionalities directly within a Python session.
-2. PyKX objects can be represented in a human readable format rather than as a memory address, namely:
+1. You can execute KDB-X Python/q functionalities directly within a Python session.
+2. `pykx` objects can be represented in a human readable format rather than as a memory address, namely:
 
 	=== "Licensed mode"
 	
@@ -82,7 +82,7 @@ The differences provided through operating with a valid kdb Insights license are
 		pykx.Table._from_addr(0x7f5b72ef8860)
 		```
 
-3. You can analyze PyKX objects through indexing:
+3. You can analyze `pykx` objects through indexing:
 
 	=== "Licensed mode"
 
@@ -107,7 +107,7 @@ The differences provided through operating with a valid kdb Insights license are
 		pykx.exceptions.LicenseException: A valid q license must be in a known location (e.g. `$QLIC`) to index into K object.
 		```
 
-4. Licensed mode allows users to cast between PyKX object types. Unlicensed mode doesn't support this, showing an error as below:
+4. Licensed mode allows users to cast between `pykx` object types. Unlicensed mode doesn't support this, showing an error as below:
 
 	=== "Licensed mode"
 
@@ -141,7 +141,7 @@ The differences provided through operating with a valid kdb Insights license are
 	3. kx.q.write
 	4. kx.q.schema
 	5. kx.q.console
-6. [Pandas API](Pandas_API.ipynb) functionality for interactions with and PyKX Table objects.
+6. [Pandas API](Pandas_API.ipynb) functionality for interactions with and `pykx` Table objects.
 6. You can convert keyed tables to equivalent Numpy types.
 7. All types can be disambiguated, generic null can be discerned from a projection null, and similar for regular vs splayed tables.
 8. Numpy list object conversion is optimized only in licensed mode.
@@ -174,24 +174,24 @@ The differences provided through operating with a valid kdb Insights license are
 
 ### How to choose between Licensed and Unlicensed
 
-You can choose to initialise PyKX under one of these modes through the use of the `#!python QARGS` environment variable as follows:
+You can choose to initialise KDB-X Python under one of these modes through the use of the `#!python QARGS` environment variable as follows:
 
 | **Mode argument** | **Description**                                                                                                                          |
 | :---------------- | :--------------------------------------------------------------------------------------------------------------------------------------- |
-| `--unlicensed`    | Starts PyKX in unlicensed mode. No license check is performed, and no warning is emitted at start-up if embedded q initialization fails. |
+| `--unlicensed`    | Starts KDB-X Python in unlicensed mode. No license check is performed, and no warning is emitted at start-up if embedded q initialization fails. |
 | `--licensed`      | Raises a `PyKXException` (as opposed to emitting a `PyKXWarning`) if embedded q initialization fails.                                    |
 
-In addition to the PyKX specific start-up arguments, you can also use `#!python QARGS` to set the standard [q command-line arguments](https://code.kx.com/q/basics/cmdline/).
+In addition to the KDB-X Python specific start-up arguments, you can also use `#!python QARGS` to set the standard [q command-line arguments](https://code.kx.com/q/basics/cmdline/).
 
-Alternatively, if you wish to access PyKX in unlicensed mode, you set the environment variable `#!python PYKX_UNLICENSED="true"` or define this in your `#!python .pykx-config` file as outlined [here](../configuration.md).
+Alternatively, if you wish to access KDB-X Python in unlicensed mode, you set the environment variable `#!python PYKX_UNLICENSED="true"` or define this in your `#!python config-pykx` file as outlined [here](../configuration.md).
 
 
-## 2. PyKX within q
+## 2. KDB-X Python within q
 
-Fully described [here](../../pykx-under-q/intro.md), the ability to use PyKX within a q session allows you to achieve the following:
+Fully described [here](../../pykx-under-q/intro.md), the ability to use KDB-X Python within a q session allows you to achieve the following:
 
 - Replace [embedPy](https://github.com/kxsystems/embedpy) functionally with an updated, more flexible interface.
-- Use Python within a q environment without the [limitations for PyKX](../../help/issues.md).
-- Use Python code in conjunction with timers and subscriptions within a q/kdb+ ecosystem.
+- Use Python within a q environment without the [limitations for KDB-X Python](../../help/issues.md).
+- Use Python code in conjunction with timers and subscriptions within a q/KDB-X ecosystem.
 
-Similar to the use of PyKX in licensed mode, PyKX running under q requires a user to have access to an appropriate license containing the `#!python insights.lib.pykx` and `#!python insights.lib.embedq` licensing flags.
+Similar to the use of KDB-X Python in licensed mode, KDB-X Python running under q requires a user to have access to an appropriate license containing the `insights.lib.pykx` and `insights.lib.embedq` (or `py` and `eq`) licensing flags.

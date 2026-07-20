@@ -2,7 +2,7 @@
 
 Older versions of mkdocstrings do not support Cython projects. Newer versions do not yet have
 element filtering implemented. This plugin exists as a temporary measure to enable filtering for
-the PyKX docs until mkdocstrings officially supports filtering.
+the KDB-X Python docs until mkdocstrings officially supports filtering.
 """
 
 from griffe.dataclasses import Alias

@@ -1,17 +1,17 @@
 ---
-title: Apply attributes in PyKX
-description: How to use attributes in PyKX
+title: Apply attributes in KDB-X Python
+description: How to use attributes in KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, PyKX objects, 
+tags: KDB-X Python, q, `pykx` objects, 
 ---
 
 # Apply Attributes
-_This page provides details on how to apply attributes in PyKX._
+_This page provides details on how to apply attributes in KDB-X Python._
 
-!!! tip "Tip: For the best experience, we recommend reading about [PyKX attributes](..//../learn/objects.md#what-are-pykx-attributes) first." 
+!!! tip "Tip: For the best experience, we recommend reading about [KDB-X Python attributes](..//../learn/objects.md#what-are-pykx-attributes) first." 
 
-In PyKX, you can apply attributes to various data structures, including `#!python Vector`/`#!python List` types, `#!python Tables`, and `#!python KeyedTable`s. To apply the attributes, call the `#!python sorted`, `#!python unique`, `#!python grouped`, and `#!python parted` methods on these objects.
+In KDB-X Python, you can apply attributes to various data structures, including `#!python Vector`/`#!python List` types, `#!python Tables`, and `#!python KeyedTable`s. To apply the attributes, call the `#!python sorted`, `#!python unique`, `#!python grouped`, and `#!python parted` methods on these objects.
 
 ### Sorted
 
@@ -141,7 +141,7 @@ b| s   p
 
 ## Performance
 
-When attributes are set on PyKX objects, various functions can use these attributes to speed up their
+When attributes are set on `pykx` objects, various functions can use these attributes to speed up their
 execution, by using different algorithms. For example, searching through a list without an attribute
 requires checking every single value. However, setting the `#!python sorted` attribute allows a search algorithm
 to use a binary search instead and then only a fraction of the values actually needs to be checked.

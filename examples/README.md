@@ -1,6 +1,6 @@
 # Examples
 
-This folder contains a number of subfolders/files containing example uses of the PyKX interface. These examples are not intended to show fully all that can be achieved by the interface but rather act as inspiration for some of the potential use cases of the interface.
+This folder contains a number of subfolders/files containing example uses of the KDB-X Python interface. These examples are not intended to show fully all that can be achieved by the interface but rather act as inspiration for some of the potential use cases of the interface.
 
 This `README.md` is intended to act as a guide for the contents within each of the individual examples explaining the use case and how the example should be run
 
@@ -34,7 +34,7 @@ This example is the best centralised representation of the wide ranging function
 
 The ipc folder contains any IPC specific examples which may be useful for users.
 
-This IPC example provided at present outlines the use of PyKX as a real-time engine, ingesting data as a subscriber to an external q process, evaluating an analytic written in Python and publishing the result of this analytic to another external q process.
+This IPC example provided at present outlines the use of KDB-X Python as a real-time engine, ingesting data as a subscriber to an external q process, evaluating an analytic written in Python and publishing the result of this analytic to another external q process.
 
 This example works in the presence or absence of a q license and is fully outlined in `ipc/README.md`
 
@@ -50,7 +50,7 @@ The compress and encrypt demo outlined by the `compress_and_encrypt.py` file and
 $ python compress_and_encrypt.py
 ```
 
-This example provides an example of how a user of PyKX can make use of the supported compression algorithms provided by q
+This example provides an example of how a user of KDB-X Python can make use of the supported compression algorithms provided by q
 
 * gzip
 * snappy

@@ -3,7 +3,7 @@ title: Analyze streaming data
 description: How to apply real-time analytics to streaming data
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, streaming, analytics
+tags: KDB-X Python, q, streaming, analytics
 ---
 
 # Analyze streaming data
@@ -16,7 +16,7 @@ _This page outlines how you can apply analytics to your streaming data._
 
 In previous sections we have walked through how to build a [basic streaming infrastructure](basic.md), [publish data](publish.md) and [subscribe to updates](subscribe.md). In more complex scenarios users may wish to apply analytics to the real-time data that is being consumed by their infrastructure. This can be completed in a subscribing process or, more formally, in a Real-Time Processor (RTP).
 
-With PyKX, an RTP subscribes to data from a tickerplant and completes one of the following:
+With KDB-X Python, an RTP subscribes to data from a tickerplant and completes one of the following:
 
 1. Operates as a Real-Time Database (RDB) ingesting data as quickly as possible, making it available for query during the day and coordinating data persistence at end of day.
 1. Allows analytic application on data prior to and post insertion into the in-memory database (RDB).
@@ -62,7 +62,7 @@ In the above code we are setting the chained tickerplant on port 5013 to provide
 Now that a chained tickerplant has been established which can be used for slow subscribers, we can generate some analytics from the data supplied by this process. To achieve this, we use a Real-Time Processor (RTP) which runs pre-processing and post-processing analytics. We generate Python analytics that achieve the following:
 
 1. Pre-process all messages to remove any data which is sourced from a table other than the `#!python trade` table.
-2. A post-processing function written in Python which uses PyKX and numpy to calculate the `#!python min`, `#!python max` and `#!python spread` of prices per symbol from the processed trade data.
+2. A post-processing function written in Python which uses KDB-X Python and numpy to calculate the `#!python min`, `#!python max` and `#!python spread` of prices per symbol from the processed trade data.
 3. Publishes the results of your aggregated information back to the primary tickerplant to ensure the aggregate data is persisted for future inspection.
 
 The reference architecture used for this is as follows:
@@ -100,7 +100,7 @@ rtp.libraries({'np': 'numpy', 'kx': 'pykx'})
 
 The above example is equivalent to running `#!python import numpy as np` and `#!python import pykx as kx` on the RTP.
 
-Now that the RTP process has access to PyKX and Numpy, we can define the pre-processor function. If this pre-processor returns a `#!python None` object, the data received will not be inserted into the RTP's in-memory database. This function must take two parameters:
+Now that the RTP process has access to KDB-X Python and Numpy, we can define the pre-processor function. If this pre-processor returns a `#!python None` object, the data received will not be inserted into the RTP's in-memory database. This function must take two parameters:
 
 1. Name of the table whose data is being processed
 2. The data that is being processed

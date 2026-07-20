@@ -210,7 +210,7 @@ class ZContext(QContext):
                    'po', 'pp', 'pq', 'ps', 'pw', 'vs', 'wc', 'wo', 'ws', 'zd')
 
     _has_default = ('a', 'b', 'c', 'D', 'd', 'e', 'f', 'H', 'h', 'i', 'K', 'k',
-                    'l', 'N', 'n', 'o', 'P', 'p', 'pg', 'q', 'T', 't', 'u', 'W', 'w',
+                    'l', 'N', 'n', 'o', 'P', 'p', 'pg', 'q', 'T', 't', 'u', 'v', 'W', 'w',
                     'X', 'x')
 
     _unsupported_keys_with_msg = {
@@ -221,7 +221,7 @@ class ZContext(QContext):
         'ey': '.z.ey is only available during a debugging session, so it is '
               'not exposed through the context interface.',
         'ts': '.z.ts is not exposed through the context interface because the '
-              'main loop is inactive in PyKX.',
+              'main loop is inactive in KDB-X Python.',
         'z': 'The q datetime type is deprecated, and so the datetime '
              'object .z.z is not exposed through the context interface.',
         'Z': 'The q datetime type is deprecated, and so the datetime '

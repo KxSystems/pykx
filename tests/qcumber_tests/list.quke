@@ -1,4 +1,4 @@
-feature PyKX list assignment, retrieval and indexing
+feature KDB-X Python list assignment, retrieval and indexing
     before
         numpyList  ::.pykx.import[`numpy;`:arange]10;
         pythonList ::.pykx.eval"[True,2,3.0,'four']";

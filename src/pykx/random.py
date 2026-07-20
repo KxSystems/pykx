@@ -16,7 +16,7 @@ def _init(_q):
 
 
 def seed(seed: int) -> None:
-    """Set random seed for PyKX random data generation.
+    """Set random seed for KDB-X Python random data generation.
 
     Parameters:
         seed: Integer value defining the seed value to be set

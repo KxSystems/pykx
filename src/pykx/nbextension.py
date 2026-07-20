@@ -125,11 +125,11 @@ def q(instructions, code): # noqa
             except kx.QError as err:
                 if '.Q.pykxld' in str(err):
                     # .Q.pykxld is not defined on the server so we pass it as inline code
-                    with open(kx.config.pykx_lib_dir/'q.k', 'r') as f:
+                    with open(kx.config.pykx_dir/'pykx.q', 'r') as f:
                         lines = f.readlines()
                         for line in lines:
                             if 'pykxld:' in line:
-                                ld = _q("k)"+line[7:-1], skip_debug=True)
+                                ld = _q("k)"+line[12:], skip_debug=True)
                                 break
                 else:
                     raise err

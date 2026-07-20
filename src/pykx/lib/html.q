@@ -3,7 +3,7 @@
 // @private
 // @desc
 // Utility for generating the JSON data to be used for the rendering
-// of a HTML version of a PyKX in-memory and splayed table
+// of a HTML version of a KDB-X Python in-memory and splayed table
 util.html.memsplay:{[c;t]
   n:count t;
   cls:{x!x}$[c[1]<ct:count cls:cols t;((c[1]-1)sublist cls),last cls;cls];

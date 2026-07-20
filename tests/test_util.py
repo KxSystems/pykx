@@ -106,17 +106,22 @@ def test_once(kx):
 
 
 @pytest.mark.ipc
-def test_pickle_pykx_df_block_manager(q):
-    """Test that a Pandas DataFrame created by PyKX can be deserialized without PyKX.
+def test_pickle_pykx_df_block_manager(kx, q):
+    """Test that a Pandas DataFrame created by KDB-X Python can be deserialized without KDB-X Python.
 
-    DataFrames that originate from PyKX have a custom block manager. We have to take care to
-    serialize it as a regular block manager so that it can be deserialized without PyKX installed.
+    DataFrames that originate from KDB-X Python have a custom block manager. We have to take care to
+    serialize it as a regular block manager so that it can be deserialized without
+    KDB-X Python installed.
     """
     df = q('([] date:9?.z.D; id:9?9; time:9?.z.N; bs:9?9; bp:9?9f; ap:9?9f; as:9?9)').pd()
     serialized = pickle.dumps(df)
     assert b'pykx' not in serialized
-    # `df._data` is the block manager
-    assert type(df._data).__name__.encode() not in serialized
+    if not kx.config.pandas_gt2:
+        # `df._data` is the block manager
+        assert type(df._data).__name__.encode() not in serialized
+    else:
+        # `df._mgr` is the block manager in Pandas 3
+        assert type(df._mgr).__name__.encode() not in serialized
 
 
 @pytest.mark.unlicensed
@@ -146,19 +151,20 @@ def test_debug_licensed(kx):
 
 @pytest.mark.unlicensed
 def test_install_q(kx):
-    base_path = Path(os.path.expanduser('~'))
+    base_path = Path.home()
     folder = base_path / 'qfolder'
-    config_path = base_path / '.pykx-config'
+    config_path = '~/test_install_q'
     assert not os.path.isdir(folder)
-    kx.util.install_q(folder)
+    kx.util.install_q(folder, config_file=config_path, config_profile='myq')
+    config_path = os.path.expanduser(config_path)
     assert os.path.isfile(config_path)
     with open(config_path, 'r') as file:
         data = toml.load(file)
-    assert ['PYKX_Q_EXECUTABLE', 'QHOME'] == list(data['default'].keys())
+    assert ['PYKX_Q_EXECUTABLE', 'QHOME'] == list(data['myq'].keys())
     assert os.path.isdir(folder)
     assert os.path.isfile(folder / 'q.k')
     shutil.rmtree(str(folder))
-    os.remove(str(base_path / '.pykx-config'))
+    os.remove(config_path)
 
 
 def test_detect_bad_columns(kx):
@@ -229,18 +235,16 @@ def test_detect_bad_columns(kx):
 
 
 def test_config_add_type(kx):
-    fpath = Path(os.path.expanduser('~')) / '.pykx-config'
-    with open(fpath, 'w') as f:
-        f.write('[default]\n')
+    fpath = Path.home()/'test_config_add_type'
 
     kx.util.add_to_config({'PYKX_GC': 'True', 'PYKX_MAX_ERROR_LENGTH': 1,
-                           'PYKX_BETA_FEATURES': True})
+                           'PYKX_BETA_FEATURES': True}, file=fpath, profile='jam')
 
     with open(fpath, "r") as f:
         data = toml.load(f)
-    assert data['default']['PYKX_GC'] == 'True'
-    assert data['default']['PYKX_MAX_ERROR_LENGTH'] == 1
-    assert data['default']['PYKX_BETA_FEATURES']
+    assert data['jam']['PYKX_GC'] == 'True'
+    assert data['jam']['PYKX_MAX_ERROR_LENGTH'] == 1
+    assert data['jam']['PYKX_BETA_FEATURES']
     os.remove(fpath)
 
 

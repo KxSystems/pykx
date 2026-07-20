@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 # Do not import pykx here - use the `kx` fixture instead!
@@ -27,11 +26,6 @@ def test_compress_encrypt_errors(kx):
         kx.Compress(block_size=24)
     assert 'block_size must be a power of 2' in str(err.value)
 
-    if os.getenv('PYKX_4_1_ENABLED') is None:
-        with pytest.raises(ValueError) as err:
-            kx.Compress(algo=kx.CompressionAlgorithm.zstd)
-        assert "'CompressionAlgorithm.zstd' only supported on" in str(err.value)
-
     with pytest.raises(ValueError) as err:
         kx.Compress(algo=kx.CompressionAlgorithm.gzip, level=100)
     assert 'Invalid level 100 for CompressionAlgorithm.gzip' in str(err.value)
@@ -52,11 +46,6 @@ def test_compression():
     compress.global_init()
     assert kx.q.z.zd.py() == [17, 4, 10]
 
-
-@pytest.mark.isolate
-def test_compression_4_1():
-    os.environ['PYKX_4_1_ENABLED'] = 'True'
-    import pykx as kx
     compress = kx.Compress(kx.CompressionAlgorithm.zstd, level=0)
     compress.global_init()
     assert kx.q.z.zd.py() == [17, 5, 0]

@@ -1,5 +1,5 @@
 """
-Functionality for the generation and management of streaming infrastructures using PyKX.
+Functionality for the generation and management of streaming infrastructures using KDB-X Python.
 Fully described [here](../user-guide/advanced/streaming/index.md), this allows users to ingest,
 persist and query vast amounts of real-time and historical data in a unified data-format.
 """
@@ -221,7 +221,7 @@ class STREAMING:
     def register_api(self, api_name: str, function: Callable) -> None:
         """
         Define a registered API to be callable by name on a process,
-            this API can be a Python function or a PyKX
+            this API can be a Python function or a KDB-X Python
             lambda/projection.
 
         Parameters:
@@ -539,7 +539,7 @@ class TICK(STREAMING):
         Tickerplant process.
 
         Parameters:
-            snap_function: A Python function or callable PyKX Lambda which takes
+            snap_function: A Python function or callable `pykx` Lambda which takes
                 a single argument and returns the expected tabular dataset for
                 display
 
@@ -598,7 +598,7 @@ class RTP(STREAMING):
         historical databases to reload if needed.
 
     In a more complex case an RTP will run analytics on data prior to and post data insert
-    as noted in step 2 above. These analytics can either be Python or q/PyKX functions.
+    as noted in step 2 above. These analytics can either be Python or q/pykx functions.
     Additionally users can define 'apis' on the server which can be called explicitly
     by users.
 
@@ -612,7 +612,7 @@ class RTP(STREAMING):
         subscriptions: A list of tables (str) from which to receive updates, if None
             the RTP will receive updates from all tables
         apis: A dictionary mapping the names to be used by users when calling a
-            defined API to the callable Python functions or PyKX lambdas/projections
+            defined API to the callable Python functions or `pykx` lambdas/projections
             which will be called.
         vanilla: In the case that the RTP is defined as 'vanilla' data received
             from an upstream tickerplant will be inserted into an in-memory table.
@@ -785,7 +785,7 @@ class RTP(STREAMING):
                     3. `database: a string denoting the directory where your current
                         days data will be persisted. This should be the same directory
                         as the `database` keyword for your HDB process should it be used.
-                        By default the location "db" will be used in the directory PyKX was
+                        By default the location "db" will be used in the directory KDB-X Python was
                         imported.
 
         Returns:
@@ -912,7 +912,7 @@ class RTP(STREAMING):
         The pre-processing function should return
 
         Parameters:
-            function: A callable function or PyKX Lambda taking 2 arguments
+            function: A callable function or `pykx` Lambda taking 2 arguments
                 the name of the table as a `str` and the message to be processed
 
         Returns:
@@ -969,7 +969,7 @@ class RTP(STREAMING):
         This function can have side-effects and does not expect a return
 
         Parameters:
-            function: A callable function or PyKX Lambda taking 2 arguments
+            function: A callable function or KDB-X Python Lambda taking 2 arguments
                 the name of the table as a `str` and the message to be processed
 
         Returns:
@@ -1083,7 +1083,7 @@ class HDB(STREAMING):
         libraries: A dictionary mapping the alias by which a Python library will be
             referred to the name of library
         apis: A dictionary mapping the names to be used by users when calling a
-            defined API to the callable Python functions or PyKX lambdas/projections
+            defined API to the callable Python functions or KDB-X Python lambdas/projections
             which will be called.
         init_args: A list of arguments passed to the initialized q process at startup
             denoting the command line options to be used for the initialized q process
@@ -1294,7 +1294,7 @@ class GATEWAY(STREAMING):
         libraries: A dictionary mapping the alias by which a Python library will be
             referred to the name of library
         apis: A dictionary mapping the names to be used by users when calling a
-            defined API to the callable Python functions or PyKX lambdas/projections
+            defined API to the callable Python functions or `pykx` lambdas/projections
             which will be called.
         connections: A dictionary passed to the sub-process which is used by
                 maps a key denoting the 'name' to be assigned
@@ -1331,7 +1331,7 @@ class GATEWAY(STREAMING):
     >>> rdb.start({'tickerplant': 'localhost:5030'})
     >>> def gateway_func(x):
     ...     # The 'module' gateway is a populated class
-    ...     # on the PyKX Gateway processes
+    ...     # on the KDB-X Python Gateway processes
     ...     rdb_data = gateway.call_port('rdb', b'{x+1}', x)
     ...     hdb_data = gateway.call_port('hdb', b'{x+2}', x)
     ...     return([rdb_data, hdb_data])
@@ -1555,7 +1555,7 @@ class BASIC:
             database=None,
             ports=_default_ports):
         """
-    Initialise a configuration for a basic PyKX streaming workflow.
+    Initialise a configuration for a basic KDB-X Python streaming workflow.
 
     This configuration will be used to (by default) start the following processes:
 

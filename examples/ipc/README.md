@@ -1,6 +1,6 @@
 # IPC interface example
 
-The purpose of this example is to provide a quickstart for interfacing with external q processes using PyKX. The example presented should operate in the presence or absence of a `k4.lic`, and as such is intended to show the flexibility of this interface for users who had previously used both PyKX and those who are familiar with qPython.
+The purpose of this example is to provide a quickstart for interfacing with external q processes using KDB-X Python. The example presented should operate in the presence or absence of a `k4.lic`, and as such is intended to show the flexibility of this interface for users who had previously used both KDB-X Python and those who are familiar with qPython.
 
 ## Quickstart
 
@@ -27,7 +27,7 @@ q)
 $ q tick/feed.q
 q)
 
-// Start the q process to receive data from PyKX
+// Start the q process to receive data from KDB-X Python
 $ q -p 5130
 q)
 ```

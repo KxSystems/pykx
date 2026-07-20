@@ -1,26 +1,26 @@
 ---
-title: PyKX Remote Functions
-description: How to execute Python functions on q servers in PyKX
+title: KDB-X Python Remote Functions
+description: How to execute Python functions on q servers in KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, performance, parallelization, secondary q threads, multithreading, peach
+tags: KDB-X Python, q, performance, parallelization, secondary q threads, multithreading, peach
 ---
 
 # Remote Function Execution
 
-_This page explains how to execute Python functions on q servers in PyKX._
+_This page explains how to execute Python functions on q servers in KDB-X Python._
 
-Remote Functions let you define Python functions within your Python environment which can interact with kdb+ data on a q process. Once defined, these functions are registered to a [remote session object](../../api/remote.md) along with any Python dependencies which need to be imported. The [remote session object](../../api/remote.md) establishes and manages the remote connection to the kdb+/q server.
+Remote Functions let you define Python functions within your Python environment which can interact with KDB-X data on a q process. Once defined, these functions are registered to a [remote session object](../../api/remote.md) along with any Python dependencies which need to be imported. The [remote session object](../../api/remote.md) establishes and manages the remote connection to the KDB-X/q server.
 
-To execute kdb+/q functions using PyKX, go to [PyKX under q](../../pykx-under-q/intro.md)
+To execute KDB-X/q functions using KDB-X Python, go to [KDB-X Python under q](../../pykx-under-q/intro.md)
 
 ## Requirements and limitations
 
 Before you start:
 
 - Make sure all necessary Python requirements are installed on the client server. For this functionality you need `#!python dill>=0.2`.
-- Confirm that the kdb+/q server you connect to can load PyKX under q.
-- Ensure that you have the correct versions of Python library dependencies in your kdb+/q environment at runtime.
+- Confirm that the KDB-X/q server you connect to can load KDB-X Python under q.
+- Ensure that you have the correct versions of Python library dependencies in your KDB-X/q environment at runtime.
 - Run the following command:
 
 ```bash
@@ -31,17 +31,17 @@ pip install pykx[remote]
 
 This walkthrough demonstrates the following steps:
 
-1. Initialize a q/kdb+ server loading PyKX under q on a specified port.
-1. Import PyKX and generate a remote session object which denotes the process against which the Python functions will be executed.
-1. Define a number of Python functions which will be executed on the remote q/kdb+ server.
+1. Initialize a q/KDB-X server loading KDB-X Python under q on a specified port.
+1. Import KDB-X Python and generate a remote session object which denotes the process against which the Python functions will be executed.
+1. Define a number of Python functions which will be executed on the remote q/KDB-X server.
 
-### Initializea q/kdb+ server with PyKX under q
+### Initialize a q/KDB-X server with KDB-X Python under q
 
-This step ensures you have a q process running with PyKX under q, as well as having a kdb+ table available to query. If you have this already, proceed to the next step.
+This step ensures you have a q process running with KDB-X Python under q, as well as having a KDB-X table available to query. If you have this already, proceed to the next step.
 
-Ensure that you have q installed. If you do not have this installed please follow the guide provided [here](https://code.kx.com/q/learn/install/), retrieving your license following the instructions provided [here](https://kx.com/kdb-insights-sdk-personal-edition-download).
+Ensure that you have q installed. If you do not have this installed please follow the guide provided [here](https://developer.kx.com/products/kdb-x/install).
 
-Install PyKX under q using the following command.
+Install KDB-X Python under q using the following command.
 
 ```bash
 python -c "import pykx;pykx.install_into_QHOME()"
@@ -66,9 +66,9 @@ Set a requirement for users to provide a username/password if you wish to add se
 .z.pw:{[u;p]$[(u~`user)&p~`password;1b;0b]}
 ```
 
-### Import PyKX and create a session
+### Import KDB-X Python and create a session
 
-Create a session object from a Python environment of your choice, which establishes and manages the remote connection to the kdb+/q server.
+Create a session object from a Python environment of your choice, which establishes and manages the remote connection to the KDB-X/q server.
 
 ```python
 >>> import pykx as kx

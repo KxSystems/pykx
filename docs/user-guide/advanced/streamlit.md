@@ -1,16 +1,16 @@
 ---
 title: Streamlit Integration
-description: Integrate PyKX Connections into you Streamlit application
+description: Integrate KDB-X Python Connections into you Streamlit application
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, q, streamlit, visualisation, query, web, application
+tags: PyKX, KDB-X Python, q, streamlit, visualisation, query, web, application
 ---
 
 # Streamlit Integration
 
 !!! Warning
 
-	Streamlit makes use of a caching mechanism which makes use of multiple threads, to make use of PyKX under these conditions it is suggested that users set `PYKX_THREADING` as `True`, for more information on the threading feature see [here](threading.md), for information on setting configuration see [here](../configuration.md).
+	Streamlit makes use of a caching mechanism which makes use of multiple threads, to make use of KDB-X Python under these conditions it is suggested that users set `PYKX_THREADING` as `True`, for more information on the threading feature see [here](threading.md), for information on setting configuration see [here](../configuration.md).
 
 [Streamlit](https://streamlit.io) provides an open source framework allowing users to turn Python scripts into sharable web applications. Functionally, Streamlit provides access to external data-sources using the concept of `connections` which allow users to develop conforming APIs which will integrate directly with streamlit applications as an extension connection types.
 
@@ -22,21 +22,21 @@ A full breakdown of the API documentation of this class can be found [here](../.
 
 To run this functionality, users must have `streamlit>=1.28` installed local to their Python session.
 
-This can be installed using the following command when installing PyKX:
+This can be installed using the following command when installing KDB-X Python:
 
 ```bash
 pip install pykx[streamlit]
 ```
 
-## Using PyKX with Streamlit
+## Using KDB-X Python with Streamlit
 
-The PyKX Streamlit integration provides users with the ability to do the following:
+The KDB-X Python Streamlit integration provides users with the ability to do the following:
 
 1. Establish a Streamlit compliant connection to a q/kdb+ process
 1. Check health of a connection and restart connection as necessary
 1. Query the remote process using `q`, `SQL` and `qSQL`
 
-As mentioned above PyKX provides a streamlit connection type `pykx.streamlit.PyKXConnection` which can be used with the streamlit [`st.connection`](https://docs.streamlit.io/develop/api-reference/connections/st.connection) functionality to integrate your streamlit application with PyKX.
+As mentioned above KDB-X Python provides a streamlit connection type `pykx.streamlit.PyKXConnection` which can be used with the streamlit [`st.connection`](https://docs.streamlit.io/develop/api-reference/connections/st.connection) functionality to integrate your streamlit application with KDB-X Python.
 
 In the below section we will discuss how these connections are established, maintained and used for query.
 
@@ -90,7 +90,7 @@ In the below example we connect to a variety of kdb+ processes on port 5050 with
 
 In streamlit, your application may be running for a significant period of time. In such situations it is not uncommon for your original connection to a server to drop.
 
-To help with such cases there are a number of methods provided by PyKX to recover your environment:
+To help with such cases there are a number of methods provided by KDB-X Python to recover your environment:
 
 - The addition of an `is_healthy` method to facilitate checking if the remote server can be interacted with.
 - The availability of a `reset` method to allow a connection which is deemed not to be healthy to be re-established.
@@ -188,7 +188,7 @@ The following script generates a simple streamlit application which
   1. Name the streamlit application
   1. Create a connection to the q process initialised on port 5050
   1. Query the q process retrieving a small tabular subset of data using the Pythonic Query API
-  1. Generates a Matplotlib graph directly using the PyKX table
+  1. Generates a Matplotlib graph directly using the `pykx` table
   1. Displays both the table and graph
 
 The script which follows can be downloaded [here](examples/streamlit.py)
@@ -208,7 +208,7 @@ The script which follows can be downloaded [here](examples/streamlit.py)
 	import matplotlib.pyplot as plt
 
 	def main():
-	    st.header('PyKX Demonstration')
+	    st.header('KDB-X Python Demonstration')
 	    connection = st.connection('pykx',
 	                               type=kx.streamlit.PyKXConnection,
 	                               port=5050)

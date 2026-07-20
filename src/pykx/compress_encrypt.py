@@ -56,7 +56,7 @@ _compression_ranges = {
 class Encrypt():
     def __init__(self, path: str = None, password: str = None) -> None:
         """
-        A class for controlling the use of encryption with PyKX.
+        A class for controlling the use of encryption with KDB-X Python.
 
         Parameters:
             path: Location of a user's encryption key file
@@ -111,7 +111,7 @@ class Compress():
                  level: int = None
     ) -> None:
         """
-        A class object for controlling q compression with PyKX.
+        A class object for controlling q compression with KDB-X Python.
 
         Parameters:
             algo: Compression algorithm to use. This must be one of:
@@ -145,8 +145,6 @@ class Compress():
             raise ValueError(f'block_size must be a power of 2, not {block_size}')
         self.encrypt = False
         self.block_size = int(log2(block_size))
-        if (algo == CompressionAlgorithm.zstd) & q('.z.K<4.1').py():
-            raise ValueError("'CompressionAlgorithm.zstd' only supported on PyKX>=4.1")
         compression_range = _compression_ranges[algo]
         if level is None:
             level = compression_range.stop -1

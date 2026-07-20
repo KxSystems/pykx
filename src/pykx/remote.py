@@ -103,8 +103,8 @@ class session:
                                         no_ctx=True)
         pykx_loaded = self._session('`pykx in key `')
         if not pykx_loaded:
-            print("PyKX not loaded on remote server, attempting to load PyKX")
-            self._session('@[system"l ",;"pykx.q";{\'"Failed to load PyKX with error: ",x}]')
+            print("KDB-X Python not loaded on remote server, attempting to load KDB-X Python")
+            self._session('@[system"l ",;"pykx.q";{\'"Failed to load KDB-X Python with error: ",x}]') # noqa: E501
             self.valid = True
         if self._libraries is not None:
             self.libraries(self._libraries)
@@ -169,8 +169,8 @@ def function(remote_session: session, *args) -> None:
         *args: Arguments that will be passed to the decorated function when it is invoked
 
     Returns:
-        A PyKX converted type of the result returned from the execution of the decorated function
-        on the remote process
+        A KDB-X Python converted type of the result returned from the execution of the decorated
+        function on the remote process
 
     Examples:
 

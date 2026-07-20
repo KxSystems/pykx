@@ -1,4 +1,4 @@
-"""Functionality for the registration of conversion functions between PyKX and Python"""
+"""Functionality for the registration of conversion functions between KDB-X Python and Python"""
 from .toq import _converter_from_python_type
 from .wrappers import Column
 
@@ -26,7 +26,7 @@ def py_toq(py_type: Any,
 ) -> None:
     """
     Register conversion logic for a specified Python type when converting it to
-    a PyKX object.
+    a `pykx` object.
 
     !!! Note
         The return of registered functions should be a valid `pykx` object type
@@ -38,10 +38,10 @@ def py_toq(py_type: Any,
 
     Parameters:
         py_type: The `type` signature used for determining when a conversion
-            should be triggered for PyKX, in particular this will check the
+            should be triggered for KDB-X Python, in particular this will check the
             `type(x)` on incoming data to determine this.
         conversion_function: The function/callable which will be used to convert
-            the supplied object to a PyKX object specified by the user.
+            the supplied object to a KDB-X Python object specified by the user.
         *,
         overwrite: If a definition for this type already exists should it be overwritten
             by default this is set to False to avoid accidental overwriting of

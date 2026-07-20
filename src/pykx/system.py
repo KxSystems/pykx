@@ -1,4 +1,4 @@
-"""System command wrappers for PyKX."""
+"""System command wrappers for KDB-X Python."""
 import os
 from pathlib import Path
 from warnings import warn

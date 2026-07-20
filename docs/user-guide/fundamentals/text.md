@@ -1,29 +1,29 @@
 ---
-title: Convert text in PyKX 
-description: How to convert text in PyKX
+title: Convert text in KDB-X Python 
+description: How to convert text in KDB-X Python
 date: July 2024
 author: KX Systems, Inc.,
-tags: PyKX, text, 
+tags: KDB-X Python, text, 
 ---
 
-# Convert text in PyKX
+# Convert text in KDB-X Python
 
-_This page provides details on how to represent, handle, and convert text in PyKX._
+_This page provides details on how to represent, handle, and convert text in KDB-X Python._
 
-In PyKX, text can be represented in various ways. Here are the basic building blocks for handling text within the library:
+In KDB-X Python, text can be represented in various ways. Here are the basic building blocks for handling text within the library:
 
 | **Type**            | **Description**                                                                                  | **Example Generation**   |
 |---------------------|--------------------------------------------------------------------------------------------------|------------------------------|
-| `pykx.SymbolAtom`   | A symbol atom in PyKX is an irreducible atomic entity storing an arbitrary number of characters. | ```pykx.q('`test')```        |
+| `pykx.SymbolAtom`   | A symbol atom in KDB-X Python is an irreducible atomic entity storing an arbitrary number of characters. | ```pykx.q('`test')```        |
 | `pykx.SymbolVector` | A symbol vector is a collected list of symbol atoms.                                             | ```pykx.q('`test`vector')``` |
 | `pykx.CharAtom`     | A char atom holds a single ASCII or 8-but unicode character stored as 1 byte.                    | `pykx.q('"a"')`              |
 | `pykx.CharVector`   | A char vector is a collected list of char vectors.                                               | `pykx.q('"test"')`           |
 
 !!! info "Head to our [Text data](https://code.kx.com/q4m3/2_Basic_Data_Types_Atoms/#24-text-data) section for a deeper dive into the underlying text representation."
 
-## Convert text to/from PyKX
+## Convert text to/from KDB-X Python
 
-To convert Pythonic text data to PyKX objects, use the `#!python pykx.SymbolAtom` and `#!python pykx.CharVector` functions as shown below:
+To convert Pythonic text data to `pykx` objects, use the `#!python pykx.SymbolAtom` and `#!python pykx.CharVector` functions as shown below:
 
 ```python
 >>> import pykx as kx
@@ -34,9 +34,9 @@ pykx.SymbolAtom(pykx.q('`test string'))
 pykx.CharVector(pykx.q('"test string"'))
 ```
 
-Alternatively, you use the automatic conversion function `#!python pykx.toq` which takes an incoming Python type and converts it to its analogous PyKX type. The following table shows the mapping between the two types:
+Alternatively, you use the automatic conversion function `#!python pykx.toq` which takes an incoming Python type and converts it to its analogous KDB-X Python type. The following table shows the mapping between the two types:
 
-| **Python Type**| **PyKX Type**                  |
+| **Python Type**| **KDB-X Python Type**                  |
 |-------------|-----------------------------------|
 | `str`       | `pykx.SymbolAtom`                 |
 | `byte`      | `pykx.CharAtom`/`pykx.CharVector` |
@@ -61,7 +61,7 @@ pykx.CharVector(pykx.q('"string"'))
 pykx.SymbolAtom(pykx.q('`bytes'))
 ```
 
-The `#!python pykx.toq` conversion is used by default when passing Python data to PyKX functions, for example:
+The `#!python pykx.toq` conversion is used by default when passing Python data to `pykx` functions, for example:
 
 ```python
 >>> import pykx as kx
@@ -81,11 +81,11 @@ pykx.SymbolAtom(pykx.q('`test'))
 pykx.CharVector(pykx.q('"test"'))
 ```
 
-## PyKX Under q
+## KDB-X Python Under q
 
 For more information on executing Python code in a q process see [evaluate and execute python](../../pykx-under-q/intro.html#evaluate-and-execute-python)
 
-Using text conversion under q we can convert PyKX text objects into q. This function call converts the Python `str` into a `SymbolAtom`
+Using text conversion under q we can convert `pykx` text objects into q. This function call converts the Python `str` into a `SymbolAtom`
 
 ```q
 q)\l pykx.q
@@ -139,7 +139,7 @@ q).pykx.qeval"'testtest'"
 q)`testtest
 ```
 
-A backtick `` ` ``  can be used to convert a PyKX object to q. This uses the same underlying logic as .pykx.toq:
+A backtick `` ` ``  can be used to convert a `pykx` object to q. This uses the same underlying logic as .pykx.toq:
 
 ```q
 q)s:.pykx.eval["('test1', 'test2')"]
@@ -151,9 +151,9 @@ For more detail on text conversion under q see our page on [.pykx.toq0](../../py
 
 ## Differences between `Symbol` and `Char` data objects
 
-While there may appear to be limited differences between `#!python Symbol` and `#!python Char` representations of objects, the choice of underlying representation can have an impact on the performance and memory profile of many applications of PyKX. This section will describe a number of these differences and their impact in various scenarios.
+While there may appear to be limited differences between `#!python Symbol` and `#!python Char` representations of objects, the choice of underlying representation can have an impact on the performance and memory profile of many applications of KDB-X Python. This section will describe a number of these differences and their impact in various scenarios.
 
-Although `#!python Symbol` and `#!python Char` representations of objects might seem similar, the choice between them can significantly affect the performance and memory usage of many PyKX applications. This section exploreS the impact of these differences in various scenarios.
+Although `#!python Symbol` and `#!python Char` representations of objects might seem similar, the choice between them can significantly affect the performance and memory usage of many KDB-X Python applications. This section exploreS the impact of these differences in various scenarios.
 
 
 ### Text access and mutability

@@ -31,7 +31,7 @@ def check(license: str,
 ) -> bool:
     """
     Validate the license key information you provided matches the license
-        saved to disk which is read by PyKX
+        saved to disk which is read by KDB-X Python
 
     Parameters:
         license: If using "FILE" format this is the location of the file being used for comparison.
@@ -39,8 +39,7 @@ def check(license: str,
         format: Is the license check being completed using a downloaded file or base64
             encoded string. Accepted inputs are "FILE"(default) or "STRING".
         license_type: The license file type/name which is to be checked, by default this
-            is 'kc.lic' which is the version provided with personal and commercial
-            evaluation licenses but can be changed to 'k4.lic' or 'kx.lic' if appropriate
+            is 'kc.lic' but can be changed to 'k4.lic' or 'kx.lic' if appropriate
 
     Returns:
         A boolean indicating if the license is correct or not and a printed message describing
@@ -166,8 +165,7 @@ def install(license: str,
         format: Is the license check being completed using a downloaded file or base64
             encoded string. Accepted inputs are "FILE"(default) or "STRING".
         license_type: The license file type/name which is to be checked, by default this
-            is 'kc.lic' which is the version provided with personal and commercial
-            evaluation licenses but can be changed to 'k4.lic' or 'kx.lic' if appropriate
+            is 'kc.lic' but can be changed to 'k4.lic' or 'kx.lic' if appropriate
         force: Enforce overwrite without opt-in message for overwrite
 
     Returns:
@@ -222,5 +220,5 @@ def install(license: str,
 
         with open(qlic/license_type, 'wb') as binary_file:
             binary_file.write(lic)
-    print("PyKX license successfully installed!")
+    print("KDB-X Python license successfully installed!")
     return True

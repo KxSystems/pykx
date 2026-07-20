@@ -49,7 +49,7 @@ def cd(newdir):
 def test_dir(q, kx):
     assert isinstance(dir(kx.ctx), list)
     assert sorted(dir(kx.ctx)) == dir(kx.ctx)
-    default_contexts = ('h', 'j', 'o', 'Q', 'q', 'z')
+    default_contexts = ('h', 'j', 'Q', 'q', 'z')
     assert all(x in dir(q) for x in default_contexts)
 
 
@@ -162,7 +162,7 @@ def test_namespace_switch(q):
 
 @pytest.mark.ipc
 def test_iter(q):
-    assert set() == {'Q', 'h', 'j', 'o', 'q', 'z'} - set(q.ctx)
+    assert set() == {'Q', 'h', 'j', 'q', 'z'} - set(q.ctx)
 
 
 @pytest.mark.ipc
@@ -326,3 +326,7 @@ def test_operator_retrieval(kx):
 
 def test_context_loadfile(kx):
     assert isinstance(kx.q.csvutil, kx.ctx.QContext)
+
+
+def test_z_v(kx):
+    assert isinstance(kx.q.z.v, kx.Dictionary)

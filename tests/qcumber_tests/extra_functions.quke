@@ -83,9 +83,9 @@ feature .pykx.version
 
 feature .pykx.debug
     should return system information when executed
-        expect a general list with PyKX information as the first element
+        expect a general list with KDB-X Python information as the first element
             ret:.pykx.debugInfo[];
-            all(0h~type ret;ret[0]like"*PyKX information*")
+            all(0h~type ret;ret[0]like"*KDB-X Python information*")
 
 feature .pykx.print
     should call print appropriately on python type objects
