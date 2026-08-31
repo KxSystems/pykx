@@ -110,3 +110,4 @@ doesn
 builtins
 kobject
 streamlit
+jupyter

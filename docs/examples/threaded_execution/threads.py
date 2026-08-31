@@ -25,6 +25,7 @@ def upsert_threaded(q, calls):
             counter -= 1
         if counter <= 0:
             break
+    kx.core.m9()
     return 0
 
 

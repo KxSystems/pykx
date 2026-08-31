@@ -31,6 +31,7 @@ Before globally enabling this functionality, consider the following:
 - **Concurrency Cost**: While the overhead for offloading calls onto a secondary thread is low, there will always be a cost in forcing a thread context switch. As such single-threaded performance is faster at the cost of concurrency.
 - **Memory-Safe Use**: While using `#!python PYKX_THREADING` it's not possible nor memory safe to have `#!python q` call back into Python; this could result in memory corruption or side-effects which may not be immediately obvious.
 - **Shutdown**: When using `#!python PYKX_THREADING`, it creates a background thread for running queries to `#!python q`. Make sure to call `#!python kx.shutdown_thread()` at the end of your script to properly close this thread. If you don’t, the thread will remain running in the background after the script finishes. To avoid this, it’s best to start your `#!python main` function within a `#!python try` - `#!python finally` block.
+- **Thread States**: When using `#!python PYKX_THREADING`, when using threads you must ensure that you call `pykx.core.m9()` before closing the thread to ensure the thread state is released and memory is not leaked.
 
 ## How to enable multithreaded execution
 

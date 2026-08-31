@@ -79,6 +79,10 @@ background thread must be shutdown when finished. The easiest way to ensure this
 a `#!python try` - `#!python finally` block around the entrypoint to your script. This ensures that even in the
 event of an error, the background thread shuts down correctly so Python can exit.
 
+When using the Python `threading` library you must ensure that you call `pykx.core.m9()` at the end of the threads
+life to ensure memory is not leaked. This is not required in the asyncio example as asyncio will reuse the thread
+again for other tasks. Calling it when the thread will be reused will result in undefined behaviour.
+
 ```
 import os
 os.environ['PYKX_THREADING'] = '1'

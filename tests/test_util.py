@@ -106,22 +106,41 @@ def test_once(kx):
 
 
 @pytest.mark.ipc
-def test_pickle_pykx_df_block_manager(kx, q):
+def test_pickle_pykx_df_block_manager(q):
     """Test that a Pandas DataFrame created by KDB-X Python can be deserialized without KDB-X Python.
 
-    DataFrames that originate from KDB-X Python have a custom block manager. We have to take care to
-    serialize it as a regular block manager so that it can be deserialized without
-    KDB-X Python installed.
+    On Pandas <3.0, DataFrames that originate from KDB-X Python use a custom block manager
+    (`pykx.util.BlockManagerUnconsolidated`). We have to take care to serialize it as a regular
+    block manager so that it can be deserialized without KDB-X Python installed. On Pandas 3.0+
+    `.pd()` already builds a standard `BlockManager`, so nothing KDB-X specific is present.
     """
     df = q('([] date:9?.z.D; id:9?9; time:9?.z.N; bs:9?9; bp:9?9f; ap:9?9f; as:9?9)').pd()
     serialized = pickle.dumps(df)
     assert b'pykx' not in serialized
-    if not kx.config.pandas_gt2:
-        # `df._data` is the block manager
-        assert type(df._data).__name__.encode() not in serialized
+    assert b'BlockManagerUnconsolidated' not in serialized
+
+
+def test_pykx_df_equals_both_directions(kx, q):
+    """`DataFrame.equals` comparing a KDB-X Python DataFrame with a native Pandas DataFrame.
+
+    Pandas 2.2.0 started comparing the `_mgr` type in `DataFrame.equals`. That makes the reverse
+    direction (KDB-X Python DataFrame as the caller) return False only while `.pd()` still uses
+    its custom `_mgr` - i.e. Pandas 2.2 up to (but not including) 3.0 (a documented known issue,
+    see docs/help/issues.md). Before 2.2 there is no `_mgr` check, and on 3.0+ `.pd()` builds a
+    standard `BlockManager`, so both directions are symmetric.
+    """
+    import pandas as pd
+    df1 = pd.DataFrame({'cl': ['foo']})
+    df2 = q('([] cl:enlist `foo)').pd()
+    # Native Pandas DataFrame as caller is True on every supported Pandas version.
+    assert df1.equals(df2)
+    pandas_version = tuple(int(x) for x in pd.__version__.split('.')[:2])
+    reverse_asymmetric = pandas_version >= (2, 2) and not kx.config.pandas_gt2
+    if reverse_asymmetric:
+        # Known limitation on Pandas 2.2 to 2.x: custom `_mgr` makes this direction False.
+        assert not df2.equals(df1)
     else:
-        # `df._mgr` is the block manager in Pandas 3
-        assert type(df._mgr).__name__.encode() not in serialized
+        assert df2.equals(df1)
 
 
 @pytest.mark.unlicensed

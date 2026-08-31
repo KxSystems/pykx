@@ -14,6 +14,10 @@ if[`e in key`.p;
   ]
  ]
 
+if["" ~ getenv`PYKX_LOADING_PYTHON; setenv[`PYKX_LOADING_Q; "true"]];
+if[not["" ~ getenv`PYKX_OLD_QHOME] and not["" ~ getenv`PYKX_LOADING_Q]; setenv[`QHOME; getenv`PYKX_OLD_QHOME]];
+if[not["" ~ getenv`PYKX_OLD_QPATH] and not["" ~ getenv`PYKX_LOADING_Q]; setenv[`QPATH; getenv`PYKX_OLD_QPATH]];
+
 // @private
 // @desc Process context prior to KDB-X Python initialization
 .pykx.util.prevCtx:system"d";
@@ -158,8 +162,17 @@ util.CFunctions:flip `qname`cname`args!flip (
 util.toPython:{wrap util.pyForeign[$[type[x]in 104 105 112h;wrap[unwrap x]`;x];y;z]}
 
 // @private
-// @desc Check if argument is of specified type
-util.isch  :{$[(104= type y);$[x~y[::]0;1b;0b];0b]}
+// @desc
+// Safely extract the pykx marker tag from a value, or ` if it is not a marker.
+util.mtag  :{$[104h<>type x;`;
+              104h<>type v0:(value x)0;`;
+              2>count vv:value v0;`;
+              enlist~first vv;vv 1;
+              `]}
+
+// @private
+// @desc Check if argument is a pykx marker of the specified type
+util.isch  :{x~util.mtag y}
 
 // @private
 // @desc
@@ -921,7 +934,6 @@ setdefault:{
     x in enlist "default"      ;"default";
     '"unknown conversion type: ",x
     ];
-  setenv[`PYKX_DEFAULT_CONVERSION;$[-10h=type util.defaultConv;enlist;]util.defaultConv];
   }
 
 // @kind function
@@ -1726,14 +1738,7 @@ qcallable:{$[util.isw x;wrap[unwrap[x]](<);util.isf x;wrap[x](<);'"Could not con
 // "Hello World"
 // ```
 safeReimport:{[x]
-  reimporter:.pykx.import[`pykx][`:PyKXReimport][];
-  envlist:reimporter[`:envlist]`;
-  envvals:getenv each envlist;
-
-  reimporter[`:reset][];
   r: @[{(0b;x y)}x;(::);{(1b;x)}];
-
-  setenv'[envlist;envvals];
   $[r 0;{'x};::] r 1
   }
 
@@ -2016,3 +2021,13 @@ loadExtension:{[ext]
 system"d ",string .pykx.util.prevCtx;
 
 k).Q.pykxld:{x:("#!"~2#*x)_x:-1!'x;+(1+*:'i;)@"\n"/:'x i:(&|1^\|0N 0 1@"/ "?*:'(v:x i),'"/")_i:&~|':(b?-1)#b:+\-/x~\:/:+,"/\\"}
+
+if[not["" ~ getenv`PYKX_LOADING_Q];
+    setenv[`PYKX_UNDER_Q; ""];
+    setenv[`PYKX_UNDER_PYTHON; ""];
+    setenv[`PYKX_Q_LOADED_MARKER; ""];
+    setenv[`PYKX_LOADED_UNDER_Q; ""];
+    setenv[`PYKX_LOADING_Q; ""];
+    setenv[`PYKX_LOADING_PYTHON; ""];
+    setenv[`PYKX_QINIT_CHECK; ""];
+  ];

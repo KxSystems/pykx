@@ -61,6 +61,7 @@ __pycache__/
 !p.so
 !libq.*
 !q.*
+!qdll.*
 !libe.so
 !e.*
 !libkurl.*

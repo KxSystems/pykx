@@ -10,7 +10,7 @@ tags: embedPy, KDB-X Python, q,
 
 _This page outlines differences and function mappings when upgrading from embedPy to KDB-X Python in a q session._
 
-Just like [KDB-X Python](../getting-started/what_is_pykx.md), [embedPy](https://github.com/kxsystems/embedpy) is a tool that allows to execute Python code and call Python functions. 
+Just like [KDB-X Python](../getting-started/what-is-kdb-x-python.md), [embedPy](https://github.com/kxsystems/embedpy) is a tool that allows to execute Python code and call Python functions.
 
 ## Functional differences
 

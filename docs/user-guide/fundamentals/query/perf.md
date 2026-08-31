@@ -87,4 +87,4 @@ To optimize frequently called SQL queries you can make use of the [prepare](../.
 
 - Learn how to query your data using the KDB-X Python Query API [here](pyquery.md).
 - If you don't have a historical database available see [here](../../advanced/database/index.md).
-- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.ipynb).
+- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.md#25-table).

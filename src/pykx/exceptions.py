@@ -34,11 +34,12 @@ class PyKXException(Exception):
 class LicenseException(PyKXException):
     """Exception for when a feature that requires a valid q license is used without one."""
     def __init__(self, feature_msg='use this feature', *args, **kwargs):
+        # Imported here rather than at module scope as pykx.config imports from this module
+        from .config import _get_unlicensed_reason
         super().__init__(
-            'A valid q license must be in a known location (e.g. `$QLIC`) to '
-            f'{feature_msg}.',
+            f'Cannot {feature_msg} as KDB-X Python is operating in unlicensed mode. {_get_unlicensed_reason()}', # noqa: E501
             *args,
-            **kwargs
+            **kwargs,
         )
 
 

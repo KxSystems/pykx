@@ -170,7 +170,8 @@ def test_sql_get_input_values(q, kx):
 )
 @pytest.mark.embedded
 def test_sql_string_col(q):
-    q('t:([] optid:1 2 3;Market:`a`b`CBOE;date:3#2023.11.14;Symbol:("a";"b";"odMP=20"))')
+    q('''t:([] optid:1 2 3;Market:`a`b`CBOE;date:3#2023.11.14;
+      Symbol:(enlist "a";enlist "b";"odMP=20"))''')
     qres = q('''select optid,Market,Symbol from t
               where date = 2023.11.14,Market=`CBOE,Symbol like "odMP=20"''')
     sqlres = q("""s)select optid,Market,Symbol from t

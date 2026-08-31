@@ -74,8 +74,8 @@ cdef void* _q_handle
 # or fallback to unlicensed mode.
 # Data is passed in via the `PYKX_QINIT_CHECK` env var to reduce `pykx` import time - why do the
 # work to gather that data when the parent process has already done it?
-qinit_check_data = os.environ.get('PYKX_QINIT_CHECK')
-if qinit_check_data is not None:                                                   # nocov
+qinit_check_data = os.getenv('PYKX_QINIT_CHECK', '')
+if qinit_check_data != '':                                                   # nocov
     _core_q_lib_path, _qhome_str, _qlic_str, _qargs = qinit_check_data.split(';')  # nocov
     import shlex                                                                   # nocov
     _qargs = list(shlex.split(_qargs))                                             # nocov
@@ -95,7 +95,7 @@ import subprocess
 import sys
 
 from .config import find_core_lib, qargs, qhome, qlic, pykx_lib_dir, \
-    release_gil, _set_licensed, under_q, use_q_lock, _qlic
+    release_gil, _set_licensed, _set_unlicensed_reason, under_q, use_q_lock, _qlic
 from .exceptions import PyKXException, PyKXWarning
 
 final_qhome = str(qhome if ignore_qhome else pykx_lib_dir)
@@ -301,7 +301,7 @@ if not pykx_threading:
                         _capout_msg = f'Captured output from initialization attempt:\n{_qinit_output}'
                         _paths_checked = f'    QLIC     {_qlic if _qlic else "Not Set"}\n'\
                                          f'    QHOME    {qhome if qhome else "Not Set"}'
-                        _lic_location = f'License used:\n    {lic_path}'
+                        _lic_location = f'\n    {lic_path}'
                     else:
                         _capout_msg = '' # nocov - this can only occur under extremely weird circumstances.
                         _lic_location = '' # nocov - this additional line is to ensure this code path is covered.
@@ -313,6 +313,7 @@ if not pykx_threading:
                                         f'{_lic_location}\n\n'\
                                         'Would you like to renew your license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
                             _license_message = _license_install(_exp_license, True, True, 'exp')
+                            _set_unlicensed_reason(f"Your license is expired: {_lic_location}")
                         elif re.compile('licen[cs]e error: embedq').search(_capout_msg):
                             _ce_license = 'You appear to be using a non KDB-X Python enabled license.\n\n'\
                                         f'{_capout_msg}\n\n'\
@@ -321,6 +322,7 @@ if not pykx_threading:
                                         'has reduced functionality.\nWould you like to install '\
                                         'a license? [Y/n]: '
                             _license_message = _license_install(_ce_license, True)
+
                         elif re.compile('licen[cs]e error: upd').search(_capout_msg):
                             _upd_license = 'Your installed license is out of date for this version'\
                                         ' of KDB-X Python and must be updated.\n\n'\
@@ -328,12 +330,14 @@ if not pykx_threading:
                                         f'{_lic_location}\n\n'\
                                         'Would you like to install an updated license? [Y/n]: '
                             _license_message = _license_install(_upd_license, True)
+                            _set_unlicensed_reason(f"Your license requires an update: {_lic_location}")
                         elif re.compile('licen[cs]e error: k[xc4].lic').search(_capout_msg) or re.compile('licen[cs]e error: badmsg').search(_capout_msg):
                             _k_license = '\nThe KDB-X Python license found is corrupt or incompatible.\n\n'\
                                         f'{_capout_msg}\n\n'\
                                         f'{_lic_location}\n\n'\
                                         'Would you like to install a new license? [Y/n]: '
                             _license_message = _license_install(_k_license, True)
+                            _set_unlicensed_reason(f"Your license is corrupt or incompatible: {_lic_location}")
                         else:
                             warning = f'Failed to initialize KDB-X Python successfully with the following error: {_capout_msg}\n\n'
                             if _lic_location == '':
@@ -344,6 +348,7 @@ if not pykx_threading:
                             _missing_license = 'Running KDB-X Python in unlicensed mode has reduced functionality.\n\n'\
                                             'Would you like to install a license? (Selecting no will proceed with unlicensed mode) [Y/n]: '
                             _license_message = _license_install(_missing_license, True)
+                            _set_unlicensed_reason(f"Your license could not be found.")
                 if (not _license_message) and _qinit_check_proc.returncode:
                     if _pykx_force_licensed:
                         raise PyKXException(f'Failed to initialize embedded q.{_capout_msg}')
@@ -360,7 +365,7 @@ if not pykx_threading:
                         _qinit_args = {'qhome': final_qhome, 'qlic': qlic, 'ignore_qhome': ignore_qhome, 'qargs': list(qargs)}
                         raise PyKXException(f'Non-zero qinit following license install with configuration: {_qinit_args}\n'
                                             f'failed with output: {_qinit_output}')
-                if 'QHOME' in os.environ and not ignore_qhome:
+                if 'QHOME' in os.environ and not ignore_qhome and os.environ['QHOME'] != '':
                     # Only link the user's QHOME to KDB-X Python's QHOME if the user actually set $QHOME.
                     # Note that `pykx.qhome` has a default value of `./q`, as that is the behavior
                     # employed by q.
@@ -432,6 +437,8 @@ cpdef shutdown_thread():
     if pykx_threading:
         _shutdown_thread()
 
+cpdef m9():
+    _m9()
 
 b9 = <K (*)(int mode, K x)>dlsym(_q_handle, sym_name('b9'))
 d9 = <K (*)(K x)>dlsym(_q_handle, sym_name('d9'))
@@ -471,7 +478,7 @@ ktj = <K (*)(short _type, long long x)>dlsym(_q_handle, sym_name('ktj'))
 ktn = <K (*)(int _type, long long length)>dlsym(_q_handle, sym_name('ktn'))
 ku = <K (*)(U x)>dlsym(_q_handle, sym_name('ku'))
 kz = <K (*)(double x)>dlsym(_q_handle, sym_name('kz'))
-m9 = <void (*)()>dlsym(_q_handle, sym_name('m9'))
+_m9 = <void (*)()>dlsym(_q_handle, sym_name('m9'))
 okx = <int (*)(K x)>dlsym(_q_handle, sym_name('okx'))
 orr = <K (*)(const char*)>dlsym(_q_handle, sym_name('orr'))
 r0 = <void (*)(K k)>dlsym(_q_handle, sym_name('r0'))

@@ -198,6 +198,7 @@ In addition to positional assignment, you can use the `#!python append` and `#!p
 	pykx.exceptions.QError: Appending data of type: <class 'pykx.wrappers.FloatVector'> to vector of type: <class 'pykx.wrappers.FloatVector'> not supported
 	>>>
 	>>> qvec.extend([1.2, 1.3, 1.4])
+	>>> qvec
 	pykx.FloatVector(pykx.q('0.7742128 0.7049724 0.5212126 1.1 1.2 1.3 1.4'))
 	>>>
 	>>> qvec.extend([1, 2, 3])

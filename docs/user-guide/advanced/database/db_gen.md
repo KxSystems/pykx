@@ -93,7 +93,7 @@ Now that you have generated a database, you can add extra partitions using the s
 ...     'price': kx.random.random(N, 10.0)
 ...     }).pd()
 >>> type(trade)
-pandas.core.frame.DataFrame
+<class 'pandas.core.frame.DataFrame'>
 ```
 
 Note that in comparison to the original database creation logic, we do not have a `#!python date` column. Instead, we add a date at partition creation. Below we provide a variety of examples of adding new partitions under various conditions:
@@ -157,7 +157,7 @@ We can now add this data to your database
 	```python
 	>>> db.create(quote, 'quote', format='splayed')
 	>>> db.tables
-	['trade', 'quote']
+	['quote', 'trade']
 	>>> type(db.quote)
 	<class 'pykx.wrappers.SplayedTable'>
 	```

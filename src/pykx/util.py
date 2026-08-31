@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from functools import wraps
+from functools import cached_property, wraps
 import inspect
 import io
 import os
@@ -15,18 +15,23 @@ from zipfile import ZipFile
 from warnings import warn
 
 import pandas as pd
-from pandas.core.internals import BlockManager, make_block
+from pandas.core.internals import BlockManager
 import numpy as np
 import requests
 import toml
 
 from .config import (
-    _executable, _get_qexecutable, _get_qhome,
+    _executable, _get_qdebug, _get_qexecutable, _get_qhome, _set_qdebug,
     beta_features, ignore_qhome, jupyterq, k_allocator, k_gc, keep_local_times,
-    load_pyarrow_unsafe, max_error_length, no_pykx_signal, numpy_gt1, pandas_gt2, pykx_config_location,  # noqa E501
-    pykx_config_profile, pykx_debug_insights, pykx_dir, pykx_lib_dir, pykx_profile_content,
-    pykx_qdebug, pykx_threading, q_executable, qargs, qce, qhome, qlic, release_gil,
-    skip_under_q, suppress_warnings, use_q_lock)
+    load_pyarrow_unsafe, max_error_length, no_pykx_signal, numpy_gt1, pandas_gt2,  # noqa E501
+    pykx_config_location, pykx_config_profile, pykx_debug_insights, pykx_dir, pykx_lib_dir,
+    pykx_profile_content, pykx_threading, q_executable, qargs, qce, qhome, qlic,
+    release_gil, skip_under_q, suppress_warnings, use_q_lock)
+
+if pandas_gt2:
+    from pandas.api.internals import create_dataframe_from_blocks
+else:
+    from pandas.core.internals import make_block
 from ._version import version as __version__
 
 from .exceptions import PyKXException
@@ -93,22 +98,6 @@ def num_available_cores() -> int:
     # No way to determine the number of cores available in this case. The CPU count will work in
     # most scenarios, and for those in which it does not there is no known workaround.
     return os.cpu_count() # nocov
-
-
-# TODO: Once Python 3.7 support is dropped, we can replace this with `functools.cached_property`
-class cached_property:
-    """Property-like descriptor which overwrites itself with the first obtained property value."""
-    def __init__(self, func):
-        self.func = func
-        self.attrname = func.__name__
-        self.__doc__ = func.__doc__
-
-    def __get__(self, instance, owner=None):
-        if instance is None:
-            return self
-        value = self.func(instance)
-        instance.__dict__[self.attrname] = value
-        return value
 
 
 class class_or_instancemethod(classmethod):
@@ -274,12 +263,18 @@ def df_from_arrays(columns, arrays, index):
         df = pd.DataFrame(index=index)
         for col, arr in zip(columns, arrays):
             df[col] = arr
+    elif pandas_gt2:
+        blocks = [
+            (a.reshape((1, len(a))), np.array([i]))
+            for i, a in enumerate(arrays)
+        ]
+        df = create_dataframe_from_blocks(blocks, index=index, columns=columns)
     else:
         blocks = tuple(
             make_block(values=a.reshape((1, len(a))), placement=(i,))
             for i, a in enumerate(arrays)
         )
-        df= pd.DataFrame(
+        df = pd.DataFrame(
             BlockManagerUnconsolidated(axes=[columns, index], blocks=blocks),
             copy=False
         )
@@ -480,7 +475,7 @@ def env_information():
                      'PYKX_RELEASE_GIL': release_gil, 'PYKX_Q_LIB_LOCATION': pykx_lib_dir,
                      'PYKX_Q_LOCK': use_q_lock, 'PYKX_SKIP_UNDERQ': skip_under_q,
                      'PYKX_Q_EXECUTABLE': q_executable, 'PYKX_THREADING': pykx_threading,
-                     'PYKX_QDEBUG': pykx_qdebug,
+                     'PYKX_QDEBUG': _get_qdebug(),
                      'PYKX_DEBUG_INSIGHTS_LIBRARIES': pykx_debug_insights,
                      'PYKX_CONFIGURATION_LOCATION': pykx_config_location,
                      'PYKX_NO_SIGNAL': no_pykx_signal,
@@ -726,20 +721,21 @@ def start_q_subprocess(port: int,
                 'Please install q using the function "kx.util.install_q" or following the '
                 'instructions at:\nhttps://code.kx.com/pykx/getting-started/installing.html'
             )
-    with PyKXReimport():
-        qinit = [q_executable, load_file, '-p', f'{port}']
-        if init_args is not None:
-            if not isinstance(init_args, list):
-                raise TypeError('Supplied additional startup arguments must be a list')
-            if not all(isinstance(s, str) for s in init_args):
-                raise TypeError('All supplied arguments to init_args must be str type objects')
-            qinit.extend(init_args)
-        server = subprocess.Popen(
-            qinit,
-            stdin=subprocess.PIPE,
-            stdout=None if process_logs else subprocess.DEVNULL,
-            stderr=None)
-        time.sleep(2)
+    qinit = [q_executable, load_file, '-p', f'{port}']
+    if init_args is not None:
+        if not isinstance(init_args, list):
+            raise TypeError('Supplied additional startup arguments must be a list')
+        if not all(isinstance(s, str) for s in init_args):
+            raise TypeError('All supplied arguments to init_args must be str type objects')
+        qinit.extend(init_args)
+    server = subprocess.Popen(
+        qinit,
+        stdin=subprocess.PIPE,
+        stdout=None if process_logs else subprocess.DEVNULL,
+        stderr=None,
+        env={**os.environ, 'QHOME': os.getenv('PYKX_OLD_QHOME', '')},
+    )
+    time.sleep(2)
     return server
 
 
@@ -826,3 +822,16 @@ def delete_q_variable(variable: str, namespace: str = '', garbage_collect: bool 
     q('{![x;();0b;enlist y]}', ns, variable)
     if garbage_collect:
         q.Q.gc()
+
+
+def qdebug(enable: bool = True):
+    """
+    Enables or disables q debugging at runtime.
+
+    Parameters:
+        enable: If True enables q debug mode.
+
+    Returns:
+        None
+    """
+    _set_qdebug(enable)

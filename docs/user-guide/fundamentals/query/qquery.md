@@ -86,4 +86,4 @@ Now that you have learnt how to query your data using q you may be interested in
 For some further reading, here are some related topics:
 
 - If you don't have a historical database available see [here](../../advanced/database/index.md).
-- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.ipynb).
+- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.md#25-table).

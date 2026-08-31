@@ -8,18 +8,22 @@ graft src/pykx/lib
 graft src/pykx/extensions
 
 recursive-include src/pykx *.py *.pxd *.pyx *.c *.so *.k
-recursive-include tests *.py
 
 include src/pykx/pykx.q
 include src/pykx/pykx_init.q_
 
-# When adding to this list a user should be conscious
-# to additionally update the ignore pattern files in
-# build/github.py
+# Keep internal-only content out of the package. This list must be kept
+# aligned with the ignore patterns in scripts/github.py, which keep the same
+# content out of the public GitHub source repo - when adding to either list,
+# update the other. Note the two use different matching: scripts/github.py
+# matches by base name recursively at any depth, whereas MANIFEST.in matches
+# anchored paths, so the entries below will not always look identical.
 exclude **/.gitignore
 exclude .gitlab-ci.yml
 exclude mkdocs.yml
 exclude **/pykx_init.q
+exclude sonar-project.properties
+global-exclude *.whl
 
 prune build
 prune coverage
@@ -27,6 +31,12 @@ prune docs
 prune benchmarks
 prune examples
 prune tests
+prune scripts
+prune .gitlab
+prune notebooks
+prune docs_setup
+prune docs_archive
+prune _docker
 
 include docs/api/pykx-execution/q.md
 

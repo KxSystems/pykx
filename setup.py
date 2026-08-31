@@ -42,7 +42,6 @@ q_lib_dir_name = {
     'Windows': 'w64',
 }[system]
 
-py_minor_version = sys.version_info[1]
 debug = os.environ.get('PYKX_DEBUG', '').lower() in {'true', '1'}
 
 windows_vcpkg_content = script_dir.resolve()/'vcpkg'/'installed'/'x64-windows-static-md'
@@ -50,7 +49,7 @@ windows_include_dirs = (str(windows_vcpkg_content/'include'),) if system == 'Win
 windows_library_dirs = () if system != 'Windows' else (str(Path(sys.exec_prefix)/'libs'),
                                                        str(Path(sys.base_exec_prefix)/'libs'),
                                                        str(windows_vcpkg_content/'lib'))
-windows_libraries = () if system != 'Windows' else ('psapi', 'q')
+windows_libraries = () if system != 'Windows' else ('psapi', 'qdll')
 
 
 class CustomInstallCommand(install):
@@ -111,7 +110,7 @@ class build_ext(default_build_ext):
                 extra_preargs=[
                     *(
                         ('-undefined dynamic_lookup',) if system == 'Darwin' else
-                        ('/LD /Fepykxq.dll q.lib -I include',) if system == 'Windows' else ()
+                        ('/LD /Fepykxq.dll qdll.lib -I include',) if system == 'Windows' else ()
                     ),
                 ],
             ),

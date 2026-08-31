@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 720" role="img" aria-labelledby="title description">
+  <title id="title">KDB-X Python architecture</title>
+  <desc id="description">Licensed Python applications use KDB-X Python with an embedded q runtime. Licensed and unlicensed Python applications can connect to a separate q process over IPC. Licensed q applications use KDB-X Python under q with an embedded Python runtime.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0b0d0e"/>
+    </marker>
+    <style>
+      text {
+        fill: #0b0d0e;
+        font-family: "Segoe UI", Arial, sans-serif;
+        text-anchor: middle;
+      }
+      .panel {
+        fill: #f0f0f0;
+        stroke: #0b0d0e;
+        stroke-width: 2;
+      }
+      .boundary {
+        stroke-dasharray: 8 7;
+      }
+      .app {
+        fill: #ffffff;
+        stroke: #0b0d0e;
+        stroke-width: 2;
+      }
+      .interface {
+        fill: #ffc300;
+        stroke: #0b0d0e;
+        stroke-width: 2;
+      }
+      .runtime {
+        fill: #ffe38a;
+        stroke: #0b0d0e;
+        stroke-width: 2;
+        stroke-dasharray: 7 6;
+      }
+      .flow {
+        fill: none;
+        stroke: #0b0d0e;
+        stroke-width: 3;
+        marker-end: url(#arrow);
+      }
+      .two-way {
+        marker-start: url(#arrow);
+      }
+      .group-label {
+        font-size: 28px;
+        font-weight: 600;
+      }
+      .box-title {
+        font-size: 25px;
+        font-weight: 600;
+      }
+      .box-detail {
+        font-size: 21px;
+      }
+      .mode-detail {
+        font-size: 17px;
+        font-weight: 600;
+      }
+      .flow-label {
+        font-size: 19px;
+        font-weight: 600;
+      }
+    </style>
+  </defs>
+
+  <rect class="panel" x="40" y="55" width="910" height="315"/>
+  <text class="group-label" x="495" y="95">Python process</text>
+
+  <rect class="app" x="90" y="165" width="230" height="100"/>
+  <text class="box-title" x="205" y="205">Python</text>
+  <text class="box-detail" x="205" y="238">application</text>
+
+  <rect class="interface" x="390" y="155" width="230" height="120"/>
+  <text class="box-title" x="505" y="205">KDB-X Python</text>
+  <text class="box-detail" x="505" y="240">(pykx)</text>
+
+  <rect class="runtime" x="690" y="100" width="230" height="125"/>
+  <text class="box-title" x="805" y="150">Embedded q</text>
+  <text class="box-detail" x="805" y="180">runtime</text>
+  <text class="mode-detail" x="805" y="207">Licensed mode</text>
+
+  <path class="flow two-way" d="M 320 215 L 390 215"/>
+  <text class="flow-label" x="355" y="145">Python API</text>
+
+  <path class="flow two-way" d="M 620 185 L 690 185"/>
+
+  <rect class="panel boundary" x="1000" y="55" width="450" height="315"/>
+  <text class="group-label" x="1225" y="95">Separate q process</text>
+
+  <rect class="runtime" x="1080" y="165" width="290" height="115"/>
+  <text class="box-title" x="1225" y="210">q server</text>
+  <text class="box-detail" x="1225" y="245">Data, functions, databases</text>
+
+  <path class="flow two-way" d="M 620 245 L 1080 245"/>
+  <text class="flow-label" x="805" y="275">IPC</text>
+
+  <rect class="panel" x="40" y="430" width="1410" height="235"/>
+  <text class="group-label" x="745" y="472">q process</text>
+
+  <rect class="app" x="100" y="515" width="250" height="95"/>
+  <text class="box-title" x="225" y="552">q application</text>
+  <text class="box-detail" x="225" y="583">or session</text>
+
+  <rect class="interface" x="500" y="500" width="300" height="125"/>
+  <text class="box-title" x="650" y="550">KDB-X Python</text>
+  <text class="box-detail" x="650" y="585">under q</text>
+
+  <rect class="runtime" x="980" y="500" width="300" height="125"/>
+  <text class="box-title" x="1130" y="540">Embedded Python</text>
+  <text class="box-detail" x="1130" y="572">runtime and libraries</text>
+  <text class="mode-detail" x="1130" y="602">Licensed mode</text>
+
+  <path class="flow two-way" d="M 350 563 L 500 563"/>
+  <text class="flow-label" x="425" y="548">q API</text>
+
+  <path class="flow two-way" d="M 800 563 L 980 563"/>
+</svg>

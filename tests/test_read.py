@@ -114,6 +114,54 @@ def test_read_csv_with_type_guessing(kx, q):
 
 
 @pytest.fixture
+def tmp_datetime_csv_path(tmp_path):
+    p = tmp_path/'datetime.csv'
+    p.write_text(
+        'dt,n\n'
+        '2023.01.01T12:30:45.500,0\n'
+        '2023.06.15T08:15:30.250,1\n'
+        '2023.12.31T23:59:59.999,2\n'
+    )
+    yield p
+    p.unlink()
+
+
+@pytest.mark.ipc
+def test_read_csv_datetime_type(kx, q, tmp_datetime_csv_path):
+    tab = q.read.csv(tmp_datetime_csv_path, [kx.DatetimeAtom, kx.LongAtom])
+    assert isinstance(tab, kx.Table)
+
+    dt = q('{x`dt}', tab)
+    assert isinstance(dt, kx.DatetimeVector)
+    assert q('{type x}', dt).py() == 15
+    assert q('{all x <> `datetime$`date$x}', dt).py()
+
+
+@pytest.fixture
+def tmp_date_csv_path(tmp_path):
+    p = tmp_path/'date.csv'
+    p.write_text(
+        'd,n\n'
+        '2023.01.01,0\n'
+        '2023.06.15,1\n'
+        '2023.12.31,2\n'
+    )
+    yield p
+    p.unlink()
+
+
+@pytest.mark.ipc
+def test_read_csv_date_type(kx, q, tmp_date_csv_path):
+    tab = q.read.csv(tmp_date_csv_path, [kx.DateAtom, kx.LongAtom])
+    assert isinstance(tab, kx.Table)
+
+    d = q('{x`d}', tab)
+    assert isinstance(d, kx.DateVector)
+    assert q('{type x}', d).py() == 14
+    assert q('{all x = 2023.01.01 2023.06.15 2023.12.31}', d).py()
+
+
+@pytest.fixture
 def tmp_fixed_path(tmp_path):
     p = tmp_path/'tmp.fixed'
     p.write_text('023054045067063072081093101155122174141202')

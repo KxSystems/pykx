@@ -55,7 +55,7 @@ This mode cannot run q embedded within it. Also, it lacks the ability to run q c
 
 ### 1.b Running in Licensed mode
 
-Licensed mode is the standard way to operate KDB-X Python, wherein it's running under a Python process [with a valid q license](../../getting-started/installing.md#2-install-a-license). This modality aims to replace PyQ as the Python-first library for KX. All KDB-X Python features are available in this mode.
+Licensed mode is the standard way to operate KDB-X Python, wherein it's running under a Python process [with a valid q license](../../getting-started/installing.md#install-a-kdb-x-license). This modality aims to replace PyQ as the Python-first library for KX. All KDB-X Python features are available in this mode.
 
 The differences provided through operating with a valid license are:
 

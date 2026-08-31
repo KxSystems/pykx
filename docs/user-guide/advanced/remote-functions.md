@@ -121,14 +121,14 @@ Examples of each of these methods can be seen below:
 
 	```python
 	>>> import pykx as kx
-	>>> session = kx.remote.session(port=5050, libraries={'kx': pykx})
+	>>> session = kx.remote.session(port=5050, libraries={'kx': 'pykx'})
 	```
 
 === "Library addition functionality"
 
 	```python
 	>>> session.libraries({'np': 'numpy', 'kx': 'pykx'})
-	>>> @function(session)
+	>>> @kx.remote.function(session)
 	... def dependent_function(x, y, z):
 	...     return kx.q.mavg(4, np.linspace(x, y, z))
 	>>> dependent_function(0, 10, 10)
@@ -138,7 +138,7 @@ Examples of each of these methods can be seen below:
 === "Defining imports within function body"
 
 	```python
-	>>> @function(remote_session)
+	>>> @kx.remote.function(session)
 	... def dependent_function(x, y, z):
 	...     import pykx as kx
 	...     import numpy as np

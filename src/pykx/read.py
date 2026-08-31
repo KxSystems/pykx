@@ -59,7 +59,7 @@ class QReader:
                 upd_types.append(i)
             else:
                 found = False
-                for key in _type_mapping.keys():
+                for key in sorted(_type_mapping.keys(), key=len, reverse=True):
                     if key in t:
                         found = True
                         upd_types.append(_type_mapping[key])
@@ -278,8 +278,8 @@ class QReader:
 
         Examples:
 
-        Read a file of fixed width data into a `pykx.List` of two `pykx.LongVectors` the first
-        with a size of 1 character and the second with a size of 2 characters.
+        Read a file of fixed width data into a `pykx.List` of two `pykx.LongVector` objects,
+        the first with a size of 1 character and the second with a size of 2 characters.
 
         ```python
         data = q.read.fixed('example_file', [b'J', b'J'], [1, 2])

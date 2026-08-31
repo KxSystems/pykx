@@ -41,9 +41,10 @@ In the below sections you will learn more about these connections and how to
 	```python
 	>>> import pykx as kx
 	>>> import subprocess
+	>>> import time
 	>>> with kx.PyKXReimport():
 	...     server = subprocess.Popen(
-	...         ('python', 'server.py'),
+	...         ('python', 'server.py', '5050'),
 	...         stdin=subprocess.PIPE,
 	...         stdout=subprocess.DEVNULL,
 	...         stderr=subprocess.DEVNULL,

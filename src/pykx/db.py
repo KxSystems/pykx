@@ -681,7 +681,7 @@ class DB(_TABLES):
         ['testTable']
         >>> db.list_columns('testTable')
         ['month', 'sym', 'time', 'price', 'size']
-        >>>  db.add_column('testTable', 'test', kx.IntAtom.null)
+        >>> db.add_column('testTable', 'test', kx.IntAtom.null)
         >>> db.list_columns('testTable')
         ['month', 'sym', 'time', 'price', 'size']
         ```
@@ -1171,7 +1171,7 @@ class DB(_TABLES):
         ```python
         >>> import pykx as kx
         >>> db = kx.DB(path = 'newDB')
-        >>> db.partition_count(sub_view = kx.q('2020.01 2020.02m'))
+        >>> db.partition_count(subview = kx.q('2020.01 2020.02m'))
         pykx.Dictionary(pykx.q('
                | trades quotes
         -------| -------------
@@ -1218,7 +1218,7 @@ class DB(_TABLES):
         ```python
         >>> import pykx as kx
         >>> db = kx.DB(path = 'newDB')
-        >>> db.subview(kx.q('2020.02 2020.03m')
+        >>> db.subview(kx.q('2020.02 2020.03m'))
         >>> kx.q.qsql.select(db.trades, 'month')
         pykx.Table(pykx.q('
         month
@@ -1278,7 +1278,7 @@ class DB(_TABLES):
         ...     'x': kx.random.random(N, ['a', 'b', 'c']),
         ...     'x1': kx.random.random(N, 1.0),
         ...     'x2': kx.random.random(N, 10)
-        ... }
+        ... })
         >>> tab = db.enumerate(tab)
         >>> tab['x']
         pykx.EnumVector(pykx.q('`sym$`a`b`a`c`b..'))
@@ -1294,7 +1294,7 @@ class DB(_TABLES):
         ...     'x': kx.random.random(N, ['a', 'b', 'c']),
         ...     'x1': kx.random.random(N, 1.0),
         ...     'x2': kx.random.random(N, 10)
-        ... }
+        ... })
         >>> tab = db.enumerate(tab, sym_file = 'mysym')
         >>> tab['x']
         pykx.EnumVector(pykx.q('`mysym$`a`b`a`c`b..'))

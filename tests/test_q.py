@@ -285,3 +285,17 @@ def test_load_spacefile(tmp_path):
     kx.q('{.pykx.util.loadfile[1_string x;y]}', test_location, b'file.q')
     assert kx.q('.pykx_test.tmp.variable')
     assert cd == os.getcwd()
+
+
+@pytest.mark.isolate
+def test_runtime_qdebug():
+    os.environ['PYKX_QDEBUG'] = 'False'
+
+    import pykx as kx
+    assert not kx.config.pykx_qdebug
+
+    kx.util.qdebug()
+    assert kx.config.pykx_qdebug
+
+    kx.util.qdebug(enable=False)
+    assert not kx.config.pykx_qdebug

@@ -133,6 +133,19 @@ def test_foreign_types(kx):
     assert f_bool.py()
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_q_projection_python_callback(kx):
+    kx.q('.pykx.pyexec"def caller(cb): return cb(10, 20)"')
+    # {[a;b;c]a+b+c}[;;100] is a projection with two free args; the callback must get (10, 20)
+    assert 130 == kx.q('(.pykx.get[`caller;<]) {[a;b;c]a+b+c}[;;100]').py()
+    # a projection alongside a keyword-argument marker must not be invoked during parsing
+    kx.q('.pykx.pyexec"def h(cb, k=0): return cb(1, 2) + k"')
+    assert 108 == kx.q('(.pykx.get[`h;<])[{[a;b;c]a+b+c}[;;100]; `k pykw 5]').py()
+
+
 @pytest.mark.isolate
 @pytest.mark.skipif(
     os.getenv('PYKX_THREADING') is not None,

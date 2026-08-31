@@ -19,7 +19,7 @@ import warnings
 import sys
 
 from . import deserialize, serialize, Q
-from .config import max_error_length, pykx_lib_dir, pykx_qdebug, system
+from .config import _get_qdebug, max_error_length, pykx_lib_dir, system
 from .core import licensed
 from .exceptions import FutureCancelled, NoResults, PyKXException, QError, UninitializedConnection
 from .util import get_default_args, normalize_to_bytes, normalize_to_str
@@ -327,7 +327,7 @@ class QFuture(asyncio.Future):
             if self._cancelled_message != '':
                 print('Connection was lost no result', file=sys.stderr)
                 return None
-            if self._debug or pykx_qdebug:
+            if self._debug or _get_qdebug():
                 if self._result._unlicensed_getitem(0).py() == True:
                     print((self._result._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
                     raise QError(self._result._unlicensed_getitem(2).py().decode())
@@ -573,6 +573,8 @@ class QConnection(Q):
               reconnection_function: callable = reconnection_function,
               connection_timeout: Optional[float] = None,
     ):
+        if self.__dict__.get('_initialized'):
+            return
         credentials = f'{normalize_to_str(username, "Username")}:' \
                       f'{normalize_to_str(password, "Password")}'
         object.__setattr__(self, '_connection_info', {
@@ -696,7 +698,7 @@ class QConnection(Q):
         if self.closed:
             raise RuntimeError(_ipc_err_warning['closed'])
         tquery = type(query)
-        debugging = (not skip_debug) and (debug or pykx_qdebug)
+        debugging = (not skip_debug) and (debug or _get_qdebug())
         if issubclass(tquery, SymbolicFunction):
             if licensed:
                 query = query.func
@@ -1044,7 +1046,8 @@ class QConnection(Q):
         ```python
         >>> import pykx as kx
         >>> with kx.SyncQConnection(port=5050) as q:
-        ...     q.upd('trade', [kx.TimespanAtom('now') 'AAPL', 1.0])
+        ...     q.upd('trade', [kx.TimespanAtom('now'), 'AAPL', 1.0])
+        >>> N = 100
         >>> trades = kx.Table(data = {
         ...     'time': kx.TimespanAtom('now'),
         ...     'sym': kx.random.random(N, ['AAPL', 'MSFT', 'GOOG']),
@@ -1359,7 +1362,7 @@ class SyncQConnection(QConnection):
             if not wait:
                 return K(None)
             res = self._recv(locked=True)
-            if skip_debug or not (debug or pykx_qdebug):
+            if skip_debug or not (debug or _get_qdebug()):
                 return res
             if res._unlicensed_getitem(0).py() == True:
                 print((res._unlicensed_getitem(1).py()).decode(), file=sys.stderr)
@@ -1439,10 +1442,13 @@ class SyncQConnection(QConnection):
             self._writer.close()
             try:
                 self._sock.shutdown(socket.SHUT_RDWR)
-                self._sock.close()
-                self._finalizer()
             except BaseException:
                 pass
+            try:
+                self._sock.close()
+            except BaseException:
+                pass
+            self._finalizer()
 
     def fileno(self) -> int:
         """The file descriptor or handle of the connection."""
@@ -1948,10 +1954,13 @@ class AsyncQConnection(QConnection):
             self._writer.close()
             try:
                 self._sock.shutdown(socket.SHUT_RDWR)
-                self._sock.close()
-                self._finalizer()
             except BaseException:
                 pass
+            try:
+                self._sock.close()
+            except BaseException:
+                pass
+            self._finalizer()
 
     def fileno(self) -> int:
         """The file descriptor or handle of the connection."""
@@ -2020,10 +2029,13 @@ class _DeferredQConnection(QConnection):
             self._writer.close()
             try:
                 self._sock.shutdown(socket.SHUT_RDWR)
-                self._sock.close()
-                self._finalizer()
             except BaseException:
                 pass
+            try:
+                self._sock.close()
+            except BaseException:
+                pass
+            self._finalizer()
 
 
 def handshake(conn: socket.socket):
@@ -2792,10 +2804,13 @@ class RawQConnection(QConnection):
             self._writer.close()
             try:
                 self._sock.shutdown(socket.SHUT_RDWR)
-                self._sock.close()
-                self._finalizer()
             except BaseException:
                 pass
+            try:
+                self._sock.close()
+            except BaseException:
+                pass
+            self._finalizer()
 
 
 class SecureQConnection(QConnection):
@@ -3033,7 +3048,7 @@ class SecureQConnection(QConnection):
 
         try:
             with self._lock if self._lock is not None else nullcontext():
-                if debug or pykx_qdebug:
+                if debug or _get_qdebug():
                     res = handler(
                         handle, 
                         normalize_to_bytes(

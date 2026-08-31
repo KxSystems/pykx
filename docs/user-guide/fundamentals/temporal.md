@@ -138,3 +138,14 @@ pykx.SecondAtom(pykx.q('**:00:00'))
 >>> kx.q('99:59:59 +1').pd()
 Timedelta('4 days 04:00:00')
 ```
+
+KDB-X Python raises an error when you convert a `#!python timedelta` value greater than `106751 days, 23:47:16.854775` to a `#!python kx.TimespanAtom`:
+
+```python
+>>> import datetime
+>>> kx.toq(datetime.timedelta(days=106751, seconds=85636, microseconds=854775))
+pykx.TimespanAtom(pykx.q('106751D23:47:16.854775000'))
+>>> kx.toq(datetime.timedelta(days=106751, seconds=85636, microseconds=854776))
+...
+OverflowError: Python int too large to convert to C long
+```

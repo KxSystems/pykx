@@ -24,7 +24,7 @@ A list of deprecated behaviors and the version in which they were removed. For f
 
 ## PyKX 3.1.7
 
-- Deprecated `value` keyword when creating `Column` objects, use `data` instead
+- Deprecated `value` keyword when creating `Column` objects, use `data` instead.
 
 ## PyKX 3.1.5
 

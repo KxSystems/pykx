@@ -1,0 +1,266 @@
+/* KDB-X Python 404 page. Keep selectors scoped for easy reuse. */
+.md-main__inner:has(.not-found-page) {
+  margin-top: 0;
+}
+
+.md-content__inner:has(> .not-found-page) {
+  margin-top: 0;
+  padding-top: 0;
+}
+
+.md-content__inner:has(> .not-found-page)::before {
+  display: none;
+}
+
+.not-found-page {
+  --not-found-accent: #194387;
+  --not-found-accent-hover: #123469;
+  --not-found-border: #d9e1e8;
+  --not-found-card-background: var(--md-default-bg-color);
+  --not-found-card-border: var(--kx-black, #0b0d0e);
+  --not-found-card-text: var(--kx-blue, #0f62fe);
+  --not-found-heading: #68727d;
+  --not-found-link: #194387;
+  --not-found-muted: #56616f;
+  margin: 0 auto 1rem;
+  max-width: 66rem;
+}
+
+[data-md-color-scheme="slate"] .not-found-page {
+  --not-found-accent: #ffc300;
+  --not-found-accent-hover: #ffcf33;
+  --not-found-border: #3b444d;
+  --not-found-card-background: var(--kx-black, #0b0d0e);
+  --not-found-card-border: var(--kx-yellow, #ffc300);
+  --not-found-card-text: var(--kx-yellow, #ffc300);
+  --not-found-heading: #9ba3aa;
+  --not-found-link: #ffc300;
+  --not-found-muted: #bac3c9;
+}
+
+.md-typeset .not-found-page h1,
+.md-typeset .not-found-page h2,
+.md-typeset .not-found-page p {
+  margin-top: 0;
+}
+
+.not-found-hero {
+  align-items: center;
+  display: grid;
+  gap: clamp(1.75rem, 4vw, 3.25rem);
+  grid-template-columns: minmax(11rem, 0.7fr) minmax(20rem, 1.3fr);
+  min-height: 0;
+  padding: 0.5rem 0 1.75rem;
+}
+
+.not-found-copy,
+.not-found-support-group {
+  min-width: 0;
+}
+
+.not-found-illustration {
+  aspect-ratio: 4 / 3;
+  background: url("../img/404/not-found-light.svg") center / contain no-repeat;
+  justify-self: center;
+  max-width: 15rem;
+  width: 100%;
+}
+
+[data-md-color-scheme="slate"] .not-found-illustration {
+  background-image: url("../img/404/not-found-dark.svg");
+}
+
+.md-typeset .not-found-copy h1 {
+  color: var(--not-found-heading);
+  font-size: 2em;
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+  margin: 0 0 0.85rem;
+}
+
+.not-found-copy > p:not(.not-found-code) {
+  color: var(--md-typeset-color);
+  line-height: 1.45;
+  max-width: 33rem;
+}
+
+.not-found-copy .not-found-lead {
+  color: var(--md-typeset-color);
+  font-weight: 400;
+  line-height: 1.45;
+}
+
+.not-found-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.md-typeset .not-found-actions .md-button {
+  background-color: var(--not-found-accent);
+  border-color: var(--not-found-accent);
+  border-radius: 0.3rem;
+  color: #fff;
+  font-weight: 400;
+  margin: 0;
+}
+
+.md-typeset .not-found-actions .md-button:hover,
+.md-typeset .not-found-actions .md-button:focus-visible {
+  background-color: var(--not-found-accent-hover);
+  border-color: var(--not-found-accent-hover);
+  color: #fff;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .not-found-actions .md-button,
+[data-md-color-scheme="slate"] .md-typeset .not-found-actions .md-button:hover,
+[data-md-color-scheme="slate"] .md-typeset .not-found-actions .md-button:focus-visible {
+  color: #101820;
+}
+
+.not-found-lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.not-found-support {
+  background: transparent;
+  border-top: 1px solid var(--not-found-border);
+  display: grid;
+  gap: 1.5rem 2.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 1.6rem;
+  padding: 1.1rem 0 0;
+}
+
+.md-typeset .not-found-destinations h2 {
+  font-size: 1.25em;
+  font-weight: 400;
+  margin: 0 0 0.35rem;
+}
+
+.md-typeset .not-found-support h2 {
+  color: var(--md-typeset-color);
+  font-size: 1em;
+  font-weight: 400;
+  line-height: 1.4;
+  margin: 0 0 0.35rem;
+}
+
+.not-found-support-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem 1rem;
+}
+
+.md-typeset .not-found-support-group > a,
+.md-typeset .not-found-support-links a {
+  color: var(--not-found-link);
+  font-weight: 400;
+}
+
+.md-typeset .not-found-support-group > a:hover,
+.md-typeset .not-found-support-group > a:focus-visible,
+.md-typeset .not-found-support-links a:hover,
+.md-typeset .not-found-support-links a:focus-visible {
+  color: var(--not-found-link);
+  text-decoration: underline;
+}
+
+.not-found-destinations {
+  padding: 0;
+}
+
+.not-found-destinations-intro {
+  color: var(--not-found-muted);
+  margin-bottom: 0;
+}
+
+.not-found-card-grid {
+  display: grid;
+  gap: 1rem 1.25rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 1.1rem;
+}
+
+.md-typeset .not-found-card {
+  align-items: center;
+  background: var(--not-found-card-background);
+  border: 1px solid var(--not-found-card-border);
+  border-radius: 10px;
+  color: var(--not-found-card-text);
+  display: flex;
+  min-height: 2.9rem;
+  padding: 0.65rem 0.85rem;
+}
+
+.md-typeset .not-found-card-title {
+  color: var(--not-found-card-text);
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.md-typeset .not-found-card:focus-visible {
+  outline: 2px solid var(--not-found-card-text);
+  outline-offset: 2px;
+}
+
+@media screen and (max-width: 56rem) {
+  .not-found-hero {
+    gap: 2rem;
+    grid-template-columns: minmax(13rem, 0.75fr) minmax(18rem, 1.25fr);
+  }
+
+  .not-found-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media screen and (max-width: 42rem) {
+  .not-found-page {
+    margin-top: 0;
+  }
+
+  .not-found-hero,
+  .not-found-support {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .not-found-hero {
+    gap: 1rem;
+    padding: 0 0 1.5rem;
+  }
+
+  .not-found-illustration {
+    justify-self: center;
+    max-width: 10rem;
+  }
+
+  .not-found-copy {
+    text-align: center;
+  }
+
+  .not-found-copy > p:not(.not-found-code) {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .not-found-actions {
+    align-items: stretch;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .md-typeset .not-found-actions .md-button {
+    text-align: center;
+    width: 100%;
+  }
+}
+
+@media screen and (max-width: 30rem) {
+  .not-found-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

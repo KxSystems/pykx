@@ -13,7 +13,7 @@ _This page provides links users can follow to receive help and support for the K
 
 If you have any issues or questions you can post them to the following locations, each of which is monitored by the KDB-X Python development team:
 
-- Ask a question to the KX community at [community.kx.com](https://community.kx.com/t5/PyKX/bd-p/PyKX).
+- Ask a question on the [KX Forum](https://forum.kx.com/).
 - Use Stack Overflow with the tags [pykx](https://stackoverflow.com/questions/tagged/pykx) or [kdb](https://stackoverflow.com/questions/tagged/kdb) depending on the subject.
 
 ## Customer Support
