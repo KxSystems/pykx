@@ -205,11 +205,8 @@ EXPORT K k_init_python(K x, K y, K z) {
         Py_DecRef(a);
     }
     PyErr_Clear();
-    struct CallArgs* init_args = malloc(sizeof(struct CallArgs));
-    init_args->arg1 = x;
-    init_args->arg2 = y;
-    init_args->arg3 = z;
-    pthread_create(&thread, NULL, thread_init, (void*)init_args);
+    // thread_init does not read its argument, so no allocation is required here.
+    pthread_create(&thread, NULL, thread_init, NULL);
     return (K)0;
 }
 

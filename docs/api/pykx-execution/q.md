@@ -48,7 +48,7 @@ Get the value of an environment variable.
 
 ```python
 >>> pykx.q.getenv('EDITOR')
-pykx.CharVector(q('"nvim"'))
+pykx.CharVector(pykx.q('"nvim"'))
 ```
 
 ### [gtime](https://code.kx.com/q/ref/gtime/)
@@ -58,7 +58,7 @@ UTC equivalent of local timestamp.
 ```python
 >>> import datetime
 >>> pykx.q.gtime(datetime.datetime.fromisoformat('2022-05-22T12:23:45.123'))
-pykx.TimestampAtom(q('2022.05.22D16:23:45.123000000'))
+pykx.TimestampAtom(pykx.q('2022.05.22D16:23:45.123000000'))
 ```
 
 ### [ltime](https://code.kx.com/q/ref/gtime/#ltime)
@@ -68,7 +68,7 @@ Local equivalent of UTC timestamp.
 ```python
 >>> import datetime
 >>> pykx.q.ltime(datetime.datetime.fromisoformat('2022-05-22T12:23:45.123'))
-pykx.TimestampAtom(q('2022.05.22D08:23:45.123000000'))
+pykx.TimestampAtom(pykx.q('2022.05.22D08:23:45.123000000'))
 
 ```
 
@@ -79,7 +79,7 @@ Set the value of an environment variable.
 ```python
 >>> pykx.q.setenv('RTMP', b'/home/user/temp')
 >>> pykx.q.getenv('RTMP')
-pykx.CharVector(q('"/home/user/temp"'))
+pykx.CharVector(pykx.q('"/home/user/temp"'))
 ```
 
 ## Interpret
@@ -90,7 +90,7 @@ Evaluate parse trees.
 
 ```python
 >>> pykx.q.eval([pykx.q('+'), 2, 3])
-pykx.LongAtom(q('5'))
+pykx.LongAtom(pykx.q('5'))
 ```
 
 ### [parse](https://code.kx.com/q/ref/parse/)
@@ -99,7 +99,7 @@ Parse a char vector into a parse tree, which can be evaluated with [`pykx.q.eval
 
 ```python
 >>> pykx.q.parse(b'{x * x}')
-pykx.Lambda(q('{x * x}'))
+pykx.Lambda(pykx.q('{x * x}'))
 >>> pykx.q.parse(b'2 + 3')
 pykx.List(pykx.q('
 +
@@ -116,7 +116,7 @@ Behaves similar to [`eval`](#eval) except the evaluation is blocked from modifyi
 
 ```python
 >>> pykx.q.reval(pykx.q.parse(b'til 10'))
-pykx.LongVector(q('0 1 2 3 4 5 6 7 8 9'))
+pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
 ```
 
 ### [show](https://code.kx.com/q/ref/show/)
@@ -133,7 +133,7 @@ Note: `show` bypasses typical Python output redirection.
 2
 3
 4
-pykx.Identity(q('::'))
+pykx.Identity(pykx.q('::'))
 ```
 
 ### [system](https://code.kx.com/q/ref/system/)
@@ -144,7 +144,7 @@ Where x is a string representing a [system command](https://code.kx.com/q/basics
 
 ```python
 >>> pykx.q.system(b'pwd')
-pykx.List(q('"/home/user"'))
+pykx.List(pykx.q('"/home/user"'))
 ```
 
 ### [value](https://code.kx.com/q/ref/value/)
@@ -168,7 +168,7 @@ Returns the value of x.
 
 ```python
 >>> pykx.q.value(pykx.q('`q`w`e!(1 2; 3 4; 5 6)'))
-pykx.List(q('
+pykx.List(pykx.q('
 1 2
 3 4
 5 6
@@ -185,7 +185,7 @@ Write global tables to disk as splayed, enumerated, indexed q tables.
 >>> from pathlib import Path
 >>> pykx.q['t'] = kx.Table(data={'x': [1, 2, 3], 'y': [10, 20, 30]})
 >>> pykx.q.dsave(Path('v'), 't')
-pykx.SymbolAtom(q('`t'))
+pykx.SymbolAtom(pykx.q('`t'))
 ```
 
 ### [get](https://code.kx.com/q/ref/get/)
@@ -195,28 +195,31 @@ Read or memory-map a variable or q data file.
 ```python
 >>> pykx.q['a'] = 10
 >>> pykx.q.get('a')
-pykx.LongAtom(q('10'))
+pykx.LongAtom(pykx.q('10'))
 ```
 
 ### [hclose](https://code.kx.com/q/ref/hopen/#hclose)
 
 Where x is a connection handle, closes the connection, and destroys the handle.
 ```python
->>> pykx.q.hclose(pykx.q('3i'))
+>>> pykx.q.hclose(3)
+pykx.Identity(pykx.q('::'))
 ```
 ### [hcount](https://code.kx.com/q/ref/hcount/)
 
 Size of a file in bytes.
 ```python
 >>> pykx.q.hcount('example.txt')
-pykx.LongAtom(q('11'))
+pykx.LongAtom(pykx.q('11'))
 ```
 ### [hdel](https://code.kx.com/q/ref/hdel/)
 
 Where `x` is a [file symbol atom](#hsym), deletes the file or folder (if empty), and returns `x`.
 
 ```python
->>> pykx.q.hdel('example.txt')
+>>> from pathlib import Path
+>>> pykx.q.hdel(Path('example.txt'))
+pykx.SymbolAtom(pykx.q('`:example.txt'))
 ```
 
 ### [hopen](https://code.kx.com/q/ref/hopen/)
@@ -224,8 +227,9 @@ Where `x` is a [file symbol atom](#hsym), deletes the file or folder (if empty),
 Open a connection to a file or process.
 
 ```python
->>> pykx.q.hopen('example.txt')
-pykx.IntAtom(q('3i'))
+>>> from pathlib import Path
+>>> pykx.q.hopen(Path('example.txt'))
+pykx.IntAtom(pykx.q('3i'))
 ```
 
 ### [hsym](https://code.kx.com/q/ref/hsym/)
@@ -234,7 +238,7 @@ Convert symbols to handle symbols, which can be used for I/O as file descriptors
 
 ```python
 >>> pykx.q.hsym('10.43.23.197')
-pykx.SymbolAtom(q('`:10.43.23.197'))
+pykx.SymbolAtom(pykx.q('`:10.43.23.197'))
 ```
 
 ### [load](https://code.kx.com/q/ref/load/)
@@ -276,7 +280,7 @@ Read text from a file or process handle.
 
 ```python
 >>> pykx.q.read0('example.txt')
-pykx.List(q('
+pykx.List(pykx.q('
 "Hello"
 "World"
 '))
@@ -288,7 +292,7 @@ Read bytes from a file or named pipe.
 
 ```python
 >>> pykx.q.read1('example.txt')
-pykx.ByteVector(q('0x48656c6c6f0a576f726c64'))
+pykx.ByteVector(pykx.q('0x48656c6c6f0a576f726c64'))
 ```
 
 ### [rload](https://code.kx.com/q/ref/load/#rload)
@@ -298,7 +302,7 @@ Load a splayed table from a directory.
 ```python
 >>> pykx.q.rload('t')
 >>> pykx.q('t')
-pykx.Table(q('
+pykx.Table(pykx.q('
 x y
 ----
 1 10
@@ -314,7 +318,7 @@ Write a table splayed to a directory.
 ```python
 >>> pykx.q['t'] = pykx.Table([[1, 10], [2, 20], [3, 30]])
 >>> pykx.q.rsave('t')
-pykx.SymbolAtom(q('`:t/'))
+pykx.SymbolAtom(pykx.q('`:t/'))
 ```
 
 ### [save](https://code.kx.com/q/ref/save/)
@@ -324,7 +328,7 @@ Write global data to file or splayed to a directory.
 ```python
 >>> pykx.q['t'] = pykx.Table([[1, 10], [2, 20], [3, 30]])
 >>> pykx.q.save('t')
-pykx.SymbolAtom(q('`:t'))
+pykx.SymbolAtom(pykx.q('`:t'))
 ```
 
 ### [set](https://code.kx.com/q/ref/get/#set)
@@ -362,9 +366,9 @@ Where
 
 ```python
 >>> pykx.q.set('a', 42)
-pykx.SymbolAtom(q('`a'))
+pykx.SymbolAtom(pykx.q('`a'))
 >>> pykx.q('a')
-pykx.LongAtom(q('42'))
+pykx.LongAtom(pykx.q('42'))
 ```
 
 ## Iterate
@@ -375,11 +379,11 @@ Iterate over list and apply a function to each element.
 
 ```python
 >>> pykx.q.each(pykx.q.count, [b'Tis', b'but', b'a', b'scratch'])
-pykx.LongVector(q('3 3 1 7'))
+pykx.LongVector(pykx.q('3 3 1 7'))
 >>> pykx.q.each(pykx.q.sums, [[2, 3, 4], [[5, 6], [7, 8]], [9, 10, 11, 12]])
-pykx.List(q('
+pykx.List(pykx.q('
 2 5 9
-((5;6);12 14)
+(5 6;12 14)
 9 19 30 42
 '))
 ```
@@ -392,7 +396,7 @@ Just as with Over and Scan, over and scan share the same syntax and perform the 
 
 ```python
 >>> pykx.q.over(pykx.q('*'), [1, 2, 3, 4, 5])
-pykx.LongAtom(q('120'))
+pykx.LongAtom(pykx.q('120'))
 ```
 
 ### [peach](https://code.kx.com/q/ref/each/)
@@ -401,11 +405,11 @@ pykx.LongAtom(q('120'))
 
 ```python
 >>> pykx.q.peach(pykx.q.count, [b'Tis', b'but', b'a', b'scratch'])
-pykx.LongVector(q('3 3 1 7'))
+pykx.LongVector(pykx.q('3 3 1 7'))
 >>> pykx.q.peach(pykx.q.sums, [[2, 3, 4], [[5, 6], [7, 8]], [9, 10, 11, 12]])
-pykx.List(q('
+pykx.List(pykx.q('
 2 5 9
-((5;6);12 14)
+(5 6;12 14)
 9 19 30 42
 '))
 ```
@@ -417,8 +421,8 @@ Applies a function to each item of `x` and the item preceding it, and returns a 
 ```python
 >>> pykx.q.prior(pykx.q('+'), [1, 2, 3, 4, 5])
 pykx.LongVector(pykx.q('1 3 5 7 9'))
->>> pykx.q.prior(lambda x, y: x + y, pykx.LongVector([1, 2, 3, 4, 5]))
-pykx.LongVector(pykx.q('0N 3 5 7 9'))
+>>> pykx.q.prior(pykx.q('+'), pykx.LongVector([1, 2, 3, 4, 5]))
+pykx.LongVector(pykx.q('1 3 5 7 9'))
 ```
 
 ### [scan](https://code.kx.com/q/ref/over/)
@@ -429,7 +433,7 @@ Just as with Over and Scan, over and scan share the same syntax and perform the 
 
 ```python
 >>> pykx.q.scan(pykx.q('+'), [1, 2, 3, 4, 5])
-pykx.LongVector(q('1 3 6 10 15'))
+pykx.LongVector(pykx.q('1 3 6 10 15'))
 ```
 
 ## Join
@@ -452,12 +456,12 @@ The resulting time column is the value of the boundary used in the first table.
 ...     'sym': ['ibm', 'msft', 'msft', 'ibm'], 'qty': [100, 99, 101, 98]
 ... })
 >>> pykx.q.aj(pykx.SymbolVector(['sym', 'time']), df1, df2)
-pykx.Table(q('
-time                 sym  qty
------------------------------
-0D10:01:01.000000000 msft 101
-0D10:01:03.000000000 ibm  98
-0D10:01:04.000000000 ge   150
+pykx.Table(pykx.q('
+time     sym  qty
+-----------------
+10:01:01 msft 101
+10:01:03 ibm  98
+10:01:04 ge   150
 '))
 ```
 
@@ -479,12 +483,12 @@ The resulting time column is the actual time of the last value in the second tab
 ...     'sym': ['ibm', 'msft', 'msft', 'ibm'], 'qty': [100, 99, 101, 98]
 ... })
 >>> pykx.q.aj0(pykx.SymbolVector(['sym', 'time']), df1, df2)
-pykx.Table(q('
-time                 sym  qty
------------------------------
-0D10:01:00.000000000 msft 101
-0D10:01:02.000000000 ibm  98
-0D10:01:04.000000000 ge   150
+pykx.Table(pykx.q('
+time     sym  qty
+-----------------
+10:01:00 msft 101
+10:01:02 ibm  98
+10:01:04 ge   150
 '))
 ```
 
@@ -509,11 +513,11 @@ The resulting time column is the value of the boundary used in the first table.
 ...     'p': pykx.q('1 0N')
 ... })
 >>> pykx.q.ajf(pykx.SymbolVector(['sym', 'time']), df1, df2)
-pykx.Table(q('
-time                 sym p n
-----------------------------
-0D00:00:01.000000000 a   1 r
-0D00:00:01.000000000 b   1 s
+pykx.Table(pykx.q('
+time     sym p n
+----------------
+00:00:01 a   1 r
+00:00:01 b   1 s
 '))
 ```
 
@@ -538,11 +542,11 @@ The resulting time column is the actual time of the last value in the second tab
 ...     'p': pykx.q('1 0N')
 ... })
 >>> pykx.q.ajf0(pykx.SymbolVector(['sym', 'time']), df1, df2)
-pykx.Table(q('
-time                 sym p n
-----------------------------
-0D00:00:01.000000000 a   1 r
-0D00:00:01.000000000 b   1 s
+pykx.Table(pykx.q('
+time     sym p n
+----------------
+00:00:01 a   1 r
+00:00:01 b   1 s
 '))
 ```
 
@@ -558,7 +562,7 @@ Performs an as-of join across temporal columns in tables. The last column the se
 ...     'sym': ['a', 'a', 'b', 'b'], 'p': pykx.LongVector([2, 4, 6, 8])})
 >>> df2 = pd.DataFrame({'sym':['b'], 'time': np.array([3], dtype='timedelta64[s]')})
 >>> pykx.q.asof(df1, df2)
-pykx.Table(q('
+pykx.Table(pykx.q('
 p
 -
 6
@@ -574,7 +578,7 @@ Equi join. The result has one combined record for each row in the second table t
 >>> df1 = pd.DataFrame({'sym':['a', 'a', 'b', 'a', 'c', 'b', 'c', 'a'], 'p': pykx.LongVector([2, 4, 6, 8, 1, 3, 5, 7])})
 >>> df2 = pd.DataFrame({'sym':['a', 'b'], 'w': ['alpha', 'beta']})
 >>> pykx.q.ej('sym', df1, df2)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym p w
 -----------
 a   2 alpha
@@ -596,7 +600,7 @@ Inner join. The result has one combined record for each row in the first table t
 >>> df2 = pd.DataFrame({'sym':['IBM', 'MSFT'], 'ex': ['N', 'CME'], 'MC': pykx.LongVector([1000, 250])})
 >>> df2 = pykx.q.xkey('sym', df2)
 >>> pykx.Table(df1)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym  p
 ------
 IBM  7
@@ -607,14 +611,14 @@ IBM  2
 MSFT 5
 '))
 >>> df2
-pykx.KeyedTable(q('
+pykx.KeyedTable(pykx.q('
 sym | ex  MC
 ----| --------
 IBM | N   1000
 MSFT| CME 250
 '))
 >>> pykx.q.ij(df1, df2)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym  p ex  MC
 ---------------
 IBM  7 N   1000
@@ -631,9 +635,9 @@ Inner join nulls filled. The result has one combined record for each row in the 
 >>> import pandas as pd
 >>> df1 = pd.DataFrame({'sym':['IBM', 'FDP', 'FDP', 'FDP', 'IBM', 'MSFT'], 'p': pykx.LongVector([7, 8, 6, 5, 2, 5])})
 >>> df2 = pd.DataFrame({'sym':['IBM', 'MSFT'], 'ex': ['N', 'CME'], 'MC': pykx.LongVector([1000, 250])})
->>> b = pykx.q.xkey('sym', df2)
+>>> df2 = pykx.q.xkey('sym', df2)
 >>> pykx.Table(df1)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym  p
 ------
 IBM  7
@@ -644,14 +648,14 @@ IBM  2
 MSFT 5
 '))
 >>> df2
-pykx.KeyedTable(q('
+pykx.KeyedTable(pykx.q('
 sym | ex  MC
 ----| --------
 IBM | N   1000
 MSFT| CME 250
 '))
 >>> pykx.q.ijf(df1, df2)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym  p ex  MC
 ---------------
 IBM  7 N   1000
@@ -668,9 +672,9 @@ Left join. For each record in the first table, the result has one record with th
 >>> import pandas as pd
 >>> df1 = pd.DataFrame({'sym':['IBM', 'FDP', 'FDP', 'FDP', 'IBM', 'MSFT'], 'p': pykx.LongVector([7, 8, 6, 5, 2, 5])})
 >>> df2 = pd.DataFrame({'sym':['IBM', 'MSFT'], 'ex': ['N', 'CME'], 'MC': pykx.LongVector([1000, 250])})
->>> b = pykx.q.xkey('sym', df2)
->>> pykx.Table(df2)
-pykx.Table(q('
+>>> df2 = pykx.q.xkey('sym', df2)
+>>> pykx.Table(df1)
+pykx.Table(pykx.q('
 sym  p
 ------
 IBM  7
@@ -680,15 +684,15 @@ FDP  5
 IBM  2
 MSFT 5
 '))
->>> df1
-pykx.KeyedTable(q('
+>>> df2
+pykx.KeyedTable(pykx.q('
 sym | ex  MC
 ----| --------
 IBM | N   1000
 MSFT| CME 250
 '))
 >>> pykx.q.lj(df1, df2)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym  p ex  MC
 ---------------
 IBM  7 N   1000
@@ -708,9 +712,9 @@ Left join nulls filled. For each record in the first table, the result has one r
 >>> import pandas as pd
 >>> df1 = pd.DataFrame({'sym':['IBM', 'FDP', 'FDP', 'FDP', 'IBM', 'MSFT'], 'p': pykx.LongVector([7, 8, 6, 5, 2, 5])})
 >>> df2 = pd.DataFrame({'sym':['IBM', 'MSFT'], 'ex': ['N', 'CME'], 'MC': pykx.LongVector([1000, 250])})
->>> b = pykx.q.xkey('sym', df2)
+>>> df2 = pykx.q.xkey('sym', df2)
 >>> pykx.Table(df1)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym  p
 ------
 IBM  7
@@ -720,15 +724,15 @@ FDP  5
 IBM  2
 MSFT 5
 '))
->>> df1
-pykx.KeyedTable(q('
+>>> df2
+pykx.KeyedTable(pykx.q('
 sym | ex  MC
 ----| --------
 IBM | N   1000
 MSFT| CME 250
 '))
 >>> pykx.q.ljf(df1, df2)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym  p ex  MC
 ---------------
 IBM  7 N   1000
@@ -748,7 +752,7 @@ Plus join. For each record in the first table, the result has one record with th
 >>> import pandas as pd
 >>> df1 = pd.DataFrame({'a': pykx.LongVector([1, 2, 3]), 'b':['x', 'y', 'z'], 'c': pykx.LongVector([10, 20, 30])})
 >>> pykx.Table(df1)
-pykx.Table(q('
+pykx.Table(pykx.q('
 a b c
 ------
 1 x 10
@@ -762,14 +766,14 @@ a b c
 ...     'd': pykx.LongVector([10, 20])
 ... })
 >>> df2 = pykx.q.xkey(pykx.SymbolVector(['a', 'b']), df2)
-pykx.KeyedTable(q('
+pykx.KeyedTable(pykx.q('
 a b| c d
 ---| ----
 1 x| 1 10
 3 z| 2 20
 '))
 >>> pykx.q.pj(df1, df2)
-pykx.Table(q('
+pykx.Table(pykx.q('
 a b c  d
 ---------
 1 x 11 10
@@ -799,7 +803,7 @@ Union join. Where the first table and the second table are both keyed or both un
 0   IBM    N  1000
 1  MSFT  CME   250
 >>> pykx.q.uj(df1, df2)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym  p ex  MC
 ---------------
 IBM  7
@@ -834,7 +838,7 @@ Union join nulls filled. Where the first table and the second table are both key
 0   IBM    N  1000
 1  MSFT  CME   250
 >>> pykx.q.ujf(df1, df2)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym  p ex  MC
 ---------------
 IBM  7
@@ -855,7 +859,7 @@ Window join. Returns for each record in the table, a record with additional colu
 ```python
 >>> import pandas as pd
 >>> import numpy as np
->>> pykx.q('t: ([]sym:3#`ibm;time:10:01:01 10:01:04 10:01:08;price:100 101 105)')
+>>> pykx.q('t: ([]sym:3#`ibm;time:10:01:01 10:01:04 10:01:08;price:100 101 105); t')
 pykx.Table(pykx.q('
 sym time     price
 ------------------
@@ -873,6 +877,8 @@ ibm 10:01:08 105
 1  ibm 0 days 10:01:04    101
 2  ibm 0 days 10:01:08    105
 >>> pykx.q('q:([]sym:`ibm; time:10:01:01+til 9; ask: (101 103 103 104 104 107 108 107 108); bid: (98 99 102 103 103 104 106 106 107))')
+pykx.Identity(pykx.q('::'))
+>>> pykx.q['q']
 pykx.Table(pykx.q('
 sym time     ask bid
 --------------------
@@ -905,7 +911,7 @@ Window join. Returns for each record in the table, a record with additional colu
 ```python
 >>> import pandas as pd
 >>> import numpy as np
->>> pykx.q('t: ([]sym:3#`ibm;time:10:01:01 10:01:04 10:01:08;price:100 101 105)')
+>>> pykx.q('t: ([]sym:3#`ibm;time:10:01:01 10:01:04 10:01:08;price:100 101 105); t')
 pykx.Table(pykx.q('
 sym time     price
 ------------------
@@ -923,6 +929,8 @@ ibm 10:01:08 105
 1  ibm 0 days 10:01:04    101
 2  ibm 0 days 10:01:08    105
 >>> pykx.q('q:([]sym:`ibm; time:10:01:01+til 9; ask: (101 103 103 104 104 107 108 107 108); bid: (98 99 102 103 103 104 106 106 107))')
+pykx.Identity(pykx.q('::'))
+>>> pykx.q['q']
 pykx.Table(pykx.q('
 sym time     ask bid
 --------------------
@@ -956,7 +964,7 @@ Count the items of a list or dictionary.
 
 ```python
 >>> pykx.q.count([1, 2, 3])
-pykx.LongAtom(q('3'))
+pykx.LongAtom(pykx.q('3'))
 ```
 
 ### [cross](https://code.kx.com/q/ref/cross/)
@@ -965,7 +973,7 @@ Returns all possible combinations of x and y.
 
 ```python
 >>> pykx.q.cross([1, 2, 3], [4, 5, 6])
-pykx.List(q('
+pykx.List(pykx.q('
 1 4
 1 5
 1 6
@@ -984,7 +992,7 @@ Cut a list or table into sub-arrays.
 
 ```python
 >>> pykx.q.cut(3, range(10))
-pykx.List(q('
+pykx.List(pykx.q('
 0 1 2
 3 4 5
 6 7 8
@@ -998,7 +1006,7 @@ Returns a list with its arguments as items.
 
 ```python
 >>> pykx.q.enlist(1, 2, 3, 4)
-pykx.LongVector(q('1 2 3 4'))
+pykx.LongVector(pykx.q('1 2 3 4'))
 ```
 
 ### [fills](https://code.kx.com/q/ref/fills/)
@@ -1008,7 +1016,7 @@ Replace nulls with preceding non-nulls.
 ```python
 >>> a = pykx.q('0N 1 2 0N 0N 2 3 4 5 0N 4')
 >>> pykx.q.fills(a)
-pykx.LongVector(q('0N 1 2 2 2 2 3 4 5 5 4'))
+pykx.LongVector(pykx.q('0N 1 2 2 2 2 3 4 5 5 4'))
 ```
 
 ### [first](https://code.kx.com/q/ref/first/)
@@ -1016,7 +1024,7 @@ pykx.LongVector(q('0N 1 2 2 2 2 3 4 5 5 4'))
 First item of a list
 ```python
 >>> pykx.q.first([1, 2, 3, 4, 5])
-pykx.LongAtom(q('1'))
+pykx.LongAtom(pykx.q('1'))
 ```
 
 ### [flip](https://code.kx.com/q/ref/flip/)
@@ -1025,7 +1033,7 @@ Returns x transposed, where x may be a list of lists, a dictionary or a table.
 
 ```python
 >>> pykx.q.flip([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10]])
-pykx.List(q('
+pykx.List(pykx.q('
 1 6
 2 7
 3 8
@@ -1042,7 +1050,7 @@ The order of the keys is the order in which they appear in x.
 
 ```python
 >>> pykx.q.group(b'mississippi')
-pykx.Dictionary(q('
+pykx.Dictionary(pykx.q('
 m| ,0
 i| 1 4 7 10
 s| 2 3 5 6
@@ -1056,7 +1064,7 @@ Intersection of two lists or dictionaries.
 
 ```python
 >>> pykx.q.inter([1, 2, 3], [2, 3, 4])
-pykx.LongVector(q('2 3'))
+pykx.LongVector(pykx.q('2 3'))
 ```
 
 ### [last](https://code.kx.com/q/ref/first/#last)
@@ -1065,7 +1073,7 @@ Last item of a list
 
 ```python
 >>> pykx.q.last([1, 2, 3])
-pykx.LongAtom(q('3'))
+pykx.LongAtom(pykx.q('3'))
 ```
 
 ### [mcount](https://code.kx.com/q/ref/count/#mcount)
@@ -1074,7 +1082,7 @@ Returns the x-item moving counts of the non-null items of y. The first x items o
 
 ```python
 >>> pykx.q.mcount(3, pykx.q('1 2 3 4 5 0N 6 7 8'))
-pykx.IntVector(q('1 2 3 3 3 2 2 2 3i'))
+pykx.IntVector(pykx.q('1 2 3 3 3 2 2 2 3i'))
 ```
 
 ### [next](https://code.kx.com/q/ref/next/)
@@ -1083,7 +1091,7 @@ Next items in a list.
 
 ```python
 >>> pykx.q.next([1, 2, 3, 4])
-pykx.LongVector(q('2 3 4 0N'))
+pykx.LongVector(pykx.q('2 3 4 0N'))
 ```
 
 ### [prev](https://code.kx.com/q/ref/next/#prev)
@@ -1092,7 +1100,7 @@ Immediately preceding items in a list.
 
 ```python
 >>> pykx.q.prev([1, 2, 3, 4])
-pykx.LongVector(q('0N 1 2 3'))
+pykx.LongVector(pykx.q('0N 1 2 3'))
 ```
 
 ### [raze](https://code.kx.com/q/ref/raze/)
@@ -1101,7 +1109,7 @@ Return the items of x joined, collapsing one level of nesting.
 
 ```python
 >>> pykx.q.raze([[1, 2], [3, 4]])
-pykx.LongVector(q('1 2 3 4'))
+pykx.LongVector(pykx.q('1 2 3 4'))
 ```
 
 ### [reverse](https://code.kx.com/q/ref/reverse/)
@@ -1110,13 +1118,7 @@ Reverse the order of items of a list or dictionary.
 
 ```python
 >>> pykx.q.reverse([1, 2, 3, 4, 5])
-pykx.List(q('
-5
-4
-3
-2
-1
-'))
+pykx.LongVector(pykx.q('5 4 3 2 1'))
 ```
 
 ### [rotate](https://code.kx.com/q/ref/rotate/)
@@ -1125,7 +1127,7 @@ Shift the items of a list to the left or right.
 
 ```python
 >>> pykx.q.rotate(2, [1, 2, 3, 4, 5])
-pykx.LongVector(q('3 4 5 1 2'))
+pykx.LongVector(pykx.q('3 4 5 1 2'))
 ```
 
 ### [sublist](https://code.kx.com/q/ref/sublist/)
@@ -1134,7 +1136,7 @@ Select a sublist of a list.
 
 ```python
 >>> pykx.q.sublist(2, [1, 2, 3, 4, 5])
-pykx.LongVector(q('1 2'))
+pykx.LongVector(pykx.q('1 2'))
 ```
 
 ### [sv](https://code.kx.com/q/ref/sv/)
@@ -1146,7 +1148,7 @@ pykx.LongVector(q('1 2'))
 
 ```python
 >>> pykx.q.sv(10, [1, 2, 3, 4])
-pykx.LongAtom(q('1234'))
+pykx.LongAtom(pykx.q('1234'))
 ```
 
 ### [til](https://code.kx.com/q/ref/til/)
@@ -1155,7 +1157,7 @@ First x natural numbers.
 
 ```python
 >>> pykx.q.til(10)
-pykx.LongVector(q('0 1 2 3 4 5 6 7 8 9'))
+pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
 ```
 
 ### [union](https://code.kx.com/q/ref/union/)
@@ -1164,7 +1166,7 @@ Union of two lists.
 
 ```python
 >>> pykx.q.union([1, 2, 3, 3, 5], [2, 4, 6, 8])
-pykx.LongVector(q('1 2 3 5 4 6 8'))
+pykx.LongVector(pykx.q('1 2 3 5 4 6 8'))
 ```
 
 ### [vs](https://code.kx.com/q/ref/vs/)
@@ -1176,7 +1178,7 @@ pykx.LongVector(q('1 2 3 5 4 6 8'))
 
 ```python
 >>> pykx.q.vs(b',', b'one,two,three')
-pykx.List(q('
+pykx.List(pykx.q('
 "one"
 "two"
 "three"
@@ -1189,9 +1191,9 @@ Copies of indexes of a list or keys of a dictionary.
 
 ```python
 >>> pykx.q.where(pykx.BooleanVector([True, False, True, True, False]))
-pykx.LongVector(q('0 2 3'))
+pykx.LongVector(pykx.q('0 2 3'))
 >>> pykx.q.where(pykx.q('1 0 0 1 0 1 1'))
-pykx.LongVector(q('0 3 5 6'))
+pykx.LongVector(pykx.q('0 3 5 6'))
 ```
 
 ### [xprev](https://code.kx.com/q/ref/next/#xprev)
@@ -1200,14 +1202,14 @@ Nearby items in a list.
 
 ```python
 >>> pykx.q.xprev(2, [1, 2, 3, 4, 5, 6])
-pykx.LongVector(q('0N 0N 1 2 3 4'))
+pykx.LongVector(pykx.q('0N 0N 1 2 3 4'))
 ```
 
 There is no `xnext` function, but `xprev` with a negative number as its first argument can achieve this.
 
 ```python
 >>> pykx.q.xprev(-2, [1, 2, 3, 4, 5, 6])
-pykx.LongVector(q('3 4 5 6 0N 0N'))
+pykx.LongVector(pykx.q('3 4 5 6 0N 0N'))
 ```
 
 ## Logic
@@ -1218,9 +1220,9 @@ Everything is true.
 
 ```python
 >>> pykx.q.all([True, True, True, True])
-pykx.BooleanAtom(q('1b'))
+pykx.BooleanAtom(pykx.q('1b'))
 >>> pykx.q.all([True, True, False, True])
-pykx.BooleanAtom(q('0b'))
+pykx.BooleanAtom(pykx.q('0b'))
 ```
 
 ### [any](https://code.kx.com/q/ref/all-any/#any)
@@ -1229,9 +1231,9 @@ Something is true.
 
 ```python
 >>> pykx.q.any([False, False, True, False])
-pykx.BooleanAtom(q('1b'))
+pykx.BooleanAtom(pykx.q('1b'))
 >>> pykx.q.any([False, False])
-pykx.BooleanAtom(q('0b'))
+pykx.BooleanAtom(pykx.q('0b'))
 ```
 
 ## Math
@@ -1242,7 +1244,7 @@ Where x is a numeric or temporal, returns the absolute value of x. Null is retur
 
 ```python
 >>> pykx.q.abs(-5)
-pykx.LongAtom(q('5'))
+pykx.LongAtom(pykx.q('5'))
 ```
 
 ### [acos](https://code.kx.com/q/ref/cos/)
@@ -1251,7 +1253,7 @@ The arccosine of x; that is, the value whose cosine is x. The result is in radia
 
 ```python
 >>> pykx.q.acos(0.5)
-pykx.FloatAtom(q('1.047198'))
+pykx.FloatAtom(pykx.q('1.047198'))
 ```
 
 ### [asin](https://code.kx.com/q/ref/sin/)
@@ -1260,7 +1262,7 @@ The arcsine of x; that is, the value whose sine is x. The result is in radians a
 
 ```python
 >>> pykx.q.asin(0.5)
-pykx.FloatAtom(q('0.5235988'))
+pykx.FloatAtom(pykx.q('0.5235988'))
 ```
 
 ### [atan](https://code.kx.com/q/ref/tan/)
@@ -1268,7 +1270,7 @@ pykx.FloatAtom(q('0.5235988'))
 The arctangent of x; that is, the value whose tangent is x. The result is in radians and lies between -π / 2 and π / 2.
 ```python
 >>> pykx.q.atan(0.5)
-pykx.FloatAtom(q('0.4636476'))
+pykx.FloatAtom(pykx.q('0.4636476'))
 ```
 
 ### [avg](https://code.kx.com/q/ref/avg/#avg)
@@ -1277,7 +1279,7 @@ Arithmetic mean.
 
 ```python
 >>> pykx.q.avg([1, 2, 3, 4, 7])
-pykx.FloatAtom(q('3.4'))
+pykx.FloatAtom(pykx.q('3.4'))
 ```
 
 ### [avgs](https://code.kx.com/q/ref/avg/#avgs)
@@ -1286,7 +1288,7 @@ Running mean.
 
 ```python
 >>> pykx.q.avgs([1, 2, 3, 4, 7])
-pykx.FloatVector(q('1 1.5 2 2.5 3.4'))
+pykx.FloatVector(pykx.q('1 1.5 2 2.5 3.4'))
 ```
 
 ### [ceiling](https://code.kx.com/q/ref/ceiling/)
@@ -1295,7 +1297,7 @@ Round up.
 
 ```python
 >>> pykx.q.ceiling([-2.7, -1.1, 0, 1.1, 2.7])
-pykx.LongVector(q('-2 -1 0 2 3'))
+pykx.LongVector(pykx.q('-2 -1 0 2 3'))
 ```
 
 ### [cor](https://code.kx.com/q/ref/cor/)
@@ -1304,7 +1306,7 @@ Correlation.
 
 ```python
 >>> pykx.q.cor(pykx.LongVector([29, 10, 54]), pykx.LongVector([1, 3, 9]))
-pykx.FloatAtom(q('0.7727746'))
+pykx.FloatAtom(pykx.q('0.7727746'))
 ```
 
 ### [cos](https://code.kx.com/q/ref/cos/)
@@ -1313,7 +1315,7 @@ The cosine of x, taken to be in radians. The result is between -1 and 1, or null
 
 ```python
 >>> pykx.q.cos(0.2)
-pykx.FloatAtom(q('0.9800666'))
+pykx.FloatAtom(pykx.q('0.9800666'))
 ```
 
 ### [cov](https://code.kx.com/q/ref/cov/)
@@ -1322,7 +1324,7 @@ Where x and y are conforming numeric lists returns their covariance as a floatin
 
 ```python
 >>> pykx.q.cov(pykx.LongVector([29, 10, 54]), pykx.LongVector([1, 3, 9]))
-pykx.FloatAtom(q('47.33333'))
+pykx.FloatAtom(pykx.q('47.33333'))
 ```
 
 ### [deltas](https://code.kx.com/q/ref/deltas/)
@@ -1331,7 +1333,7 @@ Where x is a numeric or temporal vector, returns differences between consecutive
 
 ```python
 >>> pykx.q.deltas(pykx.LongVector([1, 4, 9, 16]))
-pykx.LongVector(q('1 3 5 7'))
+pykx.LongVector(pykx.q('1 3 5 7'))
 ```
 
 ### [dev](https://code.kx.com/q/ref/dev/)
@@ -1340,7 +1342,7 @@ Standard deviation.
 
 ```python
 >>> pykx.q.dev(pykx.LongVector([10, 343, 232, 55]))
-pykx.FloatAtom(q('134.3484'))
+pykx.FloatAtom(pykx.q('134.3484'))
 ```
 
 ### [div](https://code.kx.com/q/ref/div/)
@@ -1349,7 +1351,7 @@ Integer division.
 
 ```python
 >>> pykx.q.div(7, 3)
-pykx.LongAtom(q('2'))
+pykx.LongAtom(pykx.q('2'))
 ```
 
 ### [ema](https://code.kx.com/q/ref/ema/)
@@ -1358,7 +1360,7 @@ The cosine of x, taken to be in radians. The result is between -1 and 1, or null
 
 ```python
 >>> pykx.q.ema(0.5, [1, 2, 3, 4, 5])
-pykx.FloatVector(q('1 1.5 2.25 3.125 4.0625'))
+pykx.FloatVector(pykx.q('1 1.5 2.25 3.125 4.0625'))
 ```
 
 ### [exp](https://code.kx.com/q/ref/exp/)
@@ -1367,7 +1369,7 @@ Raise *e* to a power.
 
 ```python
 >>> pykx.q.exp(1)
-pykx.FloatAtom(q('2.718282'))
+pykx.FloatAtom(pykx.q('2.718282'))
 ```
 
 ### [floor](https://code.kx.com/q/ref/floor/)
@@ -1376,7 +1378,7 @@ Round down.
 
 ```python
 >>> pykx.q.floor([-2.7, -1.1, 0, 1.1, 2.7])
-pykx.LongVector(q('-3 -2 0 1 2'))
+pykx.LongVector(pykx.q('-3 -2 0 1 2'))
 ```
 
 ### [inv](https://code.kx.com/q/ref/inv/)
@@ -1385,13 +1387,13 @@ Matrix inverse.
 
 ```python
 >>> a = pykx.q('3 3# 2 4 8 3 5 6 0 7 1f')
-pykx.List(q('
+pykx.List(pykx.q('
 2 4 8
 3 5 6
 0 7 1
 '))
 >>> pykx.q.inv(a)
-pykx.List(q('
+pykx.List(pykx.q('
 -0.4512195  0.6341463  -0.195122
 -0.03658537 0.02439024 0.1463415
 0.2560976   -0.1707317 -0.02439024
@@ -1404,7 +1406,7 @@ Natural logarithm.
 
 ```python
 >>> pykx.q.log([1, 2, 3])
-pykx.FloatVector(q('0 0.6931472 1.098612'))
+pykx.FloatVector(pykx.q('0 0.6931472 1.098612'))
 ```
 
 ### [lsq](https://code.kx.com/q/ref/lsq/)
@@ -1413,20 +1415,20 @@ Least squares, matrix divide.
 
 ```python
 >>> a = pykx.q('1f+3 4#til 12')
-pykx.List(q('
+pykx.List(pykx.q('
 1 2  3  4
 5 6  7  8
 9 10 11 12
 '))
 >>> b = pykx.q('4 4#2 7 -2 5 5 3 6 1 -2 5 2 7 5 0 3 4f')
-pykx.List(q('
+pykx.List(pykx.q('
 2  7 -2 5
 5  3 6  1
 -2 5 2  7
 5  0 3  4
 '))
 >>> pykx.q.lsq(a, b)
-pykx.List(q('
+pykx.List(pykx.q('
 -0.1233333 0.16      0.4766667 0.28
 0.07666667 0.6933333 0.6766667 0.5466667
 0.2766667  1.226667  0.8766667 0.8133333
@@ -1439,7 +1441,7 @@ Moving averages.
 
 ```python
 >>> pykx.q.mavg(3, [1, 2, 3, 5, 7, 10])
-pykx.FloatVector(q('1 1.5 2 3.333333 5 7.333333'))
+pykx.FloatVector(pykx.q('1 1.5 2 3.333333 5 7.333333'))
 ```
 
 ### [max](https://code.kx.com/q/ref/max/)
@@ -1448,7 +1450,7 @@ Maximum.
 
 ```python
 >>> pykx.q.max([0, 7, 2, 4 , 1, 3])
-pykx.LongAtom(q('7'))
+pykx.LongAtom(pykx.q('7'))
 ```
 
 ### [maxs](https://code.kx.com/q/ref/max/#maxs)
@@ -1457,7 +1459,7 @@ Maximums.
 
 ```python
 >>> pykx.q.maxs([1, 2, 5, 4, 7, 1, 2])
-pykx.LongVector(q('1 2 5 5 7 7 7'))
+pykx.LongVector(pykx.q('1 2 5 5 7 7 7'))
 ```
 
 ### [mdev](https://code.kx.com/q/ref/dev/#mdev)
@@ -1466,7 +1468,7 @@ Moving deviations.
 
 ```python
 >>> pykx.q.mdev(3, [1, 2, 5, 4, 7, 1, 2])
-pykx.FloatVector(q('0 0.5 1.699673 1.247219 1.247219 2.44949 2.624669'))
+pykx.FloatVector(pykx.q('0 0.5 1.699673 1.247219 1.247219 2.44949 2.624669'))
 ```
 
 ### [med](https://code.kx.com/q/ref/med/)
@@ -1475,7 +1477,7 @@ Median.
 
 ```python
 >>> pykx.q.med([1, 2, 3, 4, 4, 1, 2, 4, 5])
-pykx.FloatAtom(q('3f'))
+pykx.FloatAtom(pykx.q('3f'))
 ```
 
 ### [min](https://code.kx.com/q/ref/min/)
@@ -1484,7 +1486,7 @@ Minimum.
 
 ```python
 >>> pykx.q.min([7, 5, 2, 4, 6, 5, 1, 4])
-pykx.LongAtom(q('1'))
+pykx.LongAtom(pykx.q('1'))
 ```
 
 ### [mins](https://code.kx.com/q/ref/min/#mins)
@@ -1493,7 +1495,7 @@ Minimums.
 
 ```python
 >>> pykx.q.mins([7, 5, 2, 4, 6, 5, 1, 4])
-pykx.LongVector(q('7 5 2 2 2 2 1 1'))
+pykx.LongVector(pykx.q('7 5 2 2 2 2 1 1'))
 ```
 
 ### [mmax](https://code.kx.com/q/ref/max/#mmax)
@@ -1502,7 +1504,7 @@ Moving maximums.
 
 ```python
 >>> pykx.q.mmax(4, [7, 5, 2, 4, 6, 5, 1, 4])
-pykx.LongVector(q('7 7 7 7 6 6 6 6'))
+pykx.LongVector(pykx.q('7 7 7 7 6 6 6 6'))
 ```
 
 ### [mmin](https://code.kx.com/q/ref/min/#mmin)
@@ -1511,7 +1513,7 @@ Moving minimums.
 
 ```python
 >>> pykx.q.mmin(4, pykx.LongVector([7, 5, 2, 4, 6, 5, 1, 4]))
-pykx.LongVector(q('7 5 2 2 2 2 1 1'))
+pykx.LongVector(pykx.q('7 5 2 2 2 2 1 1'))
 ```
 
 ### [mmu](https://code.kx.com/q/ref/mmu/)
@@ -1521,20 +1523,20 @@ Matrix multiply, dot product.
 ```python
 >>> a = pykx.q('2 4#2 4 8 3 5 6 0 7f')
 >>> a
-pykx.List(q('
+pykx.List(pykx.q('
 2 4 8 3
 5 6 0 7
 '))
 >>> b = pykx.q('4 3#"f"$til 12')
 >>> b
-pykx.List(q('
+pykx.List(pykx.q('
 0 1  2
 3 4  5
 6 7  8
 9 10 11
 '))
 >>> pykx.q.mmu(a, b)
-pykx.List(q('
+pykx.List(pykx.q('
 87 104 121
 81 99  117
 '))
@@ -1546,7 +1548,7 @@ Modulus.
 
 ```python
 >>> pykx.q.mod([1, 2, 3, 4, 5, 6, 7], 4)
-pykx.LongVector(q('1 2 3 0 1 2 3'))
+pykx.LongVector(pykx.q('1 2 3 0 1 2 3'))
 ```
 
 ### [msum](https://code.kx.com/q/ref/sum/#msum)
@@ -1555,7 +1557,7 @@ Moving sums.
 
 ```python
 >>> pykx.q.msum(3, [1, 2, 3, 4, 5, 6, 7])
-pykx.LongVector(q('1 3 6 9 12 15 18'))
+pykx.LongVector(pykx.q('1 3 6 9 12 15 18'))
 ```
 
 ### [neg](https://code.kx.com/q/ref/neg/)
@@ -1564,7 +1566,7 @@ Negate.
 
 ```python
 >>> pykx.q.neg([2, 0, -1, 3, -5])
-pykx.LongVector(q('-2 0 1 -3 5'))
+pykx.LongVector(pykx.q('-2 0 1 -3 5'))
 ```
 
 ### [prd](https://code.kx.com/q/ref/prd/)
@@ -1573,7 +1575,7 @@ Product.
 
 ```python
 >>> pykx.q.prd([1, 2, 3, 4, 5])
-pykx.LongAtom(q('120'))
+pykx.LongAtom(pykx.q('120'))
 ```
 
 ### [prds](https://code.kx.com/q/ref/prd/#prds)
@@ -1582,7 +1584,7 @@ Cumulative products.
 
 ```python
 >>> pykx.q.prds([1, 2, 3, 4, 5])
-pykx.LongVector(q('1 2 6 24 120'))
+pykx.LongVector(pykx.q('1 2 6 24 120'))
 ```
 
 ### [rand](https://code.kx.com/q/ref/rand/)
@@ -1591,7 +1593,7 @@ Pick randomly.
 
 ```python
 >>> pykx.q.rand([1, 2, 3, 4, 5])
-pykx.LongAtom(q('2'))
+pykx.LongAtom(pykx.q('2'))
 ```
 
 ### [ratios](https://code.kx.com/q/ref/ratios/)
@@ -1600,7 +1602,7 @@ Ratios between items.
 
 ```python
 >>> pykx.q.ratios([1, 2, 3, 4, 5])
-pykx.FloatVector(q('0n 2 1.5 1.333333 1.25'))
+pykx.FloatVector(pykx.q('1 2 1.5 1.333333 1.25'))
 ```
 
 ### [reciprocal](https://code.kx.com/q/ref/reciprocal/)
@@ -1609,7 +1611,7 @@ Reciprocal of a number.
 
 ```python
 >>> pykx.q.reciprocal([1, 0, 3])
-pykx.FloatVector(q('1 0w 0.3333333'))
+pykx.FloatVector(pykx.q('1 0w 0.3333333'))
 ```
 
 ### [scov](https://code.kx.com/q/ref/cov/#scov)
@@ -1618,7 +1620,7 @@ Sample covariance.
 
 ```python
 >>> pykx.q.scov(pykx.LongVector([2, 3, 5, 7]), pykx.LongVector([4, 3, 0, 2]))
-pykx.FloatAtom(q('-2.416667'))
+pykx.FloatAtom(pykx.q('-2.416667'))
 ```
 
 ### [sdev](https://code.kx.com/q/ref/dev/#sdev)
@@ -1627,7 +1629,7 @@ Sample standard deviation.
 
 ```python
 >>> pykx.q.sdev(pykx.LongVector([10, 343, 232, 55]))
-pykx.FloatAtom(q('155.1322'))
+pykx.FloatAtom(pykx.q('155.1322'))
 ```
 
 ### [signum](https://code.kx.com/q/ref/signum/)
@@ -1640,7 +1642,7 @@ Where x (or its underlying value for temporals) is
 
 ```python
 >>> pykx.q.signum([-2, 0, 1, 3])
-pykx.IntVector(q('-1 0 1 1i'))
+pykx.IntVector(pykx.q('-1 0 1 1i'))
 ```
 
 ### [sin](https://code.kx.com/q/ref/sin/)
@@ -1649,7 +1651,7 @@ Sine.
 
 ```python
 >>> pykx.q.sin(0.5)
-pykx.FloatAtom(q('0.4794255'))
+pykx.FloatAtom(pykx.q('0.4794255'))
 ```
 
 ### [sqrt](https://code.kx.com/q/ref/sqrt/)
@@ -1658,7 +1660,7 @@ Square root.
 
 ```python
 >>> pykx.q.sqrt([-1, 0, 25, 50])
-pykx.FloatVector(q('0n 0 5 7.071068'))
+pykx.FloatVector(pykx.q('0n 0 5 7.071068'))
 ```
 
 ### [sum](https://code.kx.com/q/ref/sum/)
@@ -1667,7 +1669,7 @@ Total.
 
 ```python
 >>> pykx.q.sum(pykx.LongVector([2, 3, 5, 7]))
-pykx.LongAtom(q('17'))
+pykx.LongAtom(pykx.q('17'))
 ```
 
 ### [sums](https://code.kx.com/q/ref/sum/#sums)
@@ -1676,7 +1678,7 @@ Cumulative total.
 
 ```python
 >>> pykx.q.sums(pykx.LongVector([2, 3, 5, 7]))
-pykx.LongVector(q('2 5 10 17'))
+pykx.LongVector(pykx.q('2 5 10 17'))
 ```
 
 ### [svar](https://code.kx.com/q/ref/var/#svar)
@@ -1685,7 +1687,7 @@ Sample variance.
 
 ```python
 >>> pykx.q.svar(pykx.LongVector([2, 3, 5, 7]))
-pykx.FloatAtom(q('4.916667'))
+pykx.FloatAtom(pykx.q('4.916667'))
 ```
 
 ### [tan](https://code.kx.com/q/ref/tan/)
@@ -1694,7 +1696,7 @@ Tangent.
 
 ```python
 >>> pykx.q.tan(0.5)
-pykx.FloatAtom(q('0.5463025'))
+pykx.FloatAtom(pykx.q('0.5463025'))
 ```
 
 ### [var](https://code.kx.com/q/ref/var/)
@@ -1703,7 +1705,7 @@ Variance.
 
 ```python
 >>> pykx.q.var(pykx.LongVector([2, 3, 5, 7]))
-pykx.FloatAtom(q('3.6875'))
+pykx.FloatAtom(pykx.q('3.6875'))
 ```
 
 ### [wavg](https://code.kx.com/q/ref/avg/#wavg)
@@ -1712,7 +1714,7 @@ Weighted average.
 
 ```python
 >>> pykx.q.wavg([2, 3, 4], [1, 2 ,4])
-pykx.FloatAtom(q('2.666667'))
+pykx.FloatAtom(pykx.q('2.666667'))
 ```
 
 ### [within](https://code.kx.com/q/ref/within/)
@@ -1721,7 +1723,7 @@ Check bounds.
 
 ```python
 >>> pykx.q.within([1, 3, 10, 6, 4], [2, 6])
-pykx.BooleanVector(q('01011b'))
+pykx.BooleanVector(pykx.q('01011b'))
 ```
 
 ### [wsum](https://code.kx.com/q/ref/sum/#wsum)
@@ -1730,7 +1732,7 @@ Weighted sum.
 
 ```python
 >>> pykx.q.wsum([2, 3, 4], [1, 2, 4]) # equivalent to 2 * 1 + 3 * 2 + 4 * 4
-pykx.LongAtom(q('24'))
+pykx.FloatAtom(pykx.q('24f'))
 ```
 
 ### [xexp](https://code.kx.com/q/ref/exp/#xepx)
@@ -1739,7 +1741,7 @@ Raise x to a power.
 
 ```python
 >>> pykx.q.xexp(2, 8)
-pykx.FloatAtom(q('256f'))
+pykx.FloatAtom(pykx.q('256f'))
 ```
 
 ### [xlog](https://code.kx.com/q/ref/log/#xlog)
@@ -1748,7 +1750,7 @@ Logarithm base x.
 
 ```python
 >>> pykx.q.xlog(2, 8)
-pykx.FloatAtom(q('3f'))
+pykx.FloatAtom(pykx.q('3f'))
 ```
 
 ## Meta
@@ -1768,9 +1770,9 @@ The possible attributes are:
 
 ```python
 >>> pykx.q.attr([1,2,3])
-pykx.SymbolAtom(q('`'))
+pykx.SymbolAtom(pykx.q('`'))
 >>> pykx.q.attr(pykx.q('asc 1 2 3'))
-pykx.SymbolAtom(q('`s'))
+pykx.SymbolAtom(pykx.q('`s'))
 ```
 
 ### [null](https://code.kx.com/q/ref/null/)
@@ -1779,11 +1781,11 @@ Is null.
 
 ```python
 >>> pykx.q.null(1)
-pykx.BooleanAtom(q('0b'))
+pykx.BooleanAtom(pykx.q('0b'))
 >>> pykx.q.null(float('NaN'))
-pykx.BooleanAtom(q('1b'))
+pykx.BooleanAtom(pykx.q('1b'))
 >>> pykx.q.null(None)
-pykx.BooleanAtom(q('1b'))
+pykx.BooleanAtom(pykx.q('1b'))
 ```
 
 ### [tables](https://code.kx.com/q/ref/tables/)
@@ -1793,8 +1795,8 @@ List of tables in a namespace.
 ```python
 >>> pykx.q('exampleTable: ([] a: til 10; b: 10?10)')
 pykx.Identity(pykx.q('::'))
->>> pykx.q('exampleTable: ([] a: til 10; b: 10?10)')
-pykx.Table(q('
+>>> pykx.q('exampleTable')
+pykx.Table(pykx.q('
 a b
 ---
 0 8
@@ -1809,7 +1811,7 @@ a b
 9 5
 '))
 >>> pykx.q.tables('.')
-pykx.SymbolVector(q(',`exampleTable'))
+pykx.SymbolVector(pykx.q(',`exampleTable'))
 ```
 
 ### [type](https://code.kx.com/q/ref/type/)
@@ -1818,11 +1820,11 @@ Underlying [k type](https://code.kx.com/q/ref/#datatypes) of an [object](../pykx
 
 ```python
 >>> pykx.q.type(1)
-pykx.ShortAtom(q('-7h'))
+pykx.ShortAtom(pykx.q('-7h'))
 >>> pykx.q.type([1, 2, 3])
-pykx.ShortAtom(q('0h'))
+pykx.ShortAtom(pykx.q('7h'))
 >>> pykx.q.type(pykx.LongVector([1, 2, 3]))
-pykx.ShortAtom(q('7h'))
+pykx.ShortAtom(pykx.q('7h'))
 ```
 
 ### [view](https://code.kx.com/q/ref/view/)
@@ -1833,9 +1835,9 @@ Expression defining a view.
 >>> pykx.q('v::2+a*3')
 >>> pykx.q('a:5')
 >>> pykx.q('v')
-pykx.LongAtom(q('17'))
+pykx.LongAtom(pykx.q('17'))
 >>> pykx.q.view('v')
-pykx.CharVector(q('"2+a*3"'))
+pykx.CharVector(pykx.q('"2+a*3"'))
 ```
 
 ### [views](https://code.kx.com/q/ref/view/#views)
@@ -1846,9 +1848,9 @@ List views defined in the default namespace.
 >>> pykx.q('v::2+a*3')
 >>> pykx.q('a:5')
 >>> pykx.q('v')
-pykx.LongAtom(q('17'))
+pykx.LongAtom(pykx.q('17'))
 >>> pykx.q.views()
-pykx.SymbolVector(q(',`v'))
+pykx.SymbolVector(pykx.q(',`v'))
 ```
 
 ## Queries
@@ -1862,7 +1864,7 @@ Apply an aggregate to groups.
 pykx.LongVector(pykx.q('4 9 2 7 0 1 9 2 1 8'))
 >>> group = pykx.SymbolVector(['a', 'b', 'a', 'b', 'c', 'd', 'c', 'd', 'd', 'c'])
 pykx.SymbolVector(pykx.q('`a`b`a`b`c`d`c`d`d`c'))
->>> >>> pykx.q.fby(pykx.q('(sum; data)'), group)
+>>> pykx.q.fby(pykx.q('(sum; data)'), group)
 pykx.LongVector(pykx.q('6 16 6 16 17 4 17 4 4 17'))
 ```
 
@@ -1874,7 +1876,7 @@ Ascending sort.
 
 ```python
 >>> pykx.q.asc([4, 2, 5, 1, 0])
-pykx.LongVector(q('`s#0 1 2 4 5'))
+pykx.LongVector(pykx.q('`s#0 1 2 4 5'))
 ```
 
 ### [bin](https://code.kx.com/q/ref/bin/)
@@ -1883,9 +1885,9 @@ Binary search.
 
 ```python
 >>> pykx.q.bin([0, 2, 4, 6, 8, 10], 5)
-pykx.LongAtom(q('2'))
+pykx.LongAtom(pykx.q('2'))
 >>> pykx.q.bin([0, 2, 4, 6, 8, 10], [-10, 0, 4, 5, 6, 20])
-pykx.LongVector(q('-1 0 2 2 3 5'))
+pykx.LongVector(pykx.q('-1 0 2 2 3 5'))
 ```
 
 ### [binr](https://code.kx.com/q/ref/bin/#binr)
@@ -1894,9 +1896,9 @@ Binary search right.
 
 ```python
 >>> pykx.q.binr([0, 2, 4, 6, 8, 10], 5)
-pykx.LongAtom(q('3'))
+pykx.LongAtom(pykx.q('3'))
 >>> pykx.q.binr([0, 2, 4, 6, 8, 10], [-10, 0, 4, 5, 6, 20])
-pykx.LongVector(q('0 0 2 3 3 6'))
+pykx.LongVector(pykx.q('0 0 2 3 3 6'))
 ```
 
 ### [desc](https://code.kx.com/q/ref/desc/)
@@ -1905,7 +1907,7 @@ Descending sort.
 
 ```python
 >>> pykx.q.desc([4, 2, 5, 1, 0])
-pykx.LongVector(q('5 4 2 1 0'))
+pykx.LongVector(pykx.q('5 4 2 1 0'))
 ```
 
 ### [differ](https://code.kx.com/q/ref/differ/)
@@ -1914,7 +1916,7 @@ Find where list items change value.
 
 ```python
 >>> pykx.q.differ([1, 1, 2, 3, 4, 4])
-pykx.BooleanVector(q('101110b'))
+pykx.BooleanVector(pykx.q('101110b'))
 ```
 
 ### [distinct](https://code.kx.com/q/ref/distinct/)
@@ -1923,7 +1925,7 @@ Unique items of a list.
 
 ```python
 >>> pykx.q.distinct([1, 3, 1, 4, 5, 1, 2, 3])
-pykx.LongVector(q('1 3 4 5 2'))
+pykx.LongVector(pykx.q('1 3 4 5 2'))
 ```
 
 ### [iasc](https://code.kx.com/q/ref/asc/#iasc)
@@ -1932,7 +1934,7 @@ Ascending grade.
 
 ```python
 >>> pykx.q.iasc([4, 2, 5, 1, 0])
-pykx.LongVector(q('4 3 1 0 2'))
+pykx.LongVector(pykx.q('4 3 1 0 2'))
 ```
 
 ### [idesc](https://code.kx.com/q/ref/desc/#idesc)
@@ -1941,7 +1943,7 @@ Descending grade.
 
 ```python
 >>> pykx.q.idesc([4, 2, 5, 1, 0])
-pykx.LongVector(q('2 0 1 3 4'))
+pykx.LongVector(pykx.q('2 0 1 3 4'))
 ```
 
 ### [rank](https://code.kx.com/q/ref/rank/)
@@ -1952,9 +1954,9 @@ Where x is a list or dictionary, returns for each item in x the index of where i
 
 ```python
 >>> pykx.q.rank([4, 2, 5, 1, 0])
-pykx.LongVector(q('3 2 4 1 0'))
+pykx.LongVector(pykx.q('3 2 4 1 0'))
 >>> pykx.q.rank({'c': 3, 'a': 4, 'b': 1})
-pykx.LongVector(q('2 0 1'))
+pykx.LongVector(pykx.q('2 0 1'))
 ```
 
 ### [xbar](https://code.kx.com/q/ref/xbar/)
@@ -1963,13 +1965,13 @@ Round y down to the nearest multiple of x.
 
 ```python
 >>> pykx.q.xbar(5, 3)
-pykx.LongAtom(q('0'))
+pykx.LongAtom(pykx.q('0'))
 >>> pykx.q.xbar(5, 5)
-pykx.LongAtom(q('5'))
+pykx.LongAtom(pykx.q('5'))
 >>> pykx.q.xbar(5, 7)
-pykx.LongAtom(q('5'))
+pykx.LongAtom(pykx.q('5'))
 >>> pykx.q.xbar(3, range(16))
-pykx.LongVector(q('0 0 0 3 3 3 6 6 6 9 9 9 12 12 12 15'))
+pykx.LongVector(pykx.q('0 0 0 3 3 3 6 6 6 9 9 9 12 12 12 15'))
 ```
 
 ### [xrank](https://code.kx.com/q/ref/xrank/)
@@ -1978,9 +1980,9 @@ Group by value.
 
 ```python
 >>> pykx.q.xrank(3, range(6))
-pykx.LongVector(q('0 0 1 1 2 2'))
+pykx.LongVector(pykx.q('0 0 1 1 2 2'))
 >>> pykx.q.xrank(4, range(9))
-pykx.LongVector(q('0 0 0 1 1 2 2 3 3'))
+pykx.LongVector(pykx.q('0 0 0 1 1 2 2 3 3'))
 ```
 
 ## Table
@@ -1993,12 +1995,12 @@ Column names of a table.
 >>> import pandas as pd
 >>> import numpy as np
 >>> df = pd.DataFrame({
-...     'time': numpy.array([1, 2, 3, 4], dtype='timedelta64[s]'),
+...     'time': np.array([1, 2, 3, 4], dtype='timedelta64[s]'),
 ...     'sym':['a', 'a', 'b', 'b'],
 ...     'p': pykx.LongVector([2, 4, 6, 8])
 ...  })
 >>> pykx.q.cols(df)
-pykx.SymbolVector(q('`time`sym`p'))
+pykx.SymbolVector(pykx.q('`time`sym`p'))
 ```
 
 ### [csv](https://code.kx.com/q/ref/csv/)
@@ -2009,7 +2011,7 @@ A synonym for "," for use in preparing text for CSV files, or reading them.
 
 ```python
 >>> pykx.q.csv
-pykx.CharAtom(q('","'))
+pykx.CharAtom(pykx.q('","'))
 ```
 
 ### [fkeys](https://code.kx.com/q/ref/fkeys/)
@@ -2018,11 +2020,11 @@ Foreign-key columns of a table.
 
 ```python
 >>> pykx.q('f:([x:1 2 3]y:10 20 30)')
-pykx.Identity(q('::'))
+pykx.Identity(pykx.q('::'))
 >>> pykx.q('t: ([]a:`f$2 2 2; b: 0; c: `f$1 1 1)')
-pykx.Identity(q('::'))
+pykx.Identity(pykx.q('::'))
 >>> pykx.q.fkeys('t')
-pykx.Dictionary(q('
+pykx.Dictionary(pykx.q('
 a| f
 c| f
 '))
@@ -2035,7 +2037,7 @@ Insert or append records to a table.
 ```python
 >>> pykx.q('t: ([] a: `a`b`c; b: til 3)')
 >>> pykx.q('t')
-pykx.Table(q('
+pykx.Table(pykx.q('
 a b
 ---
 a 0
@@ -2044,7 +2046,7 @@ c 2
 '))
 >>> pykx.q.insert('t', ['d', 3])
 >>> pykx.q('t')
-pykx.Table(q('
+pykx.Table(pykx.q('
 a b
 ---
 a 0
@@ -2060,7 +2062,7 @@ Where x is a dictionary (or the name of one), returns its keys.
 
 ```python
 >>> pykx.q.key({'a': 1, 'b': 2})
-pykx.SymbolVector(q('`a`b'))
+pykx.SymbolVector(pykx.q('`a`b'))
 ```
 
 ### [keys](https://code.kx.com/q/ref/keys/)
@@ -2078,7 +2080,7 @@ idx| x
 3  | 6
 '))
 >>> pykx.q.keys('v')
-pykx.SymbolVector(q(',`idx'))
+pykx.SymbolVector(pykx.q(',`idx'))
 ```
 
 ### [meta](https://code.kx.com/q/ref/meta/)
@@ -2101,10 +2103,10 @@ Metadata for a table.
 ...     'p': pykx.LongVector([2, 4, 6, 8])
 ... })
 >>> pykx.q.meta(df)
-pykx.KeyedTable(q('
+pykx.KeyedTable(pykx.q('
 c   | t f a
 ----| -----
-time| n
+time| v
 sym | s
 p   | j
 '))
@@ -2118,14 +2120,14 @@ Where x is a table, in which some cells are lists, but for any row, all lists ar
 >>> a = pykx.Table([['a', [2, 3], 10], ['b', [5, 6, 7], 20], ['c', [11], 30]], columns=['s', 'x', 'q'])
 >>> a
 pykx.Table(pykx.q('
-s x       q
-------------
-a (2;3)   10
-b (5;6;7) 20
-c ,11     30
+s x     q
+----------
+a 2 3   10
+b 5 6 7 20
+c ,11   30
 '))
 >>> pykx.q.ungroup(a)
-pykx.Table(q('
+pykx.Table(pykx.q('
 s x  q
 -------
 a 2  10
@@ -2145,7 +2147,7 @@ Add new records to a table.
 >>> import pandas as pd
 >>> df = pd.DataFrame({'sym':['a', 'a', 'b', 'b'], 'p': pykx.LongVector([2, 4, 6, 8])})
 >>> pykx.Table(df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym p
 -----
 a   2
@@ -2173,7 +2175,7 @@ Sort a table in ascending order of specified columns.
 >>> import pandas as pd
 >>> df = pd.DataFrame({'sym':['a', 'a', 'b', 'b', 'c', 'c'], 'p': pykx.LongVector([10, 4, 6, 2, 0, 8])})
 >>> pykx.Table(df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym p
 ------
 a   10
@@ -2184,7 +2186,7 @@ c   0
 c   8
 '))
 >>> pykx.q.xasc('p', df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym p
 ------
 c   0
@@ -2204,7 +2206,7 @@ Rename table columns.
 >>> import pandas as pd
 >>> df = pd.DataFrame({'sym':['a', 'a', 'b', 'b', 'c', 'c'], 'p': pykx.LongVector([10, 4, 6, 2, 0, 8])})
 >>> pykx.Table(df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym p
 ------
 a   10
@@ -2215,7 +2217,7 @@ c   0
 c   8
 '))
 >>> pykx.q.xcol(pykx.SymbolVector(['Sym', 'Qty']), df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 Sym Qty
 -------
 a   10
@@ -2226,7 +2228,7 @@ c   0
 c   8
 '))
 >>> pykx.q.xcol({'p': 'Qty'}, df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym Qty
 -------
 a   10
@@ -2251,22 +2253,22 @@ Reorder table columns.
 ...     'p': pykx.LongVector([2, 4, 6, 8])
 ... })
 >>> pykx.Table(df)
-pykx.Table(q('
-time                 sym p
---------------------------
-0D00:00:01.000000000 a   2
-0D00:00:02.000000000 a   4
-0D00:00:03.000000000 b   6
-0D00:00:04.000000000 b   8
+pykx.Table(pykx.q('
+time     sym p
+--------------
+00:00:01 a   2
+00:00:02 a   4
+00:00:03 b   6
+00:00:04 b   8
 '))
 >>> pykx.q.xcols(pykx.SymbolVector(['p', 'sym', 'time']), df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 p sym time
---------------------------
-2 a   0D00:00:01.000000000
-4 a   0D00:00:02.000000000
-6 b   0D00:00:03.000000000
-8 b   0D00:00:04.000000000
+--------------
+2 a   00:00:01
+4 a   00:00:02
+6 b   00:00:03
+8 b   00:00:04
 '))
 ```
 
@@ -2278,7 +2280,7 @@ Sorts a table in descending order of specified columns. The sort is by the first
 >>> import pandas as pd
 >>> df = pd.DataFrame({'sym':['a', 'a', 'b', 'b', 'c', 'c'], 'p': pykx.LongVector([10, 4, 6, 2, 0, 8])})
 >>> pykx.Table(df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym p
 ------
 a   10
@@ -2289,7 +2291,7 @@ c   0
 c   8
 '))
 >>> pykx.q.xdesc('p', df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym p
 ------
 a   10
@@ -2309,7 +2311,7 @@ Groups a table by values in selected columns.
 >>> import pandas as pd
 >>> df = pd.DataFrame({'sym':['a', 'a', 'b', 'b', 'c', 'c'], 'p': pykx.LongVector([10, 4, 6, 2, 0, 8])})
 >>> pykx.Table(df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym p
 ------
 a   10
@@ -2320,7 +2322,7 @@ c   0
 c   8
 '))
 >>> pykx.q.xgroup('sym', df)
-pykx.KeyedTable(q('
+pykx.KeyedTable(pykx.q('
 sym| p
 ---| ----
 a  | 10 4
@@ -2337,7 +2339,7 @@ Set specified columns as primary keys of a table.
 >>> import pandas as pd
 >>> df = pd.DataFrame({'sym':['a', 'a', 'b', 'b', 'c', 'c'], 'p': pykx.LongVector([10, 4, 6, 2, 0, 8])})
 >>> pykx.Table(df)
-pykx.Table(q('
+pykx.Table(pykx.q('
 sym p
 ------
 a   10
@@ -2348,7 +2350,7 @@ c   0
 c   8
 '))
 >>> pykx.q.xkey('p', df)
-pykx.KeyedTable(q('
+pykx.KeyedTable(pykx.q('
 p | sym
 --| ---
 10| a
@@ -2368,11 +2370,11 @@ Whether text matches a pattern.
 
 ```python
 >>> pykx.q.like('quick', b'qu?ck')
-pykx.BooleanAtom(q('1b'))
+pykx.BooleanAtom(pykx.q('1b'))
 >>> pykx.q.like('brown', b'br[ao]wn')
-pykx.BooleanAtom(q('1b'))
+pykx.BooleanAtom(pykx.q('1b'))
 >>> pykx.q.like('quick', b'quickish')
-pykx.BooleanAtom(q('0b'))
+pykx.BooleanAtom(pykx.q('0b'))
 ```
 
 ### [lower](https://code.kx.com/q/ref/lower/)
@@ -2381,9 +2383,9 @@ Shift case to lower case.
 
 ```python
 >>> pykx.q.lower('HELLO')
-pykx.SymbolAtom(q('`hello'))
+pykx.SymbolAtom(pykx.q('`hello'))
 >>> pykx.q.lower(b'HELLO')
-pykx.CharVector(q('"hello"'))
+pykx.CharVector(pykx.q('"hello"'))
 ```
 
 ### [ltrim](https://code.kx.com/q/ref/trim/#ltrim)
@@ -2392,7 +2394,7 @@ Remove leading nulls from a list.
 
 ```python
 >>> pykx.q.ltrim(b'    pykx    ')
-pykx.CharVector(q('"pykx    "'))
+pykx.CharVector(pykx.q('"pykx    "'))
 ```
 
 ### [md5](https://code.kx.com/q/ref/md5/)
@@ -2401,7 +2403,7 @@ Message digest hash.
 
 ```python
 >>> pykx.q.md5(b'pykx')
-pykx.ByteVector(q('0xfba0532951f022133f8e8b14b6ddfced'))
+pykx.ByteVector(pykx.q('0xfba0532951f022133f8e8b14b6ddfced'))
 ```
 
 ### [rtrim](https://code.kx.com/q/ref/trim/#rtrim)
@@ -2410,7 +2412,7 @@ Remove trailing nulls from a list.
 
 ```python
 >>> pykx.q.rtrim(b'    pykx    ')
-pykx.CharVector(q('"    pykx"'))
+pykx.CharVector(pykx.q('"    pykx"'))
 ```
 
 ### [ss](https://code.kx.com/q/ref/ss/)
@@ -2419,7 +2421,7 @@ String search.
 
 ```python
 >>> pykx.q.ss(b'a cat and a dog', b'a')
-pykx.LongVector(q('0 3 6 10'))
+pykx.LongVector(pykx.q('0 3 6 10'))
 ```
 
 ### [ssr](https://code.kx.com/q/ref/ss/#ssr)
@@ -2428,7 +2430,7 @@ String search and replace.
 
 ```python
 >>> pykx.q.ssr(b'toronto ontario', b'ont', b'x')
-pykx.CharVector(q('"torxo xario"'))
+pykx.CharVector(pykx.q('"torxo xario"'))
 ```
 
 ### [string](https://code.kx.com/q/ref/string/)
@@ -2437,9 +2439,9 @@ Cast to string.
 
 ```python
 >>> pykx.q.string(2)
-pykx.CharVector(q(',"2"'))
+pykx.CharVector(pykx.q(',"2"'))
 >>> pykx.q.string([1, 2, 3, 4, 5])
-pykx.List(q('
+pykx.List(pykx.q('
 ,"1"
 ,"2"
 ,"3"
@@ -2454,7 +2456,7 @@ Remove leading and trailing nulls from a list.
 
 ```python
 >>> pykx.q.trim(b'    pykx    ')
-pykx.CharVector(q('"pykx"'))
+pykx.CharVector(pykx.q('"pykx"'))
 ```
 
 ### [upper](https://code.kx.com/q/ref/lower/#upper)
@@ -2463,9 +2465,9 @@ Shift case to upper case.
 
 ```python
 >>> pykx.q.upper('hello')
-pykx.SymbolAtom(q('`HELLO'))
+pykx.SymbolAtom(pykx.q('`HELLO'))
 >>> pykx.q.upper(b'hello')
-pykx.CharVector(q('"HELLO"'))
+pykx.CharVector(pykx.q('"HELLO"'))
 ```
 
 ## Operators
@@ -2516,7 +2518,7 @@ Example:
 Coalesce two keyed tables one containing nulls
 
 ```python
->> tab1 = kx.Table(data={
+>>> tab1 = kx.Table(data={
 ...     'x': kx.q.til(10),
 ...     'y': kx.random.random(10, 10.0)
 ...     }).set_index('x')

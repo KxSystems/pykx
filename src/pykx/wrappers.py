@@ -250,6 +250,22 @@ def _rich_convert(x: 'K', stdlib: bool = True, raw=False):
     return x.np(raw=raw)
 
 
+def _as_array(arr, dtype, copy):
+    """Apply the NumPy `__array__(dtype, copy)` protocol to an already-materialised array.
+
+    NumPy 2.* passes `dtype` positionally and `copy` by keyword to `__array__`, so every
+    implementation must accept both. A dtype conversion is unavoidably a copy, so an explicit
+    `copy=False` alongside a differing dtype is refused (matching `numpy.ndarray`).
+    """
+    if dtype is not None and dtype != arr.dtype:
+        if copy is False:
+            raise ValueError('Unable to avoid copy while creating an array as requested.')
+        return arr.astype(dtype)
+    if copy:
+        return arr.copy()
+    return arr
+
+
 # HACK: This gets overwritten by the toq module to avoid a circular import error.
 def toq(*args, **kwargs): # nocov
     raise NotImplementedError
@@ -598,8 +614,8 @@ class Atom(K):
             res = res._unlicensed_getitem(0)
         return res
 
-    def __array__(self, dtype=None):
-        return np.asarray(self.np(), dtype=dtype)
+    def __array__(self, dtype=None, copy=None):
+        return _as_array(np.asarray(self.np()), dtype, copy)
 
 
 class EnumAtom(Atom):
@@ -657,9 +673,11 @@ class TemporalSpanAtom(TemporalAtom):
         as_np_timedelta = self.np()
         if pd.isnull(as_np_timedelta):
             return pd.NaT
-        return timedelta(
-            microseconds=int(as_np_timedelta.astype('timedelta64[ns]').astype(np.int64))//1000
-        )
+        if self._np_type == 'ns':
+            microseconds = int(as_np_timedelta.astype(np.int64)) // 1000
+        else:
+            microseconds = int(as_np_timedelta.astype('timedelta64[us]').astype(np.int64))
+        return timedelta(microseconds=microseconds)
 
     def np(self,
            *,
@@ -1356,11 +1374,11 @@ class NonIntegralNumericAtom(NumericAtom, Real):
 
     @property
     def is_pos_inf(self) -> bool:
-        return np.isposinf(self.py())
+        return bool(np.isposinf(self.py()))
 
     @property
     def is_neg_inf(self) -> bool:
-        return np.isneginf(self.py())
+        return bool(np.isneginf(self.py()))
 
     def __round__(self, ndigits=None):
         return round(self.py(), ndigits)
@@ -1689,7 +1707,7 @@ class GUIDAtom(Atom):
 
     @property
     def is_null(self) -> bool:
-        return self.py(raw=True) == 0j
+        return bool(self.py(raw=True) == 0j)
 
     @property
     def is_inf(self) -> bool:
@@ -1873,13 +1891,13 @@ class Vector(Collection, abc.Sequence):
                 raise QError(str(err))
         self.__dict__.update(update_assign.__dict__)
 
-    def __array__(self):
+    def __array__(self, dtype=None, copy=None):
         # The `__array__` method must return a `np.ndarray`, not a `np.ma.masked_array`. As a
         # result, the null check we currently perform (by default) is a waste of time and memory,
         # since what will be returned in the end will ultimately expose the underlying values of
         # the nulls anyway. We can’t stop `__array__` from returning the raw null values, but we
         # can save that time and memory by using `has_nulls=False`.
-        return self.np(has_nulls=False)
+        return _as_array(self.np(has_nulls=False), dtype, copy)
 
     def __arrow_array__(self, type=None):
         if pa is None:
@@ -2420,12 +2438,12 @@ class IntegralNumericVector(NumericVector):
     """Base type for all q integral numeric vectors."""
     @property
     def has_nulls(self) -> bool:
-        return (self._base_null_value == self.np(raw=True)).any()
+        return bool((self._base_null_value == self.np(raw=True)).any())
 
     @property
     def has_infs(self) -> bool:
         a = self.np(raw=True)
-        return (a == self._base_inf_value).any() or (a == -self._base_inf_value).any()
+        return bool((a == self._base_inf_value).any() or (a == -self._base_inf_value).any())
 
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         if raw:
@@ -2560,8 +2578,8 @@ class PandasUUIDArray(pd.api.extensions.ExtensionArray):
     def __eq__(self, other):
         return self.array == other
 
-    def __array__(self):
-        return self.array
+    def __array__(self, dtype=None, copy=None):
+        return _as_array(self.array, dtype, copy)
 
     def reshape(self, *args, **kwargs):
         return self
@@ -2619,7 +2637,7 @@ class GUIDVector(Vector):
 
     @property
     def has_nulls(self) -> bool:
-        return (0j == self.np(raw=True)).any()
+        return bool((0j == self.np(raw=True)).any())
 
     @property
     def has_infs(self) -> bool:
@@ -2718,11 +2736,12 @@ class NonIntegralNumericVector(NumericVector):
     @property
     def has_nulls(self) -> bool:
         a = self.np()
-        return np.isnan(np.dot(a, a)) # `np.dot` can be used as a high-performance NaN check
+        # `np.dot` can be used as a high-performance NaN check
+        return bool(np.isnan(np.dot(a, a)))
 
     @property
     def has_infs(self) -> bool:
-        return (self.np() == np.inf).any()
+        return bool(np.isinf(self.np()).any())
 
     def __pow__(self, other, mod=None):
         if mod is None:
@@ -2825,12 +2844,12 @@ class TemporalVector(Vector):
     """Base type for all q temporal vectors."""
     @property
     def has_nulls(self) -> bool:
-        return (self._base_null_value == self.np(raw=True)).any()
+        return bool((self._base_null_value == self.np(raw=True)).any())
 
     @property
     def has_infs(self) -> bool:
         a = self.np(raw=True)
-        return (a == self._base_inf_value).any() or (a == -self._base_inf_value).any()
+        return bool((a == self._base_inf_value).any() or (a == -self._base_inf_value).any())
 
     def py(self, *, raw: bool = False, has_nulls: Optional[bool] = None, stdlib: bool = True):
         if raw:
@@ -2936,19 +2955,17 @@ class TimestampVector(TemporalFixedVector):
         if raw:
             return self.np(raw=True, has_nulls=has_nulls).tolist()
         if tzinfo is not None:
+            converted = self.np().astype('datetime64[us]').astype(datetime).tolist()
             if tzshift:
-                return [x.replace(tzinfo=pytz.utc).astimezone(tzinfo)
-                        for x in self.np().astype('datetime64[us]').astype(datetime).tolist()]
+                return [pd.NaT if x is None else x.replace(tzinfo=pytz.utc).astimezone(tzinfo)
+                        for x in converted]
             else:
-                return [x.replace(tzinfo=tzinfo)
-                        for x in self.np().astype('datetime64[us]').astype(datetime).tolist()]
-        converted_vector=self.np().astype('datetime64[us]').astype(datetime).tolist()
-        null_pos=[]
-        for x in converted_vector:
+                return [pd.NaT if x is None else x.replace(tzinfo=tzinfo)
+                        for x in converted]
+        converted_vector = self.np().astype('datetime64[us]').astype(datetime).tolist()
+        for i, x in enumerate(converted_vector):
             if x is None:
-                null_pos.append(converted_vector.index(x))
-        for i in null_pos:
-            converted_vector[i]=pd.NaT
+                converted_vector[i] = pd.NaT
         return converted_vector
 
 
@@ -3748,7 +3765,7 @@ class Table(PandasAPI, Mapping):
 
         ```python
         >>> qtab.delete(kx.Column('age'))
-        >>> qtab.delete([kx.Column('age'), kx.Column('eye')])
+        >>> qtab.delete(kx.Column('age') & kx.Column('eye'))
         ```
 
         Delete rows of the dataset based on where condition
@@ -3991,11 +4008,11 @@ class Table(PandasAPI, Mapping):
         ...                    {'ask_max': [lambda x: max(x), 'ask'],
         ...                     'ask_minus_bid': [lambda x, y: x - y, 'ask', 'bid']})
         pykx.Table(pykx.q('
-        sym time     price ask_minus_bid ask_max
+        sym time     price ask_max ask_minus_bid
         ----------------------------------------
-        ibm 10:01:01 100   3 4           103
-        ibm 10:01:04 101   4 1 1 1       104
-        ibm 10:01:08 105   3 2 1 1       108
+        ibm 10:01:01 100   103     3 4
+        ibm 10:01:04 101   104     4 1 1 1
+        ibm 10:01:08 105   108     3 2 1 1
         '))
         ```
         """
@@ -4302,12 +4319,26 @@ class PartitionedTable(SplayedTable):
         raise AttributeError("Operation 'xbar' not supported for PartitionedTable type")
 
 
-class VirtualTable(Atom):
+class VirtualTable(K):
     """Wrapper for q virtual tables."""
     t = 112
+    is_atom = False
 
     select = Table.select
     exec = Table.exec
+
+
+_VT_base_error = "pykx.VirtualTable objects cannot be operated on directly, you must .select() or .exec() data from them first" # noqa: E501
+_VT_include = {'__module__', '__firstlineno__', '__doc__', '__init__', '__new__', '__del__', '_from_addr', '__repr__', '__str__'} # noqa: E501
+
+
+def _VT_base_error_method(self, *args, **kwargs):
+    raise QError(_VT_base_error)
+
+
+for _name in vars(K):
+    if callable(getattr(K, _name)) and _name not in vars(VirtualTable)and _name not in _VT_include:
+        setattr(VirtualTable, _name, _VT_base_error_method)
 
 
 class Dictionary(Mapping):
@@ -5200,19 +5231,25 @@ class Function(Atom):
     def each_prior(self):
         return q("{x':}", self)
 
-    prior = each_prior
+    @property
+    def prior(self):
+        return self.each_prior
 
     @cached_property
     def each_right(self):
         return q('{x/:}', self)
 
-    sv = each_right
+    @property
+    def sv(self):
+        return self.each_right
 
     @cached_property
     def each_left(self):
         return q('{x\\:}', self)
 
-    vs = each_left
+    @property
+    def vs(self):
+        return self.each_left
 
 
 class Lambda(Function):
@@ -6673,7 +6710,7 @@ class Column:
         ...     'a': [1, -1, 0],
         ...     'b': [[-1, 2, 1], [0, 2], 1]
         ...     })
-        >>> tab.exec(kx.Column('b').count(iterator='each')))
+        >>> tab.exec(kx.Column('b').count(iterator='each'))
         pykx.LongVector(pykx.q('3 2 1'))
         ```
         """
@@ -8122,7 +8159,7 @@ class Column:
         ...     'a': kx.random.random(100, 5),
         ...     'b': kx.random.random([100, 3], 5)
         ...     })
-        >>> tab.exec(kx.Column('a').max())
+        >>> tab.exec(kx.Column('a').min())
         pykx.LongAtom(pykx.q('0'))
         ```
 
@@ -8607,7 +8644,6 @@ class Column:
         ```python
         >>> import pykx as kx
         >>> tab = kx.Table(data={
-        >>> tab = kx.Table(data={
         ...     'a': kx.random.random(100, 1000),
         ...     'b': kx.random.random([100, 3], 5)
         ...     })
@@ -8632,7 +8668,6 @@ class Column:
         ```python
         >>> import pykx as kx
         >>> tab = kx.Table(data={
-        >>> tab = kx.Table(data={
         ...     'a': kx.random.random(100, 1000),
         ...     'b': kx.random.random([100, 3], 5)
         ...     })
@@ -8656,7 +8691,6 @@ class Column:
 
         ```python
         >>> import pykx as kx
-        >>> tab = kx.Table(data={
         >>> tab = kx.Table(data={
         ...     'a': kx.q.til(100),
         ...     'b': kx.random.random([100, 3], 5)
@@ -8759,13 +8793,22 @@ class Column:
         """
         return self.call('rtrim', iterator=iterator)
 
-    def scov(self, iterator=None):
+    def scov(self, other, iterator=None, col_arg_ind=0, project_args=None):
         """
-        Calculate the sample covariance for items in a column or rows in a column
+        Calculate the sample covariance between a column and one of:
+
+            - Another column
+            - A Python list/numpy array
+            - A `pykx` variable in q memory
 
         Parameters:
+            other: The second column or variable (Python/q) to be used.
             iterator: What iterator to use when operating on the column
                 for example, to execute per row, use `each`
+            col_arg_ind: Determines the index within the multivariate function
+                where the column parameter will be used. Default 0.
+            project_args: The argument indices of a multivariate function which will be
+                projected on the function before evocation with use of an iterator.
 
         Examples:
 
@@ -8775,10 +8818,10 @@ class Column:
         >>> import pykx as kx
         >>> tab = kx.Table(data={
         ...     'a': kx.random.random(100, 10.0),
-        ...     'b': kx.random.random([100, 3], 10.0)
+        ...     'b': kx.random.random(100, 10.0)
         ...     })
-        >>> tab.exec(kx.Column('a').scov())
-        pykx.FloatAtom(pykx.q('8.983196'))
+        >>> tab.exec(kx.Column('a').scov(kx.Column('b')))
+        pykx.FloatAtom(pykx.q('1.442801'))
         ```
 
         Calculate the sample covariance for each row in a column:
@@ -8786,22 +8829,23 @@ class Column:
         ```python
         >>> import pykx as kx
         >>> tab = kx.Table(data={
-        ...     'a': kx.random.random(100, 10.0),
-        ...     'b': kx.random.random([100, 3], 10.0)
+        ...     'b': kx.random.random([100, 3], 10.0),
+        ...     'c': kx.random.random([100, 3], 10.0)
         ...     })
-        >>> tab.select(kx.Column('b').scov(iterator='each'))
+        >>> tab.select(kx.Column('b').scov(kx.Column('c'), iterator="'"))
         pykx.Table(pykx.q('
         b
-        ---------
-        0.3333333
-        0.3333333
-        5.333333
-        1.333333
+        -----------
+        -0.08110428
+        -1.384917
+        0.7203654
+        0.3846634
         ..
         '))
         ```
         """
-        return self.call('scov', iterator=iterator)
+        return self.call('scov', other, iterator=iterator, col_arg_ind=col_arg_ind,
+                         project_args=project_args)
 
     def sdev(self, iterator=None):
         """
@@ -9458,7 +9502,15 @@ class Column:
         ...     'b': kx.q.desc(kx.random.random(100, 10))
         ...     })
         >>> tab.select(where=kx.Column('a').within(today - 5, today - 3))
-        pykx.FloatAtom(pykx.q('2.431111'))
+        pykx.Table(pykx.q('
+        a          b
+        ------------
+        2026.07.11 9
+        2026.07.12 9
+        2026.07.11 8
+        2026.07.12 8
+        ..
+        '))
         ```
         """
         return self.call('within', [lower, upper], iterator=iterator, col_arg_ind=col_arg_ind,
@@ -10111,21 +10163,21 @@ class Column:
         ...     })
         >>> tab.dtypes
         pykx.Table(pykx.q('
-        columns datatypes     type
-        -----------------------------------
-        a       "kx.LongAtom" "kx.LongAtom"
-        b       "kx.LongAtom" "kx.LongAtom"
+        columns datatypes
+        ---------------------
+        a       "kx.LongAtom"
+        b       "kx.LongAtom"
         '))
         >>> tab.select(
         ...     kx.Column('a') &
         ...     kx.Column('a').cast('float').name('a_float') &
         ...     kx.Column('b')).dtypes
         pykx.Table(pykx.q('
-        columns datatypes      type
-        -------------------------------------
-        a       "kx.LongAtom"  "kx.LongAtom"
-        a_float "kx.FloatAtom" "kx.FloatAtom"
-        b       "kx.LongAtom"  "kx.LongAtom"
+        columns datatypes
+        ----------------------
+        a       "kx.LongAtom"
+        a_float "kx.FloatAtom"
+        b       "kx.LongAtom"
         '))
         ```
         """
@@ -10565,8 +10617,8 @@ class Column:
         ...     'a': [1, -1, 0],
         ...     'b': [[-1, 2, 1], [0, 2], 1]
         ...     })
-        >>> tab.exec(kx.Column('b').len(iterator='each')))
-        pykx.LongVector(pykx.q('3 3 3'))
+        >>> tab.exec(kx.Column('b').len(iterator='each'))
+        pykx.LongVector(pykx.q('3 2 1'))
         ```
         """
         return self.call('count', iterator=iterator)
@@ -11369,10 +11421,8 @@ class Column:
         >>> d1 = kx.q('`a`b`c ! 1 2 3')
         >>> d2 = kx.q('`d`e`f ! 4 5 6')
         >>> t = kx.Table(data={'n':[d1, d2]})
-        >>> t.exec(kx.Column('n').type(iterator='each'))
-        pykx.Table(pykx.q('
-        n
-        -----
+        >>> t.exec(kx.Column('n').key(iterator='each'))
+        pykx.List(pykx.q('
         a b c
         d e f
         '))
@@ -11487,7 +11537,7 @@ class Column:
         ```python
         >>> import pykx as kx
         >>> t = kx.q('([] n:3 6 9 12)')
-        >>> t.exec(kx.Column('n').next()))
+        >>> t.exec(kx.Column('n').next())
         pykx.LongVector(pykx.q('6 9 12 0N'))
         ```
         """

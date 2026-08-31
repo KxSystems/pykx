@@ -164,7 +164,7 @@ For instance, you can apply the `#!python each` adverb to `#!python is_prime` an
 
 ```python
 >>> is_prime.each(range(10))
-pykx.LongVector(q('0 0 1 1 0 1 0 1 0 0'))
+pykx.LongVector(pykx.q('0 0 1 1 0 1 0 1 0 0'))
 ```
 
 Then you could pass that into [`pykx.q.where`](../../api/pykx-execution/q.md#where):
@@ -177,13 +177,13 @@ pykx.LongVector(pykx.q('2 3 5 7'))
 Context is persisted between embedded calls to q, but not calls over IPC.
 
 ```python
->>> kx.q('\d .abc') # change to the `.abc` context
+>>> kx.q(r'\d .abc') # change to the `.abc` context
 pykx.Identity(pykx.q('::'))
 >>> kx.q('xyz: 1 2 3') # set variable `xyz` within the `.abc` context
 pykx.Identity(pykx.q('::'))
 >>> kx.q('.abc.xyz')
 pykx.LongVector(pykx.q('1 2 3'))
->>> kx.q('\d .') # change back to the default `.` global context
+>>> kx.q(r'\d .') # change back to the default `.` global context
 pykx.Identity(pykx.q('::'))
 >>> kx.q('xyz: 4 5 6') # set variable `xyz` within the `.` global context
 pykx.Identity(pykx.q('::'))
@@ -192,7 +192,7 @@ pykx.LongVector(pykx.q('1 2 3'))
 >>> kx.q('xyz')
 pykx.LongVector(pykx.q('4 5 6'))
 >>> q = kx.QConnection('localhost', 5001)
->>> q('\d .abc')
+>>> q(r'\d .abc')
 pykx.Identity(pykx.q('::'))
 >>> q('xyz: 1 2 3')
 pykx.Identity(pykx.q('::'))

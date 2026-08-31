@@ -3,7 +3,7 @@
 **/*q.so
 **/*q.dylib
 **/q.dll
-**/q.lib
+**/qdll.lib
 **/kxreaper
 **/libkurl.so
 **/libobjstor.so

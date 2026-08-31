@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 420" role="img" aria-labelledby="title description">
+  <title id="title">Page not found illustration</title>
+  <desc id="description">An interrupted Python code path running through a stylized data grid.</desc>
+  <defs>
+    <linearGradient id="panel" x1="82" y1="45" x2="468" y2="360" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff"/>
+      <stop offset="1" stop-color="#eef3f9"/>
+    </linearGradient>
+    <linearGradient id="route" x1="146" y1="292" x2="431" y2="105" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#194387"/>
+      <stop offset="1" stop-color="#477bcf"/>
+    </linearGradient>
+    <filter id="shadow" x="38" y="30" width="484" height="360" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#0b1e3b" flood-opacity=".14"/>
+    </filter>
+  </defs>
+  <path d="M83 89 192 27l99 57 106-61 92 53v257l-111 64-99-57-105 61-91-53V89Z" fill="#eaf0f8"/>
+  <g filter="url(#shadow)">
+    <rect x="72" y="62" width="416" height="296" rx="22" fill="url(#panel)" stroke="#c9d5e4" stroke-width="2"/>
+  </g>
+  <path d="M73 113h414" stroke="#c9d5e4" stroke-width="2"/>
+  <circle cx="101" cy="88" r="6" fill="#f23a66"/>
+  <circle cx="124" cy="88" r="6" fill="#ffc300"/>
+  <circle cx="147" cy="88" r="6" fill="#009bab"/>
+  <g fill="#d8e1ed">
+    <rect x="106" y="145" width="92" height="29" rx="6"/>
+    <rect x="211" y="145" width="92" height="29" rx="6"/>
+    <rect x="316" y="145" width="138" height="29" rx="6"/>
+    <rect x="106" y="187" width="92" height="29" rx="6"/>
+    <rect x="211" y="187" width="92" height="29" rx="6"/>
+    <rect x="316" y="187" width="138" height="29" rx="6"/>
+    <rect x="106" y="229" width="92" height="29" rx="6"/>
+    <rect x="211" y="229" width="92" height="29" rx="6"/>
+    <rect x="316" y="229" width="138" height="29" rx="6"/>
+    <rect x="106" y="271" width="92" height="29" rx="6"/>
+    <rect x="211" y="271" width="92" height="29" rx="6"/>
+    <rect x="316" y="271" width="138" height="29" rx="6"/>
+  </g>
+  <path d="M128 284c45 0 45-104 91-104 46 0 44 62 86 62 32 0 40-54 70-54" fill="none" stroke="url(#route)" stroke-linecap="round" stroke-width="10"/>
+  <path d="m374 174 18 14-18 14" fill="none" stroke="#194387" stroke-linecap="round" stroke-linejoin="round" stroke-width="8"/>
+  <circle cx="128" cy="284" r="14" fill="#ffc300" stroke="#fff" stroke-width="6"/>
+  <circle cx="305" cy="242" r="15" fill="#fff" stroke="#194387" stroke-width="7"/>
+  <path d="m316 253 17 17" stroke="#194387" stroke-linecap="round" stroke-width="8"/>
+  <rect x="360" y="270" width="113" height="72" rx="14" fill="#194387"/>
+  <text x="416.5" y="318" fill="#fff" font-family="Arial, sans-serif" font-size="38" font-weight="700" text-anchor="middle">404</text>
+</svg>

@@ -1,8 +1,8 @@
 // When a user clicks a code copy button, copy the code but remove
-// leading REPL prompts (q), >>>, and Python continuation ...).
+// leading REPL and shell prompts (q), >>>, Python continuation ..., and $).
 //
-// Add this file to mkdocs extra_javascript as javascript/strip-repl-prompts.js
-// and ensure it loads after the Material copy button script.
+// Loaded from mkdocs.yml as scripts/strip-q-prompt-copy.js.
+// Ensure it loads after the Material copy button script.
 
 (function () {
 
@@ -20,7 +20,8 @@
     //   q)
     //   >>>
     //   ...
-    const REPL_PROMPT_RE = /^\s*(q\)|>>>|\.\.\.)\s?/;
+    //   $
+    const REPL_PROMPT_RE = /^\s*(?:(?:q\)|>>>|\.\.\.)\s?|\$\s+)/;
   
     // Helper: find nearest ancestor matching a selector
     function closest(el, selector) {
@@ -147,4 +148,3 @@
     });
   
   })();
-  

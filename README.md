@@ -65,9 +65,11 @@ Full instructions on license installation are covered on the [Installing page](d
 
 KX only officially supports versions of KDB-X Python built by KX, i.e. versions of KDB-X Python installed from wheel files. Support for user-built installations of KDB-X Python (e.g. built from the source distribution) is only provided on a best-effort basis. Currently, KDB-X Python provides wheels for the following environments:
 
-- Linux (`manylinux2014_x86_64`, `manylinux2014_aarch64`) with CPython 3.9-3.14
-- macOS (`macosx_10_15_x86_64`, `macosx_10_15_arm64`) with CPython 3.9-3.14
-- Windows (`win_amd64`) with CPython 3.9-3.14
+- **Linux**
+  - (`manylinux2014_x86_64`, `manylinux2014_aarch64`) with CPython 3.9-3.11
+  - (`manylinux_2_28_x86_64`, `manylinux_2_28_aarch64`) with CPython 3.12-3.14
+- **macOS** (`macosx_10_15_x86_64`, `macosx_10_15_arm64`) with CPython 3.9-3.14
+- **Windows** (`win_amd64`) with CPython 3.9-3.14
 
 ### Dependencies
 
@@ -185,7 +187,7 @@ This work is dual licensed under [Apache 2.0](https://code.kx.com/pykx/license.h
 
 ## Community Help
 
-If you have any issues or questions you can post them to [community.kx.com](https://community.kx.com/). Also available on Stack Overflow are the tags [pykx](https://stackoverflow.com/questions/tagged/pykx) and [kdb](https://stackoverflow.com/questions/tagged/kdb).
+If you have any issues or questions you can post them to the [KX Forum](https://forum.kx.com/). Also available on Stack Overflow are the tags [pykx](https://stackoverflow.com/questions/tagged/pykx) and [kdb](https://stackoverflow.com/questions/tagged/kdb).
 
 ## Customer Support
 

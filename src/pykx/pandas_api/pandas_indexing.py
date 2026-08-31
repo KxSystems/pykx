@@ -327,9 +327,7 @@ def _rename_columns(tab, labels):
     for x in list(labels.keys()):
         if type(labels[x]) is not str:
             raise ValueError('pykx.Table column names can only be of type pykx.SymbolAtom')
-        if type(x) is not str:
-            labels.pop(x)
-        if x not in tab.columns:
+        if type(x) is not str or x not in tab.columns:
             labels.pop(x)
     if "Keyed" in str(type(tab)):
         return q('''{

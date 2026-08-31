@@ -152,13 +152,13 @@ The `columns` keyword provides the ability to access columnar data by name or ap
 	```python
 	>>> trades.delete(columns=kx.Column('date'))
 	pykx.Table(pykx.q('
-	sym  price   
-	-------------
-	AAPL 145.6259
-	MSFT 533.9187
-	MSFT 17.17696
-	GOOG 916.1286
-	AAPL 140.0383
+	sym  price    size
+	------------------
+	AAPL 145.6259 19
+	MSFT 533.9187 92
+	MSFT 17.17696 7
+	GOOG 916.1286 60
+	AAPL 140.0383 54
 	..
 	'))
 	```
@@ -261,7 +261,6 @@ The `columns` keyword provides the ability to access columnar data by name or ap
 	140.0383 54
 	..
 	'))
-	'))
 	```
 
 === "exec"
@@ -269,7 +268,7 @@ The `columns` keyword provides the ability to access columnar data by name or ap
 	```python
 	>>> trades.exec(columns=kx.Column('date') & kx.Column('price'))
 	pykx.Dictionary(pykx.q('
-	date | 2022.01.01 2022.01.02 2020.0..
+	date | 2022.01.01 2022.01.02 2022.0..
 	price| 145.6259   533.9187   17.176..
 	'))
 	```
@@ -302,12 +301,12 @@ The `columns` keyword provides the ability to access columnar data by name or ap
 	multiPrice| 291.2518 1067.837 34.35..
 	symName   | AAPL     MSFT     MSFT ..
 	'))
-        >>> trades.exec(columns=(2 * kx.Column('price', name='multiPrice') &
-        ...                     kx.Column('sym', name='symName'))
-        pykx.Dictionary(pykx.q('
-        multiPrice| 291.2518 1067.837 34.35..
-        symName   | AAPL     MSFT     MSFT ..
-        '))
+	>>> trades.exec(columns=(2 * kx.Column('price', name='multiPrice')) &
+	...                     kx.Column('sym', name='symName'))
+	pykx.Dictionary(pykx.q('
+	multiPrice| 291.2518 1067.837 34.35..
+	symName   | AAPL     MSFT     MSFT ..
+	'))
 	```
 
 === "update"
@@ -346,7 +345,7 @@ The `columns` keyword provides the ability to access columnar data by name or ap
 	pykx.Table(pykx.q('
 	maxPrice
 	--------
-	993.6284
+	989.3873
 	'))
 	```
 
@@ -460,20 +459,21 @@ By default this parameter has a value `None` which is equivalent to not filterin
 === "select"
 	
 	```python
+	>>> import datetime
 	>>> trades.select(where=(kx.Column('sym') == 'GOOG') & (kx.Column('date') == datetime.date(2022, 1, 1)))
 	pykx.Table(pykx.q('
-	sym  date       price   
-	------------------------
-	GOOG 2022.01.01 480.9078
-	GOOG 2022.01.01 454.5668
-	GOOG 2022.01.01 790.2208
-	GOOG 2022.01.01 296.6022
-	GOOG 2022.01.01 727.6113
+	sym  date       price    size
+	-----------------------------
+	GOOG 2022.01.01 872.5719 78
+	GOOG 2022.01.01 465.9199 59
+	GOOG 2022.01.01 477.2416 16
+	GOOG 2022.01.01 745.6742 7
+	GOOG 2022.01.01 472.7866 7
 	..
 	'))
 	>>> trades.select(where=[
 	...     kx.Column('sym') == 'GOOG',
-        ...     kx.Column('date') == datetime.date(2022, 1, 1)
+	...     kx.Column('date') == datetime.date(2022, 1, 1)
 	...     ])
 	>>> from datetime import date
 	>>> trades.select(columns=kx.Column('price').wavg(kx.Column('size')),
@@ -547,15 +547,15 @@ When both a `columns` and `by` clause are passed to a select query without use o
 pykx.KeyedTable(pykx.q('
 date       sym | price                                                       ..
 ---------------| ------------------------------------------------------------..
-2022.01.01 AAPL| 131.6095 236.3145 140.4332 839.3869 843.3531 641.2171 104.81..
-2022.01.01 GOOG| 480.9078 454.5668 790.2208 296.6022 727.6113 341.9665 609.77..
-2022.01.01 MSFT| 556.9152 755.6175 865.9657 714.9804 179.5444 149.734 67.0821..
-2022.01.02 AAPL| 441.8975 379.1373 659.8286 531.1731 975.3188 613.6512 603.99..
-2022.01.02 GOOG| 446.898 664.8273 648.3929 240.1062 119.6 774.3718 449.4149 8..
-2022.01.02 MSFT| 699.0336 387.7172 588.2985 725.8795 842.5805 646.37 593.7708..
-2022.01.03 AAPL| 793.2503 621.7243 570.4403 626.2866 263.992 153.475 123.7397..
-2022.01.03 GOOG| 586.263 777.3633 834.1404 906.9809 617.6205 179.6328 100.041..
-2022.01.03 MSFT| 633.3324 39.47309 682.9453 867.1843 483.0873 851.2139 318.93..
+2022.01.01 AAPL| 145.6259 636.4009 834.6557 190.0607 941.4561 728.0614 783.22..
+2022.01.01 GOOG| 872.5719 465.9199 477.2416 745.6742 472.7866 340.4314 461.68..
+2022.01.01 MSFT| 829.0066 242.9977 382.8027 873.4147 989.3873 113.8024       ..
+2022.01.02 AAPL| 140.0383 876.0921 418.4969 964.1979 235.2337 794.7449 273.06..
+2022.01.02 GOOG| 276.1598 466.191 16.11913 184.1156 380.0184 947.9831 427.323..
+2022.01.02 MSFT| 533.9187 17.17696 603.3717 392.5541 399.0626 160.1576 116.92..
+2022.01.03 AAPL| 952.2597 932.1299 970.522 131.8826 599.2828 28.98133 229.389..
+2022.01.03 GOOG| 916.1286 230.7602 251.2994 354.463 157.0345 578.8499 704.611..
+2022.01.03 MSFT| 282.4291 46.11964 532.7252 241.2059 79.21147 429.1606 399.60..
 '))
 ```
 
@@ -566,15 +566,15 @@ Adding an aggregation function allows this aggregation to be run on a column wit
 pykx.KeyedTable(pykx.q('
 date       sym | price   
 ---------------| --------
-2022.01.01 AAPL| 843.3531
-2022.01.01 GOOG| 790.2208
-2022.01.01 MSFT| 865.9657
-2022.01.02 AAPL| 975.3188
-2022.01.02 GOOG| 886.0093
-2022.01.02 MSFT| 993.6284
-2022.01.03 AAPL| 843.9354
-2022.01.03 GOOG| 914.6929
-2022.01.03 MSFT| 867.1843
+2022.01.01 AAPL| 941.4561
+2022.01.01 GOOG| 975.5566
+2022.01.01 MSFT| 989.3873
+2022.01.02 AAPL| 982.6867
+2022.01.02 GOOG| 954.7454
+2022.01.02 MSFT| 979.3561
+2022.01.03 AAPL| 970.522
+2022.01.03 GOOG| 916.1286
+2022.01.03 MSFT| 532.7252
 '))
 ```
 
@@ -603,11 +603,11 @@ AAPL 2022.01.02 140.0383 54   56.09317
 	```python
 	>>> trades.select(by=kx.Column('sym'))
 	pykx.KeyedTable(pykx.q('
-	sym | date       price   
-	----| -------------------
-	AAPL| 2022.01.02 955.4843
-	GOOG| 2022.01.02 886.0093
-	MSFT| 2022.01.01 719.9879
+	sym | date       price    size
+	----| ------------------------
+	AAPL| 2022.01.02 726.5864 55
+	GOOG| 2022.01.01 975.5566 55
+	MSFT| 2022.01.03 194.547  42
 	'))     
 	```
 
@@ -654,9 +654,9 @@ qSQL equivalent query for comparison:
 ```python
 >>> kx.q('select from trades where price=max price')
 pykx.Table(pykx.q('
-sym  date       price   
-------------------------
-AAPL 2022.01.01 983.0794
+sym  date       price    size
+-----------------------------
+MSFT 2022.01.01 989.3873 42
 '))
 ```
 
@@ -665,9 +665,9 @@ Access query API off the table object:
 ```python
 >>> trades.select(where=kx.Column('price') == kx.Column('price').max())
 pykx.Table(pykx.q('
-sym  date       price   
-------------------------
-AAPL 2022.01.01 983.0794
+sym  date       price    size
+-----------------------------
+MSFT 2022.01.01 989.3873 42
 '))
 ```
 
@@ -676,9 +676,9 @@ Direct use of the `kx.q.qsql` query APIs taking the table as a parameter:
 ```python
 >>> kx.q.qsql.select(trades, where=kx.Column('price') == kx.Column('price').max())
 pykx.Table(pykx.q('
-sym  date       price   
-------------------------
-AAPL 2022.01.01 983.0794
+sym  date       price    size
+-----------------------------
+MSFT 2022.01.01 989.3873 42
 '))
 ```
 
@@ -687,9 +687,9 @@ Passing a string will query the table of that name in q memory:
 ```python
 >>> kx.q.qsql.select('trades', where=kx.Column('price') == kx.Column('price').max())
 pykx.Table(pykx.q('
-sym  date       price   
-------------------------
-AAPL 2022.01.01 983.0794
+sym  date       price    size
+-----------------------------
+MSFT 2022.01.01 989.3873 42
 '))
 ```
 
@@ -725,13 +725,13 @@ Using `&` on two `Column` objects will return a `QueryPhrase` which describes th
 [[pykx.Operator(pykx.q('=')), 'sym', [pykx.SymbolAtom(pykx.q('`GOOG'))]], [pykx.Operator(pykx.q('>')), 'price', pykx.LongAtom(pykx.q('500'))]]
 >>> trades.select(where=qp)
 pykx.Table(pykx.q('
-sym  date       price   
-------------------------
-GOOG 2022.01.03 976.1246
-GOOG 2022.01.02 716.2858
-GOOG 2022.01.03 872.5027
-GOOG 2022.01.02 962.5156
-GOOG 2022.01.01 589.7202
+sym  date       price    size
+-----------------------------
+GOOG 2022.01.03 916.1286 60
+GOOG 2022.01.03 578.8499 46
+GOOG 2022.01.03 704.6117 70
+GOOG 2022.01.01 872.5719 78
+GOOG 2022.01.02 947.9831 41
 ..
 '))
 ```
@@ -750,17 +750,17 @@ Using `|` on two `Column` objects will return a `Column` object.
 >>> c =(kx.Column('price') < 100) | (kx.Column('price') > 500)
 >>> type(c)
 <class 'pykx.wrappers.Column'>
->>> c._value
+>>> c._data
 [pykx.Operator(pykx.q('|')), [pykx.Operator(pykx.q('<')), 'price', pykx.LongAtom(pykx.q('100'))], [pykx.Operator(pykx.q('>')), 'price', pykx.LongAtom(pykx.q('500'))]]
 >>> trades.select(where=c)
 pykx.Table(pykx.q('
-sym  date       price   
-------------------------
-AAPL 2022.01.01 542.6371
-AAPL 2022.01.01 77.57332
-MSFT 2022.01.01 637.4637
-GOOG 2022.01.03 976.1246
-MSFT 2022.01.03 539.6816
+sym  date       price    size
+-----------------------------
+MSFT 2022.01.02 533.9187 92
+MSFT 2022.01.02 17.17696 7
+GOOG 2022.01.03 916.1286 60
+MSFT 2022.01.03 46.11964 93
+MSFT 2022.01.02 603.3717 6
 ..
 '))
 ```
@@ -842,13 +842,13 @@ The following are a few examples of this various operations in use
 	```python
 	>>> trades.select(where=kx.Column('price') >= kx.Column('price').avg() / 2)
 	pykx.Table(pykx.q('
-	sym  date       price   
-	------------------------
-	AAPL 2022.01.01 542.6371
-	MSFT 2022.01.01 637.4637
-	GOOG 2022.01.03 976.1246
-	MSFT 2022.01.03 539.6816
-	GOOG 2022.01.02 716.2858
+	sym  date       price    size
+	-----------------------------
+	MSFT 2022.01.02 533.9187 92
+	GOOG 2022.01.03 916.1286 60
+	MSFT 2022.01.03 282.4291 98
+	MSFT 2022.01.02 603.3717 6
+	MSFT 2022.01.02 392.5541 34
 	..
 	'))
 	```
@@ -931,13 +931,13 @@ The following example shows this in action
 >>> kx.q['filter']='GOOG'
 >>> trades.select(where=kx.Column('sym') == kx.Variable('filter'))
 pykx.Table(pykx.q('
-sym  date       price
-------------------------
-GOOG 2022.01.03 976.1246
-GOOG 2022.01.02 716.2858
-GOOG 2022.01.03 872.5027
-GOOG 2022.01.02 962.5156
-GOOG 2022.01.01 589.7202
+sym  date       price    size
+-----------------------------
+GOOG 2022.01.03 916.1286 60
+GOOG 2022.01.03 230.7602 23
+GOOG 2022.01.02 276.1598 63
+GOOG 2022.01.03 251.2994 24
+GOOG 2022.01.03 354.463  87
 ..
 '))
 ```
@@ -1003,9 +1003,8 @@ Take for example the case where you want to find the stock information by symbol
 pykx.Table(pykx.q('
 sym  date       price    size
 -----------------------------
-MSFT 2022.01.03 977.1655 92  
-AAPL 2022.01.02 996.8898 20  
-GOOG 2022.01.03 971.9498 47  
+MSFT 2022.01.01 989.3873 42
+GOOG 2022.01.01 975.5566 55
 '))
 ```
 
@@ -1036,6 +1035,7 @@ Calculate the maximum value of each row of a column `x`
 
 ```python
 >>> table = kx.Table(data={'x': [[10, 5, 4], [20, 30, 50], [1, 2, 3]]})
+>>> table
 pykx.Table(pykx.q('
 x       
 --------
@@ -1059,6 +1059,7 @@ Join the characters associated from two columns row wise using the `'` iterator
 
 ```python
 >>> table = kx.Table(data={'x': b'abc', 'y': b'def'})
+>>> table
 pykx.Table(pykx.q('
 x y
 ---
@@ -1082,6 +1083,7 @@ Join the characters `"_xy"` to all rows in a column `x`
 
 ```python
 >>> table = kx.Table(data={'x': b'abc', 'y': b'def'})
+>>> table
 pykx.Table(pykx.q('
 x y
 ---
@@ -1110,4 +1112,4 @@ Now that you have learnt how to query your data using the Pythonic API you may b
 For some further reading, here are some related topics:
 
 - If you don't have a historical database available see [here](../../advanced/database/index.md).
-- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.ipynb).
+- To learn about creating `pykx` Table objects see [here](../../../examples/interface-overview.md#25-table).

@@ -8,10 +8,11 @@ def test_simple_schema(q, kx):
         'col1': kx.GUIDAtom,
         'col2': kx.TimeAtom,
         'col3': kx.BooleanAtom,
-        'col4': kx.FloatVector})
+        'col4': kx.FloatVector,
+        'col5': kx.SecondVector})
     assert isinstance(qtab, kx.Table)
-    assert kx.q.cols(qtab).py() == ['col1', 'col2', 'col3', 'col4']
-    assert kx.q('{exec t from 0!meta x}', qtab).py() == b'gtbf'
+    assert kx.q.cols(qtab).py() == ['col1', 'col2', 'col3', 'col4', 'col5']
+    assert kx.q('{exec t from 0!meta x}', qtab).py() == b'gtbfv'
 
 
 def test_single_key_schema(q, kx):

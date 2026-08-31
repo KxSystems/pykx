@@ -90,7 +90,7 @@ If you apply [the q function named null](https://code.kx.com/q/ref/null/) to mos
 >>> import pykx as kx
 >>> kx.q.null(kx.q('0n'))
 pykx.BooleanAtom(pykx.q('1b'))
->>> kx.q.null(('1 2 0n 3f'))
+>>> kx.q.null(kx.q('1 2 0n 3f'))
 pykx.BooleanVector(pykx.q('0010b'))
 ```
 
@@ -130,104 +130,100 @@ False
 ```
 
 Some null values are unintuitive. For instance, the null value for a character in q is the space `#!python " "`, the null value for a symbol is the empty symbol, and the null value for a GUID is `#!python 00000000-0000-0000-0000-000000000000`. A char vector (i.e. q string) that has any spaces has `#!python has_nulls` set to `#!python True`.
-See also the page with specifics on [temporal](./temporal.md) conversions.
+Refer to [temporal conversions](./temporal.md) for details about temporal null and infinity values.
 
 ## q to Python
 
+`.py()`, `.np()`, `.pd()`, and `.pa()` convert q atoms and vectors to different Python representations. Select a tab in each section to compare their results.
+
 ### Null conversions
 
-!!! note "Note"
+These tables show how each method converts q null atoms and vectors.
 
-    KDB-X Python null conversion behavior changed in version 3.0.0. The below table outlines the before and after conversions.
+=== ".py()"
 
-    === ".py()"
+    | **Data type** | **q value** | **Atom conversion** | **Vector conversion** |
+    |-----------|---------|-----------------|-------------------|
+    | guid      | `0Ng`   | `UUID(int=0)`   | `UUID(int=0)`     |
+    | short     | `0Nh`   | `pd.NA`         | `pd.NA`           |
+    | int       | `0Ni`   | `pd.NA`         | `pd.NA`           |
+    | long      | `0Nj`   | `pd.NA`         | `pd.NA`           |
+    | real      | `0Ne`   | `float('nan')`  | `float('nan')`    |
+    | float     | `0n`    | `float('nan')`  | `float('nan')`    |
+    | character | `" "`   | `b' '`          | `b' '`            |
+    | symbol    | `` ` `` | `''`            | `''`              |
+    | timestamp | `0Np`   | `pd.NaT`        | `pd.NaT`          |
+    | month     | `0Nm`   | `pd.NaT`        | `pd.NaT`          |
+    | date      | `0Nd`   | `pd.NaT`        | `pd.NaT`          |
+    | timespan  | `0Nn`   | `pd.NaT`        | `pd.NaT`          |
+    | minute    | `0Nu`   | `pd.NaT`        | `pd.NaT`          |
+    | second    | `0Nv`   | `pd.NaT`        | `pd.NaT`          |
+    | time      | `0Nt`   | `pd.NaT`        | `pd.NaT`          |
 
-        | datatype  | q value | 2.* atom conversion | 2.* vector conversion | 3.* atom conversion | 3.* vector conversion |
-        |-----------|---------|---------------------|-----------------------|---------------------|-----------------------|
-        | guid      | `0Ng`   | `UUID(int=0)`       | `UUID(int=0)`         |                     |                       |
-        | short     | `0Nh`   | `q('0Nh')`          | `q('0Nh')`            | `pd.NA`             | `pd.NA`               |
-        | int       | `0Ni`   | `q('0Ni')`          | `q('0Ni')`            | `pd.NA`             | `pd.NA`               |
-        | long      | `0Nj`   | `q('0N')`           | `q('0N')`             | `pd.NA`             | `pd.NA`               |
-        | real      | `0Ne`   | `float('nan')`      | `float('nan')`        |                     |                       |
-        | float     | `0n`    | `float('nan')`      | `float('nan')`        |                     |                       |
-        | character | `" "`   | `b' '`              | `b' '`                |                     |                       |
-        | symbol    | `` ` `` | `''`                | `''`                  |                     |                       |
-        | timestamp | `0Np`   | `None`              | `q('0Np')`            | `pd.NaT`            | `pd.NaT`              |
-        | month     | `0Nm`   | `None`              | `q('0Nm')`            | `pd.NaT`            | `pd.NaT`              |
-        | date      | `0Nd`   | `None`              | `q('0Nd')`            | `pd.NaT`            | `pd.NaT`              |
-        | timespan  | `0Nn`   | `pd.NaT`            | `q('0Nn')`            |                     | `pd.NaT`              |
-        | minute    | `0Nu`   | `pd.NaT`            | `q('0Nu')`            |                     | `pd.NaT`              |
-        | second    | `0Nv`   | `pd.NaT`            | `q('0Nv')`            |                     | `pd.NaT`              |
-        | time      | `0Nt`   | `pd.NaT`            | `q('0Nt')`            |                     | `pd.NaT`              |
+=== ".np()"
 
-    === ".np()"
+    | **Data type** | **q value** | **Atom conversion**                  | **Vector conversion**                |
+    |-----------|---------|----------------------------------|----------------------------------|
+    | guid      | `0Ng`   | `UUID(int=0)`                    | `UUID(int=0)`                    |
+    | short     | `0Nh`   | `np.int16(-32768)`               | `np.int16(-32768)`               |
+    | int       | `0Ni`   | `np.int32(-2147483648)`          | `np.int32(-2147483648)`          |
+    | long      | `0Nj`   | `np.int64(-9223372036854775808)` | `np.int64(-9223372036854775808)` |
+    | real      | `0Ne`   | `np.float32('nan')`              | `np.float32('nan')`              |
+    | float     | `0n`    | `np.float64('nan')`              | `np.float64('nan')`              |
+    | character | `" "`   | `b' '`                           | `np.bytes_(' ')`                 |
+    | symbol    | `` ` `` | `''`                             | `''`                             |
+    | timestamp | `0Np`   | `np.datetime64('NaT')`           | `np.datetime64('NaT')`           |
+    | month     | `0Nm`   | `np.datetime64('NaT')`           | `np.datetime64('NaT')`           |
+    | date      | `0Nd`   | `np.datetime64('NaT')`           | `np.datetime64('NaT')`           |
+    | timespan  | `0Nn`   | `np.timedelta64('NaT')`          | `np.timedelta64('NaT')`          |
+    | minute    | `0Nu`   | `np.timedelta64('NaT')`          | `np.timedelta64('NaT')`          |
+    | second    | `0Nv`   | `np.timedelta64('NaT')`          | `np.timedelta64('NaT')`          |
+    | time      | `0Nt`   | `np.timedelta64('NaT')`          | `np.timedelta64('NaT')`          |
 
-        | datatype  | q value | 2.* atom conversion     | 2.* vector conversion            | 3.* atom conversion              | 3.vector conversion |
-        |-----------|---------|-------------------------|----------------------------------|----------------------------------|---------------------|
-        | guid      | `0Ng`   | `UUID(int=0)`           | `UUID(int=0)`                    |                                  |                     |
-        | short     | `0Nh`   | **1                     | `np.int16(-32768)`               | `np.int16(-32768)`               |                     |
-        | int       | `0Ni`   | **1                     | `np.int32(-2147483648)`          | `np.int32(-2147483648)`          |                     |
-        | long      | `0Nj`   | **1                     | `np.int64(-9223372036854775808)` | `np.int64(-9223372036854775808)` |                     |
-        | real      | `0Ng`   | `np.float32('nan')`     | `np.float32('nan')`              |                                  |                     |
-        | float     | `0n`    | `np.float64('nan')`     | `np.float64('nan')`              |                                  |                     |
-        | character | `" "`   | `b' '`                  | `np.bytes_(' ')`                 |                                  |                     |
-        | symbol    | `` ` `` | `''`                    | `''`                             |                                  |                     |
-        | timestamp | `0Np`   | `np.datetime64('NaT')`  | `np.datetime64('NaT')`           |                                  |                     |
-        | month     | `0Nm`   | `np.datetime64('NaT')`  | `np.datetime64('NaT')`           |                                  |                     |
-        | date      | `0Nd`   | `np.datetime64('NaT')`  | `np.datetime64('NaT')`           |                                  |                     |
-        | timespan  | `0Nn`   | `np.timedelta64('NaT')` | `np.timedelta64('NaT')`          |                                  |                     |
-        | minute    | `0Nu`   | `np.timedelta64('NaT')` | `np.timedelta64('NaT')`          |                                  |                     |
-        | second    | `0Nv`   | `np.timedelta64('NaT')` | `np.timedelta64('NaT')`          |                                  |                     |
-        | time      | `0Nt`   | `np.timedelta64('NaT')` | `np.timedelta64('NaT')`          |                                  |                     |
+=== ".pd()"
 
-        - **1 Errors: `NumPy does not support null atomic integral values for short int long`
+    | **Data type** | **q value** | **Atom conversion**     | **Vector conversion**   |
+    |-----------|---------|---------------------|---------------------|
+    | guid      | `0Ng`   | `UUID(int=0)`       | `UUID(int=0)`       |
+    | short     | `0Nh`   | `pd.NA`             | `pd.NA`             |
+    | int       | `0Ni`   | `pd.NA`             | `pd.NA`             |
+    | long      | `0Nj`   | `pd.NA`             | `pd.NA`             |
+    | real      | `0Ne`   | `np.float32('nan')` | `np.float32('nan')` |
+    | float     | `0n`    | `np.float64('nan')` | `np.float64('nan')` |
+    | character | `" "`   | `b' '`              | `np.bytes_(' ')`    |
+    | symbol    | `` ` `` | `''`                | `''`                |
+    | timestamp | `0Np`   | `pd.NaT`            | `pd.NaT`            |
+    | month     | `0Nm`   | `pd.NaT`            | `pd.NaT`            |
+    | date      | `0Nd`   | `pd.NaT`            | `pd.NaT`            |
+    | timespan  | `0Nn`   | `pd.NaT`            | `pd.NaT`            |
+    | minute    | `0Nu`   | `pd.NaT`            | `pd.NaT`            |
+    | second    | `0Nv`   | `pd.NaT`            | `pd.NaT`            |
+    | time      | `0Nt`   | `pd.NaT`            | `pd.NaT`            |
 
-    === ".pd()"
+=== ".pa()"
 
-        | datatype  | q value | 2.* atom conversion | 2.* vector conversion | 3.* atom conversion | 3.* vector conversion |
-        |-----------|---------|---------------------|-----------------------|---------------------|-----------------------|
-        | guid      | `0Ng`   | `UUID(int=0)`       | `UUID(int=0)`         |                     |                       |
-        | short     | `0Nh`   | **1                 | `pd.NA`               | `pd.NA`             |                       |
-        | int       | `0Ni`   | **1                 | `pd.NA`               | `pd.NA`             |                       |
-        | long      | `0Nj`   | **1                 | `pd.NA`               | `pd.NA`             |                       |
-        | real      | `0Ne`   | `np.float32('nan')` | `np.float32('nan')`   |                     |                       |
-        | float     | `0n`    | `np.float64('nan')` | `np.float64('nan')`   |                     |                       |
-        | character | `" "`   | `b' '`              | `np.bytes_(' ')`      |                     |                       |
-        | symbol    | `` ` `` | `''`                | `''`                  |                     |                       |
-        | timestamp | `0Np`   | `pd.NaT`            | `pd.NaT`              |                     |                       |
-        | month     | `0Nm`   | `pd.NaT`            | `pd.NaT`              |                     |                       |
-        | date      | `0Nd`   | `pd.NaT`            | `pd.NaT`              |                     |                       |
-        | timespan  | `0Nn`   | `pd.NaT`            | `pd.NaT`              |                     |                       |
-        | minute    | `0Nu`   | `pd.NaT`            | `pd.NaT`              |                     |                       |
-        | second    | `0Nv`   | `pd.NaT`            | `pd.NaT`              |                     |                       |
-        | time      | `0Nt`   | `pd.NaT`            | `pd.NaT`              |                     |                       |
+    | **Data type** | **q value** | **Atom conversion**     | **Vector conversion**                                     |
+    |-----------|---------|---------------------|-------------------------------------------------------|
+    | guid      | `0Ng`   | `UUID(int=0)`       | `<pyarrow.ExtensionScalar: b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'>` |
+    | short     | `0Nh`   | `pd.NA`             | `<pyarrow.Int16Scalar: None>`                         |
+    | int       | `0Ni`   | `pd.NA`             | `<pyarrow.Int32Scalar: None>`                         |
+    | long      | `0Nj`   | `pd.NA`             | `<pyarrow.Int64Scalar: None>`                         |
+    | real      | `0Ne`   | `np.float32('nan')` | `pa.array([np.float32('nan')], type=pa.float32())[0]` |
+    | float     | `0n`    | `np.float64('nan')` | `pa.array([np.float32('nan')], type=pa.float64())[0]` |
+    | character | `" "`   | `b' '`              | `pa.array([b' '], pa.binary())[0]`                    |
+    | symbol    | `` ` `` | `''`                | `pa.array([''], pa.string())[0]`                      |
+    | timestamp | `0Np`   | `pd.NaT`            | `<pyarrow.TimestampScalar: 'None'>`                   |
+    | month     | `0Nm`   | `pd.NaT`            | **Error [1]**                                         |
+    | date      | `0Nd`   | `pd.NaT`            | `<pyarrow.Date32Scalar: None>`                        |
+    | timespan  | `0Nn`   | `pd.NaT`            | `<pyarrow.DurationScalar: None>`                      |
+    | minute    | `0Nu`   | `pd.NaT`            | **Error [2]**                                         |
+    | second    | `0Nv`   | `pd.NaT`            | `<pyarrow.DurationScalar: None>`                      |
+    | time      | `0Nt`   | `pd.NaT`            | `<pyarrow.DurationScalar: None>`                      |
 
-        - **1 Errors: `NumPy does not support null atomic integral values for short int long`
+    !!! warning "Conversion errors"
 
-    === ".pa()"
-
-        | datatype  | q value | 2.* atom conversion  | 2.* vector conversion                                 | 3.* atom conversion | 3.* vector conversion |
-        |-----------|---------|---------------------|-------------------------------------------------------|---------------------|-----------------------|
-        | guid      | `0Ng`   | `UUID(int=0)`       | **1                                                   |                     |                       |
-        | short     | `0Nh`   | **2                 | **2                                                   |     `pd.NA`         |                       |
-        | int       | `0Ni`   | **2                 | **2                                                   |     `pd.NA`         |                       |
-        | long      | `0Nj`   | **2                 | **2                                                   |     `pd.NA`         |                       |
-        | real      | `0Ne`   | `np.float32('nan')` | `pa.array([np.float32('nan')], type=pa.float32())[0]` |                     |                       |
-        | float     | `0n`    | `np.float64('nan')` | `pa.array([np.float32('nan')], type=pa.float64())[0]` |                     |                       |
-        | character | `" "`   | `b' '`              | `pa.array([b' '], pa.binary())[0]`                    |                     |                       |
-        | symbol    | `` ` `` | `''`                | `pa.array([''], pa.string())[0]`                      |                     |                       |
-        | timestamp | `0Np`   | `pd.NaT`            | **3                                                   |                     |                       |
-        | month     | `0Nm`   | `pd.NaT`            | **3                                                   |                     |                       |
-        | date      | `0Nd`   | `pd.NaT`            | **3                                                   |                     |                       |
-        | timespan  | `0Nn`   | `pd.NaT`            | **4                                                   |                     |                       |
-        | minute    | `0Nu`   | `pd.NaT`            | **4                                                   |                     |                       |
-        | second    | `0Nv`   | `pd.NaT`            | **4                                                   |                     |                       |
-        | time      | `0Nt`   | `pd.NaT`            | **4                                                   |                     |                       |
-
-        - **1 Errors: `Could not convert UUID('00000000-0000-0000-0000-000000000000') with type UUID: did not recognize Python value type when inferring an Arrow data type`
-        - **2 Errors: `NumPy does not support null atomic integral values for short int long`
-        - **3 Errors: `pyarrow.lib.ArrowNotImplementedError: Unbound or generic datetime64 time unit`
-        - **4 Errors: `pyarrow.lib.ArrowNotImplementedError: Unbound or generic timedelta64 time unit`
+        - **[1]** PyArrow raises `pyarrow.lib.ArrowNotImplementedError: Unsupported datetime64 time unit`.
+        - **[2]** PyArrow raises `pyarrow.lib.ArrowNotImplementedError: Unsupported timedelta64 time unit`.
 
 To convert vectors with the q types `#!python short`, `#!python int`, and `#!python long` to Python, you can use the following methods:
 
@@ -394,7 +390,7 @@ While `#!python -9223372036854778080` represents an underlying KDB-X Python Null
 >>> import pandas as pd
 >>> t = kx.q('([] time:.z.p;a:til 1000;b:9,999#0N)')
 >>> pd.set_option('display.max_rows', 1000)
->>> t.pd
+>>> t.pd()
                           time    a  b
 0   2023-11-26 22:16:05.885992    0  9
 1   2023-11-26 22:16:05.885992    1 --
@@ -411,175 +407,172 @@ While `#!python -9223372036854778080` represents an underlying KDB-X Python Null
     - [Pandas working with missing data](https://pandas.pydata.org/docs/user_guide/missing_data.html)
     - [Pandas nullable integer data types](https://pandas.pydata.org/docs/user_guide/integer_na.html#integer-na)
 
-### Infinite Conversions
+### Infinite conversions
 
-See also the page with specifics on [temporal](./temporal.md) conversions to explain further some of the difficulties around infinities while converting.
+Python libraries cannot represent every typed q infinity directly, so results can differ by method, data type, and object shape. Refer to [temporal conversions](./temporal.md) for details about infinity conversions for temporal types.
 
-!!! note "Note"
 
-    KDB-X Python infinite conversion behavior changed in version 3.0.0. The below tables outline the before and after conversions.
+#### Positive infinity conversions
 
-    #### Positive Infinity conversions
+=== ".py()"
 
-    === ".py()"
+    | **Data type** | **q value** | **Atom conversion**                                      | **Vector conversion**                                    |
+    |-----------|---------|------------------------------------------------------|------------------------------------------------------|
+    | short     | `0Wh`   | `float('inf')`                                       | `float('inf')`                                       |
+    | int       | `0Wi`   | `float('inf')`                                       | `float('inf')`                                       |
+    | long      | `0Wj`   | `float('inf')`                                       | `float('inf')`                                       |
+    | real      | `0We`   | `float('inf')`                                       | `float('inf')`                                       |
+    | float     | `0w`    | `float('inf')`                                       | `float('inf')`                                       |
+    | timestamp | `0Wp`   | `datetime.datetime(2262, 4, 11, 23, 47, 16, 854775)` | `datetime.datetime(1707, 9, 22, 0, 12, 43, 145224)`  |
+    | month     | `0Wm`   | `2147484007`                                         | `2147484007`                                         |
+    | date      | `0Wd`   | `2147494604`                                         | `2147494604`                                         |
+    | timespan  | `0Wn`   | `datetime.timedelta(106751, 16, 854775, 0, 47, 23)`  | `datetime.timedelta(106751, 16, 854775, 0, 47, 23)`  |
+    | minute    | `0Wu`   | `datetime.timedelta(days=1491308, seconds=7620)`     | `datetime.timedelta(days=1491308, seconds=7620)`     |
+    | second    | `0Wv`   | `datetime.timedelta(24855, 7, 0, 0, 14, 3)`          | `datetime.timedelta(24855, 7, 0, 0, 14, 3)`          |
+    | time      | `0Wt`   | `datetime.timedelta(24, 23, 647000, 0, 31, 20)`      | `datetime.timedelta(24, 23, 647000, 0, 31, 20)`      |
 
-        | datatype  | q value | 2.* atom conversion                                  | 2.* vector conversion                               | 3.* atom conversion                                  | 3.* vector conversion                                |
-        |-----------|---------|------------------------------------------------------|-----------------------------------------------------|------------------------------------------------------|------------------------------------------------------|
-        | short     | `0Wh`   | `q('0Wh')`                                           | `q('0Wh')`                                          | `float('inf')`                                       | `float('inf')`                                       |
-        | int       | `0Wi`   | `q('0Wi')`                                           | `q('0Wi')`                                          | `float('inf')`                                       | `float('inf')`                                       |
-        | long      | `0Wj`   | `q('0W')`                                            | `q('0W')`                                           | `float('inf')`                                       | `float('inf')`                                       |
-        | real      | `0We`   | `float('inf')`                                       | `float('inf')`                                      |                                                      |                                                      |
-        | float     | `0w`    | `float('inf')`                                       | `float('inf')`                                      |                                                      |                                                      |
-        | timestamp | `0Wp`   | `datetime.datetime(2262, 4, 11, 23, 47, 16, 854775)` | `datetime.datetime(1707, 9, 22, 0, 12, 43, 145224)` |                                                      |                                                      |
-        | month     | `0Wm`   | `2147484007`                                         | `2147484007`                                        |                                                      |                                                      |
-        | date      | `0Wd`   | `2147494604`                                         | `2147494604`                                        |                                                      |                                                      |
-        | timespan  | `0Wn`   | `datetime.timedelta(106751, 16, 854775, 0, 47, 23)`  | `datetime.timedelta(106751, 16, 854775, 0, 47, 23)` |                                                      |                                                      |
-        | minute    | `0Wu`   | `datetime.timedelta(-3220, 4, 33138, 0, 5, 5)`       | `datetime.timedelta(-3220, 4, 33138, 0, 5, 5)`      |                                                      |                                                      |
-        | second    | `0Wv`   | `datetime.timedelta(24855, 7, 0, 0, 14, 3)`          | `datetime.timedelta(24855, 7, 0, 0, 14, 3)`         |                                                      |                                                      |
-        | time      | `0Wt`   | `datetime.timedelta(24, 23, 647000, 0, 31, 20)`      | `datetime.timedelta(24, 23, 647000, 0, 31, 20)`     |                                                      |                                                      |
+=== ".np()"
 
-    === ".np()"
+    | **Data type** | **q value** | **Atom conversion**                                  | **Vector conversion**                                |
+    |-----------|-------|--------------------------------------------------|--------------------------------------------------|
+    | short     | `0Wh` | `np.int16(32767)`                                | `np.int16(32767)`                                |
+    | int       | `0Wi` | `np.int32(2147483647)`                           | `np.int32(2147483647)`                           |
+    | long      | `0Wj` | `np.int64(9223372036854775807)`                  | `np.int64(9223372036854775807)`                  |
+    | real      | `0We` | `np.float32('inf')`                              | `np.float32('inf')`                              |
+    | float     | `0w`  | `np.float64('inf')`                              | `np.float64('inf')`                              |
+    | timestamp | `0Wp` | `np.datetime64('2262-04-11T23:47:16.854775807')` | `np.datetime64('1707-09-22T00:12:43.145224191')` |
+    | month     | `0Wm` | `np.datetime64('178958970-08')`                  | `np.datetime64('-178954971-04')`                 |
+    | date      | `0Wd` | `np.datetime64('5881610-07-11')`                 | `np.datetime64('-5877611-06-21')`                |
+    | timespan  | `0Wn` | `np.timedelta64(9223372036854775807, 'ns')`      | `np.timedelta64(9223372036854775807, 'ns')`      |
+    | minute    | `0Wu` | `np.timedelta64(2147483647, 'm')`                | `np.timedelta64(2147483647, 'm')`                |
+    | second    | `0Wv` | `np.timedelta64(2147483647, 's')`                | `np.timedelta64(2147483647, 's')`                |
+    | time      | `0Wt` | `np.timedelta64(2147483647, 'ms')`               | `np.timedelta64(2147483647, 'ms')`               |
 
-        | datatype  |       | 2.* atom conversion                              | 2.* vector conversion                            | 3.* atom conversion             | 3.* vector conversion                            |
-        |-----------|-------|--------------------------------------------------|--------------------------------------------------|---------------------------------|--------------------------------------------------|
-        | short     | `0Wh` | **1                                              | `np.int16(32767)`                                | `np.int16(32767)`               |                                                  |
-        | int       | `0Wi` | **1                                              | `np.int32(2147483647)`                           | `np.int32(2147483647)`          |                                                  |
-        | long      | `0Wj` | **1                                              | `np.int64(9223372036854775807)`                  | `np.int64(9223372036854775807)` |                                                  |
-        | real      | `0We` | `np.float32('inf')`                              | `np.float32('inf')`                              |                                 |                                                  |
-        | float     | `0w`  | `np.float64('inf')`                              | `np.float64('inf')`                              |                                 |                                                  |
-        | timestamp | `0Wp` | `np.datetime64('2262-04-11T23:47:16.854775807')` | `np.datetime64('1707-09-22T00:12:43.145224191')` |                                 |                                                  |
-        | month     | `0Wm` | `np.datetime64('178958970-08')`                  | `np.datetime64('-178954971-04')`                 |                                 |                                                  |
-        | date      | `0Wd` | `np.datetime64('5881610-07-11')`                 | `np.datetime64('-5877611-06-21')`                |                                 |                                                  |
-        | timespan  | `0Wn` | `np.timedelta64(9223372036854775807, 'ns')`      | `np.timedelta64(9223372036854775807, 'ns')`      |                                 |                                                  |
-        | minute    | `0Wu` | `np.timedelta64(2147483647, 'm')`                | `np.timedelta64(2147483647, 'm')`                |                                 |                                                  |
-        | second    | `0Wv` | `np.timedelta64(2147483647, 's')`                | `np.timedelta64(2147483647, 's')`                |                                 |                                                  |
-        | time      | `0Wt` | `np.timedelta64(2147483647, 'ms')`               | `np.timedelta64(2147483647, 'ms')`               |                                 |                                                  |
+=== ".pd()"
 
-        - **1 Errors: `NumPy does not support infinite atomic integral values`
+    | **Data type** | **q value** | **Atom conversion**                                 | **Vector conversion**                               |
+    |-----------|-------|-------------------------------------------------|-------------------------------------------------|
+    | short     | `0Wh` | `np.int16(32767)`                               | `np.int16(32767)`                               |
+    | int       | `0Wi` | `np.int32(2147483647)`                          | `np.int32(2147483647)`                          |
+    | long      | `0Wj` | `np.int64(9223372036854775807)`                 | `np.int64(9223372036854775807)`                 |
+    | real      | `0We` | `np.float32('inf')`                             | `np.float32('inf')`                             |
+    | float     | `0w`  | `np.float64('inf')`                             | `np.float64('inf')`                             |
+    | timestamp | `0Wp` | `pd.Timestamp('2262-04-11T23:47:16.854775807')` | `pd.Timestamp('1707-09-22T00:12:43.145224191')` |
+    | month     | `0Wm` | `Timestamp('178958970-08-01 00:00:00')` **[1]** | `Timestamp('-178954971-04-01 00:00:00')` **[1]** |
+    | date      | `0Wd` | `Timestamp('5881610-07-11 00:00:00')` **[1]**   | `Timestamp('-5877611-06-21 00:00:00')` **[1]**   |
+    | timespan  | `0Wn` | `pd.Timedelta(9223372036854775807, 'ns')`       | `pd.Timedelta(9223372036854775807, 'ns')`       |
+    | minute    | `0Wu` | `Timedelta('1491308 days 02:07:00')` **[1]**    | `Timedelta('1491308 days 02:07:00')` **[1]**     |
+    | second    | `0Wv` | `pd.Timedelta(2147483647, 's')`                 | `pd.Timedelta(2147483647, 's')`                 |
+    | time      | `0Wt` | `pd.Timedelta(2147483647, 'ms')`                | `pd.Timedelta(2147483647, 'ms')`                |
 
-    === "pd()"
+    !!! warning "Pandas version requirement"
 
-        | datatype  |       | 2.* atom conversion                             | 2.* vector conversion                           | 3.* atom conversion             | 3.* vector conversion                           |
-        |-----------|-------|-------------------------------------------------|-------------------------------------------------|---------------------------------|-------------------------------------------------|
-        | short     | `0Wh` | **1                                             | `np.int16(32767)`                               | `np.int16(32767)`               |                                                 |
-        | int       | `0Wi` | **1                                             | `np.int32(2147483647)`                          | `np.int32(2147483647)`          |                                                 |
-        | long      | `0Wj` | **1                                             | `np.int64(9223372036854775807)`                 | `np.int64(9223372036854775807)` |                                                 |
-        | real      | `0We` | `np.float32('inf')`                             | `np.float32('inf')`                             |                                 |                                                 |
-        | float     | `0w`  | `np.float64('inf')`                             | `np.float64('inf')`                             |                                 |                                                 |
-        | timestamp | `0Wp` | `pd.Timestamp('2262-04-11T23:47:16.854775807')` | `pd.Timestamp('1707-09-22T00:12:43.145224191')` |                                 |                                                 |
-        | month     | `0Wm` | **2 `Timestamp('178958970-08-01 00:00:00')`     | **2 `Timestamp('178958970-08-01 00:00:00')`     |                                 |                                                 |
-        | date      | `0Wd` | **2 `Timestamp('5881610-07-11 00:00:00')`       | **2 `Timestamp('5881610-07-11 00:00:00')`       |                                 |                                                 |
-        | timespan  | `0Wn` | `pd.Timedelta(9223372036854775807, 'ns')`       | `pd.Timedelta(9223372036854775807, 'ns')`       |                                 |                                                 |
-        | minute    | `0Wu` | **2 `Timedelta('1491308 days 02:07:00')`        | **2 `Timedelta('1491308 days 02:07:00')`        |                                 |                                                 |
-        | second    | `0Wv` | `pd.Timedelta(2147483647, 's')`                 | `pd.Timedelta(2147483647, 's')`                 |                                 |                                                 |
-        | time      | `0Wt` | `pd.Timedelta(2147483647, 'ms')`                | `pd.Timedelta(2147483647, 'ms')`                |                                 |                                                 |
+        - **[1]** These conversions require Pandas 2 or later. Pandas 1 raises `Values out of range` because its constructors cannot create these values.
 
-        - **1 Errors: `NumPy does not support infinite atomic integral values
-        - **2 Errors: `Values out of range` Pandas constructors block creation of these values
+=== ".pa()"
 
-    === ".pa()"
+    | **Data type** | **q value** | **Atom conversion**                                 | **Vector conversion**                                                                           |
+    |-----------|-------|-------------------------------------------------|---------------------------------------------------------------------------------------------|
+    | short     | `0Wh` | `np.int16(32767)`                               | `<pyarrow.Int16Scalar: 32767>`                                                              |
+    | int       | `0Wi` | `np.int32(2147483647)`                          | `<pyarrow.Int32Scalar: 2147483647>`                                                         |
+    | long      | `0Wj` | `np.int64(9223372036854775807)`                 | `<pyarrow.Int64Scalar: 9223372036854775807>`                                                |
+    | real      | `0We` | `np.float32('inf')`                             | `<pyarrow.FloatScalar: inf>`                                                                |
+    | float     | `0w`  | `np.float64('inf')`                             | `<pyarrow.DoubleScalar: inf>`                                                               |
+    | timestamp | `0Wp` | `pd.Timestamp('2262-04-11T23:47:16.854775807')` | `<pyarrow.TimestampScalar: '1707-09-22T00:12:43.145224191'>`                                |
+    | month     | `0Wm` | `Timestamp('178958970-08-01 00:00:00')` **[1]** | **Error [2]**                                                                               |
+    | date      | `0Wd` | `Timestamp('5881610-07-11 00:00:00')` **[1]**   | **Error [3]**                                                                               |
+    | timespan  | `0Wn` | `pd.Timedelta(9223372036854775807, 'ns')`       | `<pyarrow.DurationScalar: Timedelta('106751 days 23:47:16.854775807')>`                     |
+    | minute    | `0Wu` | `Timedelta('1491308 days 02:07:00')` **[1]**    | **Error [4]**                                                                               |
+    | second    | `0Wv` | `pd.Timedelta(2147483647, 's')`                 | `<pyarrow.DurationScalar: datetime.timedelta(days=24855, seconds=11647)>`                   |
+    | time      | `0Wt` | `pd.Timedelta(2147483647, 'ms')`                | `<pyarrow.DurationScalar: datetime.timedelta(days=24, seconds=73883, microseconds=647000)>` |
 
-        | datatype  |       | 2.* atom conversion                             | 2.* vector conversion                                                                       | 3.* atom conversion             | 3.* vector conversion                                        |
-        |-----------|-------|-------------------------------------------------|---------------------------------------------------------------------------------------------|---------------------------------|--------------------------------------------------------------|
-        | short     | `0Wh` | **1                                             | `<pyarrow.Int16Scalar: 32767>`                                                              | `np.int16(32767)`               |                                                              |
-        | int       | `0Wi` | **1                                             | `<pyarrow.Int32Scalar: 2147483647>`                                                         | `np.int32(2147483647)`          |                                                              |
-        | long      | `0Wj` | **1                                             | `<pyarrow.Int64Scalar: 9223372036854775807>`                                                | `np.int64(9223372036854775807)` |                                                              |
-        | real      | `0We` | `np.float32('inf')`                             | `<pyarrow.FloatScalar: inf>`                                                                |                                 |                                                              |
-        | float     | `0w`  | `np.float64('inf')`                             | `<pyarrow.DoubleScalar: inf>`                                                               |                                 |                                                              |
-        | timestamp | `0Wp` | `pd.Timestamp('2262-04-11T23:47:16.854775807')` | `<pyarrow.TimestampScalar: '1707-09-22T00:12:43.145224191'>`                                |                                 |                                                              |
-        | month     | `0Wm` | **2 `Timestamp('178958970-08-01 00:00:00')`     | **3                                                                                         |                                 |                                                              |
-        | date      | `0Wd` | **2 `Timestamp('5881610-07-11 00:00:00')`       | **4                                                                                         |                                 |                                                              |
-        | timespan  | `0Wn` | `pd.Timedelta(9223372036854775807, 'ns')`       | `<pyarrow.DurationScalar: Timedelta('106751 days 23:47:16.854775807')>`                     |                                 |                                                              |
-        | minute    | `0Wu` | **2 `Timedelta('1491308 days 02:07:00')`        | **5                                                                                         |                                 |                                                              |
-        | second    | `0Wv` | `pd.Timedelta(2147483647, 's')`                 | `<pyarrow.DurationScalar: datetime.timedelta(days=24855, seconds=11647)>`                   |                                 |                                                              |
-        | time      | `0Wt` | `pd.Timedelta(2147483647, 'ms')`                | `<pyarrow.DurationScalar: datetime.timedelta(days=24, seconds=73883, microseconds=647000)>` |                                 |                                                              |
+    !!! warning "Conversion limitations"
 
-        - **1 Errors: `NumPy does not support infinite atomic integral values`
-        - **2 Errors: `Values out of range - Pandas constructors block them`
-        - **3 Errors: `pyarrow.lib.ArrowNotImplementedError: Unsupported datetime64 time unit`
-        - **4 Errors: `OverflowError: days=-2147472692; must have magnitude <= 999999999`
-        - **5 Errors: `pyarrow.lib.ArrowNotImplementedError: Unsupported timedelta64 time unit`
+        - **[1]** These conversions require Pandas 2 or later. Pandas 1 raises `Values out of range` because its constructors cannot create these values.
+        - **[2]** PyArrow raises `pyarrow.lib.ArrowNotImplementedError: Unsupported datetime64 time unit`.
+        - **[3]** The conversion raises `OverflowError: days=-2147472692; must have magnitude <= 999999999`.
+        - **[4]** PyArrow raises `pyarrow.lib.ArrowNotImplementedError: Unsupported timedelta64 time unit`.
 
-    #### Negative Infinity conversions
+#### Negative infinity conversions
 
-    === ".py()"
+=== ".py()"
 
-        | datatype  |        | 2.* atom conversion                                  | 2.* vector conversion                               | 3.* atom conversion                                 | 3.* vector conversion |
-        |-----------|--------|------------------------------------------------------|-----------------------------------------------------|-----------------------------------------------------|-----------------------|
-        | short     | `-0Wh` | `q('-0Wh')`                                          | `q('-0Wh')`                                         | `float('-inf')`                                     | `float('-inf')`       |
-        | int       | `-0Wi` | `q('-0Wi')`                                          | `q('-0Wi')`                                         | `float('-inf')`                                     | `float('-inf')`       |
-        | long      | `-0Wj` | `q('-0W')`                                           | `q('-0W')`                                          | `float('-inf')`                                     | `float('-inf')`       |
-        | real      | `-0We` | `float('-inf')`                                      | `float('-inf')`                                     |                                                     |                       |
-        | float     | `-0w`  | `float('-inf')`                                      | `float('-inf')`                                     |                                                     |                       |
-        | timestamp | `-0Wp` | `datetime.datetime(2262, 4, 11, 23, 47, 16, 854774)` | `datetime.datetime(1707, 9, 22, 0, 12, 43, 145224)` | `datetime.datetime(1707, 9, 22, 0, 12, 43, 145224)` |                       |
-        | month     | `-0Wm` | `-2147483287`                                        | `-2147483287`                                       |                                                     |                       |
-        | date      | `-0Wd` | `-2147472690`                                        | `-2147472690`                                       |                                                     |                       |
-        | timespan  | `-0Wn` | `datetime.timedelta(-106752, 43, 145224, 0, 12)`     | `datetime.timedelta(-106752, 43, 145224, 0, 12)`    |                                                     |                       |
-        | minute    | `-0Wu` | `datetime.timedelta(3219, 55, 966861, 0, 54, 18)`    | `datetime.timedelta(3219, 55, 966861, 0, 54, 18)`   |                                                     |                       |
-        | second    | `-0Wv` | `datetime.timedelta(-24856, 53, 0, 0, 45, 20)`       | `datetime.timedelta(-24856, 53, 0, 0, 45, 20)`      |                                                     |                       |
-        | time      | `-0Wt` | `datetime.timedelta(-25, 36, 353000, 0, 28, 3)`      | `datetime.timedelta(-25, 36, 353000, 0, 28, 3)`     |                                                     |                       |
+    | **Data type** | **q value** | **Atom conversion**                                        | **Vector conversion**                                      |
+    |-----------|--------|--------------------------------------------------------|--------------------------------------------------------|
+    | short     | `-0Wh` | `float('-inf')`                                        | `float('-inf')`                                        |
+    | int       | `-0Wi` | `float('-inf')`                                        | `float('-inf')`                                        |
+    | long      | `-0Wj` | `float('-inf')`                                        | `float('-inf')`                                        |
+    | real      | `-0We` | `float('-inf')`                                        | `float('-inf')`                                        |
+    | float     | `-0w`  | `float('-inf')`                                        | `float('-inf')`                                        |
+    | timestamp | `-0Wp` | `datetime.datetime(1707, 9, 22, 0, 12, 43, 145224)`    | `datetime.datetime(1707, 9, 22, 0, 12, 43, 145224)`    |
+    | month     | `-0Wm` | `-2147483287`                                          | `-2147483287`                                          |
+    | date      | `-0Wd` | `-2147472690`                                          | `-2147472690`                                          |
+    | timespan  | `-0Wn` | `datetime.timedelta(-106752, 43, 145224, 0, 12)`       | `datetime.timedelta(-106752, 43, 145224, 0, 12)`       |
+    | minute    | `-0Wu` | `datetime.timedelta(days=-1491309, seconds=78780)`     | `datetime.timedelta(days=-1491309, seconds=78780)`     |
+    | second    | `-0Wv` | `datetime.timedelta(-24856, 53, 0, 0, 45, 20)`         | `datetime.timedelta(-24856, 53, 0, 0, 45, 20)`         |
+    | time      | `-0Wt` | `datetime.timedelta(-25, 36, 353000, 0, 28, 3)`        | `datetime.timedelta(-25, 36, 353000, 0, 28, 3)`        |
 
-    === "np()"
+=== ".np()"
 
-        | datatype  |        | 2.* atom conversion                              | 2.* vector conversion                            | 3.* atom conversion                              | 3.* vector conversion |
-        |-----------|--------|--------------------------------------------------|--------------------------------------------------|--------------------------------------------------|-----------------------|
-        | short     | `-0Wh` | **1                                               | `np.int16(-32767)`                              | `np.int16(-32767)`                               |                       |
-        | int       | `-0Wi` | **1                                              | `np.int32(-2147483647)`                          | `np.int32(-2147483647)`                          |                       |
-        | long      | `-0Wj` | **1                                              | `np.int64(-9223372036854775807)`                 | `np.int64(-9223372036854775807)`                 |                       |
-        | real      | `-0We` | `np.float32('-inf')`                             | `np.float32('-inf')`                             |                                                  |                       |
-        | float     | `-0w`  | `np.float64('-inf')`                             | `np.float64('-inf')`                             |                                                  |                       |
-        | timestamp | `-0Wp` | `np.datetime64('1677-09-21T00:12:43.145224193')` | `np.datetime64('1707-09-22T00:12:43.145224193')` | `np.datetime64('1707-09-22T00:12:43.145224193')` |                       |
-        | month     | `-0Wm` | `np.datetime64('-178954971-06')`                 | `np.datetime64('-178954971-06')`                 |                                                  |                       |
-        | date      | `-0Wd` | `np.datetime64('-5877611-06-23')`                | `np.datetime64('-5877611-06-23')`                |                                                  |                       |
-        | timespan  | `-0Wn` | `np.timedelta64(-9223372036854775807, 'ns')`     | `np.timedelta64(-9223372036854775807, 'ns')`     |                                                  |                       |
-        | minute    | `-0Wu` | `np.timedelta64(-2147483647, 'm')`               | `np.timedelta64(-2147483647, 'm')`               |                                                  |                       |
-        | second    | `-0Wv` | `np.timedelta64(-2147483647, 's')`               | `np.timedelta64(-2147483647, 's')`               |                                                  |                       |
-        | time      | `-0Wt` | `np.timedelta64(-2147483647, 'ms')`              | `np.timedelta64(-2147483647, 'ms')`              |                                                  |                       |
+    | **Data type** | **q value** | **Atom conversion**                                  | **Vector conversion**                                |
+    |-----------|--------|--------------------------------------------------|--------------------------------------------------|
+    | short     | `-0Wh` | `np.int16(-32767)`                               | `np.int16(-32767)`                               |
+    | int       | `-0Wi` | `np.int32(-2147483647)`                          | `np.int32(-2147483647)`                          |
+    | long      | `-0Wj` | `np.int64(-9223372036854775807)`                 | `np.int64(-9223372036854775807)`                 |
+    | real      | `-0We` | `np.float32('-inf')`                             | `np.float32('-inf')`                             |
+    | float     | `-0w`  | `np.float64('-inf')`                             | `np.float64('-inf')`                             |
+    | timestamp | `-0Wp` | `np.datetime64('1707-09-22T00:12:43.145224193')` | `np.datetime64('1707-09-22T00:12:43.145224193')` |
+    | month     | `-0Wm` | `np.datetime64('-178954971-06')`                 | `np.datetime64('-178954971-06')`                 |
+    | date      | `-0Wd` | `np.datetime64('-5877611-06-23')`                | `np.datetime64('-5877611-06-23')`                |
+    | timespan  | `-0Wn` | `np.timedelta64(-9223372036854775807, 'ns')`     | `np.timedelta64(-9223372036854775807, 'ns')`     |
+    | minute    | `-0Wu` | `np.timedelta64(-2147483647, 'm')`               | `np.timedelta64(-2147483647, 'm')`               |
+    | second    | `-0Wv` | `np.timedelta64(-2147483647, 's')`               | `np.timedelta64(-2147483647, 's')`               |
+    | time      | `-0Wt` | `np.timedelta64(-2147483647, 'ms')`              | `np.timedelta64(-2147483647, 'ms')`              |
 
-        - **1 Errors: `NumPy does not support infinite atomic integral values`
+=== ".pd()"
 
-    === ".pd()"
+    | **Data type** | **q value** | **Atom conversion**                                 | **Vector conversion**                               |
+    |-----------|--------|-------------------------------------------------|-------------------------------------------------|
+    | short     | `-0Wh` | `np.int16(-32767)`                              | `np.int16(-32767)`                              |
+    | int       | `-0Wi` | `np.int32(-2147483647)`                         | `np.int32(-2147483647)`                         |
+    | long      | `-0Wj` | `np.int64(-9223372036854775807)`                | `np.int64(-9223372036854775807)`                |
+    | real      | `-0We` | `np.float32('-inf')`                            | `np.float32('-inf')`                            |
+    | float     | `-0w`  | `np.float64('-inf')`                            | `np.float64('-inf')`                            |
+    | timestamp | `-0Wp` | `pd.Timestamp('1707-09-22 00:12:43.145224193')` | `pd.Timestamp('1707-09-22 00:12:43.145224193')` |
+    | month     | `-0Wm` | `Timestamp('-178954971-06-01 00:00:00')` **[1]** | `Timestamp('-178954971-06-01 00:00:00')` **[1]** |
+    | date      | `-0Wd` | `Timestamp('-5877611-06-23 00:00:00')` **[1]**   | `Timestamp('-5877611-06-23 00:00:00')` **[1]**   |
+    | timespan  | `-0Wn` | `pd.Timedelta(-9223372036854775807, 'ns')`      | `pd.Timedelta(-9223372036854775807, 'ns')`      |
+    | minute    | `-0Wu` | `Timedelta('-1491309 days +21:53:00')` **[1]**   | `Timedelta('-1491309 days +21:53:00')` **[1]**   |
+    | second    | `-0Wv` | `pd.Timedelta(-2147483647, 's')`                | `pd.Timedelta(-2147483647, 's')`                |
+    | time      | `-0Wt` | `pd.Timedelta(-2147483647, 'ms')`               | `pd.Timedelta(-2147483647, 'ms')`               |
 
-        | datatype  |        | 2.* atom conversion                             | 2.* vector conversion                           | 3.* atom conversion                             | 3.* vector conversion |
-        |-----------|--------|-------------------------------------------------|-------------------------------------------------|-------------------------------------------------|-----------------------|
-        | short     | `-0Wh` | **1                                             | `np.int16(-32767)`                              | `np.int16(-32767)`                              |                       |
-        | int       | `-0Wi` | **1                                             | `np.int32(-2147483647)`                         | `np.int32(-2147483647)`                         |                       |
-        | long      | `-0Wj` | **1                                             | `np.int64(-9223372036854775807)`                | `np.int64(-9223372036854775807)`                |                       |
-        | real      | `-0We` | `np.float32('-inf')`                            | `np.float32('-inf')`                            |                                                 |                       |
-        | float     | `-0w`  | `np.float64('-inf')`                            | `np.float64('-inf')`                            |                                                 |                       |
-        | timestamp | `-0Wp` | `pd.Timestamp('1677-09-21T00:12:43.145224193')` | `pd.Timestamp('1707-09-22 00:12:43.145224193')` | `pd.Timestamp('1707-09-22 00:12:43.145224193')` |                       |
-        | month     | `-0Wm` | **2 `Timestamp('-178954971-06-01 00:00:00')`    | **2 `Timestamp('-178954971-06-01 00:00:00')`    |                                                 |                       |
-        | date      | `-0Wd` | **2 `Timestamp('-5877611-06-23 00:00:00')`      | **2 `Timestamp('-5877611-06-23 00:00:00')`      |                                                 |                       |
-        | timespan  | `-0Wn` | `pd.Timedelta(-9223372036854775807, 'ns')`      | `pd.Timedelta(-9223372036854775807, 'ns')`      |                                                 |                       |
-        | minute    | `-0Wu` | **2 `Timedelta('-1491309 days +21:53:00')`      | **2 `Timedelta('-1491309 days +21:53:00')`      |                                                 |                       |
-        | second    | `-0Wv` | `pd.Timedelta(-2147483647, 's')`                | `pd.Timedelta(-2147483647, 's')`                |                                                 |                       |
-        | time      | `-0Wt` | `pd.Timedelta(-2147483647, 'ms')`               | `pd.Timedelta(-2147483647, 'ms')`               |                                                 |                       |
+    !!! warning "Pandas version requirement"
 
-        - **1 Errors: `NumPy does not support infinite atomic integral values`
-        - **2 Errors: `Values out of range` Pandas constructors block creation of these values
+        - **[1]** These conversions require Pandas 2 or later. Pandas 1 raises `Values out of range` because its constructors cannot create these values.
 
-    === ".pa()"
+=== ".pa()"
 
-        | datatype  |        | 2.* atom conversion                             | 2.* vector conversion                                                                        | 3.* atom conversion                             | 3.* vector conversion |
-        |-----------|--------|-------------------------------------------------|----------------------------------------------------------------------------------------------|-------------------------------------------------|-----------------------|
-        | short     | `-0Wh` | **1                                             | `<pyarrow.Int16Scalar: -32767>`                                                              | `np.int16(-32767)`                              |                       |
-        | int       | `-0Wi` | **1                                             | `<pyarrow.Int32Scalar: -2147483647>`                                                         | `np.int32(-2147483647)`                         |                       |
-        | long      | `-0Wj` | **1                                             | `<pyarrow.Int64Scalar: -9223372036854775807>`                                                | `np.int64(-9223372036854775807)`                |                       |
-        | real      | `-0We` | `np.float32('-inf')`                            | `<pyarrow.FloatScalar: -inf>`                                                                |                                                 |                       |
-        | float     | `-0w`  | `np.float64('-inf')`                            | `<pyarrow.DoubleScalar: -inf>`                                                               |                                                 |                       |
-        | timestamp | `-0Wp` | `pd.Timestamp('1677-09-21T00:12:43.145224193')` | `<pyarrow.TimestampScalar: '1707-09-22 00:12:43.145224193'>`                                 | `pd.Timestamp('1707-09-22 00:12:43.145224193')` |                       |
-        | month     | `-0Wm` | **2 `Timestamp('-178954971-06-01 00:00:00')`    |  **3                                                                                         |                                                 |                       |
-        | date      | `-0Wd` | **2 `Timestamp('-5877611-06-23 00:00:00')`      |  **4                                                                                         |                                                 |                       |
-        | timespan  | `-0Wn` | `pd.Timedelta(-9223372036854775807, 'ns')`      | `<pyarrow.DurationScalar: Timedelta('-106752 days +00:12:43.145224193')>`                    |                                                 |                       |
-        | minute    | `-0Wu` | **2 `Timedelta('-1491309 days +21:53:00')`      | **5                                                                                          |                                                 |                       |
-        | second    | `-0Wv` | `pd.Timedelta(-2147483647, 's')`                | `<pyarrow.DurationScalar: datetime.timedelta(days=-24856, seconds=74753)>`                   |                                                 |                       |
-        | time      | `-0Wt` | `pd.Timedelta(-2147483647, 'ms')`               | `<pyarrow.DurationScalar: datetime.timedelta(days=-25, seconds=12516, microseconds=353000)>` |                                                 |                       |
+    | **Data type** | **q value** | **Atom conversion**                                 | **Vector conversion**                                                                            |
+    |-----------|--------|-------------------------------------------------|----------------------------------------------------------------------------------------------|
+    | short     | `-0Wh` | `np.int16(-32767)`                              | `<pyarrow.Int16Scalar: -32767>`                                                              |
+    | int       | `-0Wi` | `np.int32(-2147483647)`                         | `<pyarrow.Int32Scalar: -2147483647>`                                                         |
+    | long      | `-0Wj` | `np.int64(-9223372036854775807)`                | `<pyarrow.Int64Scalar: -9223372036854775807>`                                                |
+    | real      | `-0We` | `np.float32('-inf')`                            | `<pyarrow.FloatScalar: -inf>`                                                                |
+    | float     | `-0w`  | `np.float64('-inf')`                            | `<pyarrow.DoubleScalar: -inf>`                                                               |
+    | timestamp | `-0Wp` | `pd.Timestamp('1707-09-22 00:12:43.145224193')` | `<pyarrow.TimestampScalar: '1707-09-22 00:12:43.145224193'>`                                 |
+    | month     | `-0Wm` | `Timestamp('-178954971-06-01 00:00:00')` **[1]** | **Error [2]**                                                                                |
+    | date      | `-0Wd` | `Timestamp('-5877611-06-23 00:00:00')` **[1]**   | **Error [3]**                                                                                |
+    | timespan  | `-0Wn` | `pd.Timedelta(-9223372036854775807, 'ns')`      | `<pyarrow.DurationScalar: Timedelta('-106752 days +00:12:43.145224193')>`                    |
+    | minute    | `-0Wu` | `Timedelta('-1491309 days +21:53:00')` **[1]**   | **Error [4]**                                                                                |
+    | second    | `-0Wv` | `pd.Timedelta(-2147483647, 's')`                | `<pyarrow.DurationScalar: datetime.timedelta(days=-24856, seconds=74753)>`                   |
+    | time      | `-0Wt` | `pd.Timedelta(-2147483647, 'ms')`               | `<pyarrow.DurationScalar: datetime.timedelta(days=-25, seconds=12516, microseconds=353000)>` |
 
-        - **1 Errors: `NumPy does not support infinite atomic integral values`
-        - **2 Errors: `Values out of range - Pandas constructors block them`
-        - **3 Errors: `pyarrow.lib.ArrowNotImplementedError: Unsupported datetime64 time unit`
-        - **4 Errors: `OverflowError: days=-2147472690; must have magnitude <= 999999999`
-        - **5 Errors: `pyarrow.lib.ArrowNotImplementedError: Unsupported timedelta64 time unit`
+    !!! warning "Conversion limitations"
+
+        - **[1]** These conversions require Pandas 2 or later. Pandas 1 raises `Values out of range` because its constructors cannot create these values.
+        - **[2]** PyArrow raises `pyarrow.lib.ArrowNotImplementedError: Unsupported datetime64 time unit`.
+        - **[3]** The conversion raises `OverflowError: days=-2147472690; must have magnitude <= 999999999`.
+        - **[4]** PyArrow raises `pyarrow.lib.ArrowNotImplementedError: Unsupported timedelta64 time unit`.
 
 #### Infinite weirdness
 

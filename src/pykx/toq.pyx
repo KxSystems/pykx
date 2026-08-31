@@ -112,7 +112,7 @@ from . import wrappers as k
 from ._pyarrow import pyarrow as pa
 from .cast import *
 from . import config
-from .config import beta_features, find_core_lib, k_allocator, licensed, pandas_gt1, system
+from .config import beta_features, find_core_lib, keep_local_times, k_allocator, licensed, pandas_gt1, system
 from .constants import NULL_INT16, NULL_INT32, NULL_INT64
 from .constants import INF_INT16, INF_INT32, INF_INT64, INF_NEG_INT16, INF_NEG_INT32, INF_NEG_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
@@ -120,6 +120,12 @@ from .util import df_from_arrays, slice_to_range
 
 import importlib.util
 _torch_unavailable = importlib.util.find_spec('torch') is None
+_np_get_handler_name = (np.core.multiarray if np.__version__[0] == '1'
+                        else np._core.multiarray).get_handler_name
+
+
+cdef bint _pykx_allocated(x):
+    return _np_get_handler_name(x) == 'pykx_allocator'
 
 
 __all__ = [
@@ -971,9 +977,7 @@ def from_list(x: list,
     if ktype is not None and not ktype is k.List:
         try:
             np_type = pykx_ktype_to_np_type.get(ktype) if ktype != k.GUIDVector else object
-
             if ktype is k.TimestampVector and config.keep_local_times:
-
                 x = [y.replace(tzinfo=None) for y in x]
             return from_numpy_ndarray(np.array(x, dtype=np_type), ktype, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
         except TypeError as ex:
@@ -1379,11 +1383,19 @@ def from_numpy_ndarray(x: np.ndarray,
     Returns:
         An instance of a subclass of `pykx.Vector`.
     """
-    owndata = False
-    writeable = False
+    # Structured arrays (those with named fields) map onto q tables rather than vectors.
+    if x.dtype.names is not None:
+        return from_numpy_recarray(x, ktype, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
+    skip_allocator = False
     if hasattr(x, 'flags'):
-        owndata = x.flags.owndata
-        writeable = x.flags.writeable
+        if (
+            not k_allocator
+            or no_allocator
+            or not x.flags.owndata
+            or not x.flags.writeable
+            or not _pykx_allocated(x)
+        ):
+            skip_allocator = True
     if str(x.dtype) == "pykx.uuid":
         x = x.array
 
@@ -1483,7 +1495,7 @@ def from_numpy_ndarray(x: np.ndarray,
                 core.r0(kx)
                 raise TypeError('Item size mismatch when converting Numpy ndarray to q: q item size '
                                 f'({itemsize}) != Numpy item size ({x.itemsize})')
-            if not k_allocator or no_allocator or not owndata or not writeable:
+            if skip_allocator:
                 kx = core.ktn(ktype.t, n)
                 data = x.__array_interface__['data'][0]
                 memcpy(<void *> kx.G0, <void *> data, n * itemsize)
@@ -1536,12 +1548,12 @@ def from_numpy_ndarray(x: np.ndarray,
             core.r0(kx)
             raise TypeError('Item size mismatch when converting Numpy ndarray to q: q item size '
                             f'({itemsize}) != Numpy item size ({x.itemsize})')
-        if not k_allocator or no_allocator or not owndata or not writeable:
+        if skip_allocator:
             kx = core.ktn(ktype.t, n)
             data = x.__array_interface__['data'][0]
             memcpy(<void *> kx.G0, <void *> data, n * itemsize)
             return factory(<uintptr_t>kx, False)
-    if not k_allocator or no_allocator or not owndata or not writeable:
+    if skip_allocator:
         return factory(<uintptr_t>kx, False) # nocov
     Py_INCREF(x)
     data = x.__array_interface__['data'][0]
@@ -1551,6 +1563,100 @@ def from_numpy_ndarray(x: np.ndarray,
     res = factory(<uintptr_t>kx, True)
     setattr(res, '_numpy_allocated', pyobject_to_long_addr(x))
     return res
+
+
+def from_numpy_recarray(x: np.recarray,
+                        ktype: Optional[KType] = None,
+                        *,
+                        cast: bool = False,
+                        handle_nulls: bool = False,
+                        strings_as_char: bool = False,
+                        no_allocator: bool = False,
+) -> Union[k.Table, k.KeyedTable]:
+    """Converts a structured `numpy.ndarray` (including a `numpy.recarray`) into a `pykx.Table`.
+
+    This is the inverse of [`pykx.Table.np`][pykx.wrappers.Table.np], which produces a
+    `numpy.recarray` via `pandas.DataFrame.to_records`. Each named field of the array's dtype
+    becomes a column of the resulting q table, with each field converted independently as a
+    `numpy.ndarray` would be.
+
+    See Also:
+        - [`from_numpy_ndarray`][pykx.toq.from_numpy_ndarray]
+        - [`from_pandas_dataframe`][pykx.toq.from_pandas_dataframe]
+
+    Parameters:
+        x: The structured `numpy.ndarray`/`numpy.recarray` that will be converted into a q table.
+            Its dtype must have named fields (i.e. `x.dtype.names is not None`).
+        ktype: Desired `pykx.K` subclass (or type number) for the returned value. If `None`, a
+            `pykx.Table` is returned. The following values are supported:
+
+            +-------------------+-----------------------------------------------------------------+
+            | `ktype`           | Returned value                                                  |
+            +===================+=================================================================+
+            | `None`            | Same as for `ktype=pykx.Table`.                                 |
+            +-------------------+-----------------------------------------------------------------+
+            | `pykx.Table`      | The record array as a q table.                                  |
+            +-------------------+-----------------------------------------------------------------+
+            | `pykx.KeyedTable` | The record array as a q keyed table.                            |
+            +-------------------+-----------------------------------------------------------------+
+        cast: Unused.
+        handle_nulls: Convert `pd.NaT` to corresponding q null values in Pandas dataframes and
+            Numpy arrays.
+
+    Raises:
+        TypeError: The array is not a structured array, has more than one dimension, or the
+            `ktype` is unsupported.
+
+    Returns:
+        An instance of `pykx.Table` or `pykx.KeyedTable`.
+    """
+    cdef core.K kx
+    if getattr(x, 'dtype', None) is None or x.dtype.names is None:
+        raise _conversion_TypeError(x, repr('numpy.recarray'), ktype)
+    if x.ndim != 1:
+        raise TypeError(
+            'Only one dimensional record arrays can be converted to a q table, received an '
+            f'array with {x.ndim} dimensions'
+        )
+    # Keyed tables (and any other non-default target) are handled by the more general Pandas
+    # path, which understands how to build the key columns from an index.
+    if not (ktype is None or ktype is k.Table):
+        return from_pandas_dataframe(
+            pd.DataFrame.from_records(x),
+            ktype,
+            cast=cast,
+            handle_nulls=handle_nulls,
+            strings_as_char=strings_as_char,
+            no_allocator=no_allocator,
+        )
+    # Convert each field independently as a numpy array, preserving its dtype (e.g. an 'S1'
+    # field becomes a char column and a 'U1' field a symbol column) and assemble the columns
+    # into a table.
+    columns = {}
+    for name in x.dtype.names:
+        col = from_numpy_ndarray(
+            x[name],
+            cast=cast,
+            handle_nulls=handle_nulls,
+            strings_as_char=strings_as_char,
+            no_allocator=no_allocator,
+        )
+        # A table column must be a vector. A single element field (e.g. a one row 'S1'/bytes
+        # column) converts to an atom, so enlist it into a length one vector.
+        if isinstance(col, k.Atom):
+            col = from_list([col])
+        columns[name] = col
+    kk = from_dict(
+        columns,
+        cast=cast,
+        handle_nulls=handle_nulls,
+        strings_as_char=strings_as_char,
+        no_allocator=no_allocator,
+    )
+    kx = core.xT(core.r1(_k(kk)))
+    if kx == NULL:
+        raise PyKXException('Failed to create table from numpy record array')
+    return factory(<uintptr_t>kx, False)
 
 
 _size_to_nan = {
@@ -1577,6 +1683,8 @@ def _to_numpy_or_categorical(x, col_name=None, df=None):
     if isinstance(x, np.ndarray):
         return x
     elif isinstance(x, (pd.Series, pd.Index)):
+        if keep_local_times and hasattr(x, 'dt') and hasattr(x.dt, 'tz_localize'):
+           x = x.dt.tz_localize(None) 
         if isinstance(x.values, pd.Categorical):
             return from_pandas_categorical(
                 x.values,
@@ -1584,8 +1692,12 @@ def _to_numpy_or_categorical(x, col_name=None, df=None):
             )
         elif isinstance(x.values, pd.core.arrays.ExtensionArray):
             attrnull = hasattr(x, 'isnull')
-            hasnull = x.isnull().values.any() if attrnull else False
-            if isinstance(x.dtype, pd.StringDtype) and attrnull and hasnull:
+            isnull = x.isnull().values if attrnull else None
+            hasnull = isnull.any() if attrnull else False
+            string_dtype = pd.api.types.is_string_dtype(x.dtype)
+            if string_dtype and (len(x) == 0 or (attrnull and isnull.all())):
+                return np.full(len(x), '', dtype='U1')
+            elif string_dtype and attrnull and hasnull:
                 return np.array(x.to_numpy(copy=False, na_value=None))
             elif x.dtype.kind != 'f' and attrnull and hasnull:
                 if not x.dtype.kind in ['i', 'M', 'm']:
@@ -2279,6 +2391,8 @@ def from_numpy_datetime64(x: np.datetime64,
     """
     cdef core.K kx
     if isinstance(x, pd._libs.tslibs.timestamps.Timestamp):
+        if keep_local_times and hasattr(x, 'tz_localize'):
+            x = x.tz_localize(None)
         x = x.to_datetime64()
     if ktype is None or ktype is k.TimestampAtom:
         kx = core.ktj(-12, x.astype(np.dtype('datetime64[ns]')).astype(np.int64) - TIMESTAMP_OFFSET) # noqa
@@ -2597,7 +2711,6 @@ def from_ellipsis(x: Ellipsis,
     return q('value[(;)]1')
 
 
-# TODO: After Python 3.7 support is dropped, use a `typing.Protocol` for `x` (KXI-9158)
 def from_fileno(x: Any,
                 ktype: Optional[KType] = None,
                 *,
@@ -2925,6 +3038,7 @@ _converter_from_python_type = {
 
     np.ndarray: from_numpy_ndarray,
     np.ma.MaskedArray: from_numpy_ndarray,
+    np.recarray: from_numpy_recarray,
 
     pd.DataFrame: from_pandas_dataframe,
     pd.Series: from_pandas_series,

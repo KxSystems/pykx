@@ -30,6 +30,7 @@ extra_css:
   # More accessible colors in the edited versions
   - stylesheets/2026-edited.css
   - stylesheets/prism-edited.css
+  - stylesheets/404.css
 
 extra_javascript:
   - https://code.kx.com/scripts/prism.js
@@ -41,9 +42,14 @@ extra_javascript:
   - 'https://code.jquery.com/jquery-3.6.0.min.js'
   - 'https://use.fontawesome.com/3dbf29ed12.js'
   - scripts/strip-q-prompt-copy.js
-  # this relative path is needed to source from code.kx.com!!!
-  - "&period;&period;/&period;&period;/pykx/scripts/versions.js"
-  # Uncomment only for local test 
+  - scripts/init_kapa_widget.js
+  - scripts/collapse-code.js
+  - scripts/search-highlight-clear.js
+  # absolute URL so the shared, symlinked versions.js loads on every page.
+  # The old "&period;" relative hack is double-escaped to "&amp;period;" by
+  # newer mkdocs-material, which 404s and breaks the version dropdown.
+  - https://code.kx.com/pykx/scripts/versions.js
+  # Uncomment only for local test
   # - 'scripts/versions.js'
 
 
@@ -82,7 +88,8 @@ markdown_extensions:
           format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tilde
   - toc:
-      permalink: false
+      permalink: true
+      permalink_title: ""
       title: On this page
 
 plugins:
@@ -127,11 +134,11 @@ plugins:
   - search
   - exclude-search:
       exclude:
-        - user-guide/advanced/Pandas_API.ipynb
-        - examples/interface-overview.ipynb
-        - examples/jupyter-integration.ipynb
-        - examples/db-management.ipynb
-        - examples/streaming/Evolving System.ipynb
+        - user-guide/advanced/Pandas_API*
+        - examples/jupyter-integration*
+        - examples/db-management*
+        - "examples/streaming/Evolving System*"
+        - examples/charting*
   - spellcheck:
       known_words: spelling.txt
       ignore_code: true    # Ignore words in <code> tags
@@ -142,7 +149,6 @@ plugins:
         - comparisons.md # Skipped due to false positives
         - performance.md # Skipped due to false positives
         - user-guide/advanced/Pandas_API.ipynb
-        - examples/interface-overview.ipynb
         - examples/jupyter-integration.ipynb
         - examples/db-management.ipynb
         - examples/streaming/Evolving System.ipynb
@@ -167,19 +173,20 @@ plugins:
         'beta-features/streamlit.md': 'user-guide/advanced/streamlit.md'
         'beta-features/threading.md': 'user-guide/advanced/threading.md'
         'changelog.md': 'release-notes/changelog.md'
-        'comparisons.md': 'getting-started/what_is_pykx.md'
+        'comparisons.md': 'getting-started/what-is-kdb-x-python.md'
         'evaluating.md': 'user-guide/fundamentals/evaluating.md'
         'examples/threaded_execution/index.md': 'examples/threaded_execution/threading.md'
         'examples/threaded_execution/threaded_execution.md': 'examples/threaded_execution/threading.md'
-        'extras/comparisons.md': 'getting-started/what_is_pykx.md'
+        'extras/comparisons.md': 'getting-started/what-is-kdb-x-python.md'
         'extras/faq.md': 'help/faq.md'
         'extras/known_issues.md': 'help/issues.md'
         'faq.md': 'help/faq.md'
-        'getting-started/interface_overview.md': 'getting-started/what_is_pykx.md'
+        'getting-started/interface_overview.md': 'examples/interface-overview.md'
+        'getting-started/what_is_pykx.md': 'getting-started/what-is-kdb-x-python.md'
         'getting-started/q_magic_command.md': 'examples/jupyter-integration.ipynb'
         'indexing.md': 'user-guide/fundamentals/indexing.md'
         'installing.md': 'getting-started/installing.md'
-        'interface_overview.md': 'getting-started/what_is_pykx.md'
+        'interface_overview.md': 'examples/interface-overview.md'
         'known_issues.md': 'help/issues.md'
         'licenses.md': 'license.md'
         'limitations.md': 'help/issues.md'
@@ -215,6 +222,10 @@ theme:
     - content.code.annotate
     - content.action.edit
     - content.code.copy
+    - search.highlight
+    - navigation.tracking
+    - navigation.top
+    - toc.follow
   palette:
   - media: "(prefers-color-scheme: light)"
     scheme: kx-light
@@ -231,13 +242,13 @@ theme:
 docs_dir: docs
 
 nav:
-  - Home: 
+  - Home:
     - Overview: index.md
-    - Get Started:
-      - Install: getting-started/installing.md
-      - Quickstart guide: getting-started/quickstart.md
+    - About: getting-started/what-is-kdb-x-python.md
+    - Install: getting-started/installing.md
+    - Quickstart: getting-started/quickstart.md
   - Learn:
-    - What is KDB-X Python?: getting-started/what_is_pykx.md
+    - Fundamentals: examples/interface-overview.md
     - Objects and attributes: learn/objects.md
     - Databases: user-guide/advanced/database/index.md
     - Modes of operation: user-guide/advanced/modes.md
@@ -313,7 +324,7 @@ nav:
       - Python to KDB-X: api/pykx-q-data/toq.md
       - Wrappers: api/pykx-q-data/wrappers.md
       - KDB-X to Python: api/pykx-q-data/type_conversions.md
-    - Pandas API: user-guide/advanced/Pandas_API.ipynb
+    - pandas API: user-guide/advanced/Pandas_API.ipynb
     - Exceptions: api/exceptions.md
   - Integrations:
     - NumPy: user-guide/advanced/numpy.md
@@ -321,7 +332,6 @@ nav:
     - Python charting libraries: examples/charting.ipynb
     - Jupyter Integration: examples/jupyter-integration.ipynb
   - Examples:
-    - KDB-X Python Introduction Notebook: examples/interface-overview.ipynb
     - Subscriber: examples/subscriber/readme.md
     - Compress and encrypt: examples/compress_and_encrypt/readme.md
     - Database creation and management: examples/db-management.ipynb

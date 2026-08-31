@@ -73,7 +73,7 @@ def py_toq(py_type: Any,
 
     ```python
     >>> def complex_toq_upd(data):
-    ...    return kx.q('{`real`imag!(x;y)}', kx.toq(data.real), kx.toq(data.imag)
+    ...    return kx.q('{`real`imag!(x;y)}', kx.toq(data.real), kx.toq(data.imag))
     >>> kx.register.py_toq(complex, complex_toq_upd, overwrite=True)
     >>> kx.toq(complex(1, 2))
     pykx.Dictionary(pykx.q('
@@ -138,7 +138,7 @@ def column_function(name: str,
     >>> def min_max_scaler(self):
     ...     return self.call('{(x-minData)%max[x]-minData:min x}')
     >>> kx.register.column_function('minmax', min_max_scaler)
-    >>> tab.select(kx.Column('true') & kx.Column('true').minmax().rename('scaled_true'))
+    >>> tab.select(kx.Column('true') & kx.Column('true').minmax().name('scaled_true'))
     ```
 
     Register mean-absolute error function to be applied between 'true' and 'pred' columns

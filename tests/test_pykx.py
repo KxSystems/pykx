@@ -439,26 +439,34 @@ def test_kx_versions(kx):
     test_K = str(kx.q.z.K.py())
     test_vars = (test_os, test_arch, test_K)
     if test_vars == ('Linux', 'x86_64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.07.23')
     elif test_vars == ('Linux', 'aarch64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.07.23')
     elif test_vars == ('Darwin', 'x86_64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.07.23')
     elif test_vars == ('Darwin', 'arm64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.07.23')
     elif test_vars == ('Windows', 'AMD64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.07.23')
     else:
         raise AssertionError(f"Unexpected env: {test_vars}")
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
 def test_default_qce():
     import pykx as kx
     assert not kx.q('@[{2<count .s};`;{0b}]').py()
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
 def test_QARGS_QCE_qce():
     os.environ['QARGS']='--qce'
     import pykx as kx
@@ -466,6 +474,10 @@ def test_QARGS_QCE_qce():
 
 
 @pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
 def test_PYKX_QCE_qce():
     os.environ['PYKX_QCE']='True'
     import pykx as kx

@@ -167,7 +167,7 @@ class PyKXConnection(BaseConnection[SyncQConnection]):
         Parameters:
             query: A q expression to be evaluated. This must be valid q, qSQL or SQL in the KX
                 Insights style.
-            *args: Arguments to the query. Each argument will be converted into a `#!python pykx.K`
+            *args: Arguments to the query. Each argument will be converted into a `#!python pykx`
                 object. Up to 8 arguments can be provided (maximum supported by q functions).
             format: Description of query format for internal pre-processing before the query is sent
                 to the server. This must be one of 'q', 'qsql' or 'sql'.

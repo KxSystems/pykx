@@ -51,11 +51,11 @@ In the below cell, we complete the following:
 1. Make a copy of the column `#!python price` named `#!python price_copy`.
 1. Adjust the value of the stock price on the copied column to account for a two-for-one stock split by multiplying the price by half.
 1. Delete the original `#!python price` column.
-1. Rename the copied column `#!python symbol_copy` to be `#!python symbol`.
+1. Rename the copied column `#!python price_copy` to be `#!python price`.
 1. Reorder the columns.
 
 ```python
->>> col_order = db.trade.columns.py()
+>>> col_order = db.list_columns('trade')
 >>> db.copy_column('trade', 'price', 'price_copy')
 >>> db.apply_function('trade', 'price_copy', lambda x: x * 0.5)
 >>> db.delete_column('trade', 'price')

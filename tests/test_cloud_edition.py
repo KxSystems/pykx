@@ -6,7 +6,8 @@ import platform
 import pytest
 
 
-if platform.system() != 'Linux' or platform.machine() == 'aarch64':
+if platform.system() != 'Linux' or platform.machine() == 'aarch64'\
+        or os.getenv('SKIP_LIC_TESTS') is not None:
     pytest.skip(
         'KDB-X Cloud Edition functionality only supports'
         ' x86_64 Linux',

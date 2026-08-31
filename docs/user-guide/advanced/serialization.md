@@ -106,7 +106,7 @@ Similar to the examples in the previous section in the below we will serialize a
 	x x1 x2
 	-------
 	1 2  3
-	>>> print(kx.deserialize(sertab.copy())
+	>>> print(kx.deserialize(sertab.copy()))
 	x x1 x2
 	-------
 	1 2  3 

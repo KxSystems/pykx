@@ -1,20 +1,95 @@
-# KDB-X Python Changelog
+# Changelog
 
-This changelog tracks all KDB-X Python releases and their associated additions, fixes, and improvements.
+_This changelog tracks KDB-X Python and PyKX releases, including additions, fixes, and improvements._
 
-!!! Note
 
-		For changes to KDB-X Python within a q environment, refer to the [KDB-X Python under q changelog](./underq-changelog.md).
+!!! info "KDB-X Python and PyKX"
 
-## KDB-X
+    **KDB-X Python** (`pykx>=4.0`) is the evolution of **PyKX** (`pykx<4.0`).
 
-KDB-X is the evolution of kdb+. For full details and to install go [here](https://developer.kx.com/products/kdb-x/install).
+    This page groups release notes by product:
+
+    - **KDB-X Python** (`pykx>=4.0`)
+    - **PyKX** (`pykx<4.0`)
+
+    For guidance on migrating from PyKX to KDB-X Python, refer to the [migration guide](../upgrades/3040.md).
+
+
+For changes to KDB-X Python within a q environment, refer to the [KDB-X Python under q changelog](./underq-changelog.md).
 
 ## KDB-X Python
 
-KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details and a migration guide [here](../upgrades/3040.md).
+### 4.1.0
 
-## KDB-X Python 4.0.0
+**Release Date**
+
+2026-08-19
+
+**Additions**
+
+- Added a reason why unlicensed mode was set when returning a `LicenseException`
+
+	```python
+	>>> import pykx as kx
+	>>> kx.q('1+1')
+	Traceback (most recent call last):
+		File "<stdin>", line 1, in <module>
+		File "/home/user/venv/lib/python3.10/site-packages/pykx/embedded_q.py", line 234, in __call__
+			raise LicenseException("run q code via 'pykx.q'")
+	pykx.exceptions.LicenseException: Cannot run q code via 'pykx.q' as KDB-X Python is operating in unlicensed mode. Your license is corrupt or incompatible:
+	/tmp/license/k4.lic
+	```
+
+- Added `kx.util.qdebug()` to enable or disable q debugging at runtime.
+- Added `kx.core.m9()`, which clears KDB-X Python's thread state memory. Refer to [multithreaded execution](../user-guide/advanced/threading.md) for more detail.
+
+**Fixes and Improvements**
+
+- KDB-X Python now automatically manages the internal environment variables used to reimport it, so `PyKXReimport` (and `.pykx.safeReimport`) are not required in the majority of use cases. Refer to [Reimporting module](../api/reimporting.md) for more detail.
+- `kx.toq` now converts a structured NumPy array (including a `numpy.recarray`, as produced by `pykx.Table.np`) into a `pykx.Table`, with one column per named field. Previously this raised `TypeError: Cannot convert <class 'numpy.rec.recarray'> ... to K object`.
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.toq(kx.q('([] c:enlist " ")').np())
+    pykx.Table(pykx.q('
+    c
+    -
+     
+    '))
+    ```
+
+- Fixed `QPATH` accumulating a duplicate `$QHOME/mod` entry on every nested KDB-X Python import.
+- Fixed `.py()` conversion for large-magnitude `pykx.MinuteAtom` values. Before this fix, `.py()` returned an overflowed `datetime.timedelta` value or raised an error with NumPy 2.5 or later.
+- `kx.schema.builder` no longer raises `pykx.exceptions.QError: sector` when you pass a `kx.SecondVector`.
+- `kx.license.install` now installs license files that use nonstandard names and prints the destination path after a successful installation.
+
+    ```python
+    >>> kx.license.install('~/.kx/kc_backup.lic', format='FILE', license_type='kc.lic')
+    KDB-X Python license successfully installed: /home/user/.kx/kc.lic
+    True
+    ```
+
+- Opening a `kx.QConnection` directly now opens a single handle to the server. Previously each connection opened two.
+- `kx.QConnection.close()` no longer leaks the socket and underlying q handle when the peer has already died.
+- `kx.Table.rename` now ignores non-string column names instead of raising a `KeyError`.
+- `kx.KeyedTable.reset_index` no longer raises `pykx.exceptions.QError: ]` when you pass integer `levels` with `drop=True`.
+- The `is_null`, `is_pos_inf`, `is_neg_inf`, `has_nulls`, and `has_infs` properties now consistently return Python `bool` values (`True` or `False`). Previously, some types returned NumPy Boolean scalars.
+- Restored the Conda release for ARM.
+- Python 3.12 and 3.13 are now built for the `manylinux_2_28` platform (`x86_64` and `aarch64`) to support [NumPy 2.5.1](https://numpy.org/devdocs/release/2.5.1-notes.html#changes) and later.
+- `kx.Column.scov` no longer raises `ValueError: setting an array element with a sequence`.
+- Fixed `__array__` of atoms, vectors, and GUID arrays with NumPy 2.x, which passes `dtype` and `copy` arguments. Before this fix, `numpy.asarray(obj, dtype=...)` could raise `TypeError: __array__() takes 1 positional argument but 2 were given`.
+- `.pd()` now builds DataFrames using a standard Pandas `BlockManager` on Pandas 3.0 and later. This fixes `.equals` behavior when you compare a DataFrame created by KDB-X Python with one created by Pandas. On Pandas 2.2 to 2.x the comparison remains asymmetric, as described in [known issues](../help/issues.md).
+- `kx.toq` now preserves the symbol typing of empty or entirely-null Pandas string columns.
+- Moved to [KDB-X 5.0.20260723](https://code.kx.com/kdb-x/releases/release-notes-latest.html).
+- Fixed `pykx.exceptions.QError: The specified module could not be found.` raised on import on Windows.
+- Fixed a segfault that could occur when converting some objects to `pykx.K` types in threads.
+- `PYKX_KEEP_LOCAL_TIMES` now applies to Pandas temporal types.
+- `q.read.csv` and `kx.QReader.csv` now correctly map `kx.DatetimeAtom` and `kx.DatetimeVector` to the q datetime type when you pass a list of column types.
+- `kx.TimestampVector.py()` now correctly converts every null in the vector to `pandas.NaT`.
+- `kx.TimestampVector.py(tzinfo=...)` no longer raises `AttributeError` when the vector contains nulls.
+- `has_infs` now reports `True` for `kx.FloatVector` and `kx.RealVector` values containing negative infinity.
+
+### 4.0.0
 
 **Release Date**
 
@@ -23,7 +98,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 **Additions**
 
 - Added [`kx.use`](../api/module.md#pykx.module.use) for importing `q` modules within KDB-X Python. Refer to the [module documentation](../api/module.md) for more.
-    ```Python
+    ```python
     >>> import pykx as kx
     >>> pq = kx.use('kx.pq')
     >>> pq
@@ -69,9 +144,102 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - Moved to [KDB-X 5.0.20260501](https://code.kx.com/kdb-x/releases/release-notes-latest.html).
 - Fixed `.pykx.console` under q when [kxline](https://code.kx.com/kdb-x/how_to/general_guidance/embedded-line-editor-kxline.html) is in use.
-- Includes all changes from PyKX [PyKX 3.1.8](#pykx-318), [PyKX 3.1.9](#pykx-319), and [PyKX 3.2.0](#pykx-320).
+- Includes all changes from PyKX [PyKX 3.1.8](#318), [PyKX 3.1.9](#319), and [PyKX 3.2.0](#320).
 
-## PyKX 3.2.0
+### 4.0.0b5
+
+**Release Date**
+
+2026-02-09
+
+**Additions**
+
+- New `VirtualTable` class for use with [Parquet module](https://code.kx.com/kdb-x/modules/parquet/overview.html):
+
+    ```q
+    >>> import pykx as kx
+    >>> from pathlib import Path
+    >>> pq = kx.q.use('kx.pq')
+    >>> t = pq['pq'](Path('types.parquet'))
+    >>> t
+    pykx.VirtualTable(pykx.q('`T!`f`m`t!(k){[f;t;c;b;a;v]g:$[s:-1h=@b;0;#b];(bf;b1):$[g;df[t;0,0b;b];(::;()..'))
+    >>> t.select()
+    pykx.Table(pykx.q('
+    col0 col1 col2 
+    ---------------
+    1    1    "asd"
+    1    2    "bsd"
+    0    3    "csd"
+    1    4    "asd"
+    0    5    "bsd"
+    0    6    "csd"
+    1    7    "asd"
+    0    8    "bsd"
+    0    9    "csd"
+    '))
+    >>> t.select(kx.Column('col1').max(), by=kx.Column('col2'))
+    pykx.KeyedTable(pykx.q('
+    col2 | col1
+    -----| ----
+    "asd"| 7   
+    "bsd"| 8   
+    "csd"| 9   
+    '))
+    ```
+
+**Fixes and Improvements**
+
+- Moved to [KDB-X 5.0.20260122](https://code.kx.com/kdb-x/releases/release-notes-latest.html).
+- Includes bug fixes from [PyKX 3.1.6](#316) and [PyKX 3.1.7](#317).
+
+### 4.0.0b4
+
+**Release Date**
+
+2025-11-17
+
+**Fixes and Improvements**
+
+- Moved to [KDB-X 5.0.20251114](https://code.kx.com/kdb-x/releases/release-notes-latest.html).
+- Includes bug fixes from [PyKX 3.1.5](#315).
+
+### 4.0.0b3
+
+**Release Date**
+
+2025-09-30 (expired 2026-01-04)
+
+**Fixes and Improvements**
+
+- Moved to KDB-X 0.1.1.
+
+### 4.0.0b2
+
+**Release Date**
+
+2025-07-30 (expired 2025-09-30)
+
+**Fixes and Improvements**
+
+- Removes `invalid escape sequence` warnings upon import for some users.
+- Turns on NumPy allocator by default.
+    - Replaces `PYKX_ALLOCATOR` with `PYKX_NO_ALLOCATOR`
+    - Replaces `--pykxalloc` with `--pykxnoalloc`
+- Includes bug fixes from [PyKX 3.1.4](#314).
+
+### 4.0.0b1
+
+**Release Date**
+
+2025-07-02 (expired 2025-09-30)
+
+**Additions**
+
+- Initial release. Uses [KDB-X 0.1.0](https://code.kx.com/kdb-x/releases/release-notes-latest.html).
+
+## PyKX
+
+### 3.2.0
 
 **Release Date**
 
@@ -483,7 +651,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - Python 3.8 is no longer supported as it is [end of life](https://devguide.python.org/versions/#unsupported-versions).
 
-## PyKX 3.1.9
+### 3.1.9
 
 **Release Date**
 
@@ -529,7 +697,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - Updated 4.1 to 2026.04.01 for all platforms.
 
-## PyKX 3.1.8
+### 3.1.8
 
 **Release Date**
 
@@ -540,7 +708,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 - Added `connection_timeout` keyword argument to `AsyncQConnection` objects allowing the specification of a timeout for the initial connection to a `q` server.
 - Added the usage of `.q.Q.ens` for `sym_enum` argument in `DB` objects.
 
-## PyKX 3.1.7
+### 3.1.7
 
 **Release Date**
 
@@ -604,53 +772,8 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - Deprecated the `value` keyword when creating `kx.Column` objects, use `data` instead.
 
-## KDB-X Python 4.0.0b5
 
-**Release Date**
-
-2026-02-09
-
-**Additions**
-
-- New `VirtualTable` class for use with [Parquet module](https://code.kx.com/kdb-x/modules/parquet/overview.html):
-
-    ```q
-    >>> import pykx as kx
-    >>> from pathlib import Path
-    >>> pq = kx.q.use('kx.pq')
-    >>> t = pq['pq'](Path('types.parquet'))
-    >>> t
-    pykx.VirtualTable(pykx.q('`T!`f`m`t!(k){[f;t;c;b;a;v]g:$[s:-1h=@b;0;#b];(bf;b1):$[g;df[t;0,0b;b];(::;()..'))
-    >>> t.select()
-    pykx.Table(pykx.q('
-    col0 col1 col2 
-    ---------------
-    1    1    "asd"
-    1    2    "bsd"
-    0    3    "csd"
-    1    4    "asd"
-    0    5    "bsd"
-    0    6    "csd"
-    1    7    "asd"
-    0    8    "bsd"
-    0    9    "csd"
-    '))
-    >>> t.select(kx.Column('col1').max(), by=kx.Column('col2'))
-    pykx.KeyedTable(pykx.q('
-    col2 | col1
-    -----| ----
-    "asd"| 7   
-    "bsd"| 8   
-    "csd"| 9   
-    '))
-    ```
-
-**Fixes and Improvements**
-
-- Moved to [KDB-X 5.0.20260122](https://code.kx.com/kdb-x/releases/release-notes-latest.html).
-- Includes bug fixes from [PyKX 3.1.6](#pykx-316) and [PyKX 3.1.7](#pykx-317).
-
-## PyKX 3.1.6
+### 3.1.6
 
 **Release Date**
 
@@ -663,7 +786,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 	=== "Behavior prior to change"
 
-        ```Python
+        ```python
         >>> da = kx.q.z.D
 		>>> a = kx.toq(pd.DataFrame({'r':[2,3,4],'date':[da-2, da, da-1], 'k':[10, 11, 12]}))
 		>>> b = kx.toq(pd.DataFrame({'r':[5,6,7],'date':[da-2, da-1, da], 'k':[13, 14, 15]}))
@@ -679,7 +802,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 	=== "Behavior post change"
 
-        ```Python
+        ```python
         >>> da = kx.q.z.D
 		>>> a = kx.toq(pd.DataFrame({'r':[2,3,4],'date':[da-2, da, da-1], 'k':[10, 11, 12]}))
 		>>> b = kx.toq(pd.DataFrame({'r':[5,6,7],'date':[da-2, da-1, da], 'k':[13, 14, 15]}))
@@ -693,18 +816,8 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 		'))
         ```
 
-## KDB-X Python 4.0.0b4
 
-**Release Date**
-
-2025-11-17
-
-**Fixes and Improvements**
-
-- Moved to [KDB-X 5.0.20251114](https://code.kx.com/kdb-x/releases/release-notes-latest.html).
-- Includes bug fixes from [PyKX 3.1.5](#pykx-315).
-
-## PyKX 3.1.5
+### 3.1.5
 
 **Release Date**
 
@@ -732,7 +845,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 	=== "Behavior prior to change"
 
-        ```Python
+        ```python
         >>> df=pd.DataFrame(dict(embeddings=list(np.random.ranf((500, 10)).astype(np.float32))))
         >>> kx.toq(df)
         segfault
@@ -740,7 +853,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 	=== "Behavior post change"
 
-        ```Python
+        ```python
         >>> df=pd.DataFrame(dict(embeddings=list(np.random.ranf((500, 10)).astype(np.float32))))
         >>> kx.toq(df)
         ```
@@ -793,31 +906,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - Creating more than one `DB` instance without specifying `overwrite=True`
 
-## KDB-X Python 4.0.0b3
-
-**Release Date**
-
-2025-09-30 (expired 2026-01-04)
-
-**Fixes and Improvements**
-
-- Moved to KDB-X 0.1.1.
-
-## KDB-X Python 4.0.0b2
-
-**Release Date**
-
-2025-07-30 (expired 2025-09-30)
-
-**Fixes and Improvements**
-
-- Removes `invalid escape sequence` warnings upon import for some users.
-- Turns on NumPy allocator by default.
-    - Replaces `PYKX_ALLOCATOR` with `PYKX_NO_ALLOCATOR`
-    - Replaces `--pykxalloc` with `--pykxnoalloc`
-- Includes bug fixes from [PyKX 3.1.4](#pykx-314).
-
-## PyKX 3.1.4
+### 3.1.4
 
 **Release Date**
 
@@ -828,17 +917,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 - Resolved error on import when `PYKX_THREADING` was set.
 - Fixed an issue where data could be corrupted in keyed columns of PyArrow backed Pandas dataframes.
 
-## KDB-X Python 4.0.0b1
-
-**Release Date**
-
-2025-07-02 (expired 2025-09-30)
-
-**Additions**
-
-- Initial release. Uses [KDB-X 0.1.0](https://code.kx.com/kdb-x/releases/release-notes-latest.html).
-
-## PyKX 3.1.3
+### 3.1.3
 
 **Release Date**
 
@@ -1141,7 +1220,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - Deprecated `kx.q.system.console_size`, use `kx.q.system.display_size` instead.
 
-## PyKX 3.1.2
+### 3.1.2
 
 **Release Date**
 
@@ -1151,7 +1230,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - Fixes an issue when using `PYKX_THREADING` that could cause a segfault in some scenarios.
 
-## PyKX 3.1.1
+### 3.1.1
 
 **Release Date**
 
@@ -1190,7 +1269,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 		['dbsplay']
 		```
 
-## PyKX 3.1.0
+### 3.1.0
 
 **Release Date**
 
@@ -1523,7 +1602,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 	        [0.6137, 0.5295, 0.6916, 0.2297, 0.6920]], dtype=torch.float64)
 	```
 
-## PyKX 3.0.1
+### 3.0.1
 
 **Release Date**
 
@@ -1609,7 +1688,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 	'))
 	```
 
-## PyKX 3.0.0
+### 3.0.0
 
 **Release Date**
 
@@ -1675,7 +1754,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 		- [Remote Function Execution](../user-guide/advanced/remote-functions.md)
 		- [Streamlit Integration](../user-guide/advanced/streamlit.md)
 		- [Multi-threaded use of PyKX](../user-guide/advanced/threading.md)
-	- Upgrade considerations for these features can be found [here](../upgrades/2030.md#remote-python-execution)
+	- Refer to [Remote Python execution](https://code.kx.com/pykx/3.0/upgrades/2030.html#remote-python-execution) in the PyKX 3.0 upgrade guide before you upgrade.
 
 - Allows user to overwrite jupyter notebook kernel with q code by setting `PYKX_JUPYTERQ` to `True` before starting the notebook. This can also be accessed at runtime using `#!python kx.util.jupyter_qfirst_enable()` and `#!python kx.util.jupyter_qfirst_disable()`
 - Tab completion for `reserved_words` list in `src/pykx/__init__.py` added for Jupyter Notebooks after the import of PyKX.
@@ -1911,7 +1990,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 	- Use the path to their already downloaded `kc.lic`/`k4.lic` licenses without going through the "Do you want to install a license" workflow
 	- Allow users to persist for future use that they wish to use the IPC only unlicensed mode of PyKX, this will persist a file `~/.pykx-config` which sets configuration denoting unlicensed mode is to be used.
 
-- Addition of function `#!python kx.util.install_q` to allow users who do not have access to a `q` executable at the time of installing PyKX. See [here](../getting-started/installing.md) for instructions regarding its use
+- Addition of function `#!python kx.util.install_q` to allow users who do not have access to a `q` executable at the time of installing PyKX. See [here](../user-guide/advanced/streaming/index.md#before-you-start) for instructions regarding its use
 - Addition of function `#!python kx.util.start_q_subprocess` to allow a `q` process to be started on a specified port with supplied initialisation arguments, for example:
 
 	```python
@@ -1985,7 +2064,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 **Fixes and Improvements**
 
-- Previously built-in `#!python help()` python function, when called on q keywords such as `#!python kx.q.rand` or `#!python kx.q.max` was displaying the generic `wrappers` object help message. As noted in [the installation docs](../getting-started/installing.md#dependencies), this functionality requires the installation of optional libraries available through `pip install pykx[help]`.
+- Previously built-in `#!python help()` python function, when called on q keywords such as `#!python kx.q.rand` or `#!python kx.q.max` was displaying the generic `wrappers` object help message. As noted in [the dependency reference](../user-guide/configuration.md#dependencies-and-bundled-assets), this functionality requires the installation of optional libraries available through `pip install pykx[help]`.
 
 	=== "Behavior prior to change"
 
@@ -2054,7 +2133,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 		```
 
 - Previously loading pykx.q during q startup using `QINIT` or `QHOME/q.q` resulted in a segfault or a corruption.
-- Removal of several deprecated configuration variables which previously noted to be deprecated at the next major release. See [here](../upgrades/2030.md#deprecations) for more information.
+- Removed several configuration variables marked as deprecated in earlier releases. Refer to [Deprecations](https://code.kx.com/pykx/3.0/upgrades/2030.html#deprecations) in the PyKX 3.0 upgrade guide.
 - Attempts to convert `#!python kx.List` objects with non-conforming types previously resulted in an ambiguous error, updated error message indicates the root cause.
 
 	=== "Behavior prior to change"
@@ -2315,7 +2394,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 	=== "Behavior post change"
 
-		```Python
+		```python
 		>>> t = kx.q('([] g:2?0Ng)')
 		>>> kx.toq(t['g'].pd(raw=True))
 		pykx.GUIDVector(pykx.q('8c6b8b64-6815-6084-0a3e-178401251b68 5ae7962d-49f2-404d-5aec-f7c8abbae288'))
@@ -2675,7 +2754,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - PyKX 3.0.0 is a major version update which includes changes requiring review before upgrading from 2.5.*. A page details these changes in full [here](../upgrades/2030.md)
 
-## PyKX 2.5.5
+### 2.5.5
 
 **Release Date**
 
@@ -2686,7 +2765,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 - PyKX Pandas dependency has been raised to allow `<=2.2.3` for Python>3.8
 - PyKX Pandas dependency for Python 3.8 has been clamped to `<2.0` due to support being dropped for it by Pandas after 2.0.3.
 
-## PyKX 2.5.4
+### 2.5.4
 
 **Release Date**
 
@@ -2743,7 +2822,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 - Version 2.5.4 marks the removal of support for releases to PyPI/Anaconda of Python 3.7 supported versions of PyKX
 
 
-## PyKX 2.5.2
+### 2.5.2
 
 **Release Date**
 
@@ -2855,7 +2934,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 - Reworked `Table.std()` method to better handle edge cases relating to mixed columns and nulls. Now matching Pandas results. This addresses issues raised [here](https://github.com/KxSystems/pykx/issues/28).
 -  Fix to issue where loading PyKX on Windows from 2.5.0 could result in a users working directory being changed to `site-packages/pykx`.
 
-## PyKX 2.5.1
+### 2.5.1
 
 **Release Date**
 
@@ -3029,7 +3108,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 - Updated CSV analysis logic to be based on `csvutil.q` 2020.06.20.
 - Fix for config value `PYKX_4_1_ENABLED` to only use 4.1 if set to `True`, `true`, or `1`. Previously any non empty value enabled 4.1.
 
-## PyKX 2.5.0
+### 2.5.0
 
 **Release Date**
 
@@ -3535,7 +3614,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - Addition of [streamlit](https://streamlit.io/) connection class `pykx.streamlit.Connection` to allow querying of q processes when building a streamlit application. For an example of this functionality and an introduction to it's usage see [here](../user-guide/advanced/streamlit.md).
 
-## PyKX 2.4.2
+### 2.4.2
 
 **Release Date**
 
@@ -3545,7 +3624,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - Updated `libq` to 2024.03.28 for all supported OS's.
 
-## PyKX 2.4.1
+### 2.4.1
 
 **Release Date**
 
@@ -3582,7 +3661,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 		5e-324
 		```
 
-## PyKX 2.4.0
+### 2.4.0
 
 **Release Date**
 
@@ -3894,7 +3973,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 	warn('PYKX_THREADING is only supported on Linux / MacOS, it has been disabled.')
 	```
 
-## PyKX 2.3.2
+### 2.3.2
 
 **Release Date**
 
@@ -3905,7 +3984,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 - Update of PyKX 4.0 linux shared object to version 2024.02.09, this update is to facilitate deployments on more secure linux/linux-arm environments.
 - Update `Table.rename()` to skip over columns not in table instead of throwing error to match `pandas`.
 
-## PyKX 2.3.1
+### 2.3.1
 
 **Release Date**
 
@@ -4018,7 +4097,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 	>>> remote_session.clear()
 	```
 
-## PyKX 2.3.0
+### 2.3.0
 
 **Release Date**
 
@@ -4131,7 +4210,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
         When using `PYKX_THREADING` you must ensure you call `kx.shutdown_thread()` at the end of the script to ensure the background thread is properly closed.
 
-## PyKX 2.2.3
+### 2.2.3
 
 **Release Date**
 
@@ -4149,7 +4228,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 	PyKX 2.2.3 is currently not available for Mac x86 for all Python versions, additionally it is unavailable for Mac ARM on Python 3.7. Updated builds will be provided once available.
 
-## PyKX 2.2.2
+### 2.2.2
 
 !!! Warning
 
@@ -4165,7 +4244,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 - A regression in 2.2.1 resulted in `SIGINT` signals being incorrectly treated as `SIGTERM` style signals, PyKX now resets all signals overwritten by PyKX to their values prior to import.
 - Indexing regression in 2.2.1 causing hangs for certain inputs such as `tbl[::-1]` has been resolved.
 
-## PyKX 2.2.1
+### 2.2.1
 
 !!! Warning
 
@@ -4316,7 +4395,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 
 - If dependent on the environment variable `UNDER_PYTHON` please upgrade your code to use `PYKX_UNDER_PYTHON`
 
-## PyKX 2.2.0
+### 2.2.0
 
 **Release Date**
 
@@ -4630,7 +4709,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 	pykx.CharAtom(pykx.q('"a"'))
 	```
 
-## PyKX 2.1.2
+### 2.1.2
 
 **Release Date**
 
@@ -4664,7 +4743,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 		pykx.LongAtom(pykx.q('2'))
 		```
 
-## PyKX 2.1.1
+### 2.1.1
 
 **Release Date**
 
@@ -4680,7 +4759,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details a
 	AttributeError: module 'pykx' has no attribute 'PyKXSerialized'
 	```
 
-## PyKX 2.1.0
+### 2.1.0
 
 **Release Date**
 
@@ -4818,7 +4897,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 - The version of `Cython` used to build `PyKX` was updated to the full `3.0.x` release version.
 
-## PyKX 2.0.1
+### 2.0.1
 
 **Release Date**
 
@@ -4830,7 +4909,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Use of the environment variables `QARGS='--unlicensed'` or `QARGS='--licensed'` operate correctly following regression in 2.0.0
 - Fix to issue where `OSError` would be raised when `close()` was called on an IPC connection which has already disconnected server side
 
-## PyKX 2.0.0
+### 2.0.0
 
 **Release Date**
 
@@ -4982,7 +5061,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 - Pandas API functionality is enabled permanently which will modify data indexing and retrieval. Users should ensure to review and test their codebase before upgrading.
 
-## PyKX 1.6.3
+### 1.6.3
 
 **Release Date**
 
@@ -4999,7 +5078,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Prevent attempting to pass wrapped Python functions over IPC.
 - Support IPC payloads over 4GiB.
 
-## PyKX 1.6.2
+### 1.6.2
 
 **Release Date**
 
@@ -5019,7 +5098,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Fix error when binding with [FFI](https://github.com/KxSystems/ffi) in `QINIT`.
 - Fix issue calling `peach` with `PYKX_RELEASE_GIL` set to true when calling a Python function.
 
-## PyKX 1.6.1
+### 1.6.1
 
 **Release Date**
 
@@ -5044,7 +5123,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Fixed an issue where reimporting `PyKX` when run under q would cause a segmentation fault.
 - Updated the warning message for the insights core libraries failing to load to make it more clear that no error has occurred.
 
-## PyKX 1.6.0
+### 1.6.0
 
 **Release Date**
 
@@ -5096,7 +5175,7 @@ the following reads a CSV file and specifies the types of the three columns name
 	'))
 	```
 
-## PyKX 1.5.3
+### 1.5.3
 
 **Release Date**
 
@@ -5107,7 +5186,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Added support for Pandas `Float64Index`.
 - Wheels for ARM64 based Macs are now available for download.
 
-## PyKX 1.5.2
+### 1.5.2
 
 **Release Date**
 
@@ -5117,7 +5196,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 - Added support for ARM 64 Linux.
 
-## PyKX 1.5.1
+### 1.5.1
 
 **Release Date**
 
@@ -5128,7 +5207,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Fixed an issue with `pykx.q` that caused errors to not be raised properly under q.
 - Fixed an issue when using `.pykx.get` and `.pykx.getattr` that caused multiple calls to be made.
 
-## PyKX 1.5.0
+### 1.5.0
 
 **Release Date**
 
@@ -5153,7 +5232,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Fixed a bug around conversions of `Pandas` tables with no column names.
 - Fixed an issue around `.pykx.qeval` not returning unwrapped results in certain scenarios.
 
-## PyKX 1.4.2
+### 1.4.2
 
 **Release Date**
 
@@ -5163,7 +5242,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 - Fixed an issue that would cause `EmbeddedQ` to fail to load.
 
-## PyKX 1.4.1
+### 1.4.1
 
 **Release Date**
 
@@ -5175,7 +5254,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Fixed a memory leak around calling wrapped `Foreign` objects in `pykx.q`.
 - Fixed an issue around the `tls` keyword argument when creating `QConnection` instances, as well as a bug in the unlicensed behavior of `SecureQConnection`'s.
 
-## PyKX 1.4.0
+### 1.4.0
 
 **Release Date**
 
@@ -5209,7 +5288,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Added support for a Pandas like API around `Table` and `KeyedTable` instances, documentation for the specific functionality can be found [here](../user-guide/advanced/Pandas_API.ipynb).
 - Added `.pykx.setdefault` to `pykx.q` which allows the default conversion type to be set without using environment variables.
 
-## PyKX 1.3.2
+### 1.3.2
 
 **Release Date**
 
@@ -5219,7 +5298,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 - Fixed support for using TLS with `SyncQConnection` instances.
 
-## PyKX 1.3.1
+### 1.3.1
 
 **Release Date**
 
@@ -5242,7 +5321,7 @@ the following reads a CSV file and specifies the types of the three columns name
     - OpenSSLv3 support
 - Added ability to specify maximum length for IPC error messages. The default is 256 characters and this can be changed by setting the `PYKX_MAX_ERROR_LENGTH` environment variable.
 
-## PyKX 1.3.0
+### 1.3.0
 
 **Release Date**
 
@@ -5261,7 +5340,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 - EmbedPy replacement functionality `pykx.q` updated significantly to provide parity with embedPy from a syntax perspective. Documentation of the interface [here](../pykx-under-q/intro.md) provides API usage. Note that initialization requires the first version of Python to be retrieved on a users `PATH` to have PyKX installed. Additional flexibility with respect to installation location is expected in `1.4.0` please provide any feedback to `pykx@kx.com`
 
-## PyKX 1.2.2
+### 1.2.2
 
 **Release Date**
 
@@ -5271,7 +5350,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 - Fixed an issue causing the timeout argument for `QConnection` instances to not work properly.
 
-## PyKX 1.2.1
+### 1.2.1
 
 **Release Date**
 
@@ -5282,7 +5361,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Added support for OpenSSLv3 for IPC connections created when in 'licensed' mode.
 - Updated conversion functionality for timestamps to support conversions within Pandas 1.5.0
 
-## PyKX 1.2.0
+### 1.2.0
 
 **Release Date**
 
@@ -5310,7 +5389,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Support for [NEP-49](https://numpy.org/neps/nep-0049.html), which allows Numpy arrays to be converted into `q` Vectors without copying the underlying data. This behavior is opt-in and you can do so by setting the environment variable `PYKX_ALLOCATOR` to 1, "1" or True or by adding the flag `--pykxalloc` to the `QARGS` environment variable. Note: This feature also requires a python version of at least 3.8.
 - Support the ability to trigger early garbage collection of objects in the `q` memory space by adding `--pykxgc` to the QARGS environment variable, or by setting the `PYKX_GC` environment variable to 1, "1" or True.
 
-## PyKX 1.1.1
+### 1.1.1
 
 **Release Date**
 
@@ -5320,7 +5399,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 - Added ability to skip symlinking `$QHOME` to `PyKX`'s local `$QHOME` by setting the environment variable `IGNORE_QHOME`.
 
-## PyKX 1.1.0
+### 1.1.0
 
 **Release Date**
 
@@ -5355,7 +5434,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Improved performance of converting `pykx.SymbolVector` to `numpy.array` of strings, and also the conversion back from a `numpy.array` of `strings` to a `q` `SymbolVector`.
 - Improved performance of converting `numpy.array`'s of `dtype`s `datetime64`/`timedelta64 ` to the various `pykx.TemporalTypes`.
 
-## PyKX 1.0.1
+### 1.0.1
 
 **Release Date**
 
@@ -5378,7 +5457,7 @@ the following reads a CSV file and specifies the types of the three columns name
 - Misc test updates.
 - Misc doc updates.
 
-## PyKX 1.0.0
+### 1.0.0
 
 **Release Date**
 

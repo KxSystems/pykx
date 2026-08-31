@@ -14,6 +14,19 @@ KDB-X is the evolution of kdb+. For full details and to install, refer to the [K
 
 KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, refer to the migration guide [here](../upgrades/3040.md).
 
+## KDB-X Python 4.1.0
+
+**Release Date**
+
+2026-08-19
+
+**Fixes and Improvements**
+
+- `.pykx.safeReimport` is no longer required in the majority of use cases. Refer to [Reimporting module](../api/reimporting.md) for more detail.
+- Loading KDB-X Python under q no longer exports `PYKX_SKIP_UNDERQ`, so a Python process spawned from that q session imports with the full `.pykx` API rather than inheriting a skipped under-q integration.
+- `.pykx.setdefault` now only changes the default conversion for the current process; it no longer exports `PYKX_DEFAULT_CONVERSION` (which previously leaked the value to child processes).
+- Fixed q projections passed to a Python function being evaluated during argument parsing.
+
 ## PyKX 3.2.0
 
 **Release Date**

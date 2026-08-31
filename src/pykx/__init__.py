@@ -7,12 +7,20 @@ import logging
 import os
 import sys
 
+if os.getenv('PYKX_LOADING_Q', '') == '':
+    os.environ['PYKX_LOADING_PYTHON'] = 'true'
+
+if os.getenv('PYKX_OLD_QHOME', '') != '' and os.getenv('PYKX_LOADING_PYTHON', '') != '':
+    os.environ['QHOME'] = os.getenv('PYKX_OLD_QHOME', "")
+if os.getenv('PYKX_OLD_QPATH', '') != '' and os.getenv('PYKX_LOADING_PYTHON', '') != '':
+    os.environ['QPATH'] = os.getenv('PYKX_OLD_QPATH', "")
+
 if os.getenv('PYKX_LOADED_UNDER_Q') == 'True':
     sys.exit(0)
 
 # Attempt to import PyArrow early to get ahead of others (e.g. Pandas) who would try to import it
 # without guarding against segfaults. Skip this if we're just doing a qinit check.
-if os.environ.get('PYKX_QINIT_CHECK') is None:
+if os.getenv('PYKX_QINIT_CHECK', '') == '':
     try:
         from ._pyarrow import pyarrow
     except ImportError: # nocov
@@ -561,3 +569,20 @@ if not no_pykx_signal:
 
 def __dir__():
     return __all__
+
+
+envlist = (
+    'PYKX_UNDER_Q',
+    'PYKX_UNDER_PYTHON',
+    'PYKX_Q_LOADED_MARKER',
+    'PYKX_LOADED_UNDER_Q',
+    'PYKX_LOADING_PYTHON',
+    'PYKX_LOADING_Q',
+    'PYKX_QINIT_CHECK',
+)
+if os.getenv('PYKX_LOADING_PYTHON', '') != '':
+    for x in envlist:
+        os.environ[x] = ''
+        del os.environ[x]
+        if licensed:
+            q(f'setenv[`{x}; ""]')

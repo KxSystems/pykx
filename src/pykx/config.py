@@ -34,6 +34,7 @@ tcore_path_location = bytes(Path(__file__).parent.resolve(strict=True) / '_tcore
 # If PYKX_CONFIGURATION_LOCATION is not set it will search '.'
 pykx_config_location = os.path.expanduser(os.getenv('PYKX_CONFIGURATION_LOCATION', ''))
 pykx_config_profile = os.getenv('PYKX_PROFILE', 'default')
+unlicensed_reason = None
 
 
 def _get_config_value(param, default):
@@ -53,10 +54,6 @@ def _is_enabled(param, cmdflag=False):
     else:
         env_config = val.lower() in ('1', 'true')
     return env_config or (cmdflag and cmdflag in qargs)
-
-
-def _is_set(envvar):
-    return os.getenv(envvar, None)
 
 
 pykx_config_locs = [Path.home()/'.kx/config-pykx']
@@ -157,7 +154,7 @@ _qcfg_values = _get_qcfg_values()
 def _get_qhome():
     qhome_value = _get_config_value('QHOME', None)
 
-    if qhome_value is not None:
+    if qhome_value:
         try:
             qhome = Path(qhome_value).resolve(strict=True)
             return qhome
@@ -174,7 +171,15 @@ def _get_qhome():
 
 def _get_qpath(qhome):
     qpath = _get_config_value('QPATH', None)
-    os.environ['QPATH'] = str(qhome/'mod' if qpath is None else qpath+':'+str(qhome/'mod'))
+    mod = str(qhome / 'mod')
+    if qpath is None or qpath == '':
+        result = mod
+    elif mod in qpath.split(os.pathsep):
+        result = qpath
+    else:
+        result = qpath + os.pathsep + mod
+    os.environ['QPATH'] = result
+    return result
 
 
 if 'QHOME' in _qcfg_values:
@@ -187,6 +192,8 @@ else:
     qhome = _get_qhome()
 
 qpath = _get_qpath(qhome)
+os.environ['PYKX_OLD_QHOME'] = str(qhome) if qhome is not None else ""
+os.environ['PYKX_OLD_QPATH'] = str(qpath) if qpath is not None else ""
 
 # License search
 if 'QLIC' in _qcfg_values:
@@ -285,6 +292,7 @@ def _license_install_B64(license, license_type): # pragma: no cover
 
 
 def _license_check(lic_type, lic_encoding, lic_variable): # pragma: no cover
+    global unlicensed_reason
     license_content = None
     lic_name = lic_type + '.lic'
     lic_file = qlic / lic_name
@@ -299,6 +307,7 @@ def _license_check(lic_type, lic_encoding, lic_variable): # pragma: no cover
                            f'  License location: {qlic}/{lic_type}.lic\n'\
                            'Reason: License content matches supplied Environment variable'
         print(conflict_message)
+        unlicensed_reason = f"Updating license failed. {lic_variable} contents matched contents of {qlic}/{lic_type}.lic." # noqa: E501
         return False
     else:
         return _license_install_B64(lic_encoding, lic_name)
@@ -333,7 +342,7 @@ def _unlicensed_config(unlicensed_message):
 
 
 def _license_install(intro=None, return_value=False, license_check=False, license_error=None): # noqa:
-
+    global unlicensed_reason
     if not hasattr(sys, 'ps1'):  # Exit if running in a non-interactive session
         return False
 
@@ -371,6 +380,7 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
                  f'    QHOME    {qhome if qhome else "Not Set"}\n\n'\
                  'Running KDB-X Python in unlicensed mode has reduced functionality.\n'\
                  'Would you like to install a license? [Y/n]: '
+    unlicensed_reason = "No license was found."
     root = 'C:\\path\\to\\' if platform.system() == 'Windows' else '~/path/to/'
     continue_license = input(first_user if intro is None else intro)
     if continue_license in ('n', 'N'):
@@ -458,6 +468,22 @@ elif not license_located:
 licensed = False
 
 _pykx_force_unlicensed = ('--unlicensed' in qargs or _is_enabled('PYKX_UNLICENSED', '--unlicensed')) or light_load # noqa: E501
+
+try:
+    config_unlicensed_flag = pykx_profile_content['PYKX_UNLICENSED']
+except KeyError:
+    config_unlicensed_flag = False
+
+if _pykx_force_unlicensed:
+    if '--unlicensed' in qargs:
+        unlicensed_reason = ("--unlicensed passed to args.")
+    elif light_load:
+        unlicensed_reason = ("light_load enabled.")
+    elif os.environ.get('PYKX_UNLICENSED') and unlicensed_reason is None:
+        unlicensed_reason = ("The environment variable PYKX_UNLICENSED is set to True.")
+    elif config_unlicensed_flag:
+        unlicensed_reason = (f"PYKX_UNLICENSED is set to True in the config file {pykx_config_location}.") # noqa: E501
+
 _pykx_force_licensed = ('--licensed' in qargs or _is_enabled('PYKX_LICENSED', '--licensed')) and not light_load # noqa: E501
 
 qlib_location = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_libs_dir))
@@ -508,6 +534,24 @@ def find_core_lib(name: str) -> Path:
 def _set_licensed(licensed_):
     global licensed
     licensed = licensed_
+
+
+def _set_unlicensed_reason(unlicensed_reason_):
+    global unlicensed_reason
+    unlicensed_reason = unlicensed_reason_
+
+
+def _get_unlicensed_reason():
+    return unlicensed_reason
+
+
+def _set_qdebug(qdebug_):
+    global pykx_qdebug
+    pykx_qdebug = qdebug_
+
+
+def _get_qdebug():
+    return pykx_qdebug
 
 
 def _set_keep_local_times(keep_local_times_):

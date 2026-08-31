@@ -177,19 +177,19 @@ Notice the information about the persistence characteristics of your data using 
 
 ```python
 >>> kx.q('-21!`:/tmp/db/2020.01.01/tab/x')
-pykx.Dictionary(pykx.q(''))
+pykx.Dictionary(pykx.q('(`symbol$())!()'))
 >>> kx.q('-21!`:/tmp/db/2020.01.02/tab/x')
 pykx.Dictionary(pykx.q('
-compressedLength  | 5467
-uncompressedLength| 8016
+compressedLength  | 53551
+uncompressedLength| 80016
 algorithm         | 2i
 logicalBlockSize  | 17i
 zipLevel          | 4i
 '))
 >>> kx.q('-21!`:/tmp/db/2020.01.03/tab/x')
 pykx.Dictionary(pykx.q('
-compressedLength  | 6374
-uncompressedLength| 8016
+compressedLength  | 59625
+uncompressedLength| 80016
 algorithm         | 4i
 logicalBlockSize  | 17i
 zipLevel          | 10i
@@ -212,7 +212,7 @@ To set the `#!python gzip` globally, use the `#!python global_init` on the gener
 ```python
 >>> compress = kx.Compress(algo=kx.CompressionAlgorithm.gzip, level=9)
 >>> compress.global_init()
->>> kx.q.z.z.d
+>>> kx.q.z.zd
 pykx.LongVector(pykx.q('17 2 9'))
 ```
 

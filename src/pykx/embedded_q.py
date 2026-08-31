@@ -11,7 +11,7 @@ from . import Q
 from . import toq
 from . import wrappers
 from . import schema
-from .config import find_core_lib, licensed, pykx_dir, pykx_libs_dir, pykx_qdebug, pykx_threading, qargs, qce, skip_under_q, suppress_warnings, pykx_debug_insights # noqa
+from .config import find_core_lib, _get_qdebug, licensed, pykx_dir, pykx_libs_dir, pykx_threading, qargs, qce, skip_under_q, suppress_warnings, pykx_debug_insights # noqa
 from .core import keval as _keval
 from .exceptions import FutureCancelled, LicenseException, NoResults, PyKXException, PyKXWarning, QError # noqa
 from ._wrappers import _factory as factory
@@ -144,14 +144,14 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                         .pykx.util.loadfile["{kxic_path}";"{kxic_file}"]
                         ];
                         '''
-            if os.getenv('PYKX_UNDER_Q') is None:
+            if os.getenv('PYKX_UNDER_Q', '') == '':
                 os.environ['PYKX_UNDER_PYTHON'] = 'true'
                 code += 'setenv[`PYKX_UNDER_PYTHON;"true"];'
                 code += f'2:[`$"{pykx_qlib_path}";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
             else:
                 suffix = ""
-                if os.getenv("PYKXQ_THREADING") is not None:
+                if os.getenv("PYKXQ_THREADING", '') != '':
                     suffix = "_m"
                 code += f'2:[`$"{pykx_qlib_path}q{suffix}";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q{suffix}") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
@@ -167,8 +167,8 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                          PyKXWarning)
                 else:
                     eprint(f'WARN: Failed to load KX Insights Core library {lib!r}.')
-            if (not skip_under_q and os.getenv('PYKX_Q_LOADED_MARKER') != 'loaded'
-                and os.getenv('PYKX_UNDER_Q') is None
+            if (not skip_under_q and os.getenv('PYKX_Q_LOADED_MARKER', '') != 'loaded'
+                and os.getenv('PYKX_UNDER_Q', '') == ''
             ):
                 os.environ['PYKX_Q_LOADED_MARKER'] = 'loaded'
                 self._call('setenv[`PYKX_Q_LOADED_MARKER; "loaded"]', skip_debug=True)
@@ -191,7 +191,7 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
                 )
                 self._call('.pykx.setdefault[enlist"k"]', skip_debug=True)
             if (self._call('@[{x in " " vs .z.l 7};"COMMUNITY";{0b}]', skip_debug=True).py()
-                    and os.getenv('PYKX_UNDER_Q') is None):
+                    and os.getenv('PYKX_UNDER_Q', '') == ''):
                 print(("\nWelcome to KDB-X Community Edition!\n"
                        "For Community support, please visit https://kx.com/slack\n"
                        "Tutorials can be found at https://github.com/KxSystems/tutorials\n"
@@ -235,7 +235,7 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
         if len(args) > 8:
             raise TypeError('Too many arguments - q queries cannot have more than 8 parameters')
         query = wrappers.CharVector(query)
-        if (not skip_debug) and (debug or pykx_qdebug):
+        if (not skip_debug) and (debug or _get_qdebug()):
             if 0 != len(args):
                 query = wrappers.List([query, *[wrappers.K(x) for x in args]])
             result = _keval(

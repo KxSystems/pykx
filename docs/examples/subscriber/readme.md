@@ -18,7 +18,9 @@ The following python libraries are required to run this example:
 1. KDB-X Python (`pykx`)
 1. asyncio
 
-The source code for this example is available in the examples directory here:
+To follow along, [download and extract the example files](archive.zip). The archive contains the synchronous and asynchronous subscriber scripts.
+
+You can also view the scripts in the source repository:
 
 1. [Synchronous subscriber](https://github.com/KxSystems/pykx/blob/main/examples/subscriber/subscriber.py)
 1. [Asynchronous subscriber](https://github.com/KxSystems/pykx/blob/main/examples/subscriber/subscriber_async.py)
@@ -197,5 +199,5 @@ This example has demonstrated how to initiate a q process, subscribe to an exist
 
 Check out more examples such as:
 
-- [Real-Time Streaming]
-- [Compression and Encryption]
+- [Real-time streaming](../streaming/index.md)
+- [Compress and encrypt](../compress_and_encrypt/readme.md)

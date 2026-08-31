@@ -25,6 +25,11 @@
     --md-typeset-img-bg:               #f4edda;
     --md-typeset-mark-color:           rgba(295,195,0,.3); /*KX Yellow: #FFC300*/
   }
+
+  /* Show the diagram variant that matches the active color scheme. */
+  [data-md-color-scheme="kx-light"] .only-dark { display: none; }
+  [data-md-color-scheme="slate"] .only-light { display: none; }
+
   .md-typeset a:hover {
     color: var(--md-typeset-a-color);
   }
@@ -296,11 +301,13 @@
 	border: 1px solid var(--kx-black);
 	border-radius: 10px;
 }
-.md-typeset div.large-tile-grid > div h2 {
+.md-typeset div.large-tile-grid > div h2,
+.md-typeset div.large-tile-grid > div h3 {
 	margin: 0;
 	font-weight: 500;
 }
-.md-typeset div.large-tile-grid > div h2 span {
+.md-typeset div.large-tile-grid > div h2 span,
+.md-typeset div.large-tile-grid > div h3 span {
 	display: block;
 	margin-top: 0.3rem;
 	font-size: 0.9rem;
@@ -360,4 +367,74 @@
 
 .md-tabs__link {
   user-select: none;
+}
+
+/* Collapsible code blocks */
+.code-collapse {
+  position: relative;
+}
+
+.code-collapse::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6em;
+  background: linear-gradient(to bottom, transparent 0%, var(--md-code-bg-color) 80%);
+  pointer-events: none;
+}
+
+[data-md-color-scheme="slate"] .code-collapse::after {
+  background: linear-gradient(to bottom, transparent, var(--kx-blue-grey));
+}
+
+.code-collapse--expanded::after {
+  display: none;
+}
+
+.code-collapse-toggle--bottom {
+  position: absolute;
+  bottom: 2em;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0;
+  z-index: 1;
+  background: var(--md-code-bg-color);
+}
+
+[data-md-color-scheme="slate"] .code-collapse-toggle--bottom {
+  background: var(--kx-blue-grey);
+}
+
+[data-md-color-scheme="kx-light"] .code-collapse-toggle--bottom {
+  background: var(--md-code-bg-color);
+}
+
+.code-collapse-toggle {
+  display: inline-block;
+  margin-bottom: 0.4em;
+  cursor: pointer;
+  color: var(--kx-blue);
+  background: none;
+  border: 1px solid var(--kx-blue);
+  border-radius: 0.2em;
+  font-weight: 500;
+  font-size: 0.8em;
+  padding: 0.2em 0.6em;
+}
+
+.code-collapse-toggle:hover {
+  background: var(--kx-blue);
+  color: white;
+}
+
+[data-md-color-scheme="slate"] .code-collapse-toggle {
+  color: var(--kx-yellow);
+  border-color: var(--kx-yellow);
+}
+
+[data-md-color-scheme="slate"] .code-collapse-toggle:hover {
+  background: var(--kx-yellow);
+  color: var(--kx-black);
 }

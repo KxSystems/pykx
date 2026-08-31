@@ -13,9 +13,13 @@ _This page is an introduction to the KDB-X Python Real-Time Data Capture functio
 
 The capture, persistence and presentation of high velocity real-time data provides significant challenges to users at all levels from new users attempting to capture this form of data for the first time, to seasoned data-engineers building complex ingestion workflows.
 
-!!! Note "Install q"
+## Before you start
 
-        The Real-Time Data Capture functionality provided by KDB-X Python requires you to have access to a `q` executable. A workflow is provided by KDB-X Python to install q as outlined [here](../../../getting-started/installing.md). Alternatively, you will be prompted to install q if not detected when initializing the Real-Time Capture functionality.
+Real-Time Capture starts separate q processes and requires a q executable. Most other KDB-X Python features use the embedded q runtime and do not require this step.
+
+[Install KDB-X](https://code.kx.com/kdb-x/get_started/kdb-x-install.html) to get the required `q` executable.
+
+If the Python process cannot resolve `q`, [configure the q executable path](../../configuration.md#configure-q-for-real-time-capture).
 
 The KDB-X Python Real-Time Data Capture functionality described in this documentation provides a framework for users at all levels of their journey to build highly performant real-time systems which can quickly provide users with the following:
 

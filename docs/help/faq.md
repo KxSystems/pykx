@@ -47,7 +47,6 @@ pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
 The following steps are run by `pykx` to find the license when you execute `#!python import pykx`:
 
 1. Search for **kx.lic**, **kc.lic** and **k4.lic** license files in this order within the following locations:
-	1. Current working directory
 	1. Location defined by environment variable `#!bash QLIC` if set
 	1. Location defined by environment variable `#!bash QHOME` if set
 2. If a license is not found KDB-X Python will use the following environment variables (if they are set) to install and make use of a license:

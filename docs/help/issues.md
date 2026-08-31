@@ -23,6 +23,7 @@ _This page details known issues and functional limitations when using KDB-X Pyth
 >>> def func(n=2):
 ...    return n
 ...
+>>> kx.q['func'] = func
 >>> kx.q('func', None)
 pykx.LongAtom(pykx.q('2'))
 >>> kx.q('func', kx.q('::'))
@@ -135,14 +136,11 @@ q)f[::] /equivalent
 7
 ```
 
-## Pandas
+#### `DataFrame.equals` behavior on Pandas 2.2 to 2.x
 
-### Known issues
-#### Changes in `DataFrame.equals` behavior from Pandas 2.2.0
+On Pandas 2.2 up to (but not including) 3.0, a difference exists in how `DataFrame.equals` handles DataFrames with different `_mgr` types. This is resolved on Pandas 3.0 and later, where `.pd()` builds DataFrames with a standard `BlockManager`.
 
-In Pandas 2.2.0, a difference was introduced in how `DataFrame.equals` handles DataFrames with different `_mgr` types.
-
-**Example:**
+**Example (Pandas 2.2 to 2.x):**
 ```python
 >>> import pandas as pd
 >>> import pykx as kx
@@ -150,15 +148,15 @@ In Pandas 2.2.0, a difference was introduced in how `DataFrame.equals` handles D
 >>> df1 = pd.DataFrame({'cl': ['foo']})
 >>> df2 = kx.q('([] cl:enlist `foo)').pd()
 
->>> df2.equals(df1)
+>>> df1.equals(df2)
 True
 
->>> df1.equals(df2) # Prior to Pandas 2.2.0, this would also evaluate to True
+>>> df2.equals(df1) # Prior to Pandas 2.2.0, this would also evaluate to True
 False
 ```
 
 **Cause:**  
-Pandas now checks the type of the `_mgr` (dataframes manager) property. KDB-X Python uses a custom `_mgr` implementation for performance optimization.
+Pandas 2.2 onwards checks the type of the `_mgr` (dataframe manager) property. On Pandas 2.x, KDB-X Python uses a custom `_mgr` implementation for performance optimization.
 
 ```python
 >>> type(df1._mgr)
@@ -168,10 +166,12 @@ Pandas now checks the type of the `_mgr` (dataframes manager) property. KDB-X Py
 <class 'pykx.util.BlockManagerUnconsolidated'>
 ```
 
-**Workaround:**
+**Workaround (Pandas 2.2 to 2.x):**
 Comparing the full contents of DataFrames irrespective of `_mgr` types works regardless of order of df1 and df2 in the comparison. To do so, use one of the following approaches:
 ```python
 >>> assert (df2 == df1).all().all()  # Element-wise comparison
 >>> pd.testing.assert_frame_equal(df2, df1)  # Pandas' built-in test
 >>> assert df1.compare(df2).empty  # Check if there are no differences
 ```
+
+On Pandas < 2.2 or >=3.0 use `.equals` as normal.

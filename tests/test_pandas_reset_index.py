@@ -37,6 +37,14 @@ def test_reset_drop(q):
     assert q('~', df.reset_index(['x', 'y'], drop=True), pddf.reset_index(['x', 'y'], drop=True))
 
 
+def test_reset_int_drop(q):
+    df = q('([x: til 10; y: 10 - til 10]z: 10?`a`b`c)')
+    pddf = df.pd()
+    assert q('~', df.reset_index(0, drop=True), pddf.reset_index(0, drop=True))
+    assert q('~', df.reset_index(1, drop=True), pddf.reset_index(1, drop=True))
+    assert q('~', df.reset_index([0, 1], drop=True), pddf.reset_index([0, 1], drop=True))
+
+
 def test_reset_duplicates(kx, q):
     df = q('([til 10;10?1f];10?1f;10?1f)')
     assert q('~', df.reset_index(allow_duplicates=True), q('0!', df))

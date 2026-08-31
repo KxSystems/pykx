@@ -1,402 +1,239 @@
 ---
-title:  KDB-X Python installation guide
-description: Getting started with KDB-X Python
-last_updated: October 2025
+title: Install KDB-X Python
+description: Install KDB-X Python, configure a KDB-X license, verify the installation, and prepare air-gapped environments
+last_updated: July 2026
 author: KX Systems, Inc.,
-tags: KDB-X Python, setup, install,
+keywords:
+  - KDB-X Python
+  - pykx
+  - install
+  - pip
+  - license
+  - air-gapped environments
+  - Windows
 ---
-# KDB-X Python installation guide
 
-_This page explains how to install KDB-X Python on your machine._
+# Install KDB-X Python
 
-!!! License
+_Install KDB-X Python, configure a license, and verify the installation._
 
-	KDB-X Python is released under a dual license covering the files within the [KDB-X Python repository](https://github.com/kxsystems/pykx) as outlined [here](../license.md).
+**Estimated time:** 5–10 minutes for a standard `pip` installation, license setup, and verification.
+
+!!! warning "Software license terms"
+
+	KX releases KDB-X Python under a dual license that covers the files in the [KDB-X Python repository](https://github.com/kxsystems/pykx). Review the [KDB-X Python license terms](../license.md) before installation.
 
 	**Acceptance of license terms:**
 	
-	By downloading, installing, or using KDB-X Python, you acknowledge and agree that you have read, understood, and accept the license [link](../license.md) and will adhere to its terms. 
+	By downloading, installing, or using KDB-X Python, you acknowledge and agree that you have read, understood, and accept the [KDB-X Python license terms](../license.md).
 
-## Pre-requisites
+## Prerequisites
 
 Before you start, make sure you have:
 
-- [**Python**](https://www.python.org/downloads/) (versions 3.9-3.14)
+- [**Python**](https://www.python.org/downloads/) 3.9-3.14
 - [**pip**](https://pypi.org/project/pip/)
 
-Recommended: a virtual environment with packages such as [venv](https://docs.python.org/3/library/venv.html) from the standard library.
+Create and activate a virtual environment to isolate KDB-X Python from other projects:
+
+=== "macOS and Linux"
+
+	```sh
+	python3 -m venv .venv
+	source .venv/bin/activate
+	```
+
+=== "Windows PowerShell"
+
+	```powershell
+	py -m venv .venv
+	.\.venv\Scripts\Activate.ps1
+	```
+
+	??? tip "If PowerShell blocks virtual environment activation"
+
+		PowerShell may require permission to run the activation script. Enable locally created scripts for the current PowerShell session, then activate the environment:
+
+		```powershell
+		Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
+		.\.venv\Scripts\Activate.ps1
+		```
+
+		When prompted, confirm the policy change. The setting applies only to the current PowerShell session. PowerShell discards it when you close the window.
+
+		If an organizational policy prevents this change, run subsequent commands with `.\.venv\Scripts\python.exe` instead of `python`.
 
 ## Supported environments
 
-KX only supports versions of KDB-X Python built by KX (installed from wheel files) for:
+KX supports KDB-X Python wheels for CPython 3.9-3.14 on Linux, macOS, and Windows.
 
-- **Linux** (`manylinux2014_x86_64`, `manylinux2014_aarch64`) with CPython 3.9-3.14
-- **macOS** (`macosx_10_15_x86_64`, `macosx_10_15_arm64`) with CPython 3.9-3.14
-- **Windows** (`win_amd64`) with CPython 3.9-3.14
+??? info "Supported wheel platform tags"
 
-We provide assistance to user-built installations of KDB-X Python only on a best-effort basis.
+	The wheel platform tag depends on the operating system and, for Linux, the CPython version:
 
-## 1. Install KDB-X Python
+	| **Platform** | **CPython versions** | **Wheel platform tags** |
+	| --- | --- | --- |
+	| Linux | 3.9-3.11 | `manylinux2014_x86_64`, `manylinux2014_aarch64` |
+	| Linux | 3.12-3.14 | `manylinux_2_28_x86_64`, `manylinux_2_28_aarch64` |
+	| macOS | 3.9-3.14 | `macosx_10_15_x86_64`, `macosx_10_15_arm64` |
+	| Windows | 3.9-3.14 | `win_amd64` |
 
-You can install KDB-X Python from three sources:
+## Install from PyPI
 
-!!! Note "Installing in air-gapped environments"
+PyPI is the recommended installation method for most users. If you manage packages with Conda, uv, or pipx, or need to build from source, expand **Other installation methods**. For an offline system, follow [Air-gapped installation](#air-gapped-installation).
 
-        If you are installing in a location without internet connection you may find [this section](#installing-in-an-air-gapped-environment) useful.
+!!! info "Why the package is named `pykx`"
 
-=== "Install KDB-X Python from PyPI"
+	KDB-X Python is the product name, but the Python distribution and import package remain `pykx` for compatibility with applications written for PyKX 3.x. Use `pykx` in package-manager commands and `import pykx` in Python code.
 
-	Ensure you have a recent version of `#!bash pip`:
+	If you are upgrading from PyKX 3.x, review the [migration guide](../upgrades/3040.md).
+
+Upgrade `pip`:
+
+```sh
+python -m pip install --upgrade pip
+```
+
+Install the latest KDB-X Python release from PyPI:
+
+```sh
+python -m pip install --upgrade pykx
+```
+
+??? info "Other installation methods"
+
+	=== "Conda"
+
+		On Linux x86 and ARM architectures, create an environment and install KDB-X Python from the `kx` channel:
+
+		```sh
+		conda create --name kdbx-python python
+		conda activate kdbx-python
+		conda install -c kx pykx
+		```
+
+	=== "uv"
+
+		Create a virtual environment and install KDB-X Python:
+
+		```sh
+		uv venv
+		uv pip install pykx
+		```
+
+	=== "pipx"
+
+		Install KDB-X Python and its dependencies in an isolated virtual environment:
+
+		```sh
+		pipx install pykx --include-deps
+		```
+
+		Activate the environment that pipx creates before you import KDB-X Python.
+
+	=== "Build from source"
+
+		Install KDB-X Python directly from the repository:
+
+		```sh
+		git clone https://github.com/kxsystems/pykx
+		cd pykx
+		python -m pip install .
+		```
+
+		Building from source requires Git and may require platform-specific build tools. KX provides best-effort support for user-built installations.
+
+Without a KDB-X license, KDB-X Python runs with reduced functionality. To continue without a license, skip to [Verify the installation](#verify-the-installation).
+
+## Install a KDB-X license
+
+Before you start, make sure you have one of these KDB-X licenses ready:
+
+- A `kc.lic` license key from the [KX Developer Center](https://developer.kx.com/products/kdb-x/install).
+- A `k4.lic` license provided separately by KX.
+
+[Review the KDB-X license requirements](https://code.kx.com/kdb-x/get_started/kdb-x-install.html#license-requirements) for more information.
+
+=== "Python prompt"
+
+	Start an interactive Python session and import KDB-X Python:
 
 	```sh
-	pip install --upgrade pip
-
-	```
-	Then install the latest version of KDB-X Python with the following command:
-
-	```sh
-	pip install --upgrade pykx
-
-	```
-
-=== "Install KDB-X Python from Anaconda"
-
-	For Linux x86 and arm-based architectures, you can install KDB-X Python from the `#!bash kx` channel on Anaconda as follows:
-
-	```sh
-	conda install -c kx KDB-X Python
-
-	```
-	Type `#!bash y` when prompted to accept the installation.
-
-
-=== "Install KDB-X Python from GitHub"
-
-	Clone the `pykx` repository:
-
-	```sh
-	git clone https://github.com/kxsystems/pykx
-
-	```
-
-	Enter the cloned repository and install KDB-X Python using `#!bash pip`:
-
-	```sh
-	cd pykx
-	pip install .
-
-	```
-
-=== "Install KDB-X Python from UV"
-
-	Ensure you have `#!bash uv` installed, instructions can be found [here.](https://docs.astral.sh/uv/getting-started/installation/)
-	
-	Then install the latest version of KDB-X Python with the following command:
-	
-	```sh
-	uv pip install pykx
-
-	```
-
-=== "Install KDB-X Python from pipx"
-
-	Ensure you have `#!bash pipx` installed, installation guide can be found [here.](https://pipx.pypa.io/stable/installation/)
-
-	Then install KDB-X Python using the flag to install dependencies:
-
-	```sh
-	pipx install pykx --include-deps
-	
-	```
-
-	This will create a virtual environment to run KDB-X Python in, make sure you activate this to access the package.
-
-
-At this point you have [partial access to KDB-X Python](../user-guide/advanced/modes.md#1a-running-in-unlicensed-mode). To gain access to all KDB-X Python features, follow the steps in the next section, otherwise go straight to [3. Verify KDB-X Python Installation](#3-verify-pykx-installation).
-
-
-## 2. Install a KDB-X license
-
-To use all KDB-X Python functionalities, you need to download and install a KDB-X license.
-To obtain a license, go to the [KX Developer Center](https://developer.kx.com/products/kdb-x/install).
-
-### 2.a Install an existing license in Python
-
-Follow the steps below to install a license for KDB-X Python:
-
-1. Start your Python session:
-
-	```bash
 	$ python
 	```
 
-2. Import the KDB-X Python library. When prompted to accept the installation, type `#!python Y` or press `#!python Enter`:
-
 	```python
 	>>> import pykx as kx
-
-	Thank you for installing KDB-X Python!
-
-	We have been unable to locate your license for KDB-X Python. Running KDB-X Python in unlicensed mode has reduced functionality.
-	Would you like to install a license? [Y/n]:
 	```
 
-3. Indicate whether you have access to an existing KDB-X Python enabled license or not, type `#!python Y` if you have a license:
+	When prompted, confirm that you want to install a license. Choose a license file or base64-encoded license key, then provide its location or value.
 
-	```python
-	Do you have access to an existing license for KDB-X Python that you would like to use? [N/y]:
-	```
+=== "Environment variables"
 
-4. Choose the desired method to activate your license by typing `#!python 1` or `#!python 2` as appropriate:
+	Configure one license source before starting Python:
 
-	```bash
-	Please select the method you wish to use to activate your license:
-    [1] Provide the location of your license file
-    [2] Paste the license key
-	```
+	| **License source** | **Environment variable** | **Value** |
+	| --- | --- | --- |
+	| `kc.lic` or `k4.lic` file | `QLIC` | Directory that contains the license file |
+	| Base64-encoded `kc.lic` key | `KDB_LICENSE_B64` | License key supplied by KX |
+	| Base64-encoded `k4.lic` key | `KDB_K4LICENSE_B64` | License key supplied by KX |
 
-5. Depending on your choice (`#!python 1` or `#!python 2`), complete the installation by following the final steps as below:
+	KDB-X Python reads the configured license when the Python process starts.
 
-	=== "1"
+## Verify the installation
 
-		```bash
-		Provide the download location of your license (for example, ~/path/to/kc.lic): 
-		```
+Print the installed version and active license mode:
 
-	=== "2"
-
-		Specify the license type:
-
-		```bash
-		Please confirm the license type:
-		[1] kc.lic - The default
-		[2] k4.lic - Used in some scenarios
-		```
-
-		Then paste your license key and hit enter:
-
-		```bash
-		Provide your kc.lic license key (base64 encoded string) :
-		```
-
-6. Validate the correct installation of your license:
-
-	```python
-	>>> kx.q.til(10)
-	pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
-	```
-
-### 2.b Install license with environment variables
-
-For environment-specific flexibility, there are two ways to install your license: by using a file or by copying text. Click on the tabs below, read the instructions, and choose the method you wish to follow:
-
-!!! Note ""
-
-	=== "Using a file"
-
-		1. Download your license file.
-
-		2. Set an environment variable pointing to the folder with the license file. (Learn how to set environment variables from [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/)).
-       		* **Variable Name**: `#!bash QLIC`
-      	    * **Variable Value**: `#!bash /user/path/to/folder`
-
-	=== "Using text"
-
-		1. Copy the `#!bash base64` encoded contents of your license key provided.
-
-		2. On your computer, set an environment variable with the contents of your `kc.lic` license key named `#!bash KDB_LICENSE_B64`. Or use `KDB_K4LICENSE_B64` if you have an older `k4.lic` license key. (Learn how to set environment variables from [here](https://chlee.co/how-to-setup-environment-variables-for-windows-mac-and-linux/)).
-       		* **Variable Name**: `KDB_LICENSE_B64`  / `KDB_K4LICENSE_B64`
-      	    * **Variable Value**: `<copied license key>`
-
-To validate if you successfully installed your license with environment variables, start Python and import KDB-X Python as follows:
-
-```bash
-$ python
->>> import pykx as kx
->>> kx.q.til(5)
-pykx.LongVector(pykx.q('0 1 2 3 4'))
+```sh
+python -c "import pykx as kx; print(kx.__version__); print(f'Licensed: {kx.licensed}')"
 ```
 
-!!! Tip "Tip: automatic license renewal setup"
+The command prints the KDB-X Python version and one of these results:
 
-    When your license nears its expiry date, you can set KDB-X Python to automatically renew it. To do this, modify the environment variable `#!bash KDB_LICENSE_B64` or `#!bash KDB_K4LICENSE_B64` with your new license information. When KDB-X Python initializes with the expired license, it will attempt to overwrite it with the new value:
+- `Licensed: True` confirms that KDB-X Python initialized embedded q with the installed license.
+- `Licensed: False` confirms that KDB-X Python runs in unlicensed mode.
 
-	```shell
-	$python
-	>>> import pykx as kx
-	Initialisation failed with error: exp
-	Your license has been updated using the following information:
-	Environment variable: 'KDB_K4LICENSE_B64'
-	License write location: /user/path/to/license/k4.lic
+If the result does not match your configuration, refer to [Troubleshooting](../help/troubleshooting.md).
+
+## Air-gapped installation
+
+Use a connected system that matches the operating system, architecture, and Python version of the air-gapped system.
+
+Prepare a wheelhouse using one of these sources:
+
+=== "PyPI"
+
+	Download KDB-X Python and its dependencies:
+
+	```sh
+	$ python -m pip download --destination-directory wheelhouse pykx
 	```
 
-## 3. Verify KDB-X Python installation
+=== "Build from source"
 
-To verify if you successfully installed KDB-X Python on your system, run:
+	Clone the repository and build KDB-X Python and its dependencies:
 
-```bash
-python -c"import pykx;print(pykx.__version__)"
-```
-
-This command should display the installed version of KDB-X Python.
-
-## Dependencies
-
-??? Info "Expand for Required and Optional KDB-X Python dependencies"
-
-	=== "Required"
-
-		KDB-X Python depends on the following third-party Python packages:
-
-      - `pandas>=1.2; python_version>'3.8'`
-      - `numpy>=1.22; python_version<'3.11'`
-      - `numpy>=1.23; python_version=='3.11'`
-      - `numpy>=1.26; python_version>='3.12'`
-      - `pytz>=2022.1`
-      - `toml~=0.10.2`
-      - `dill>=0.2.0`
-      - `requests>=2.25.0`
-
-		**Note**: All are installed automatically by `#!bash pip` when you install KDB-X Python.
-
-		Here's a breakdown of how KDB-X Python uses these libraries:
-
-		- [NumPy](https://pypi.org/project/numpy): converts data from `pykx` objects to NumPy equivalent Array/Recarray style objects; direct calls to NumPy functions such as `numpy.max` with  `pykx` objects relies on the NumPy Python API.
-		- [Pandas](https://pypi.org/project/pandas): converts KDB-X Python data to Pandas Series/DataFrame equivalent objects or to PyArrow data formats. Pandas is used as an intermediary data format.
-		- [pytz](https://pypi.org/project/pytz/): converts data with timezone information to  `pykx` objects to ensure that the offsets are accurately applied.
-		- [toml](https://pypi.org/project/toml/): for configuration parsing and management, with `config-KDB-X Python` as outlined [here](../user-guide/configuration.md).
-		- [dill](https://pypi.org/project/dill): used in the serialization and deserialization of Python objects when interfacing between q and Python processes using [remote functions](../user-guide/advanced/remote-functions.md) or [real-time capture](../user-guide/advanced/streaming/index.md) functionality.
-
-
-	=== "Optional"
-
-		**Optional Python dependencies:**
-
-		- **`pyarrow >=3.0.0`**: install `pyarrow` extra, for example `pip install pykx[pyarrow]`.
-		- **`find-libpython ~=0.2`**: install `debug` extra, for example `pip install pykx[debug]`.
-		- **`ast2json ~=0.3`**: install with `dashboards` extra, for example `pip install pykx[dashboards]`
-		- **`dill >=0.2`**: install via pip, with `remote` extra, for example `pip install pykx[remote]`
-		- **`psutil >=5.0.0`**: install via pip, with `streaming` extra, for example `pip install pykx[streaming]`
-		- **`torch >2.1`**: install via pip, with `torch` extra, for example `pip install pykx[torch]`
-
-        Here's a breakdown of how KDB-X Python uses these libraries:
-
-		- [PyArrow](https://pypi.org/project/pyarrow): converts `pykx` objects to and from their PyArrow equivalent table/array objects.
-		- [find-libpython](https://pypi.org/project/find-libpython): provides the `libpython.{so|dll|dylib}` file required by [KDB-X Python under q](../pykx-under-q/intro.md).
-		- [ast2json](https://pypi.org/project/ast2json/): required for KX Dashboards Direct integration.
-		- [psutil](https://pypi.org/project/psutil/): facilitates the stopping and killing of a q process on a specified port allowing for orphaned q processes to be stopped, functionality defined [here](../api/util.md#pykxutilkill_q_process).
-		- [torch](https://pytorch.org/docs/stable/): required for conversions between `#!python torch.Tensor` objects and their KDB-X Python equivalents.
-
-	    **Optional non-Python dependencies:**
-
-		- `libssl` for TLS on [IPC connections](../api/ipc.md).
-		- `libpthread` on Linux/MacOS when using the `PYKX_THREADING` environment variable.
-
-!!! Note "Troubleshooting and Support"
-
-	If you encounter any issues during the installation process, refer to the following sources for assistance:
-	
-	   - Visit our [troubleshooting](../help/troubleshooting.md) guide.
-	   - Ask a question on the KX community at [learninghub.kx.com](https://learninghub.kx.com/forums/forum/pykx/).
-       - Use Stack Overflow and tag [`pykx`](https://stackoverflow.com/questions/tagged/pykx) or [`kdb`](https://stackoverflow.com/questions/tagged/kdb) depending on the subject.
-	   - Go to [support](../help/support.md).
-
-## Asset Information
-
-| Platform  | Mode          | File        | Version      |
-| --------- | ------------- | ----------- | ------------ |
-| Linux ARM | KDB-X         | libq.so     | 5.0.20260501 |
-| Linux x86 | KDB-X         | libq.so     | 5.0.20260501 |
-| Mac ARM   | KDB-X         | libq.dylib  | 5.0.20260501 |
-| Mac x86   | KDB-X         | libq.dylib  | 5.0.20260501 |
-| Windows   | KDB-X         | q.dll/q.lib | 5.0.20260501 |
-| Linux ARM | Unlicensed    | libe.so     | 2023.11.22   |
-| Linux x86 | Unlicensed    | libe.so     | 2023.11.22   |
-| Mac ARM   | Unlicensed    | libe.so     | 2023.11.22   |
-| Mac x86   | Unlicensed    | libe.so     | 2023.11.22   |
-| Windows   | Unlicensed    | e.dll/e.lib | 2024.08.21   |
-
-## Optional: Installing a q executable
-
-The following section is optional and primarily required if you are looking to make use of the [Real-Time Capture](../user-guide/advanced/streaming/index.md) functionality provided by KDB-X Python.
-
-### Do I need a q executable?
-
-For the majority of functionality provided by KDB-X Python you do not explicitly need access to a q executable. Users within a Python process who do not have a q executable will be able to complete tasks such as the following:
-
-- Convert data to/from Python types
-- Run analytics on in-memory and on-disk databases
-- Create databases
-- Query remote q processes via IPC
-- Execute numpy functions with KDB-X Python data
-
-If however you need to make use of the [Real-Time Capture](../user-guide/advanced/streaming/index.md) functionality you will need access to a q executable. Fundamentally the capture and persistence of real-time data and the application of analytics on this streaming data is supported via deployment of code on q processes.
-
-### Configuring KDB-X Python to use an existing executable
-
-By default, when initializing a q process within Real-Time Capture workflows, KDB-X Python attempts to call `q` directly. However, this approach can be unreliable when the Python `subprocess` module is used to launch the process. To ensure consistency, configure the environment to explicitly reference the full path to your q executable.
-
-If you already have a q executable, KDB-X Python can use this when initializing the Real-Time Capture APIs through the setting of the following in your [configuration file](../user-guide/configuration.md#configuration-file) or as [environment variables](../user-guide/configuration.md#environment-variables):
-
-| **Variable**        | **Explanation**                                                                                                      |
-| :------------------ | :--------------------------------------------------------------------------------------------------------------- |
-| `PYKX_Q_EXECUTABLE` | Specifies the location of the q executable which should be called. Typically this will be `QHOME/[lmw]64/q[.exe]`|
-| `QHOME`             | The directory to which q was installed                                                                           |
-
-### Installing an executable
-
-Go to [KDB-X](https://kdb-x.kx.com/) and follow the instructions.
-
-### Installing in an air-gapped environment
-
-Installing Python libraries in air-gapped environments requires users to first download the [Python wheel](https://realpython.com/python-wheels/) files for the libraries you need to install.
-
-!!! Note "Build using the same environment as you're installing"
-
-	When downloading the `.whl` files and dependencies make sure you are using the same OS and Python version as you will be when installing in your isolated environment. 
-
-Prepare the installation package from an internet-enabled system in one of the following ways:
-
-1. Download the `.whl` file for the OS, library version and Python version you are intending to use on the air-gapped environment. These files can be sourced from [here](https://pypi.org/project/pykx/#files).
-2. Generate the `.whl` file from a git clone of the [KDB-X Python repository](https://github.com/kxsystems/pykx). An example of this is as follows:
-
-	```bash
+	```sh
 	$ git clone https://github.com/kxsystems/pykx
 	$ cd pykx
-	$ pip install build
-	# The below will install the `.whl` to a `dist/` folder
-	$ python -m build .
-	```
-After downloading the `*.whl` file locally, you can retrieve and save its required dependencies using the following command:
-
-	```bash
-	$ pip download dist/*.whl
+	$ python -m pip wheel --wheel-dir wheelhouse .
 	```
 
-Copy the content of your `dist/` folder to an external storage device (USB-key etc.) and upload the `.whl` files to your air-gapped device.
+Copy the `wheelhouse` directory to the air-gapped system, then install from it. This example uses `/opt/airgap/wheels`:
 
-Install the wheels which for simplicity are stored at a location `/opt/airgap/wheels`
-
-```bash
-pip install --no-cache /opt/airgap/wheels/*
+```sh
+python -m pip install --no-index --find-links=/opt/airgap/wheels pykx
 ```
 
-### Verify KDB-X Python can use the executable
+After installation, [install a KDB-X license](#install-a-kdb-x-license) and [verify the installation](#verify-the-installation).
 
-Verifying that KDB-X Python has access to the executable can be done through execution of the function `#!python kx.util.start_q_subprocess` and requires either your configuration file or environment variables to include `PYKX_Q_EXECUTABLE`. This is outlined [here](#configuring-kdb-x-python-to-use-an-existing-executable).
+## Related installation topics
 
-```python
->>> import pykx as kx
->>> server = kx.util.start_q_subprocess(5052)
->>> conn = kx.SyncQConnection(port=5052)     # Connect to subprocess
->>> conn('1+1')
-pykx.LongAtom(pykx.q('2'))
->>> server.kill()
-```
+- [Configure KDB-X Python](../user-guide/configuration.md)
+- [Review dependencies and bundled assets](../user-guide/configuration.md#dependencies-and-bundled-assets)
+- [Manage or renew a license](../user-guide/advanced/license.md)
+- [Get installation help](../help/support.md)
 
 ## Next steps
 
-That's it! You can now start using KDB-X Python in your Python projects:
-
-- [Quickstart guide](quickstart.md)
-- [Updating/Upgrading your license](../user-guide/advanced/license.md)
+- [Run the quickstart](quickstart.md)

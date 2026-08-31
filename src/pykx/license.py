@@ -153,7 +153,7 @@ def expires() -> int:
 def install(license: str,
             *,
             format: Optional[str] = 'FILE',
-            license_type: Optional[str] = 'kc.lic',
+            license_type: Optional[str] = None,
             force: Optional[bool] = False
 ) -> bool:
     """
@@ -164,9 +164,10 @@ def install(license: str,
             If "STRING" this is the base64 encoded string provided in your license email
         format: Is the license check being completed using a downloaded file or base64
             encoded string. Accepted inputs are "FILE"(default) or "STRING".
-        license_type: The license file type/name which is to be checked, by default this
-            is 'kc.lic' but can be changed to 'k4.lic' or 'kx.lic' if appropriate
-        force: Enforce overwrite without opt-in message for overwrite
+        license_type: The license file type/name which is to be installed. If unspecified
+            and a "FILE" is being installed whose name is one of 'kc.lic', 'k4.lic' or
+            'kx.lic', that name is used; otherwise it defaults to 'kc.lic'.
+        force: Enforce overwrite without opt-in message for overwrite.
 
     Returns:
         A boolean indicating if the license has been correctly overwritten
@@ -194,6 +195,12 @@ def install(license: str,
     if format not in ('file', 'string'):
         raise Exception('Unsupported option provided for format parameter')
 
+    if license_type is None:
+        known_types = ('kc.lic', 'k4.lic', 'kx.lic')
+        incoming_name = (os.path.basename(os.path.expanduser(Path(license)))
+                         if format == 'file' else None)
+        license_type = incoming_name if incoming_name in known_types else 'kc.lic'
+
     license_located = False
     installed_lic = qlic/license_type
     if os.path.exists(installed_lic):
@@ -210,7 +217,7 @@ def install(license: str,
         if not os.path.exists(download_location):
             raise Exception(f'Download location provided {download_location} does not exist.')
 
-        shutil.copy(download_location, qlic)
+        shutil.copy(download_location, qlic/license_type)
     else:
         try:
             lic = base64.b64decode(license)
@@ -220,5 +227,5 @@ def install(license: str,
 
         with open(qlic/license_type, 'wb') as binary_file:
             binary_file.write(lic)
-    print("KDB-X Python license successfully installed!")
+    print(f"KDB-X Python license successfully installed: {qlic/license_type}")
     return True

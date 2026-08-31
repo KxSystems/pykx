@@ -1464,6 +1464,11 @@ def test_df_rename(kx, q):
     rez = t.rename({'Poliddcy': 'PolicyID', 'Policy': 'p_id'}, axis=1)
     assert all(t.pd().rename({'Poliddcy': 'PolicyID', 'Policy': 'p_id'}, axis=1).eq(rez.pd()))
 
+    t = kx.q('([] Policy: 1 2 3)')
+    cols = {0: 'ignored', 'Policy': 'PolicyID'}
+    rez = t.rename(cols, axis=1)
+    assert all(t.pd().rename(cols, axis=1).eq(rez.pd()))
+
     mixed_index_table = kx.q('([] id:(`a;2;1); Policy: 3 4 5; name:`a`b`c)').pd()
     df=kx.toq(mixed_index_table.set_index(['id']))
     rez = df.rename({1: 'x', 2: 'j'})

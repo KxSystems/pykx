@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from platform import system
 from sys import getrefcount
+from threading import Thread
 from uuid import UUID, uuid4
 
 # Do not import Pandas, PyArrow, or KDB-X Python here - use the pd/pa/kx fixtures instead!
@@ -1008,6 +1009,68 @@ def test_from_numpy_ndarray_3(kx):
     assert all(minute_array.np() == minute_array_np)
 
 
+@pytest.mark.nep49
+def test_from_numpy_recarray(kx):
+    # A structured/record array (as produced by ``Table.np``) converts to a q Table with one
+    # column per named field, rather than raising a TypeError (KXI-71774). This holds both for a
+    # ``numpy.recarray`` and for a plain structured ``numpy.ndarray``.
+    rec = np.array([(1, b'a'), (2, b'b')], dtype=[('x', 'i8'), ('y', 'S1')])
+    for arr in (rec, rec.view(np.recarray)):
+        tab = kx.toq(arr)
+        assert isinstance(tab, kx.Table)
+        assert kx.K(arr).py() == tab.py()
+        # The 'S1' field 'y' becomes a q char column (one char per row).
+        assert tab.py() == {'x': [1, 2], 'y': b'ab'}
+
+    # The reported round-trip must work out of the box: a single row char column.
+    single_char = kx.q('([] c:enlist " ")')
+    assert kx.toq(single_char.np()).py() == single_char.py()
+
+    # A range of column types should round-trip through ``Table.np`` -> ``toq`` for both the
+    # recarray and the plain structured ndarray forms.
+    tab = kx.q('([] a:1 2 3; b:`x`y`z; c:"abc"; d:1.1 2.2 3.3; e:0x010203; f:3?0Ng)')
+    assert kx.q('~', kx.toq(tab.np()), tab).py()
+    assert kx.q('~', kx.toq(np.asarray(tab.np())), tab).py()
+
+    # Empty tables preserve their (char) column typing rather than degrading to a list.
+    empty = kx.q('([] c:0#" ")')
+    assert kx.q('~', kx.toq(empty.np()), empty).py()
+
+    # 'U1' (str) fields become symbol columns, 'S1' (bytes) fields become char columns.
+    mixed = np.array([('a', b'z')], dtype=[('s', 'U1'), ('b', 'S1')])
+    mtab = kx.toq(mixed)
+    assert kx.q('type', mtab['s']).py() == 11  # symbol vector
+    assert kx.q('type', mtab['b']).py() == 10  # char vector
+
+    # ktype=KeyedTable is supported (keyed on a generated index).
+    assert isinstance(kx.toq(tab.np(), ktype=kx.KeyedTable), kx.KeyedTable)
+    assert isinstance(kx.toq(tab.np(), ktype=kx.Table), kx.Table)
+
+    # strings_as_char converts symbol fields to lists of char vectors.
+    sac = kx.toq(tab.np(), strings_as_char=True)
+    assert kx.q('type', sac['b']).py() == 0  # general list of char vectors
+
+    # handle_nulls preserves q nulls through the round-trip.
+    with_nulls = kx.q('([] a:1 2 0N 4; d:1.1 2.2 0n 4.4)')
+    assert kx.q('~', kx.toq(with_nulls.np(), handle_nulls=True), with_nulls).py()
+
+    # Unsupported ktypes and multi-dimensional structured arrays raise TypeError.
+    with pytest.raises(TypeError):
+        kx.toq(rec, kx.LongVector)
+    with pytest.raises(TypeError):
+        kx.toq(np.zeros((2, 2), dtype=[('a', 'i8')]))
+
+
+@pytest.mark.nep49
+def test_from_numpy_single_char(kx):
+    # The default conversion of a length-one 'S1' (bytes) array remains a CharAtom, matching the
+    # existing behaviour where a single byte becomes an atom (KXI-71774).
+    assert isinstance(kx.toq(np.array([b' '], dtype='S1')), kx.CharAtom)
+    # A CharVector can still be forced explicitly from a single byte.
+    assert isinstance(kx.CharVector(b' '), kx.CharVector)
+    assert kx.CharVector(b' ').py() == b' '
+
+
 @pytest.mark.unlicensed
 @pytest.mark.nep49
 def test_from_numpy_incompatible_types(kx):
@@ -1371,6 +1434,49 @@ def test_from_arrow(kx, pa, pd):
 
     a = pa.chunked_array([[1, 2, 3], [4, 5, 6]])
     assert a.combine_chunks() == kx.K(a).pa()
+
+
+@pytest.mark.licensed
+@pytest.mark.nep49
+def test_from_arrow_empty_string_column(kx, pd, pa):
+    schema = pa.schema([('s', pa.large_string()), ('i', pa.int64())])
+    via_string = isinstance(schema.empty_table().to_pandas()['s'].dtype, pd.StringDtype)
+    empty_str_type = 11 if via_string else 0
+
+    empty = kx.toq(schema.empty_table())
+    assert kx.q('type', empty['s']).py() == empty_str_type
+    assert kx.q('type', empty['i']).py() == 7
+
+    all_null = kx.toq(pa.table({'s': pa.array([None, None], type=pa.large_string())}))
+    assert kx.q('type', all_null['s']).py() == empty_str_type
+    if via_string:
+        assert kx.q('~', all_null['s'], kx.q('2#`')).py()
+
+    populated = kx.toq(pa.table({'s': pa.array(['a', None], type=pa.large_string())}))
+    assert kx.q('type', populated['s']).py() == 11
+    assert kx.q('~', populated['s'], kx.q('`a`')).py()
+
+
+@pytest.mark.licensed
+@pytest.mark.nep49
+def test_from_pandas_empty_string_column(kx, pd):
+    for data in ([], [None], [None, None]):
+        df = pd.DataFrame({'s': pd.Series(data, dtype='string')})
+        assert kx.q('type', kx.toq(df)['s']).py() == 11
+        assert kx.q('type', kx.toq(df, strings_as_char=True)['s']).py() == 0
+
+
+@pytest.mark.licensed
+@pytest.mark.nep49
+def test_from_pandas_arrow_string_column(kx, pd, pa):
+    if not hasattr(pd, 'ArrowDtype'):
+        pytest.skip('pd.ArrowDtype requires pandas>=1.5')
+    dtype = pd.ArrowDtype(pa.large_string())
+    for data in ([], [pd.NA], [pd.NA, pd.NA], ['a', pd.NA], ['a', 'b']):
+        col = kx.toq(pd.DataFrame({'s': pd.Series(data, dtype=dtype)}))['s']
+        assert kx.q('type', col).py() == 11
+    mixed = kx.toq(pd.DataFrame({'s': pd.Series(['a', pd.NA], dtype=dtype)}))['s']
+    assert kx.q('~', mixed, kx.q('`a`')).py()
 
 
 @pytest.mark.licensed
@@ -1760,3 +1866,61 @@ def test_2d_array_from_file_no_allocator(kx):
 def test_embedding_segfault(kx):
     df=pd.DataFrame(dict(embeddings=list(np.random.ranf((500, 10)).astype(np.float32))))
     kx.toq(df)
+
+
+def test_table_in_thread(kx):
+
+    def generate_data():
+        now = datetime.utcnow()
+        trade_id = uuid4()
+        df = pd.DataFrame(
+            [[now, "VOD", "LSE", "buy", 75.90, 100, trade_id]],
+            columns=["time", "sym", "exch", "side", "price", "size", "tradeID"]
+        )
+        return kx.Table(df)
+
+    def generate_data_in_thread():
+        res = []
+
+        def thread_body():
+            d = generate_data()
+            res.append(d)
+        t = Thread(target=thread_body)
+        t.start()
+        t.join()
+        return res[0]
+
+    assert isinstance(generate_data_in_thread(), kx.Table)
+
+
+@pytest.mark.licensed_only
+def test_keep_local_times_off(kx):
+    a = pd.Timestamp('2026-07-28 15:41:22.734077-0400', tz='America/New_York')
+    b = pd.Series([a, a])
+
+    k = kx.q('2026.07.28D15:41:22.734077000')
+    kk = kx.q('2026.07.28D15:41:22.734077000 2026.07.28D15:41:22.734077000')
+    k2 = kx.q('2026.07.28D19:41:22.734077000')
+    kk2 = kx.q('2026.07.28D19:41:22.734077000 2026.07.28D19:41:22.734077000')
+
+    assert kx.toq(a) == k2
+    assert (kx.toq(b) == kk2).all()
+    assert kx.toq(a) != k
+    assert not (kx.toq(b) == kk).any()
+
+
+@pytest.mark.isolate
+def test_keep_local_times_on():
+    import os
+    os.environ['PYKX_KEEP_LOCAL_TIMES'] = '1'
+    import pykx as kx
+    import pandas as pd
+
+    a = pd.Timestamp('2026-07-28 15:41:22.734077-0400', tz='America/New_York')
+    b = pd.Series([a, a])
+
+    k = kx.q('2026.07.28D15:41:22.734077000')
+    kk = kx.q('2026.07.28D15:41:22.734077000 2026.07.28D15:41:22.734077000')
+
+    assert kx.toq(a) == k
+    assert (kx.toq(b) == kk).all()

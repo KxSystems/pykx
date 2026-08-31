@@ -15,6 +15,7 @@ from textwrap import dedent
 from uuid import UUID
 import itertools
 import sys
+import warnings
 
 # Do not import Pandas, PyArrow, or pykx here - use the pd/pa/kx fixtures instead!
 import numpy as np
@@ -724,6 +725,15 @@ class Test_Atom:
         assert not q('{x*y+z}').is_null
         assert not q('{x*y+z}').is_inf
 
+        for expr in ('0Ng', '0Nh', '0Ne', '0Nf', '0Np', '0Nn', '0Nu', '0Nv', '0Nt', '" "', '`'):
+            atom = q(expr)
+            for prop in ('is_null', 'is_inf', 'is_pos_inf', 'is_neg_inf'):
+                assert type(getattr(atom, prop)) is bool, f'{expr}.{prop}'
+        for expr in ('0We', '-0We', '0Wf', '-0Wf', '0Wh', '-0Wh'):
+            atom = q(expr)
+            for prop in ('is_inf', 'is_pos_inf', 'is_neg_inf'):
+                assert type(getattr(atom, prop)) is bool, f'{expr}.{prop}'
+
     @pytest.mark.nep49
     def test_null_np(self, q, kx):
         for type_char in 'hij':
@@ -1083,6 +1093,25 @@ class Test_Atom:
         assert np.asarray(kx.MonthAtom(datetime(2003, 4, 5))).dtype == "<M8[M]"
         assert np.asarray(kx.DateAtom(datetime(2003, 4, 5))).dtype == "<M8[D]"
         assert np.asarray(kx.TimespanAtom(timedelta(3))).dtype == "<m8[ns]"
+
+    @pytest.mark.unlicensed
+    def test_array_protocol(self, kx, q):
+        # NumPy 2.* passes `dtype` positionally and `copy` by keyword to `__array__`.
+        # Atoms and Vectors must accept both without raising a TypeError or emitting a
+        # DeprecationWarning (see PandasUUIDArray regression in Test_Table). These paths
+        # remain valid on NumPy 1.x, which never passes `copy`.
+        numpy_gt2 = version.parse(np.__version__) >= version.parse('2.0')
+        for obj in (kx.LongAtom(42), kx.q('til 5')):
+            assert np.asarray(obj, dtype=object).dtype == object
+            with warnings.catch_warnings():
+                warnings.simplefilter('error', DeprecationWarning)
+                assert np.array(obj) is not None
+                assert np.array(obj, copy=True) is not None
+            if numpy_gt2:
+                # A dtype conversion is unavoidably a copy, so an explicit copy=False must
+                # be refused. NumPy 1.x has lenient copy semantics and does not raise here.
+                with pytest.raises(ValueError):
+                    np.array(obj, dtype=object, copy=False)
 
     @pytest.mark.unlicensed
     def test_arr_nulls(self, kx, q):
@@ -1817,6 +1846,10 @@ class Test_Vector:
             assert q(f'@[v;-3?50;:;0N{type_code}]').has_nulls
             assert q(f'@[v;-3?50;:;0W{type_code}]').has_infs
 
+            for expr in (v, q(f'@[v;-3?50;:;0N{type_code}]'), q(f'@[v;-3?50;:;0W{type_code}]')):
+                assert type(expr.has_nulls) is bool, f'{type_code}.has_nulls'
+                assert type(expr.has_infs) is bool, f'{type_code}.has_infs'
+
         types = (
             ('h', '0h'), ('i', '0i'), ('j', '0j'), ('e', '10000e'), ('f', '10000f'), ('p', '0p'),
             ('m', '2000.01m'), ('d', '2000.01.01d'), ('n', '00:00:00.000000000'), ('u', '00:00'),
@@ -1824,6 +1857,21 @@ class Test_Vector:
         )
         for type_code, zero in types:
             f(type_code, zero)
+
+        for expr in ('0Ng,3?0Ng', 'v where not null v:10?0Ng', '011011100b', '0xdeadbeef'):
+            vec = q(expr)
+            assert type(vec.has_nulls) is bool, f'{expr}.has_nulls'
+            assert type(vec.has_infs) is bool, f'{expr}.has_infs'
+
+    def test_has_infs_negative_infinity(self, q, kx):
+        assert isinstance(q('-0w -0w -0w'), kx.FloatVector)
+        assert q('-0w -0w -0w').has_infs
+        assert isinstance(q('-0we, -0we, -0we'), kx.RealVector)
+        assert q('-0we, -0we, -0we').has_infs
+        assert q('1 2 -0w').has_infs
+        assert q('1 2 0w').has_infs
+        assert not q('1 2 3f').has_infs
+        assert type(q('-0w -0w').has_infs) is bool
 
     def test_np_timestampvector_nulls(self, kx):
         assert pd.isna(kx.q('0Np').py())
@@ -2430,6 +2478,27 @@ class Test_TimestampVector:
         assert q('"p"$()').np().dtype == np.dtype('datetime64[ns]')
         assert q('"p"$()').np(raw=True).dtype == np.int64
 
+    @pytest.mark.nep49
+    def test_py_multiple_nulls(self, q, kx):
+        vec = kx.q('(2023.01.01D12:00:00.000000000; 0Np; 2023.01.03D06:30:00.000000000; 0Np; 0Np)')
+        assert isinstance(vec, kx.TimestampVector)
+        result = vec.py()
+        assert result[0] == datetime(2023, 1, 1, 12, 0, 0)
+        assert result[2] == datetime(2023, 1, 3, 6, 30, 0)
+        assert result[1] is pd.NaT
+        assert result[3] is pd.NaT
+        assert result[4] is pd.NaT
+        assert None not in result
+
+    @pytest.mark.nep49
+    def test_py_tzinfo_nulls(self, kx):
+        vec = kx.q('(2023.01.01D12:00:00.000000000; 0Np; 2023.01.03D06:30:00.000000000)')
+        result = vec.py(tzinfo=pytz.timezone('GMT'))
+        assert result[0] == datetime(2023, 1, 1, 12, 0, 0, tzinfo=pytz.utc)
+        assert result[0].tzinfo is not None
+        assert result[2] == datetime(2023, 1, 3, 6, 30, 0, tzinfo=pytz.utc)
+        assert result[1] is pd.NaT
+
 
 class Test_MonthVector:
     q_vec_str = '2006.04 1947.10 1876.04 2170.01m'
@@ -2901,10 +2970,20 @@ class Test_Table:
         t = q(self.q_table_str)
         assert all(t.pa().to_pandas() == t.pd(raw_guids=True))
 
+    def test_pd_raw_guids_repr(self, q):
+        # A raw_guids=True DataFrame must be renderable: pandas/numpy call
+        # PandasUUIDArray.__array__(dtype) when formatting, which previously
+        # raised `TypeError: __array__() takes 1 positional argument but 2 were given`.
+        df = q(self.q_table_str).pd(raw_guids=True)
+        assert repr(df)
+        assert np.asarray(df['c'].values, dtype=object).shape == (3,)
+
     def test_has_null_and_has_inf(self, q):
         table = q('([]0w,9?1f;0n,9?1f)')
         assert table.has_nulls
         assert table.has_infs
+        assert type(table.has_nulls) is bool
+        assert type(table.has_infs) is bool
 
     def test_null_to_pandas(self, q, pd):
         q('ty:2 5 6 7 8 9 10 11 12 13 14 16 17 18 19h')
@@ -3430,6 +3509,8 @@ class Test_Dictionary:
         dic = q('flip ([]0w,9?1f;0n,9?1f)')
         assert dic.has_nulls
         assert dic.has_infs
+        assert type(dic.has_nulls) is bool
+        assert type(dic.has_infs) is bool
 
     def test_nested_dict(self, q):
         single_nested = {
@@ -4222,6 +4303,9 @@ def test_nulls(kx, q, pa):
 
 def test_infinites(kx, q, pa):
     import datetime
+    # Pandas >= 2.0 supports non-nanosecond resolution, so month/date/minute
+    # infinities (out of the nanosecond range) convert instead of overflowing.
+    pandas_gt1 = not pd.__version__.split('.')[0] == '1'
 
     def compare_infinites(q_infinite, py_infinite):
         assert type(q_infinite) == type(py_infinite)
@@ -4248,7 +4332,7 @@ def test_infinites(kx, q, pa):
     py_positive_infinites = [math.inf, math.inf, math.inf, float('inf'), float('inf'),
                              datetime.datetime(2262, 4, 11, 23, 47, 16, 854775), 2147484007,
                              2147494604, datetime.timedelta(106751, 16, 854775, 0, 47, 23),
-                             datetime.timedelta(-3220, 4, 33138, 0, 5, 5),
+                             datetime.timedelta(minutes=2147483647),
                              datetime.timedelta(24855, 7, 0, 0, 14, 3),
                              datetime.timedelta(24, 23, 647000, 0, 31, 20)]
     compare_all_infinites(positive_infinites, py_positive_infinites, 'py')
@@ -4256,7 +4340,7 @@ def test_infinites(kx, q, pa):
     py_negative_infinites = [-math.inf, -math.inf, -math.inf, float('-inf'), float('-inf'),
                              datetime.datetime(1707, 9, 22, 0, 12, 43, 145224), -2147483287,
                              -2147472690, datetime.timedelta(-106752, 43, 145224, 0, 12),
-                             datetime.timedelta(3219, 55, 966861, 0, 54, 18),
+                             datetime.timedelta(minutes=-2147483647),
                              datetime.timedelta(-24856, 53, 0, 0, 45, 20),
                              datetime.timedelta(-25, 36, 353000, 0, 28, 3)]
     compare_all_infinites(negative_infinites, py_negative_infinites, 'py')
@@ -4309,18 +4393,33 @@ def test_infinites(kx, q, pa):
                              np.float64('-inf'), pd.Timestamp('1707-09-22 00:12:43.145224193'),
                              None, None, pd.Timedelta(-9223372036854775807, 'ns'), None,
                              pd.Timedelta(-2147483647, 's'), pd.Timedelta(-2147483647, 'ms')]
+    # month (6), date (7) and minute (9) exceed pandas' nanosecond range. On
+    # pandas >= 2.0 they convert (coarser resolution) and are verified below:
+    # month/date pinned via their (already verified) .np() datetime64 value, minute
+    # directly. On pandas 1.x these overflow, so they remain skipped.
     skip = [6, 7, 9]
-    # 6 7 9 Values out of range - Pandas constructors block them
     compare_all_infinites(positive_infinites, pd_positive_infinites, 'pd', skip=skip)
     compare_all_infinites(negative_infinites, pd_negative_infinites, 'pd', skip=skip)
+    if pandas_gt1:
+        for i in (6, 7):
+            assert positive_infinites[i].pd().to_datetime64() == np_positive_infinites[i]
+            assert negative_infinites[i].pd().to_datetime64() == np_negative_infinites[i]
+        assert positive_infinites[9].pd().to_numpy() == np_positive_infinites[9]
+        assert negative_infinites[9].pd().to_numpy() == np_negative_infinites[9]
 
     # infinites in Vectors .pd()
-    skip = [6, 7, 9]  # 6 7 9 Values out of range - Pandas constructors block them
+    skip = [6, 7, 9]  # verified below on pandas >= 2.0 (overflow on pandas 1.x)
     pd_infinites = [[x, y] for x, y in zip(pd_positive_infinites, pd_negative_infinites)]
     pd_infinites[5][0] = pd.Timestamp('1707-09-22T00:12:43.145224191')
     compare_all_infinites(infinites, pd_infinites, 'pd', ind=0, skip=skip)
     pd_infinites[5][1] = pd.Timestamp('1707-09-22 00:12:43.145224193')
     compare_all_infinites(infinites, pd_infinites, 'pd', ind=1, skip=skip)
+    if pandas_gt1:
+        for i in (6, 7):
+            assert infinites[i].pd()[0].to_datetime64() == np_infinites[i][0]
+            assert infinites[i].pd()[1].to_datetime64() == np_infinites[i][1]
+        assert infinites[9].pd()[0].to_numpy() == np_infinites[9][0]
+        assert infinites[9].pd()[1].to_numpy() == np_infinites[9][1]
 
     # Atom infinites .pa()
     pa_positive_infinites = [np.int16(32767), np.int32(2147483647), np.int64(9223372036854775807),
@@ -4335,16 +4434,23 @@ def test_infinites(kx, q, pa):
                              None, None, pd.Timedelta(-9223372036854775807, 'ns'), None,
                              pd.Timedelta(-2147483647, 's'),
                              pd.Timedelta(-2147483647, 'ms')]
+    # month (6), date (7) and minute (9) exceed pandas' nanosecond range; verified
+    # below on pandas >= 2.0 (month/date pinned via .np(), minute directly). On
+    # pandas 1.x these overflow, so they remain skipped.
     skip = [6, 7, 9]
-    # 6, 7, 9 .pa runs but creates out of bounds objects
     compare_all_infinites(positive_infinites, pa_positive_infinites, 'pa', skip=skip)
     compare_all_infinites(negative_infinites, pa_negative_infinites, 'pa', skip=skip)
+    if pandas_gt1:
+        for i in (6, 7):
+            assert positive_infinites[i].pa().to_datetime64() == np_positive_infinites[i]
+            assert negative_infinites[i].pa().to_datetime64() == np_negative_infinites[i]
+        assert positive_infinites[9].pa().to_numpy() == np_positive_infinites[9]
+        assert negative_infinites[9].pa().to_numpy() == np_negative_infinites[9]
 
     # infinites in Vectors .pa()
-    skip = [5, 6, 7, 9]
-    # 5, 6 pyarrow.lib.ArrowNotImplementedError: Unsupported datetime64 time unit
-    # 7 OverflowError: days=-2147472692; must have magnitude <= 999999999
-    # 9 pyarrow.lib.ArrowNotImplementedError: Unsupported timedelta64 time unit
+    # timestamp (5) is verified below; month (6), date (7) and minute (9) raise and
+    # are asserted with pytest.raises after the value comparisons.
+    skip = [6, 7, 9]
     pa_infinites = [[x, y] for x, y in zip(pa_positive_infinites, pa_negative_infinites)]
     pa_infinites[0][0] = pa.array([32767], pa.int16())[0]
     pa_infinites[1][0] = pa.array([2147483647], pa.int32())[0]
@@ -4361,11 +4467,21 @@ def test_infinites(kx, q, pa):
     pa_infinites[2][1] = pa.array([-9223372036854775807], pa.int64())[0]
     pa_infinites[3][1] = pa.array([np.float32('-inf')], pa.float32())[0]
     pa_infinites[4][1] = pa.array([np.float64('-inf')], pa.float64())[0]
-    pa_infinites[5][1] = pa.array([-9223372036854775809+946684800000000000], pa.timestamp('ns'))[0]
+    pa_infinites[5][1] = pa.array([np.datetime64('1707-09-22T00:12:43.145224193')],
+                                  pa.timestamp('ns'))[0]
     pa_infinites[8][1] = pa.array([-9223372036854775807], pa.duration('ns'))[0]
     pa_infinites[10][1] = pa.array([-2147483647], pa.duration('s'))[0]
     pa_infinites[11][1] = pa.array([-2147483647], pa.duration('ms'))[0]
     compare_all_infinites(infinites, pa_infinites, 'pa', ind=1, skip=skip)
+
+    # month (6) and minute (9) vector .pa() raise on an unsupported pyarrow unit;
+    # date (7) constructs but its out-of-range value raises when materialised.
+    with pytest.raises(pa.lib.ArrowNotImplementedError):
+        infinites[6].pa()
+    with pytest.raises(pa.lib.ArrowNotImplementedError):
+        infinites[9].pa()
+    with pytest.raises(OverflowError):
+        infinites[7].pa()[0].as_py()
 
 
 # Conversions of nested K lists requires a license, We need to be able to call
