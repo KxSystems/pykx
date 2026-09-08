@@ -79,7 +79,7 @@ When generating workloads that integrate Python and q code, KDB-X Python under q
 
 ### 1. Flexibility in supported data formats and conversions
 
-When using EmbedPy to convert data between q and Python, there’s a fundamental limitation related to supported data formats. Specifically, when passed to Python functions, q objects use the analogous Python/NumPy representation. This means that if an embedPy user requires data in a Pandas/PyArrow format, they need to convert it manually.
+When using EmbedPy to convert data between q and Python, there's a fundamental limitation related to supported data formats. Specifically, when passed to Python functions, q objects use the analogous Python/NumPy representation. This means that if an embedPy user requires data in a Pandas/PyArrow format, they need to convert it manually.
 
 As KDB-X Python supports Python, NumPy, Pandas, and PyArrow data formats, it improves the workflow coverage and flexibility. For instance, KDB-X Python by default converts q tables to Pandas DataFrames when passed to a Python function as follows:
 
