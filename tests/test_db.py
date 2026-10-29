@@ -1,4 +1,5 @@
 import os
+from platform import system
 import shutil
 import warnings
 
@@ -91,6 +92,31 @@ def test_list(kx):
 
 
 @pytest.mark.order(6)
+def test_loaded_objects(kx):
+    db = kx.DB()
+    kx.q('`:db/mydict set `a`b!1 2')
+    db.load('db', overwrite=True)
+    assert db.tables == ['t']
+    assert 'mydict' in db.objects
+    assert db.mydict.py() == {'a': 1, 'b': 2}
+    assert db.object.mydict.py() == {'a': 1, 'b': 2}
+    os.remove(db.path/'mydict')
+
+
+@pytest.mark.order(7)
+def test_loaded_objects_clash(kx):
+    db = kx.DB()
+    kx.q('`:db/create set `a`b!1 2')
+    with pytest.warns(UserWarning, match="DB loaded object DB.create attribute exists"):
+        db.load('db', overwrite=True)
+    assert 'create' in db.objects
+    assert callable(db.create)
+    assert db.create_.py() == {'a': 1, 'b': 2}
+    assert db.object.create.py() == {'a': 1, 'b': 2}
+    os.remove(db.path/'create')
+
+
+@pytest.mark.order(8)
 def test_column_add(kx):
     db = kx.DB()
     db.load('db')
@@ -100,7 +126,7 @@ def test_column_add(kx):
     assert ['sym', 'ti', 'p', 'sz', 'vol'] == db_cols
 
 
-@pytest.mark.order(7)
+@pytest.mark.order(9)
 def test_column_reorder(kx):
     db = kx.DB()
     db.load('db')
@@ -108,7 +134,7 @@ def test_column_reorder(kx):
     assert ['vol', 'sym', 'sz', 'p', 'ti'] == db.list_columns('t')
 
 
-@pytest.mark.order(8)
+@pytest.mark.order(10)
 def test_column_rename(kx):
     db = kx.DB()
     db.load('db')
@@ -128,7 +154,7 @@ def test_column_rename(kx):
     assert ['vol', 'sym', 'sz', 'price', 'ti', 'something_else'] == db.list_columns('t')
 
 
-@pytest.mark.order(9)
+@pytest.mark.order(11)
 def test_column_delete(kx):
     db = kx.DB()
     db.load('db')
@@ -144,7 +170,7 @@ def test_column_delete(kx):
     assert "Specified column 'no_col'" in str(err.value)
 
 
-@pytest.mark.order(10)
+@pytest.mark.order(12)
 def test_column_find(kx):
     db = kx.DB()
     db.load('db')
@@ -154,7 +180,7 @@ def test_column_find(kx):
     assert 'Requested column not found' in str(err.value)
 
 
-@pytest.mark.order(11)
+@pytest.mark.order(13)
 def test_column_set_attr(kx):
     db = kx.DB()
     db.load('db')
@@ -166,7 +192,7 @@ def test_column_set_attr(kx):
     assert "Specified column 'no_col'" in str(err.value)
 
 
-@pytest.mark.order(12)
+@pytest.mark.order(14)
 def test_column_clear_attr(kx):
     db = kx.DB()
     db.load('db')
@@ -178,7 +204,7 @@ def test_column_clear_attr(kx):
     assert "Specified column 'no_col'" in str(err.value)
 
 
-@pytest.mark.order(13)
+@pytest.mark.order(15)
 def test_column_set_type(kx):
     db = kx.DB()
     db.load('db')
@@ -193,7 +219,7 @@ def test_column_set_type(kx):
     assert "Specified column 'no_col'" in str(err.value)
 
 
-@pytest.mark.order(14)
+@pytest.mark.order(16)
 def test_column_copy(kx):
     db = kx.DB()
     db.load('db')
@@ -217,7 +243,7 @@ def test_column_copy(kx):
     assert ['sym', 'sz', 'price', 'ti', 'size'] == db.list_columns('t')
 
 
-@pytest.mark.order(15)
+@pytest.mark.order(17)
 @pytest.mark.skipif(
     os.getenv('PYKX_THREADING') is not None,
     reason='Not supported with PYKX_THREADING'
@@ -235,7 +261,7 @@ def test_column_apply(kx):
     assert "Provided 'function' is not callable" in str(err.value)
 
 
-@pytest.mark.order(16)
+@pytest.mark.order(18)
 def test_table_rename(kx):
     db = kx.DB()
     db.load('db')
@@ -245,7 +271,7 @@ def test_table_rename(kx):
     assert type(db.trades) == kx.PartitionedTable # noqa: E721
 
 
-@pytest.mark.order(17)
+@pytest.mark.order(19)
 def test_db_fill(kx):
     db = kx.DB(path='db')
     assert db.tables == ['trades']
@@ -256,13 +282,13 @@ def test_db_fill(kx):
     db.create(qtab, 'newtab', kx.q('2015.01.03'))
     with pytest.raises(kx.QError) as err:
         db.partition_count()
-    assert '2015.01.01/newtab. OS reports: No such file or directory' in str(err.value)
+    assert '2015.01.01/newtab. OS reports:' in str(err.value)
     db.fill_database()
     parts = db.partition_count()
     all(kx.q.qsql.exec(parts.values(), 'newtab') == [0, 0, 1000])
 
 
-@pytest.mark.order(18)
+@pytest.mark.order(20)
 def test_load_warning(kx):
     kx.q('`:./db/2015.01.01/table/ set .Q.en[`:./db;]([] ti:09:30:00 09:31:00; p:101 102f; sz:100 200; sym:`a`b)') # noqa: E501
     kx.q('`:./db/2015.01.02/table/ set .Q.en[`:./db;]([] ti:09:30:00 09:31:00; p:101.5 102.5; sz:150 210;sym:`b`c)') # noqa: E501
@@ -271,12 +297,17 @@ def test_load_warning(kx):
     assert db.tables is None
     with warnings.catch_warnings(record=True) as w:
         db.load('db')
-    assert 'A database table "table" would overwrite' in str(w[-1].message)
+    assert "DB loaded table DB.table attribute exists" in str(w[-1].message)
     assert type(db.table) != kx.PartitionedTable # noqa: E721
+    assert type(db.table_) == kx.PartitionedTable # noqa: E721
     assert type(db.table.table) == kx.PartitionedTable # noqa: E721
 
 
-@pytest.mark.order(19)
+@pytest.mark.order(21)
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='zlib libs are not available on the Windows CI runner'
+)
 def test_compress(kx):
     zd_cache = kx.q.z.zd
     compress = kx.Compress(kx.CompressionAlgorithm.gzip, level=8)
@@ -294,7 +325,7 @@ def test_compress(kx):
     assert compress_info['zipLevel'].py() == 8
 
 
-@pytest.mark.order(20)
+@pytest.mark.order(22)
 def test_enumerate(kx):
     tab = kx.Table(data={
         'date': kx.q('2015.01.01 2015.01.01 2015.01.02 2015.01.02'),
@@ -314,7 +345,7 @@ def test_enumerate(kx):
     assert type(kx.q.value(entab1['sym'])) == kx.SymbolVector # noqa: E721
 
 
-@pytest.mark.order(21)
+@pytest.mark.order(23)
 def test_partition_count(kx):
     db = kx.DB(path='db')
     fullview = db.partition_count()
@@ -327,7 +358,7 @@ def test_partition_count(kx):
     assert all(cache == kx.q.Q.pv)
 
 
-@pytest.mark.order(22)
+@pytest.mark.order(24)
 def test_subview(kx):
     db = kx.DB(path='db')
     db.subview([kx.q('2015.01.01')])
@@ -376,6 +407,74 @@ def test_spaces_load(tmp_path):
     assert db.tables == ['t']
 
 
+@pytest.mark.isolate
+def test_object_overwrite_detected(tmp_path):
+    import pykx as kx
+    os.chdir(tmp_path)
+    kx.q('ignoredTab:([] a: 1 2 3)')
+    kx.q('ignoredObject:1 2 3')
+    kx.q('`:dbA/2020.01.01/t/ set .Q.en[`:dbA;] ([] a:1 2 3; sym:`x`y`x)')
+    kx.q('`:dbA/cfg set `a`b!1 2')
+    kx.q('`:dbA/vecA set 1 2')
+    kx.q('`:dbA/memTab set ([] a:1 2)')
+    kx.q('`:dbA/table set ([] a:1 2 3)')
+    kx.q('`:dbA/enumerate set 1 2 3')
+
+    db = kx.DB()
+    dbDir = dir(db)
+    db.load('dbA')
+    assert dir(db) == sorted(dbDir + ['cfg', 'date', 'enumerate_', 'sym', 'vecA']
+                             + ['memTab', 't', 'table_'])
+    assert db.objects == ['cfg', 'date', 'enumerate', 'sym', 'vecA']
+    assert db.tables == ['memTab', 't', 'table']
+    assert db.cfg.py() == {'a': 1, 'b': 2}
+    assert type(db.memTab) == kx.Table # noqa: E721
+
+    os.chdir(tmp_path)
+    kx.q('`:dbB/2020.01.01/t/ set .Q.en[`:dbB;] ([] a:10 20 30 40; sym:`p`q`p`q)')
+    kx.q('`:dbB/cfg set `a`b!10 20')
+    kx.q('`:dbB/memTab set ([] a:3 4)')
+    kx.q('`:dbB/table set ([] a:3 4)')
+    kx.q('`:dbB/vecB set 1 2')
+
+    db.load(path=tmp_path/'dbB', overwrite=True)
+    assert db.objects == ['cfg', 'date', 'sym', 'vecB']
+    assert db.tables == ['memTab', 't', 'table']
+    assert db.cfg.py() == {'a': 10, 'b': 20}
+
+
+@pytest.mark.isolate
+def test_load_failure_resets_zvs(tmp_path):
+    import pykx as kx
+    os.chdir(tmp_path)
+    (tmp_path/'dbFail').mkdir()
+    with open(tmp_path/'dbFail'/'.DS_Store', 'w') as f:
+        f.write('invalidfile')
+
+    db = kx.DB()
+    with pytest.raises(kx.QError):
+        db.load('dbFail')
+    assert not kx.q('@[{get x;1b};`.z.vs;0b]').py()
+    assert not kx.q('@[{get x;1b};`.pykx.i.updatedVars;0b]').py()
+
+
+@pytest.mark.isolate
+def test_load_with_existing_zvs(tmp_path):
+    import pykx as kx
+    os.chdir(tmp_path)
+    kx.q('`:dbC/2020.01.01/t/ set .Q.en[`:dbC;] ([] a:1 2 3)')
+    kx.q('`:dbC/cfg set `a`b!1 2')
+
+    kx.q('A:`$()')
+    kx.q('.z.vs:{[x;y] A,:x}')
+    original_zvs = kx.q('.z.vs')
+
+    kx.DB(path='dbC')
+
+    assert 'cfg' in kx.q('A').py()
+    assert kx.q('{[o] .z.vs~o}', original_zvs).py()
+
+
 def test_load_failure(kx):
     with open('db/.DS_Store', 'w') as f:
         f.write('invalidfile')
@@ -394,7 +493,7 @@ def test_load_failure(kx):
     os.remove('db/test.q')
 
 
-@pytest.mark.order(23)
+@pytest.mark.order(25)
 def test_sym_enum_create_1(kx):
     shutil.rmtree('db')
     db = kx.DB(path='db')
@@ -409,7 +508,7 @@ def test_sym_enum_create_1(kx):
     assert test_path.is_file()
 
 
-@pytest.mark.order(24)
+@pytest.mark.order(26)
 def test_sym_enum_load_1(kx):
     db2 = kx.DB()
     db2.load("db")
@@ -417,7 +516,7 @@ def test_sym_enum_load_1(kx):
     assert db2.stocks.size == kx.toq(1332)
 
 
-@pytest.mark.order(25)
+@pytest.mark.order(27)
 def test_sym_enum_create_2(kx):
     db = kx.DB(path='db')
     N = 333
@@ -431,7 +530,7 @@ def test_sym_enum_create_2(kx):
     assert test_path.is_file()
 
 
-@pytest.mark.order(26)
+@pytest.mark.order(28)
 def test_sym_enum_load_2(kx):
     db2 = kx.DB()
     db2.load('db')
@@ -439,7 +538,7 @@ def test_sym_enum_load_2(kx):
     assert db2.stocks.size == kx.toq(1332)
 
 
-@pytest.mark.order(27)
+@pytest.mark.order(29)
 def test_sym_enum_create_3(kx):
     db = kx.DB(path='db')
     N = 333
@@ -454,7 +553,7 @@ def test_sym_enum_create_3(kx):
     assert test_path.is_file()
 
 
-@pytest.mark.order(28)
+@pytest.mark.order(30)
 def test_sym_enum_load_3(kx):
     db2 = kx.DB()
     db2.load('db')
@@ -472,6 +571,7 @@ def test_list_tabs_warn_multiple(kx, capsys):
     from datetime import date
     import tempfile
 
+    cwd = os.getcwd()
     with tempfile.TemporaryDirectory() as temp_dir:
 
         db = kx.DB(path=temp_dir + '/db1')
@@ -486,5 +586,6 @@ def test_list_tabs_warn_multiple(kx, capsys):
         db3.create(kx.Table(data={"date": [date(2025, 1, 5), date(2025, 1, 6)],
                                   "col2": [2.0, 3.0]}), "table3", "date")
         assert db3.tables == ['table3']
+        os.chdir(cwd)  # Windows cannot delete a directory that is the working directory
         captured = capsys.readouterr()
         assert 'PyKXWarning: Only one DB object exists at a time within a process. Use overwrite=True to overwrite your existing DB object. This warning will error in future releases.'in captured.out # noqa: E501

@@ -5,7 +5,6 @@ import io
 import os
 from pathlib import Path
 import platform
-import signal
 import shutil
 import subprocess
 import sys
@@ -23,9 +22,9 @@ import toml
 from .config import (
     _executable, _get_qdebug, _get_qexecutable, _get_qhome, _set_qdebug,
     beta_features, ignore_qhome, jupyterq, k_allocator, k_gc, keep_local_times,
-    load_pyarrow_unsafe, max_error_length, no_pykx_signal, numpy_gt1, pandas_gt2,  # noqa E501
+    load_pyarrow_unsafe, max_error_length, no_pykx_signal, pandas_gt2,
     pykx_config_location, pykx_config_profile, pykx_debug_insights, pykx_dir, pykx_lib_dir,
-    pykx_profile_content, pykx_threading, q_executable, qargs, qce, qhome, qlic,
+    pykx_profile_content, q_executable, qargs, qce, qhome, qlic,
     release_gil, skip_under_q, suppress_warnings, use_q_lock)
 
 if pandas_gt2:
@@ -252,13 +251,15 @@ class BlockManagerUnconsolidated(BlockManager):
         return self.blocks
 
 
-def df_from_arrays(columns, arrays, index):
-    """Create a DataFrame from Numpy arrays without copying."""
-    if pandas_gt2 and numpy_gt1:
-        stringColumns = [i for i, a in enumerate(arrays) if
-                         isinstance(a.dtype, np.dtypes.StringDType)]
-    else:
-        stringColumns = []
+def df_from_arrays(columns, arrays, index, string_columns=()):
+    """Create a DataFrame from Numpy arrays without copying.
+
+    Parameters:
+        columns: Column names for the resulting DataFrame.
+        arrays: One array per column.
+        index: Index for the resulting DataFrame.
+        string_columns: Positions within `arrays` to convert as str type.
+    """
     if pandas_gt2 and any(type(a).__name__ == 'PandasUUIDArray' for a in arrays):
         df = pd.DataFrame(index=index)
         for col, arr in zip(columns, arrays):
@@ -278,8 +279,8 @@ def df_from_arrays(columns, arrays, index):
             BlockManagerUnconsolidated(axes=[columns, index], blocks=blocks),
             copy=False
         )
-    if stringColumns and pandas_gt2:
-        for col in df.columns[stringColumns]:
+    if pandas_gt2 and string_columns:
+        for col in df.columns[list(string_columns)]:
             df[col] = df[col].astype("str")
     return df
 
@@ -465,6 +466,8 @@ def config_information():
 
 
 def env_information():
+    from .config import pykx_threading
+
     env_info = '\n**** KDB-X Python Configuration Variables ****\n'
 
     global_config = {'PYKX_IGNORE_QHOME': ignore_qhome, 'PYKX_KEEP_LOCAL_TIMES': keep_local_times,
@@ -758,12 +761,16 @@ def kill_q_process(port: int) -> bool:
             '    conda -> conda install conda-forge::psutil'
         )
     processes = [proc for proc in psutil.process_iter() if proc.name()
-                 == 'q']
+                 in ('q', 'q.exe')]
     for p in processes:
-        for c in p.connections():
+        try:
+            conns = p.connections()
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            continue
+        for c in conns:
             if c.status == 'LISTEN' and c.laddr.port == port:
                 try:
-                    os.kill(p.pid, signal.SIGKILL)
+                    p.kill()
                     return True
                 except BaseException:
                     return False

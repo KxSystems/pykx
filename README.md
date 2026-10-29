@@ -67,9 +67,9 @@ KX only officially supports versions of KDB-X Python built by KX, i.e. versions 
 
 - **Linux**
   - (`manylinux2014_x86_64`, `manylinux2014_aarch64`) with CPython 3.9-3.11
-  - (`manylinux_2_28_x86_64`, `manylinux_2_28_aarch64`) with CPython 3.12-3.14
-- **macOS** (`macosx_10_15_x86_64`, `macosx_10_15_arm64`) with CPython 3.9-3.14
-- **Windows** (`win_amd64`) with CPython 3.9-3.14
+  - (`manylinux_2_28_x86_64`, `manylinux_2_28_aarch64`) with CPython 3.12-3.15
+- **macOS** (`macosx_10_15_x86_64`, `macosx_10_15_arm64`) with CPython 3.9-3.15
+- **Windows** (`win_amd64`) with CPython 3.9-3.15
 
 ### Dependencies
 
@@ -77,10 +77,18 @@ KX only officially supports versions of KDB-X Python built by KX, i.e. versions 
 
 KDB-X Python depends on the following third-party Python packages:
 
-- `pandas>=1.2; python_version>'3.8'`
-- `numpy>=1.22; python_version<'3.11'`
+- `numpy~=1.22; python_version=='3.9'`
+- `numpy>=1.22; python_version=='3.10'`
 - `numpy>=1.23; python_version=='3.11'`
-- `numpy>=1.26; python_version>'3.11'`
+- `numpy>=1.26; python_version=='3.12'`
+- `numpy>=2.1.0; python_version=='3.13'`
+- `numpy>=2.3.2; python_version=='3.14'`
+- `numpy>=2.5.2; python_version>='3.15'`
+- `pandas>=1.2; python_version>'3.8' and python_version<'3.12'`
+- `pandas>=2.1.1; python_version=='3.12'`
+- `pandas>=2.2.3; python_version=='3.13'`
+- `pandas>=2.3.3; python_version=='3.14'`
+- `pandas>=3.0.6; python_version>='3.15'`
 - `pytz>=2022.1`
 - `toml~=0.10.2`
 - `dill>=0.2.0`

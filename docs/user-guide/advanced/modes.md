@@ -141,7 +141,7 @@ The differences provided through operating with a valid license are:
 	3. kx.q.write
 	4. kx.q.schema
 	5. kx.q.console
-6. [Pandas API](Pandas_API.ipynb) functionality for interactions with and `pykx` Table objects.
+6. [Pandas API](Pandas_API.md) functionality for interactions with and `pykx` Table objects.
 6. You can convert keyed tables to equivalent Numpy types.
 7. All types can be disambiguated, generic null can be discerned from a projection null, and similar for regular vs splayed tables.
 8. Numpy list object conversion is optimized only in licensed mode.

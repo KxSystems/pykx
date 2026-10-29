@@ -67,6 +67,35 @@ class PandasSorting:
 
     @api_return
     def sort_values(self, by=None, ascending=True):
+        """Sort the table by the values of one or more columns.
+
+        Parameters:
+            by (str or list): The name of the column, or list of names, to sort by. If not given all
+                columns are used.
+            ascending (bool): Sort in ascending order if `True` and descending order if `False`.
+
+        Returns:
+            (Table): The sorted table.
+
+        Examples:
+            >>> tab = kx.q('([] a:3 1 2; b:4 5 6)')
+            >>> tab.sort_values('a')
+            pykx.Table(pykx.q('
+            a b
+            ---
+            1 5
+            2 6
+            3 4
+            '))
+            >>> tab.sort_values('a', ascending=False)
+            pykx.Table(pykx.q('
+            a b
+            ---
+            3 4
+            2 6
+            1 5
+            '))
+        """
         check_column_types(self, by)
         if not isinstance(ascending, bool):
             raise ValueError(f"""For argument 'ascending' expected type bool,
@@ -85,8 +114,48 @@ class PandasSorting:
 
     @api_return
     def nlargest(self, n, columns=None, keep='first'):
+        """Return the first `n` rows ordered by the columns in descending order.
+
+        Parameters:
+            n (int): The number of rows to return.
+            columns (str or list): The name of the column, or list of names, to order by.
+            keep (str): How to handle duplicate values, one of `'first'`, `'last'` or `'all'`.
+
+        Returns:
+            (Table): The first `n` rows of the table in descending order.
+
+        Examples:
+            >>> tab = kx.q('([] a:3 1 2; b:4 5 6)')
+            >>> tab.nlargest(2, 'a')
+            pykx.Table(pykx.q('
+            a b
+            ---
+            3 4
+            2 6
+            '))
+        """
         return nLargeSmall(self, n, "largest", columns, keep)
 
     @api_return
     def nsmallest(self, n, columns, keep='first'):
+        """Return the first `n` rows ordered by the columns in ascending order.
+
+        Parameters:
+            n (int): The number of rows to return.
+            columns (str or list): The name of the column, or list of names, to order by.
+            keep (str): How to handle duplicate values, one of `'first'`, `'last'` or `'all'`.
+
+        Returns:
+            (Table): The first `n` rows of the table in ascending order.
+
+        Examples:
+            >>> tab = kx.q('([] a:3 1 2; b:4 5 6)')
+            >>> tab.nsmallest(2, 'a')
+            pykx.Table(pykx.q('
+            a b
+            ---
+            1 5
+            2 6
+            '))
+        """
         return nLargeSmall(self, n, "smallest", columns, keep)

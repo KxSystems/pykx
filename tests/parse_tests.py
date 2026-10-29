@@ -1,14 +1,36 @@
+import ast
+from collections import namedtuple
 from inspect import getmembers, getsource, isclass, isfunction
 import os
+import re
 import sys
 from textwrap import dedent
 
 import test_cast
+import test_db
+import test_license
+import test_nbextension
+import test_splay
+import test_tick
+import test_compress_encrypt
+import test_config
+import test_pandas_agg
+import test_pandas_apply
+import test_pandas_map
+import test_pandas_replace
+import test_pandas_reset_index
+import test_pandas_set_index
+import test_random
+import test_register
+import test_reimport
+import test_remote
+import test_schema
+import test_sql
+import test_system
 import test_console
 import test_ctx
 import test_exceptions
 import test_ipc
-import test_module
 import test_pandas_api
 import test_pykx
 import test_q_foreign
@@ -19,6 +41,7 @@ import test_read
 import test_toq
 import test_util
 import test_wrappers
+import test_pandas_sorting
 import test_write
 
 
@@ -27,13 +50,15 @@ py_minor_version = sys.version_info[1]
 
 class ParamTest:
     def __init__(self, x): # noqa
-        if callable(x[1]) and 'class ' not in str(x[1]):
+        if callable(x[1]) and not isclass(x[1]):
             self._type = 'func'
             self.func_name = x[0]
             self._func = x[1]
             source = []
             marks = ['ipc', 'isolate', 'licensed', 'nep', 'pandas_api', 'pypy', 'static']
-            etc = ['test', 'assert', 'np_ts', 'q_', 'mkt', 'self.v', 'kt', 'self.create_splayed']
+            etc = ['test', 'assert', 'np_ts', 'q_', 'mkt', 'self.v', 'kt', 'self.create_splayed',
+                   'self.create_partitioned_table', 'self.reset_sp', 'self.DEFAULT_PATH',
+                   'self.make_tab', 'self.errStr']
             for line in getsource(x[1]).split('\n'):
                 if line == '' or line == '\n':
                     continue
@@ -57,7 +82,8 @@ class ParamTest:
                                   .replace('(self)', '()'))
                 else:
                     source.append(line)
-            self.source = dedent('\n'.join(source))
+            # `time` is datetime.time in the generated files, which import sleep directly
+            self.source = dedent('\n'.join(source)).replace('time.sleep(', 'sleep(')
             self.decorators = [
                 line.strip().split()[0]
                 for line in getsource(x[1])[:getsource(x[1]).find("def ")].strip().splitlines()
@@ -77,6 +103,11 @@ class ParamTest:
                 if '@' in line or 'class' in line:
                     continue
                 self.class_attrs.append(line)
+            first_def = next((i for i, x in enumerate(self.source.split('\n')) if 'def' in x), 0)
+            src_lines = self.source.split('\n')
+            for node in ast.parse(dedent(self.source)).body[0].body:
+                if isinstance(node, ast.Assign) and node.lineno > first_def:
+                    self.class_attrs.extend(src_lines[node.lineno - 1:node.end_lineno])
             self.decorators = [
                 line.strip().split()[0]
                 for line in self.source[:self.source.find("class ")].strip().splitlines()
@@ -101,6 +132,8 @@ class ParamTest:
         return self
 
     def add_class_attrs(self, attrs):
+        for name in {m.group(1) for a in attrs if (m := re.match(r'\s+(\w+)\s*=', a))}:
+            self.source = re.sub(rf'\bself\.{name}\b', name, self.source)
         new_lines = []
         added = False
         for line in self.source.split('\n'):
@@ -114,12 +147,22 @@ class ParamTest:
         return self
 
 
+ModuleGlobal = namedtuple('ModuleGlobal', ['func_name', 'source'])
+
+
+# Modules whose tests use module-level values which flattening would otherwise drop
+CARRY_GLOBALS = ('test_pandas_sorting',)
+
+
 class ParseModule:
     def __init__(self, mod):
         self.module = mod
         self.module_str = str(self.module).split(' ')[1]
 
         self.members = getmembers(self.module, isfunction)
+        # pytest>=8.4 wraps fixtures in an object which is no longer a function
+        self.members.extend([(x[0], x[1].__wrapped__) for x in getmembers(self.module)
+                             if type(x[1]).__name__ == 'FixtureFunctionDefinition'])
         self.members.extend([x for x in
                              getmembers(self.module, isclass)
                              if str(x[1].__module__) in str(self.module)
@@ -135,6 +178,7 @@ class ParseModule:
                         and 'dedent' != x.func_name
                         and 'python_implementation' != x.func_name
                         and 'wrapper' != x.func_name
+                        and 'patch' != x.func_name
         ]
         self.helpers.extend([x for x in self.parsed if x._type == 'func' and x.func_name[0] == '_'])
         self.functions = [x for x in self.parsed
@@ -144,11 +188,20 @@ class ParseModule:
                           and 'QARGS' not in x.source
                           and 'QHOME' not in x.source
                           and 'QLIC' not in x.source
+                          and 'PYKX_UNLICENSED' not in x.source
+                          and 'PYKX_LIGHT_LOAD' not in x.source
                           and 'memory_domain' not in x.source
                           and 'RawQConnection' not in x.source
                           and 'peach' not in x.source
         ]
         self.classes = [x for x in self.parsed if x._type == 'class']
+        self.globals = []
+        if self.module.__name__ in CARRY_GLOBALS:
+            source = getsource(self.module)
+            for node in ast.parse(source).body:
+                if isinstance(node, ast.Assign):
+                    self.globals.append(ModuleGlobal(
+                        node.targets[0].id, ast.get_source_segment(source, node) + '\n'))
 
 
 class ParseTestSuite:
@@ -167,14 +220,22 @@ class ParseTestSuite:
         pandas_licensed = []
 
         for mod in self.modules:
+            helpers.extend(mod.globals)
             helpers.extend(mod.helpers)
+            for func in mod.functions:
+                func.append_to_name('_' + mod.module_str[1:-1])
             for cls in mod.classes:
                 for func in cls.functions:
-                    if 'def create_splayed_table' in func.source:
+                    if any(f'def {helper}' in func.source
+                           for helper in ('create_splayed_table', 'reset_sp',
+                                          'create_partitioned_table')):
+                        func.source = func.source.replace('(self, ', '(', 1)
+                        func.add_class_attrs(cls.class_attrs)
                         helpers.append(func)
                     else:
                         func.add_class_attrs(cls.class_attrs)
-                        mod.functions.append(func.append_to_name('_' + mod.module_str[1:-1]))
+                        suffix = f'_{cls.class_name}_{mod.module_str[1:-1]}'
+                        mod.functions.append(func.append_to_name(suffix))
             for func in mod.functions:
                 added = False
                 if any(['large' in x for x in func.decorators]) or any(['isolate' in x for x in func.decorators]): # noqa
@@ -209,18 +270,38 @@ class ParseTestSuite:
                         nep_licensed.append(func)
                     embedded.append(func)
 
-        return [helpers,
-                licensed,
-                unlicensed,
-                ipc_licensed,
-                ipc_unlicensed,
-                embedded,
-                nep_licensed,
-                nep_unlicensed,
-                pandas_licensed
+        result = [helpers,
+                  licensed,
+                  unlicensed,
+                  ipc_licensed,
+                  ipc_unlicensed,
+                  embedded,
+                  nep_licensed,
+                  nep_unlicensed,
+                  pandas_licensed
         ]
+        self.check_collisions(result)
+        return result
+
+    @staticmethod
+    def check_collisions(groups):
+        # A repeated top-level name is silently rebound when the generated file is
+        # imported, so only the last definition would ever run.
+        helper_names = {x.func_name for x in groups[0]}
+        collisions = []
+        for group in groups[1:]:
+            seen = set()
+            for func in group:
+                if func.func_name in seen or func.func_name in helper_names:
+                    collisions.append(func.func_name)
+                seen.add(func.func_name)
+        if collisions:
+            raise RuntimeError('Generated test names are not unique: '
+                               + ', '.join(sorted(set(collisions))))
 
 
+# Excluded on Windows: test_virtual_table (needs kx.pq), test_streamlit (unsupported),
+# test_module (class based tests are not supported by this parser)
 tests = ParseTestSuite([
     test_read,
     test_write,
@@ -228,7 +309,6 @@ tests = ParseTestSuite([
     test_console,
     test_exceptions,
     test_ipc,
-    test_module,
     test_q_future,
     test_query,
     test_util,
@@ -238,7 +318,28 @@ tests = ParseTestSuite([
     test_q,
     test_pykx,
     test_toq,
-    test_pandas_api
+    test_pandas_api,
+    test_compress_encrypt,
+    test_db,
+    test_license,
+    test_nbextension,
+    test_splay,
+    test_tick,
+    test_config,
+    test_pandas_agg,
+    test_pandas_apply,
+    test_pandas_map,
+    test_pandas_replace,
+    test_pandas_reset_index,
+    test_pandas_set_index,
+    test_random,
+    test_register,
+    test_reimport,
+    test_remote,
+    test_schema,
+    test_sql,
+    test_system,
+    test_pandas_sorting
 ]).make_tests()
 files = [
     ('win_tests/lic/licensed_tests.py', 1, ''),
@@ -299,7 +400,13 @@ test_libs = [
     'import itertools',
     'import operator',
     'import platform',
-    'import toml'
+    'import toml',
+    'import warnings',
+    'from threading import Thread',
+    'import statistics',
+    'from abc import ABCMeta',
+    'import base64',
+    'from unittest.mock import patch'
 ]
 
 
@@ -356,6 +463,24 @@ import pykx as kx\n
                 'utf-8'
             )
         )
+
+        f.write(bytes(
+            '''
+@pytest.fixture(autouse=True)
+def _reset_process_state():
+    # Linux runs every test in a forked process, Windows shares one so undo state leaks
+    cwd = os.getcwd()
+    yield
+    os.chdir(cwd)
+    db = kx.DB._instance
+    if db is not None:
+        kx.DB._instance = None
+        try:
+            kx.q('{![`.;();0b;x]}tables[]')
+        except BaseException:
+            pass
+
+''', 'utf-8'))
 
         for test in tests[0]:
             f.write(bytes(test.source + '\n', 'utf-8'))

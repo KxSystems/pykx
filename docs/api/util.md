@@ -150,3 +150,75 @@ q info:
 (`m64;4f;2020.05.04)
 "insights.lib.embedq insights.lib.pykx..
 ```
+
+## `pykx.qhelp`
+
+```python
+pykx.qhelp(keyword)
+```
+
+Return the reference entry for a q function or operator, such as `til` or `select`. This is the text Python's `help` shows for a q function, it is rarely called directly.
+
+**Parameters:**
+
+| Name    | Type  | Description                                          | Default    |
+| :-----: | :---: | :--------------------------------------------------- | :--------: |
+| keyword | `str` | The name of the q function or operator to look up.   | _required_ |
+
+**Returns:**
+
+| Type  | Description                                                                                                  |
+| :---: | :----------------------------------------------------------------------------------------------------------- |
+| `str` | The text of the reference entry. A message pointing to <https://code.kx.com> is returned if there is no entry. |
+
+**Examples:**
+
+Show the entry for a q function with `help`:
+
+```python
+>>> import pykx as kx
+>>> help(kx.q.til)
+Help on Lambda in pykx:
+
+pykx.Lambda = pykx.Lambda(pykx.q('k){$[0>@x;!x;'`type]}'))
+    • til
+
+    First x natural numbers.
+
+
+        >>> pykx.q.til(10)
+        pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+```
+
+```python
+>>> print(kx.qhelp('til'))
+ • til
+
+First x natural numbers.
+
+
+    >>> pykx.q.til(10)
+    pykx.LongVector(pykx.q('0 1 2 3 4 5 6 7 8 9'))
+```
+
+## `pykx.activate_numpy_allocator`
+
+```python
+pykx.activate_numpy_allocator()
+```
+
+Set the allocator used for NumPy array data to one which allocates the data in the embedded q memory space. A NumPy array created with this allocator can be converted to a q vector without copying the data.
+
+The allocator is named `'pykx_allocator'`. `pykx` activates it when it is imported if the installed NumPy supports custom allocators (version `1.22.0` or later) and the active allocator is the default one. It is not activated if the environment variable `PYKX_NO_ALLOCATOR` is set to `1` or the flag `--pykxnoalloc` is in the `QARGS` environment variable.
+
+Only arrays created after the allocator is activated gain the benefit. The name of the allocator used by an array `x` is returned by `numpy.core.multiarray.get_handler_name(x)`.
+
+A q vector keeps its metadata immediately before its data, so each array can be converted to one q vector only. Converting the array again returns the same q vector with its reference count increased by one. A view of an array is not converted without a copy, whether or not the allocator is active. Refer to [NEP 49](https://numpy.org/neps/nep-0049.html) for details of custom NumPy allocators.
+
+## `pykx.deactivate_numpy_allocator`
+
+```python
+pykx.deactivate_numpy_allocator()
+```
+
+Replace the `pykx` NumPy allocator with the allocator which was in use when it was first activated. This has no effect if the `pykx` allocator was not activated.

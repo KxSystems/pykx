@@ -1,4 +1,4 @@
-import select
+import asyncio
 
 import pandas as pd
 import pykx as kx
@@ -27,49 +27,49 @@ def python_analytic(qdata):
 if kx.licensed:
     kx.q('upd:{x insert y}')
 
-# Open a connection to the defined process
-sub_connection = kx.QConnection('localhost', 5140)
-# Subscribe to updates from the trade table
-sub_connection('{.u.sub[x;y]}', 'trade', '')
-# Retrieve the file descriptor to be monitored for messages
-sub_connection_fd = int(sub_connection.fileno())
 
-pub_connection = kx.QConnection('localhost', 5130)
+async def main():
+    # Open a connection to the tickerplant. A RawQConnection is used as it is
+    # the only connection type which accepts the asynchronous messages that a
+    # tickerplant publishes to its subscribers; the other connection types
+    # discard them.
+    async with kx.RawQConnection('localhost', 5140) as sub_connection:
+        # Subscribe to updates from the trade table
+        await sub_connection('.u.sub', 'trade', '')
 
-is_readable = [sub_connection_fd]
-is_writeable = []
-is_error = []
+        with kx.SyncQConnection('localhost', 5130) as pub_connection:
+            while True:
+                # Yield to the event loop so that any published messages can be
+                # read from the socket into the connection's receive queue
+                await asyncio.sleep(0.005)
 
-while is_readable:
-    # Set file descriptors expected to monitored for
-    # incoming data by Python's select loop functionality
-    readable, writable, error = select.select(is_readable,
-                                              is_writeable,
-                                              is_error)
+                # Retrieve the next published message, if one is available.
+                # Messages take the form ('upd'; 'trade'; data)
+                message = sub_connection.poll_recv()
+                if message is None:
+                    continue
 
-    # This will be triggered whenever anything is available on the
-    # reading socket
-    for _sock in readable:
-        # Trigger read from socket by calling with empty char on fd,
-        # this is required as embedded q is not actively listening
-        # to open sockets so needs to be 'told' to do so.
-        if kx.licensed:
-            sub_connection(b'')
-            trade = kx.q('trade')
-        else:
-            # In the unlicensed case the return is a list containing
-            # ['upd','trade', data], we cannot invoke the upd in
-            # the absence of a license so store the returned data to
-            # be modified with the python analytic by indexing in for
-            # modification
-            trade = sub_connection(b'').py()[2]
+                if kx.licensed:
+                    # Apply the update to a table held in embedded q, then run
+                    # the analytic over the full history accumulated so far
+                    kx.q('upd', message[1], message[2])
+                    trade = kx.q('trade')
+                else:
+                    # We cannot invoke upd in the absence of a license, so the
+                    # analytic runs on the batch of data just received. The
+                    # message is converted to Python before indexing as K
+                    # objects cannot be indexed into in unlicensed mode.
+                    trade = message.py()[2]
 
-        # Do nothing if the sync call returns nothing
-        if trade is None:
-            pass
-        else:
-            # Invoke the Python analytic
-            python_return = python_analytic(trade)
-            # Send the Python analytic return to the predefined
-            # connection on localhost:5130
-            pub_connection('{show x}', python_return)
+                # Invoke the Python analytic
+                python_return = python_analytic(trade)
+                # Send the Python analytic return to the predefined
+                # connection on localhost:5130
+                pub_connection('{show x}', python_return)
+
+
+if __name__ == '__main__':
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print('Subscriber suspended')

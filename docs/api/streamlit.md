@@ -9,7 +9,7 @@ tags: streamlit, ipc
 
 _This page documents the API for using the Streamlit library with KDB-X Python._
 
-::: pykx.streamlit
+::: pykx._streamlit_conn
     rendering:
       show_root_heading: false
     options:

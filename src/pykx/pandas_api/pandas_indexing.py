@@ -161,23 +161,40 @@ def _parse_indexes(tab, loc):
     return loc
 
 
+def _carry_row_mask(src, dst):
+    mask = getattr(src, '_row_mask', None)
+    if mask is not None and isinstance(dst, K):
+        dst._row_mask = mask
+    return dst
+
+
+def _boolean_select(tab, loc):
+    mask = getattr(tab, '_row_mask', None)
+    if mask is not None and int(q('sum', mask)) != len(tab):
+        mask = None  # provenance no longer describes this table
+    if len(loc) != len(tab):
+        if mask is None or len(loc) != len(mask):
+            raise IndexError(
+                f'Unalignable boolean mask of length {len(loc)} provided as an indexer for a '
+                f'table of length {len(tab)}'
+            )
+        loc = q('{x where y}', loc, mask)
+    if 'Keyed' in str(type(tab)):
+        res = q('{(count keys x)!(0!x) where y}', tab, loc)
+    else:
+        res = q('{x where y}', tab, loc)
+    res._row_mask = loc if mask is None else q('{@[x; where x; :; y]}', mask, loc)
+    return res
+
+
 def _iloc(tab, loc):
     cols = None
     if isinstance(loc, tuple):
         cols = _parse_cols(tab, loc[1])
         loc = loc[0]
-        tab = _get(tab, cols, None)
+        tab = _carry_row_mask(tab, _get(tab, cols, None))
     if isinstance(loc, BooleanVector):
-        if len(loc) != len(tab):
-            new_loc = q('{x where y}', loc, tab.prev_locs[str(len(loc))])
-            tab.prev_locs[str(len(loc))] = tab.prev_locs[str(len(loc))] & loc
-            loc = new_loc
-            tab.prev_locs[str(len(loc))] = loc
-        else:
-            tab.prev_locs[str(len(tab))] = loc
-        if 'Keyed' in str(type(tab)):
-            return q('{(count keys x)!((0!x) each where y)}', tab, loc)
-        return q('{x where y}', tab, loc)
+        return _boolean_select(tab, loc)
     loc = _parse_indexes(tab, loc)
     if "Keyed" in str(type(tab)):
         return q('{((flip (keys x)!(enlist y))!x each y)}', tab, loc)
@@ -204,7 +221,7 @@ def _loc(tab, loc): # noqa
             return q(f'{{[t] flip value select from t where {where_clause}}}', tab)
         cols = _parse_cols(tab, loc[1])
         loc = loc[0]
-        tab = _get(tab, cols, None)
+        tab = _carry_row_mask(tab, _get(tab, cols, None))
     if isinstance(loc, slice):
         return _iloc(tab, loc)
     if (((isinstance(loc, list) and (isinstance(loc[0], str) or isinstance(loc[0], SymbolAtom)))
@@ -231,16 +248,7 @@ def _loc(tab, loc): # noqa
             )
         return _get(tab, loc, None)
     if isinstance(loc, BooleanVector):
-        if len(loc) != len(tab):
-            new_loc = q('{x where y}', loc, tab.prev_locs[str(len(loc))])
-            tab.prev_locs[str(len(loc))] = tab.prev_locs[str(len(loc))] & loc
-            loc = new_loc
-            tab.prev_locs[str(len(loc))] = loc
-        else:
-            tab.prev_locs[str(len(tab))] = loc
-        if 'Keyed' in str(type(tab)):
-            return q('{(count keys x)!((0!x) each where y)}', tab, loc)
-        return q('{x where y}', tab, loc)
+        return _boolean_select(tab, loc)
     if isinstance(loc, str) or isinstance(loc, SymbolAtom):
         if q('{not x in cols y}', loc, tab):
             raise QError(f'Attempted to retrieve inaccessible column: {loc}')
@@ -342,37 +350,132 @@ def _rename_columns(tab, labels):
 class PandasIndexing:
     @api_return
     def head(self, n: int = 5):
-        """Return the first `n` rows."""
-        return q(f'{{{n}#x}}', self)
+        """Return the first `n` rows, or all but the last `-n` rows if `n` is negative.
+
+        Examples:
+            >>> tab = kx.q('([] a:til 10)')
+            >>> tab.head(3)
+            pykx.Table(pykx.q('
+            a
+            -
+            0
+            1
+            2
+            '))
+        """
+        return q('{$[y<0;(0|y+count x) sublist x;y sublist x]}', self, n)
 
     @api_return
     def tail(self, n: int = 5):
-        """Return the last `n` rows."""
-        return q(f'{{neg[{n}]#x}}', self)
+        """Return the last `n` rows, or all but the first `-n` rows if `n` is negative.
+
+        Examples:
+            >>> tab = kx.q('([] a:til 10)')
+            >>> tab.tail(3)
+            pykx.Table(pykx.q('
+            a
+            -
+            7
+            8
+            9
+            '))
+        """
+        return q('{$[y<0;(neg y)_x;(neg y) sublist x]}', self, n)
 
     @api_return
     def pop(self, col_name: str):
-        """Pop a column / columns from a table by name and return it."""
+        """Pop a column / columns from a table by name and return it.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.pop('b')
+            pykx.Table(pykx.q('
+            b
+            -
+            4
+            5
+            6
+            '))
+            >>> tab
+            pykx.Table(pykx.q('
+            a
+            -
+            1
+            2
+            3
+            '))
+        """
         return _pop(self, col_name)
 
     @api_return
     def get(self, key, default=None):
-        """Get items from table based on key, if key is not found default is returned."""
+        """Get items from table based on key, if key is not found default is returned.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.get('a')
+            pykx.LongVector(pykx.q('1 2 3'))
+            >>> tab.get(['a', 'b'])
+            pykx.Table(pykx.q('
+            a b
+            ---
+            1 4
+            2 5
+            3 6
+            '))
+        """
         return _get(self, key, default)
 
     @property
     def at(self):
-        """Return the value at row, column"""
+        """Access or set a single value by row label and column name.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.at[1, 'b']
+            pykx.LongAtom(pykx.q('5'))
+            >>> tab.at[1, 'b'] = 50
+            >>> tab
+            pykx.Table(pykx.q('
+            a b
+            ----
+            1 4
+            2 50
+            3 6
+            '))
+        """
         return TableAt(self)
 
     @property
     def loc(self):
-        """Return the value at row, column"""
+        """Access or set rows and columns by label or by a boolean mask.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.loc[tab['a'] > 1, 'b']
+            pykx.Table(pykx.q('
+            b
+            -
+            5
+            6
+            '))
+        """
         return TableLoc(self)
 
     @property
     def iloc(self):
-        """Return the value at index."""
+        """Access or set rows and columns by integer position.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.iloc[[0, 2], ['a']]
+            pykx.Table(pykx.q('
+            a
+            -
+            1
+            3
+            '))
+        """
         return TableILoc(self)
 
 
@@ -380,7 +483,40 @@ class PandasReindexing:
 
     def drop(self, labels=None, axis=0, index=None, columns=None,  # noqa: C901
              level=None, inplace=False, errors='raise'):
+        """Remove rows or columns from a table.
 
+        Parameters:
+            labels (str, int or list): The row or column labels to remove, depending on `axis`.
+            axis (int): 0 removes rows and 1 removes columns.
+            index (list): The row labels to remove, as an alternative to `labels` with `axis=0`.
+            columns (str or list): The column labels to remove, as an alternative to `labels` with
+                `axis=1`.
+            level (int or str): The key level to remove rows from, for a keyed table with several
+                key columns.
+            inplace (bool): Not implemented, must be `False`.
+            errors (str): `'raise'` raises an error if a label is not found and `'ignore'` skips it.
+
+        Returns:
+            (Table): The table with the rows or columns removed.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.drop(columns=['b'])
+            pykx.Table(pykx.q('
+            a
+            -
+            1
+            2
+            3
+            '))
+            >>> tab.drop([1])
+            pykx.Table(pykx.q('
+            a b
+            ---
+            1 4
+            3 6
+            '))
+        """
         if labels is None and index is None and columns is None:
             raise ValueError("Need to specify at least one of 'labels', 'index' or 'columns'")
         elif labels is not None and (index is not None or columns is not None):
@@ -421,7 +557,28 @@ class PandasReindexing:
         return t
 
     def drop_duplicates(self, subset=None, keep='first', inplace=False, ignore_index=False):
+        """Remove duplicate rows from a table.
 
+        Parameters:
+            subset (None): Not yet implemented, must be `None`.
+            keep (str): Only `'first'` is implemented.
+            inplace (bool): Not yet implemented, must be `False`.
+            ignore_index (bool): Not yet implemented, must be `False`.
+
+        Returns:
+            (Table): The table with only the first of each set of duplicate rows. A `KeyedTable` is
+                not supported.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 1 2; b:3 3 4)')
+            >>> tab.drop_duplicates()
+            pykx.Table(pykx.q('
+            a b
+            ---
+            1 3
+            2 4
+            '))
+        """
         if subset is not None or keep != 'first' or inplace or ignore_index:
             raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only implemented for keep='first', inplace=False, ignore_index=False.") # noqa: E501
 
@@ -435,6 +592,34 @@ class PandasReindexing:
 
     def rename(self, mapper=None, index=None, columns=None, axis=0,
                copy=None, inplace=False, level=None, errors='ignore'):
+        """Rename the columns or the index of a table.
+
+        Parameters:
+            mapper (dict): A dictionary of names to new names, applied to the axis given by `axis`.
+            index (dict): A dictionary of index names to new names, for a keyed table with a single
+                key column.
+            columns (dict): A dictionary of column names to new names.
+            axis (int or str): 0 or `'index'` renames the index and 1 or `'columns'` renames the
+                columns.
+            copy (bool): Not yet implemented, must be `None`.
+            inplace (bool): Not yet implemented, must be `False`.
+            level (None): Not yet implemented, must be `None`.
+            errors (str): Not yet implemented, must be `'ignore'`.
+
+        Returns:
+            (Table or KeyedTable): The table with the names changed.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.rename(columns={'a': 'x'})
+            pykx.Table(pykx.q('
+            x b
+            ---
+            1 4
+            2 5
+            3 6
+            '))
+        """
         if ("Keyed" not in str(type(self)) and columns is None
                 and ((axis == 'index' or axis == 0) or (index is not None))):
             raise ValueError("Can only rename index of a KeyedTable")
@@ -473,6 +658,26 @@ class PandasReindexing:
         return t
 
     def add_suffix(self, suffix, axis=0):
+        """Add a suffix to the name of each column.
+
+        Parameters:
+            suffix (str): The string added to the end of each column name.
+            axis (int): 0 for a `Table` and 1 for the value columns of a `Table` or `KeyedTable`.
+
+        Returns:
+            (Table): The table with the columns renamed.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.add_suffix('_x')
+            pykx.Table(pykx.q('
+            a_x b_x
+            -------
+            1   4
+            2   5
+            3   6
+            '))
+        """
         t = self
         if axis == 1:
             t = q('''{[s;t]
@@ -490,6 +695,26 @@ class PandasReindexing:
         return t
 
     def add_prefix(self, prefix, axis=0):
+        """Add a prefix to the name of each column.
+
+        Parameters:
+            prefix (str): The string added to the start of each column name.
+            axis (int): 0 for a `Table` and 1 for the value columns of a `Table` or `KeyedTable`.
+
+        Returns:
+            (Table): The table with the columns renamed.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.add_prefix('x_')
+            pykx.Table(pykx.q('
+            x_a x_b
+            -------
+            1   4
+            2   5
+            3   6
+            '))
+        """
         t = self
         if axis == 1:
             t = q('''{[s;t]
@@ -507,6 +732,31 @@ class PandasReindexing:
 
     def sample(self, n=None, frac=None, replace=False, weights=None,
                random_state=None, axis=None, ignore_index=False):
+        """Select random rows from the table.
+
+        Parameters:
+            n (int): The number of rows to return. This cannot be used with `frac` and defaults to
+                1.
+            frac (float): The fraction of the rows to return. This cannot be used with `n`.
+            replace (bool): Whether the same row can be selected more than once.
+            weights (None): Not yet implemented, must be `None`.
+            random_state (None): Not yet implemented, must be `None`.
+            axis (int): Not yet implemented, must be `None`.
+            ignore_index (bool): Not yet implemented, must be `False`.
+
+        Returns:
+            (Table): A table of the selected rows.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.sample(2)
+            pykx.Table(pykx.q('
+            a b
+            ---
+            1 4
+            2 5
+            '))
+        """
         if n is None and frac is None:
             n = 1
         elif frac is not None:

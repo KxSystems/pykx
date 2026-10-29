@@ -183,7 +183,7 @@ import pytz
 
 from . import _wrappers, beta_features, help
 from ._pyarrow import pyarrow as pa
-from .config import _check_beta, k_gc, licensed, numpy_gt1, pandas_gt1, pandas_gt2, suppress_warnings # noqa E501
+from .config import _check_beta, k_gc, licensed, pandas_gt1, suppress_warnings
 from .core import keval as _keval
 from .constants import INF_INT16, INF_INT32, INF_INT64, INF_NEG_INT16, INF_NEG_INT32, INF_NEG_INT64
 from .constants import NULL_INT16, NULL_INT32, NULL_INT64
@@ -3245,9 +3245,14 @@ def _to_np(vec, raw, has_nulls, reshape=False):
     arr = vec.np(raw=raw, has_nulls=has_nulls)
     if reshape:
         arr = arr.reshape(-1)
-    if pandas_gt2 and numpy_gt1 and isinstance(vec, SymbolVector):
-        arr = np.array(arr, np.dtypes.StringDType)
     return arr
+
+
+def _symbol_columns(vectors, raw):
+    """Positions of the symbol columns in `vectors`, for `df_from_arrays`."""
+    if raw:
+        return []
+    return [i for i, vec in enumerate(vectors) if isinstance(vec, SymbolVector)]
 
 
 class Table(PandasAPI, Mapping):
@@ -3334,11 +3339,12 @@ class Table(PandasAPI, Mapping):
         raw_guids=False,
         as_arrow: Optional[bool] = False,
     ):
+        vecs = list(self._values)
         if raw_guids and not raw:
-            v = [_to_np(x, isinstance(x, GUIDVector), has_nulls) for x in self._values]
+            v = [_to_np(x, isinstance(x, GUIDVector), has_nulls) for x in vecs]
             v = [PandasUUIDArray(x) if x.dtype == complex else x for x in v]
         else:
-            v = [_to_np(x, raw, has_nulls) for x in self._values]
+            v = [_to_np(x, raw, has_nulls) for x in vecs]
         if pandas_gt1:
             # The current behavior is a bug and will raise an error in the future, this change
             # proactively fixes that for us
@@ -3347,12 +3353,14 @@ class Table(PandasAPI, Mapping):
                     v[i] = v[i].astype(np.dtype('datetime64[s]'))
                 elif v[i].dtype == np.dtype('datetime64[M]'):
                     v[i] = v[i].astype(np.dtype('datetime64[s]'))
-        df = df_from_arrays(pd.Index(self._keys), v, pd.RangeIndex(len(self)))
+        df = df_from_arrays(pd.Index(self._keys), v, pd.RangeIndex(len(self)),
+                            string_columns=_symbol_columns(vecs, raw))
         _pykx_base_types = {}
-        for i, v in enumerate(self._values):
-            if not raw and isinstance(v, EnumVector):
-                df = df.astype({self._keys.py()[i]: 'category'})
-            _pykx_base_types[self._keys.py()[i]] = str(type(v).__name__)
+        col_names = self._keys.py()
+        for i, vec in enumerate(vecs):
+            if not raw and isinstance(vec, EnumVector):
+                df = df.astype({col_names[i]: 'category'})
+            _pykx_base_types[col_names[i]] = str(type(vec).__name__)
         df.attrs['_PyKX_base_types'] = _pykx_base_types
         if as_arrow:
             if not pandas_gt1:
@@ -4371,7 +4379,8 @@ class Dictionary(Mapping):
     def __setitem__(self, key, val):
         if isinstance(key, tuple):
             raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented, .pykx.Dictionary objects do not support tuple key assignment") # noqa: E501
-        self.__dict__.update(q('{ye:(),y;x,ye!$[y~ye;z;enlist z]}', self, key, val).__dict__)
+        res = q('{ye:(),y;x,ye!$[y~ye;z;enlist z]}', self, key, val)
+        self.__dict__.update(res.__dict__)
 
     def _repr_html_(self):
         if not licensed:
@@ -4395,8 +4404,7 @@ class Dictionary(Mapping):
         df = pd.read_json(StringIO(qtab.py().decode("utf-8")), orient='records',
                           convert_dates=False, dtype=False)
         df.set_index('pykxDictionaryKeys', inplace=True)
-        if df.columns.values[0] == 'pykxDictionaryValues':
-            df.columns.values[0] = ''
+        df = df.rename(columns={'pykxDictionaryValues': ''})
         df.index.names = ['']
         ht = CharVector(df.to_html())
         ht = q('''{[c;t;h]
@@ -4571,12 +4579,15 @@ class KeyedTable(Dictionary, PandasAPI):
                     raise PyArrowUnavailable # nocov
                 df = df.convert_dtypes(dtype_backend='pyarrow')
             return df
-        idx = [_to_np(kvg(i), raw, has_nulls, reshape=True) for i in range(len(kk))]
-        cols = [_to_np(vvg(i), raw, has_nulls) for i in range(len(vk))]
+        key_vecs = [kvg(i) for i in range(len(kk))]
+        value_vecs = [vvg(i) for i in range(len(vk))]
+        idx = [_to_np(vec, raw, has_nulls, reshape=True) for vec in key_vecs]
+        cols = [_to_np(vec, raw, has_nulls) for vec in value_vecs]
         column_names = pd.Index(kk.py() + vk.py())
         columns = idx + cols
         index = pd.Index(np.arange(len(self)))
-        df = df_from_arrays(column_names, columns, index)
+        df = df_from_arrays(column_names, columns, index,
+                            string_columns=_symbol_columns(key_vecs + value_vecs, raw))
 
         _pykx_base_types = {}
         for i, col in enumerate(kk.py()):
@@ -5114,11 +5125,24 @@ class KeyedTable(Dictionary, PandasAPI):
 
 
 class GroupbyTable(PandasAPI):
-    def __init__(self, tab, as_index, was_keyed, as_vector=None):
-        self.tab = tab
+    def __init__(self, tab, as_index, was_keyed, as_vector=None, *, build=None, source=None,
+                 by=None, columns=None, sort=True, dropna=True):
+        self._tab = tab
+        self._build = build
         self.as_index = as_index
         self.was_keyed = was_keyed
         self.as_vector = as_vector
+        self._source = source
+        self._by = by
+        self._agg_cols = columns
+        self._sort = sort
+        self._dropna = dropna
+
+    @property
+    def tab(self):
+        if self._tab is None:
+            self._tab = self._build()
+        return self._tab
 
     def q(self):
         return self.tab
@@ -5141,11 +5165,19 @@ class GroupbyTable(PandasAPI):
         )
 
     def __getitem__(self, item):
+        columns = [item] if isinstance(item, str) else list(item) if isinstance(
+            item, (list, tuple)) else None
         return GroupbyTable(
-            self.tab[item],
-            True,
+            None,
+            self.as_index,
             False,
-            as_vector=item
+            as_vector=item,
+            build=lambda: self.tab[item],
+            source=self._source if self._agg_cols is None else None,
+            by=self._by,
+            columns=columns,
+            sort=self._sort,
+            dropna=self._dropna,
         )
 
 
@@ -5548,7 +5580,14 @@ class Composition(Function):
     @property
     def params(self):
         if q('{.pykx.util.isw x}', self).py():
-            return q('.pykx.unwrap', self).params
+            obj = q('.pykx.unwrap', self)
+            try:
+                return obj.params
+            except AttributeError as e:
+                raise AttributeError(
+                    f"Composition wraps a {type(obj).__name__} object, which has no attribute "
+                    "'params'"
+                ) from e
         return self.func.params
 
     @property
@@ -5741,7 +5780,8 @@ class Foreign(Atom):
                 *[K(x) for x in args],
                 **{k: K(v) for k, v in kwargs.items()}
             )
-        return q('{x . y}', self, [*[K(x) for x in args]])
+        return q('{x . y}', self,
+                 [*[K(x) for x in args]] if args else q('enlist (::)'))
 
     @property
     def params(self):

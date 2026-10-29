@@ -12,7 +12,19 @@ class PandasResetIndex:
     def reset_index(self, levels=None, *, drop=False, inplace=False,
                     col_level=0, col_fill='', allow_duplicates=False,
                     names=None):
-        """Reset keys/index of a `pykx.Table`"""
+        """Reset keys/index of a `pykx.Table`
+
+        Examples:
+            >>> tab = kx.q('1!([] k:`a`b`c; v:1 2 3)')
+            >>> tab.reset_index()
+            pykx.Table(pykx.q('
+            k v
+            ---
+            a 1
+            b 2
+            c 3
+            '))
+        """
         if col_level != 0:
             raise QError("'col_level' not presently supported")
         if col_fill != '':

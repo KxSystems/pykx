@@ -6,8 +6,8 @@ import pytest
 def save_helper(location, code, instructions):
     from pykx import nbextension
     nbextension.q(instructions, code)
-    f = open(location, "r")
-    assert f.read() == code
+    with open(location, "r") as f:
+        assert f.read() == code
     shutil.rmtree(location.split('/')[0])
 
 
@@ -62,7 +62,6 @@ def test_save_ipc(kx, q_port):
     save_helper(location, code, instructions)
 
 
-@pytest.mark.unlicensed
 def test_save_ipc_locked(q, q_port):
     from pykx import nbextension
     port = str(q_port)

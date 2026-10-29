@@ -14,7 +14,9 @@ Here we have:
 3. A Python process subscribing to the tick process, running a Python analytic on the trade data and pushing the results to another process
 4. A q process to which the results of the Python analytic can be pushed
 
-For more information about the differences between the licensed and unlicensed version of this example please consult `readwrite.py` this has a breakdown of the steps taken in the presence/absence of a licensed shared object.
+The Python script for this example lives at [`docs/examples/ipc/readwrite.py`](../../docs/examples/ipc/readwrite.py).
+
+For more information about the differences between the licensed and unlicensed version of this example please consult that script, this has a breakdown of the steps taken in the presence/absence of a licensed shared object.
 
 ### Start the required q processes
 
@@ -35,7 +37,7 @@ q)
 ### Start the pykx subscriber/publisher
 ```bash
 // When running with a valid k4.lic in $QHOME
-$ python readwrite.py
+$ python ../../docs/examples/ipc/readwrite.py
 Running example in presence of licensed q
 
 // When running in the absence of a valid k4.lic in $QHOME

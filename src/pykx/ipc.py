@@ -2428,9 +2428,9 @@ class RawQConnection(QConnection):
             response = response[1]
         try:
             msg = serialize(response, mode=level, wait=2)
-        except QError as e:
+        except Exception as e:
             error = True
-            response = SymbolAtom(f"{e}")
+            response = SymbolAtom(str(e).removeprefix('Failed to serialize IPC message: '))
             msg = serialize(response, mode=level, wait=2)
         if error:
             msg_view = list(msg.copy())
@@ -2525,7 +2525,7 @@ class RawQConnection(QConnection):
             events = reader.select(timeout)
             for key, _ in events:
                 callback = key.data
-                res = callback[0]()(key.fileobj)
+                res = callback()(key.fileobj)
                 if res is None:
                     count -= 1
                     if count > 1:
@@ -2555,7 +2555,7 @@ class RawQConnection(QConnection):
                         elif MessageType.async_msg.value == msg_type:
                             print(e)
                     if MessageType.sync_msg.value == msg_type:
-                        callback[0]()(key.fileobj, res, level)
+                        callback()(key.fileobj, res, level)
                     count -= 1
                     if count > 1:
                         return
@@ -2797,7 +2797,7 @@ class RawQConnection(QConnection):
                 events = self._reader.select()
                 for key, _mask in events:
                     callback = key.data
-                    callback[0](key.fileobj)
+                    callback[0]()(key.fileobj)
             self._reader.unregister(self._sock)
             self._writer.unregister(self._sock)
             self._reader.close()

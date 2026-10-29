@@ -49,8 +49,8 @@ void k_free(Allocator* ctx, uintptr_t p, npy_uintp sz) {
     gstate = PyGILState_Ensure();
     if (p) {
         K x = k_from_buf(p);
-        r0_ptr(x);
         int should_dealloc = x->r == 0;
+        r0_ptr(x);
         if (should_dealloc) {
             if (gc_enabled == -1) {
                 gc_enabled = PyLong_AsLong(PyDict_GetItemString(PyModule_GetDict(PyImport_AddModule("pykx.config")), "k_gc"))

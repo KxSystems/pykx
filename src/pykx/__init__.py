@@ -301,7 +301,7 @@ from .read import QReader
 from .system import SystemCommands
 from .write import QWriter
 from .reimporter import PyKXReimport
-from .module import use
+from .module import QModule, QNamespaceProxy, use
 
 from . import config
 from . import console
@@ -426,10 +426,6 @@ def install_into_QHOME(overwrite_embedpy=False,
         shutil.copy(Path(__file__).parent/'lib'/'sql.k_', Path(dest)/'s.k_')
     shutil.copy(Path(__file__).parent/'pykx.q', dest)
     shutil.copy(Path(__file__).parent/'pykx_init.q_', dest)
-    if platform.system() == 'Windows':
-        if dest == qhome:
-            dest = dest/'w64'
-        shutil.copy(Path(__file__).parent/'lib/w64/q.dll', dest)
 
 
 def activate_numpy_allocator() -> None:
@@ -550,6 +546,8 @@ __all__ = sorted([
     'config',
     'util',
     'q',
+    'QModule',
+    'QNamespaceProxy',
     'use',
     'shutdown_thread',
     'PyKXReimport',

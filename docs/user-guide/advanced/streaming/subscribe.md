@@ -49,8 +49,8 @@ The below sections provide examples in Python and q showing how users can subscr
 
 In all cases subscription is achieved through execution of the `#!python .u.sub` function on the tickerplant process which is being connected to. This function takes two parameters:
 
-1. The name(s) of the table(s) for which you are subscribing to, in the case that you are subscribing to all data this argument should be an empty str in Python or ````` in q.
-2. The name(s) of the symbol(s) to which you are subscribing, in the case that you are subscribing to all symbols within the tables this should be an empty str in Python or ````` in q.
+1. The name(s) of the table(s) for which you are subscribing to, in the case that you are subscribing to all data this argument should be an empty str in Python or `` ` `` in q.
+2. The name(s) of the symbol(s) to which you are subscribing, in the case that you are subscribing to all symbols within the tables this should be an empty str in Python or `` ` `` in q.
 
 ### Python
 

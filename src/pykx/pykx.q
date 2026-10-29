@@ -95,7 +95,7 @@ k)c:{'[y;x]}/|:
 k)ce:{'[y;x]}/enlist,|:
 
 // @desc Make use of `pykx.so` logic when running under Python
-if["true"~getenv`PYKX_UNDER_PYTHON;
+if[("true"~lower getenv`PYKX_UNDER_PYTHON) or 1b~@[get;`.pykx.util.underPython;0b];
   util.load:2:[hsym`$pykxDir,"/pykx";]
   ];
 

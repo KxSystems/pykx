@@ -14,7 +14,19 @@ def _init(_q):
 class PandasSetIndex:
     @api_return
     def set_index(self, keys, drop=True, append=False, inplace=False, verify_integrity=False):
-        """Set the index using existing columns."""
+        """Set the index using existing columns.
+
+        Examples:
+            >>> tab = kx.q('([] k:`a`b`c; v:1 2 3)')
+            >>> tab.set_index('k')
+            pykx.KeyedTable(pykx.q('
+            k| v
+            -| -
+            a| 1
+            b| 2
+            c| 3
+            '))
+        """
         if(pd.core.indexes.multi.MultiIndex == type(keys) and not
            all(x is None for x in keys.names)):
             keys = q('{flip x!flip y}', list(keys.names), keys.values)
@@ -40,5 +52,20 @@ class PandasSetIndex:
 
     @property
     def index(self):
+        """The index of the table, which is the key of a keyed table or the row numbers of a table.
+
+        Examples:
+            >>> tab = kx.q('([] k:`a`b`c; v:1 2 3)')
+            >>> tab.index
+            pykx.LongVector(pykx.q('0 1 2'))
+            >>> tab.set_index('k').index
+            pykx.Table(pykx.q('
+            k
+            -
+            a
+            b
+            c
+            '))
+        """
         key = q('{$[99h~type x;key x;til count x]}', self)
         return key

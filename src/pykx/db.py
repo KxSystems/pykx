@@ -81,6 +81,10 @@ class _TABLES:
     pass
 
 
+class _OBJECTS:
+    pass
+
+
 class DB(_TABLES):
     _instance = None
     _init_tabs = None
@@ -89,7 +93,9 @@ class DB(_TABLES):
     _load_script = True
     path = None
     tables = None
+    objects = None
     table = _TABLES
+    object = _OBJECTS
     loaded = False
 
     def __new__(cls,
@@ -143,12 +149,13 @@ class DB(_TABLES):
         ['quote', 'trade']
         ```
         !!! note "Loading root-level objects"
-            When using `pykx.DB`, only partitioned tables are exposed as attributes of the
-            `DB` object. Root-level splayed objects (for example, dictionaries or lists stored
-            alongside partitions) are **not** attached to the `DB` instance, but are still loaded
-            into the q process and can be accessed directly using `kx.q`.
-
-            For example, you can retrieve a variable `mySplayTab` by running `kx.q['mySplayTab']`.
+            When using `pykx.DB`, tables are exposed as attributes of the
+            `DB` object, are listed in `DB.tables` and are also available via `DB.table.<name>`.
+            Any other object loaded from the database root (for example a dictionary or list
+            stored alongside the partitions) is attached to the `DB` instance in the same way,
+            listed in `DB.objects` and also available via `DB.object.<name>`. If a table or
+            object's name would overwrite an existing `DB` attribute a warning is raised and
+            it is instead made available directly on the `DB` instance as `DB.<name>_`.
         Define the path to be used for a database which does not initially exist
 
         ```python
@@ -468,28 +475,62 @@ class DB(_TABLES):
             if not encrypt.loaded:
                 encrypt.load_key()
 
-        q('''
-            {[path;cd;ld]
-            .[.Q.lo;
-                (`$1_string path;cd;ld);
-                {x:$[x like "*.DS_Store";
-                    "Invalid MacOS metadata file '.DS_Store' stored in Database";
-                    x];
-                '"Failed to load Database with error: ",x
+        zvs_was_set = bool(q('@[{get x;1b};`.z.vs;0b]').py())
+        user_zvs = q('.z.vs') if zvs_was_set else None
+
+        q('.pykx.i.updatedVars:`$()')
+        if zvs_was_set:
+            q('''
+                {[hook]
+                .z.vs:{[hook;nm;idx] .pykx.i.updatedVars,:nm; hook[nm;idx]}[hook]
                 }
-                ]
-            }
-            ''', load_path, change_dir, load_scripts)
+                ''', user_zvs)
+        else:
+            q('.z.vs:{[nm;idx] .pykx.i.updatedVars,:nm}')
+
+        try:
+            q('''
+                {[path;cd;ld]
+                .[.Q.lo;
+                    (`$1_string path;cd;ld);
+                    {x:$[x like "*.DS_Store";
+                        "Invalid MacOS metadata file '.DS_Store' stored in Database";
+                        x];
+                    '"Failed to load Database with error: ",x
+                    }
+                    ]
+                }
+                ''', load_path, change_dir, load_scripts)
+        finally:
+            updated_objects = q(
+                '{[] r:.pykx.i.updatedVars; delete updatedVars from `.pykx.i; r}[]'
+            ).py()
+            if zvs_was_set:
+                q('{[hook] .z.vs:hook}', user_zvs)
+            else:
+                q('system "x .z.vs"')
 
         self.path = load_path
         self.loaded = True
-        self.tables = q('{x where {$[-1h=type t:.Q.qp tab:get x;$[t;x in .Q.pt;in[`$last vs["/";-1_string value flip tab]; key y]];0b]}[;y]each x}', q.tables(), load_path).py() # noqa: E501
+        self.tables = q('{asc distinct x where x in tables[]}', updated_objects).py()
+        self.objects = q('{asc distinct x where not x in tables[]}', updated_objects).py()
         for i in self.tables:
+            target = i
             if i in self._dir_cache:
-                warn(f'A database table "{i}" would overwrite one of the pykx.DB() methods, please access your table via the table attribute') # noqa: E501
-            else:
-                setattr(self, i, q[i])
+                target = i + '_'
+                warn(f"DB loaded table DB.{i} attribute exists, "
+                     f"access table via DB.{target} or DB.table.{i}")
+            setattr(self, target, q[i])
             setattr(self.table, i, q[i])
+
+        for i in self.objects:
+            target = i
+            if i in self._dir_cache:
+                target = i + '_'
+                warn(f"DB loaded object DB.{i} attribute exists, "
+                     f"access object via DB.{target} or DB.object.{i}")
+            setattr(self, target, q[i])
+            setattr(self.object, i, q[i])
         return None
 
     def _reload(self):

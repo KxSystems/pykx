@@ -1,4 +1,5 @@
 import os
+from platform import system
 import shutil
 
 # Do not import pykx here - use the `kx` fixture instead!
@@ -208,6 +209,10 @@ def test_table_rename(kx):
 
 
 @pytest.mark.order(17)
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='zlib libs are not available on the Windows CI runner'
+)
 def test_compress(kx):
     zd_cache = kx.q.z.zd
     compress = kx.Compress(kx.CompressionAlgorithm.gzip, level=8)

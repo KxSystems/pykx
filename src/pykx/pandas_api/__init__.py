@@ -1,6 +1,7 @@
 """Pandas API for `pykx.Table`."""
 
 
+from functools import wraps
 from warnings import warn
 
 
@@ -16,15 +17,19 @@ def handle_groupby_tab(func, *args, **kwargs):
     _args = list(args)
     _tab = _args[0]
     _args = _args[1:]
-    key, tab = q('{[x] (key x; value x)}', _tab.tab)
-    res = q(
-        '{[tab; f; args; kwargs]'
-        'f[;pyarglist args; pykwargs kwargs] each flip each tab}',
-        tab,
-        func,
-        _args,
-        _kwargs
-    )
+    native = native_groupby_agg(func.__name__, _tab, _args, _kwargs)
+    if native is not None:
+        key, res = native
+    else:
+        key, tab = q('{[x] (key x; value x)}', _tab.tab)
+        res = q(
+            '{[tab; f; args; kwargs]'
+            'f[;pyarglist args; pykwargs kwargs] each flip each tab}',
+            tab,
+            func,
+            _args,
+            _kwargs
+        )
     ungroup = False
     if 'List' in str(type(res)):
         res = q('{[x] flip each x}', res)
@@ -42,12 +47,13 @@ def handle_groupby_tab(func, *args, **kwargs):
         res = q('{[x; y] x!y}', q(f'([] idx: til {len(res)})'), res)
     if ungroup:
         res = res.ungroup()
-    if _tab.as_vector is not None and 'Table' in str(type(res)):
+    if _tab.as_index and _tab.as_vector is not None and 'Table' in str(type(res)):
         return res[_tab.as_vector]
     return res
 
 
 def api_return(func):
+    @wraps(func)
     def return_val(*args, **kwargs):
         tab = args[0]
         if 'GroupbyTable' in str(type(tab)):
@@ -66,6 +72,7 @@ def api_return(func):
     return return_val
 
 
+from .pandas_native_agg import _init as _native_agg_init, native_groupby_agg
 from .pandas_meta import _init as _meta_init, PandasMeta
 from .pandas_conversions import _init as _conv_init, PandasConversions
 from .pandas_indexing import _init as _index_init, PandasIndexing, PandasReindexing, TableLoc
@@ -91,6 +98,7 @@ def _init(_q):
     _sorting_init(q)
     _reset_index_init(q)
     _replace_init(q)
+    _native_agg_init(q)
 
 
 class PandasAPI(PandasApply, PandasMeta, PandasIndexing, PandasReindexing,
@@ -98,7 +106,6 @@ class PandasAPI(PandasApply, PandasMeta, PandasIndexing, PandasReindexing,
                 PandasSorting, PandasReplace, PandasResetIndex, PandasMap):
     """PandasAPI mixin class"""
     replace_self = False
-    prev_locs = {}
 
     def __init__(self, *args, **kwargs):
         if type(self) == PandasAPI:

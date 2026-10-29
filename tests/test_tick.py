@@ -85,6 +85,58 @@ def test_tick_start(kx):
     os.getenv('PYKX_THREADING') is not None,
     reason='Not supported with PYKX_THREADING'
 )
+def test_restart_processing(kx):
+    import time
+    trade_schema = kx.schema.builder({
+        'time': kx.TimespanAtom,
+        'sym': kx.SymbolAtom,
+        'px': kx.FloatAtom})
+    os.makedirs('restart_db', exist_ok=True)
+    kx.q('{x set y}',
+         kx.SymbolAtom(':restart_db/trade'),
+         kx.Table(data={'sym': ['AAPL'], 'px': [1.0]}))
+
+    # A restarted tickerplant must resume processing of messages
+    tick = kx.tick.TICK(port=5030, tables={'trades': trade_schema})
+    tick.start()
+    assert tick('.u.t').py() == ['trades']
+    tick.restart()
+    assert tick('.tick.tabs').py() == ['trades']
+    assert tick('.u.t').py() == ['trades']
+
+    # A restarted RTP must re-subscribe to the tickerplant
+    rdb = kx.tick.RTP(port=5031, subscriptions=['trades'])
+    rdb.start({'tickerplant': 'localhost:5030'})
+    rdb.restart()
+    assert len(rdb('trades')) == 0
+    with kx.SyncQConnection(port=5030) as q:
+        q.upd('trades', [kx.q.z.N, 'AAPL', 1.0])
+    time.sleep(1)
+    assert len(rdb('trades')) == 1
+    rdb.stop()
+    tick.stop()
+
+    # A process which was never started must not be started by a restart
+    hdb = kx.tick.HDB(port=5032)
+    hdb.restart()
+    assert hdb('1b')
+    with pytest.raises(kx.QError) as err:
+        hdb('trade')
+    assert 'trade' in str(err.value)
+
+    # A restarted HDB must re-load the database it was started with
+    hdb.start(database='restart_db')
+    assert len(hdb('trade')) == 1
+    hdb.restart()
+    assert len(hdb('trade')) == 1
+    hdb.stop()
+    shutil.rmtree('restart_db')
+
+
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_tick_chained(kx):
     trade_schema = kx.schema.builder({
         'time': kx.TimespanAtom,
@@ -349,6 +401,32 @@ def test_basic_infra(kx):
     os.getenv('PYKX_THREADING') is not None,
     reason='Not supported with PYKX_THREADING'
 )
+def test_basic_infra_no_logging(kx):
+    trade = kx.schema.builder({
+        'time': kx.TimespanAtom,
+        'sym': kx.SymbolAtom,
+        'px': kx.FloatAtom})
+    before = os.listdir()
+    basic = kx.tick.BASIC(tables={'trade': trade}, log_directory=None)
+    basic.start()
+    assert basic.tick('.tick.logdir').py() == []
+    assert basic.tick('.u.l').py() == 0
+    assert basic.tick._log_directory is None
+
+    with kx.SyncQConnection(port=5010) as q:
+        q.upd('trade', [kx.q.z.N, 'AAPL', 1.0])
+    with kx.SyncQConnection(port=5011) as q:
+        tab = q('trade')
+    assert isinstance(tab, kx.Table)
+    assert len(tab) == 1
+    basic.stop()
+    assert os.listdir() == before
+
+
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
 def test_process_kill(kx):
     hdb = kx.tick.HDB(port=5012)
     hdb.start(database='db')
@@ -358,7 +436,8 @@ def test_process_kill(kx):
     kx.util.kill_q_process(port=5012)
     with pytest.raises(kx.QError) as err:
         kx.SyncQConnection(port=5012)
-    assert any([x in str(err.value) for x in ['Connection refused', 'Connection reset']])
+    expected = ['Connection refused', 'Connection reset', 'actively refused']
+    assert any([x in str(err.value) for x in expected])
 
 
 @pytest.mark.skipif(
@@ -381,3 +460,39 @@ def test_init_args(kx):
     with pytest.raises(TypeError) as err:
         kx.tick.HDB(port=5012, init_args=['test', 1])
     assert 'str type objects' in str(err.value)
+
+
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_init_args_kept_on_restart(kx):
+    for cls in (kx.tick.TICK, kx.tick.RTP, kx.tick.HDB, kx.tick.GATEWAY):
+        proc = cls(port=5012, init_args=['-g', '1'])
+        try:
+            proc.restart()
+            assert 1 == proc('\\g'), cls.__name__
+        finally:
+            proc.stop()
+
+    tick = kx.tick.TICK(port=5012, hard_reset=True)
+    try:
+        tick.restart()
+        assert tick('.tick.hardReset').py()
+    finally:
+        tick.stop()
+
+
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_init_failure_cleans_up_subprocess(kx):
+    with pytest.raises(kx.QError) as err:
+        kx.tick.HDB(port=5013, tables={'trade': 'not_a_table'})
+    assert 'Provided table schema must be an "kx.Table"' in str(err.value)
+
+    with pytest.raises(kx.QError) as err:
+        kx.SyncQConnection(port=5013)
+    expected = ['Connection refused', 'Connection reset', 'actively refused']
+    assert any(x in str(err.value) for x in expected)
