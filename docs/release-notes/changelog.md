@@ -19,6 +19,261 @@ For changes to KDB-X Python within a q environment, refer to the [KDB-X Python u
 
 ## KDB-X Python
 
+### 4.2.0
+
+**Release Date**
+
+2026-10-23
+
+**Additions**
+
+- Added support for Python 3.15. Not available on Conda, this will follow at next release once all dependencies have 3.15 compatible versions published.
+- Added conversion of Python 3.15 `frozendict` objects to q dictionaries.
+- Moved to [KDB-X 5.0.20261015](https://code.kx.com/kdb-x/releases/release-notes-latest.html).
+- Added `DB.objects`, listing non-table objects loaded from the database root and attached to the `DB` object. `DB.tables` now also lists any table loaded from the database root, not only partitioned/splayed tables. See the [database reference](../api/db.md) for details.
+- Added the ability to unpack objects from `QModule` objects.
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.use('kx.ax.graphics')
+    pykx.QModule(pykx.q('
+    gg| pykx.QNamespaceProxy
+    qp| pykx.QNamespaceProxy
+    '))
+    >>> gg, qp = kx.use('kx.ax.graphics')
+    >>> qp
+    pykx.QNamespaceProxy(pykx.q('
+    area       | pykx.Lambda
+    bar        | pykx.Lambda
+    boxplot    | pykx.Lambda
+    display    | pykx.Lambda
+    dsl        | pykx.Lambda
+    ...
+    '))
+    ```
+
+- Added `kx.module.wrap`, which presents a q dictionary as a `QModule`. Useful for the [logging](https://github.com/KxSystems/logging/tree/main) module, whose `createLog` returns a dictionary of functions rather than exporting them.
+
+    ```python
+    >>> import pykx as kx
+    >>> logger = kx.use('kx.log')
+    >>> log = kx.module.wrap(logger.createLog())
+    >>> log.info(b'Hello World!')
+    2026.09.04D11:13:31.614026479 info PID[332949] HOST[localhost] Hello World!
+    >>> log.setlvl('trace')
+    ```
+
+- Added `kx.module.unwrap`, the inverse of `kx.module.wrap`, which recovers the q dictionary behind a `QModule` or a `QNamespaceProxy`.
+
+    ```python
+    >>> import pykx as kx
+    >>> mod = kx.use('kx.mymodule')
+    >>> opts = kx.module.unwrap(mod.opts)
+    >>> opts['headers']
+    pykx.Dictionary(pykx.q('
+    Accept| "a"
+    X     | "b"
+    '))
+    ```
+
+- A module export whose name Python cannot use as an attribute can now be reached with a single trailing underscore.
+
+    ```python
+    >>> import pykx as kx
+    >>> kurl = kx.use('kx.kurl')
+    >>> kurl.async_             # `kurl.async` is a Python SyntaxError
+    >>> kurl['async']           # equivalent to kurl.async_
+    ```
+
+- `QModule` and `QNamespaceProxy` objects now support `len`, key access and `in`, alongside attribute access.
+- `QModule` and `QNamespaceProxy` can now be reached as `kx.QModule` and `kx.QNamespaceProxy`, as well as through `kx.module`.
+- A module now converts to the q dictionary behind it if passed to `kx.toq`.
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.q['printf'] = kx.use('kx.printf')    # previously TypeError: Cannot convert
+    >>> kx.q('printf.printf ("%d rows";42)')
+    pykx.CharVector(pykx.q('"42 rows"'))
+    ```
+
+- When activating an existing license, KDB-X Python now offers to use the license key supplied by an environment variable when `KDB_K4LICENSE_B64` or `KDB_LICENSE_B64` is set.
+
+    ```python
+    >>> import pykx as kx
+
+    Thank you for installing KDB-X Python!
+
+    We have been unable to locate your license for KDB-X Python.
+
+    Running KDB-X Python in unlicensed mode has reduced functionality.
+    Would you like to install a license? [Y/n]: Y
+
+    Do you have access to an existing license for KDB-X Python that you would like to use? [N/y]: Y
+
+    Please select the method you wish to use to activate your license:
+        [1] Provide the location of your license file
+        [2] Paste the license key
+        [3] Use the license key supplied by the KDB_LICENSE_B64 environment variable
+    Enter your choice here [1/2/3]: 3
+
+    KDB-X Python license successfully installed to: /home/user/.kx/kc.lic
+    ```
+
+**Fixes and Improvements**
+
+- Fixed a segfault when loading `pykx.q` into a process that had already imported `pykx`.
+- Fixed a segmentation fault in unlicensed mode when a NumPy array of 8MiB or more, allocated by the KDB-X Python NumPy allocator, was deallocated.
+- Fixed a segmentation fault when assigning an item into a `pykx.Dictionary` with garbage collection enabled (`PYKX_GC`).
+- `PYKX_THREADING` is now automatically disabled when unlicensed mode is used.
+- Reading and assigning to the exports of a module packaged as a single file (`.q`, `.q_`, `.k_` or a shared object) now work.
+- `kx.use` registers a submodule on its parent whichever order the two are loaded in, rather than raising `TypeError` when the parent is loaded first.
+- `kx.use` now includes the underlying q error in the `ImportError` it raises.
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.use('kx.arrow')
+    ImportError: Failed to load kx.arrow: no kexport: /lib/x86_64-linux-gnu/libstdc++.so.6: version `GLIBCXX_3.4.31' not found (required by /home/user/.kx/mod/kx/arrow/clib.li64.so)
+    ```
+
+- An exported name resolves to its `export` entry, as it does in q.
+
+    ```python
+    >>> import pykx as kx
+    >>> mod = kx.use('kx.mymodule')     # exports f:{"exported ",x}, and holds f:{"private ",x}
+    >>> mod.f(b'x')                     # previously "private x"
+    pykx.CharVector(pykx.q('"exported x"'))
+    ```
+
+- `QNamespaceProxy` is now a `QModule` and supports everything a module does.
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.use('kx.ax')
+    pykx.QModule(pykx.q('
+    gg| pykx.QNamespaceProxy      # previously pykx.Dictionary
+    qp| pykx.QNamespaceProxy
+    qd| pykx.QNamespaceProxy
+    '))
+    ```
+
+- Calling a `pykx.Foreign` q function with no arguments now passes the generic null `(::)` rather than the empty list `()`.
+
+    ```python
+    >>> import pykx as kx
+    >>> kurl = kx.use('kx.kurl')
+    >>> kurl.listRegistered()       # previously raised QError: type
+    pykx.Table(pykx.q('
+    domain tenant expiresOn deltaSec
+    --------------------------------
+    '))
+    ```
+
+- `restart()` on `kx.tick` processes now resumes message processing using the configuration the process was started with. Previously a restarted process was left initialized but not processing.
+- Fixed tick processes to shut down fully when initialization fails rather than throw an `AttributeError`.
+- Setting `log_directory=None` when initializing `kx.tick.BASIC` now disables tickerplant logging as documented, rather than writing the logfile named `::`.
+- Fixed the IPC `readwrite.py` example, which discarded tickerplant updates and failed with `QError: trade`.
+- Fixed a bug when calling `poll_recv_async` on a `RawQConnection` object that would cause an error due to the use of `WeakMethod`s.
+- A client querying a KDB-X Python server for an object that cannot be serialized no longer hangs waiting on a response. The server now throws `'type`.
+- `kx.serialize` now raises a `QError` when an object cannot be serialized. It previously raised `TypeError: Expected unicode, got int`.
+
+	```python
+	>>> import pykx as kx
+	>>> kx.serialize(kx.q('.pykx.getattr'))
+	pykx.exceptions.QError: Failed to serialize IPC message: type
+	```
+
+- `.pd()` now gives symbol columns the pandas `str` rather than `object` dtype on pandas 3.0 and later when NumPy 1.x is installed.
+- `.pd(raw=True)` now returns symbol columns as bytes in an `object` column on pandas 3.0.
+- Fixed `kx.toq` of a `pandas.DataFrame` raising `AttributeError: module 'numpy' has no attribute 'dtypes'` on NumPy versions below 1.25.
+- Fix pandas 3.1 displaying a `pykx.Dictionary` in Jupyter raised `ValueError: Cannot modify read-only array`
+- Fixed pandas 3.1 `kx.toq` of a PyArrow timestamp or duration column holding nulls raised `TypeError: Invalid value '-9223372036854775808'`.
+- A failed conversion of a `pandas.DataFrame` or NumPy record array to a table no longer leaves a q error pending. Previously the next q function call could fail with that error. The raised `PyKXException` now includes the q error, for example `Failed to create table from k dictionary: nyi`.
+- Converting a `pandas.MultiIndex` with mixed level name types, for example `names=['a', 1]`, now raises `PyKXException: Failed to create table from pandas MultiIndex: nyi`. Previously the process crashed.
+- Raised the minimum pandas and NumPy versions to the first releases that publish wheels for each Python version: pandas `>=2.1.1` on Python 3.12, pandas `>=2.2.3` and NumPy `>=2.1.0` on Python 3.13, and NumPy `>=2.3.2` on Python 3.14.
+- `Table.head(n)` and `Table.tail(n)` no longer repeat rows when `n` is larger than the table. They return the whole table, matching pandas.
+- `Table.head(n)` and `Table.tail(n)` with a negative `n` now drop `-n` rows from the end (`head`) or the start (`tail`) and return the rest, matching pandas.
+- Fixed chained Boolean indexing with `kx.Table.loc` and `kx.Table.iloc` returning incorrect rows after an unrelated table with the same number of rows had been filtered. An unalignable Boolean mask now raises `IndexError` rather than `KeyError`.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.q('([] x: til 10)')
+		>>> subset = tab.loc[tab['x'] > 4]
+		>>> other = kx.q('([] y: til 10)')
+		>>> filtered = other.loc[other['y'] > 6]  # an unrelated table of the same length
+		>>> subset.loc[tab['x'] < 8]
+		pykx.Table(pykx.q('
+		x
+		-
+		5
+		'))
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.q('([] x: til 10)')
+		>>> subset = tab.loc[tab['x'] > 4]
+		>>> other = kx.q('([] y: til 10)')
+		>>> filtered = other.loc[other['y'] > 6]  # an unrelated table of the same length
+		>>> subset.loc[tab['x'] < 8]
+		pykx.Table(pykx.q('
+		x
+		-
+		5
+		6
+		7
+		'))
+		```
+
+- Improved the performance of the pandas API aggregations `sum`, `prod`, `min`, `max`, `mean`, `median`, `count`, `std`, `sem`, `skew`, `kurt`, `idxmax`, `idxmin`, `any` and `all` on `pykx.Table` and `groupby` objects.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> tab = kx.q('n:2000000;([] sym:n?`a`b`c`d; size:n?1000; price:n?10f)')
+		>>> %timeit tab.groupby('sym')['size'].sum()
+		43.6 ms
+		>>> %timeit tab[['size', 'price']].sum()
+		16.0 ms
+		>>> %timeit tab[['size', 'price']].all()
+		4.64 s
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> %timeit tab.groupby('sym')['size'].sum()
+		7.4 ms
+		>>> %timeit tab[['size', 'price']].sum()
+		3.3 ms
+		>>> %timeit tab[['size', 'price']].all()
+		3.5 ms
+		```
+
+- `min`, `max`, `idxmax` and `idxmin` now work on GUID columns, as they do in pandas, where they previously raised a `QError`.
+- Aggregations such as `sum`, `all` and `any` now return an empty dictionary, rather than raising an `IndexError`, when `bool_only` or `numeric_only` leaves no columns.
+- `import pykx` no longer imports `streamlit`, which was overwriting the default Plotly template and causing Plotly charts to lose their colors. `pykx.streamlit.PyKXConnection` now loads Streamlit on first use.
+- `kx.q.system.load` now raises correct `ValueError` when you pass an empty path instead of the incorrect `IndexError: string index out of range`.
+- Fixed `#!python kx.util.kill_q_process` on Windows.
+- `#!python kx.install_into_QHOME` no longer copies `q.dll` into `#!bash QHOME` on Windows, as it is no longer required.
+- Improved the clarity of an error message on incorrectly constructed `Composition` types.
+
+**Upgrade considerations**
+
+The pandas API aggregations now return the same results as the equivalent pandas methods in cases where they previously differed. Review code which relies on the earlier results.
+
+- `all` and `any` on a `pykx.Table` with `skipna=False` now count a null as true.
+- `skipna=False` on `sum`, `prod`, `min` and `max` now returns a null if the column contains a null.
+- `median` on a `pykx.Table` no longer treats a null as the smallest value, and `sem` and `kurt` no longer count nulls in N.
+- `kurt` on a `pykx.Table` now returns null when a column has too few values.
+- `idxmax` and `idxmin` on a table with one key column now return the key labels rather than row numbers, and on a `groupby` of an unkeyed table return labels from the original table rather than positions within each group. A column of only nulls now returns null.
+- `groupby(..., as_index=False)[columns]` now keeps the grouping columns in the result, as pandas does.
+- `groupby` with `dropna=True` now drops a group when any of its keys is null, as pandas does. Previously only a null in the first key dropped the group.
+- `mean`, `median`, `std`, `sem` and `kurt` with `numeric_only=True` now include boolean columns, as pandas does.
+
 ### 4.1.0
 
 **Release Date**
@@ -3006,7 +3261,7 @@ For changes to KDB-X Python within a q environment, refer to the [KDB-X Python u
 		>>> qtab.update({'eye': '`blue`brown`green'})
 		>>> qtab.update({'eye': ['blue']}, where='hair=`fair')
 
-- [Pandas API](../user-guide/advanced/Pandas_API.ipynb) additions: `isnull`, `isna`, `notnull`, `notna`, `idxmax`, `idxmin`, `kurt`, `sem`.
+- [Pandas API](../user-guide/advanced/Pandas_API.md) additions: `isnull`, `isna`, `notnull`, `notna`, `idxmax`, `idxmin`, `kurt`, `sem`.
 - Addition of `filter_type`, `filter_columns`, and `custom` parameters to `QReader.csv()` to add options for CSV type guessing.
 
 	```python
@@ -3682,7 +3937,7 @@ For changes to KDB-X Python within a q environment, refer to the [KDB-X Python u
 - Added support for Python `3.12`.
     - Support for PyArrow in this python version is currently in Beta.
 - Added conversion of NumPy arrays of type `datetime64[s]`, `datetime64[ms]`, `datetime64[us]` to `kx.TimestampVector`
-- Added [Table.sort_values()](../user-guide/advanced/Pandas_API.ipynb#tablesort_values), [Table.nsmallest()](../user-guide/advanced/Pandas_API.ipynb#tablensmallest) and [Table.nlargest()](../user-guide/advanced/Pandas_API.ipynb#tablenlargest) to the Pandas like API for sorting tables.
+- Added [Table.sort_values()](../user-guide/advanced/Pandas_API.md), [Table.nsmallest()](../user-guide/advanced/Pandas_API.md) and [Table.nlargest()](../user-guide/advanced/Pandas_API.md) to the Pandas like API for sorting tables.
 - `Table.rename()` now supports non-numerical index columns and improved the quality of errors thrown.
 - Added the `reconnection_attempts` key word argument to `SyncQConnection`, `SecureQConnection`, and `AsyncQConnection` IPC classes. This argument allows IPC connection to be automatically re-established when it is lost and a server has reinitialized.
 
@@ -4158,7 +4413,7 @@ For changes to KDB-X Python within a q environment, refer to the [KDB-X Python u
 	```
 
 - Addition of `reset_index`, `add_suffix`, `add_prefix`, `count`, `skew` and `std` functionality to Pandas Like API
-    - See [here](../user-guide/advanced/Pandas_API.ipynb) for details of supported keyword arguments, limitations and examples.
+    - See [here](../user-guide/advanced/Pandas_API.md) for details of supported keyword arguments, limitations and examples.
 - `%%q` Jupyter Notebook magic adds `--debug` option which prints the q backtrace if the cell execution fails.
 - Release 2.3.0 adds to PyKX the concept of Beta features, these features are available to users through setting the configuration/environment variable `PYKX_BETA_FEATURES`. For more information on Beta features see further documentation [here](../beta-features/index.md)
 
@@ -4921,7 +5176,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 **Additions**
 
-- [Pandas API](../user-guide/advanced/Pandas_API.ipynb) is enabled by default allowing users to treat PyKX Tables similarly to Pandas Dataframes for a limited subset of Pandas like functionality. As a result of this change the environment variable `PYKX_ENABLE_PANDAS_API` is no longer required.
+- [Pandas API](../user-guide/advanced/Pandas_API.md) is enabled by default allowing users to treat PyKX Tables similarly to Pandas Dataframes for a limited subset of Pandas like functionality. As a result of this change the environment variable `PYKX_ENABLE_PANDAS_API` is no longer required.
 - Addition of file based configuration setting allowing users to define profiles for various PyKX modalities through definition of the file `.pykx.config` see [here](../user-guide/configuration.md) for more information.
 - Addition of new PyKX license installation workflow for users who do not have a PyKX license allowing for installation of personal licenses via a form based install process. This updated flow is outlined [here](../getting-started/installing.md).
 - Addition of a new module `pykx.license` which provides functionality for the installation of licenses, checking of days to expiry and validation that the license which PyKX is using matches the file/base64 string the user expects. For more information see [here](../api/license.md).
@@ -5132,10 +5387,10 @@ the following reads a CSV file and specifies the types of the three columns name
 **Additions**
 
 - Added `merge_asof` to the Pandas like API.
-    - See [here](../user-guide/advanced/Pandas_API.ipynb#tablemerge_asof) for details of supported keyword arguments and limitations.
+    - See [here](../user-guide/advanced/Pandas_API.md) for details of supported keyword arguments and limitations.
 - Added `set_index` to the Pandas like API.
-    - See [here](../user-guide/advanced/Pandas_API.ipynb##setting-indexes) for details of supported keyword arguments and limitations.
-- Added a set of basic computation methods operating on tabular data to the Pandas like API. See [here](../user-guide/advanced/Pandas_API.ipynb#computations) for available methods and examples.
+    - See [here](../user-guide/advanced/Pandas_API.md) for details of supported keyword arguments and limitations.
+- Added a set of basic computation methods operating on tabular data to the Pandas like API. See [here](../user-guide/advanced/Pandas_API.md) for available methods and examples.
 - `pykx.util.debug_environment` added to help with import errors.
 - q vector type promotion in licensed mode.
 - Added `.pykx.toraw` to `pykx.q` to enable raw conversions (e.g. `kx.toq(x, raw=True)`)
@@ -5285,7 +5540,7 @@ the following reads a CSV file and specifies the types of the three columns name
 
 **Beta Features**
 
-- Added support for a Pandas like API around `Table` and `KeyedTable` instances, documentation for the specific functionality can be found [here](../user-guide/advanced/Pandas_API.ipynb).
+- Added support for a Pandas like API around `Table` and `KeyedTable` instances, documentation for the specific functionality can be found [here](../user-guide/advanced/Pandas_API.md).
 - Added `.pykx.setdefault` to `pykx.q` which allows the default conversion type to be set without using environment variables.
 
 ### 1.3.2

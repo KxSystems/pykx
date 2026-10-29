@@ -42,7 +42,8 @@ extra_javascript:
   - 'https://code.jquery.com/jquery-3.6.0.min.js'
   - 'https://use.fontawesome.com/3dbf29ed12.js'
   - scripts/strip-q-prompt-copy.js
-  - scripts/init_kapa_widget.js
+  # Kapa "Ask AI" is injected by GTM container GTM-PG938LS.
+  # GA4 remains managed by GTM; do not add a separate gtag snippet.
   - scripts/collapse-code.js
   - scripts/search-highlight-clear.js
   # absolute URL so the shared, symlinked versions.js loads on every page.
@@ -134,7 +135,6 @@ plugins:
   - search
   - exclude-search:
       exclude:
-        - user-guide/advanced/Pandas_API*
         - examples/jupyter-integration*
         - examples/db-management*
         - "examples/streaming/Evolving System*"
@@ -148,7 +148,6 @@ plugins:
       skip_files:          # Skip files entirely
         - comparisons.md # Skipped due to false positives
         - performance.md # Skipped due to false positives
-        - user-guide/advanced/Pandas_API.ipynb
         - examples/jupyter-integration.ipynb
         - examples/db-management.ipynb
         - examples/streaming/Evolving System.ipynb
@@ -289,6 +288,7 @@ nav:
     - Apply attributes: user-guide/advanced/attributes.md
     - Compress and encrypt data: user-guide/advanced/compress-encrypt.md
     - Import existing q functions: user-guide/advanced/context_interface.md
+    - Load KDB-X modules: user-guide/advanced/modules.md
     - Run remote functions: user-guide/advanced/remote-functions.md
     - Serialize data: user-guide/advanced/serialization.md
     - Use KDB-X Python in subprocesses: user-guide/advanced/subprocess.md
@@ -319,12 +319,21 @@ nav:
       - Reimporter module: api/reimporting.md
       - License management: api/license.md
       - Module importing: api/module.md
+      - Jupyter magic commands: api/jupyter.md
       - KDB-X Python under q: pykx-under-q/api.md
     - Data types and conversions:
       - Python to KDB-X: api/pykx-q-data/toq.md
       - Wrappers: api/pykx-q-data/wrappers.md
       - KDB-X to Python: api/pykx-q-data/type_conversions.md
-    - pandas API: user-guide/advanced/Pandas_API.ipynb
+    - pandas API:
+      - Overview: user-guide/advanced/Pandas_API.md
+      - Metadata and aggregations: api/pandas-api/metadata.md
+      - Indexing and selection: api/pandas-api/indexing.md
+      - Merging and joining: api/pandas-api/merge.md
+      - Group by: api/pandas-api/groupby.md
+      - Sorting: api/pandas-api/sorting.md
+      - Function application: api/pandas-api/apply.md
+      - Data preprocessing: api/pandas-api/preprocessing.md
     - Exceptions: api/exceptions.md
   - Integrations:
     - NumPy: user-guide/advanced/numpy.md

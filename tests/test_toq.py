@@ -4,6 +4,8 @@ import math
 import os
 from pathlib import Path
 from platform import system
+import subprocess
+import sys
 from sys import getrefcount
 from threading import Thread
 from uuid import UUID, uuid4
@@ -687,6 +689,17 @@ def test_from_list(kx):
         kx.List('aaa')
 
 
+@pytest.mark.skipif(sys.version_info < (3, 15), reason='frozendict was added in Python 3.15')
+def test_from_frozendict(kx):
+    fd = frozendict(a=1, b=2)  # noqa: F821
+    for x in (kx.toq(fd), kx.Dictionary(fd), kx.q('{x}', fd)):
+        assert isinstance(x, kx.Dictionary)
+        assert x.py() == kx.toq({'a': 1, 'b': 2}).py()
+    assert kx.toq([fd]).py() == kx.toq([{'a': 1, 'b': 2}]).py()
+    td = frozendict(a=[1, 2], b=[3, 4])  # noqa: F821
+    assert kx.Table(data=td).py() == kx.Table(data={'a': [1, 2], 'b': [3, 4]}).py()
+
+
 @pytest.mark.unlicensed
 def test_from_dict(kx):
     assert kx.K({}).py() == {}
@@ -1184,6 +1197,21 @@ def test_from_pandas_dataframe_no_col_names(kx, pd):
 
 
 @pytest.mark.nep49
+def test_from_pandas_dataframe_col_name_types(kx, pd):
+    data = [[1, 2, 3], [4, 5, 6]]
+    assert kx.toq(pd.DataFrame(data, columns=['a', 'b', 'c'])).columns.py() == ['a', 'b', 'c']
+    for cols in ([0, 1, 2], [0.5, 1.5, 2.5]):
+        res = kx.toq(pd.DataFrame(data, columns=cols))
+        assert res.t == 98
+        assert res.columns.py() == ['x', 'x1', 'x2']
+    with pytest.raises(kx.exceptions.PyKXException,
+                       match='Failed to create table from k dictionary: nyi'):
+        kx.toq(pd.DataFrame(data, columns=['a', 1, 'c']))
+    # The failed conversion must not leave a q error pending for the next one to report
+    assert kx.toq(pd.DataFrame(data, columns=['a', 'b', 'c'])).columns.py() == ['a', 'b', 'c']
+
+
+@pytest.mark.nep49
 def test_from_pandas_index(q, kx, pd):
     t = q('([] a:til 4; b:"abcd"; c:`w`x`y`z; d:100+til 4)')
     assert all(kx.K(t.pd().index) == q('0 1 2 3'))
@@ -1191,6 +1219,9 @@ def test_from_pandas_index(q, kx, pd):
     assert (kx.K(mkt.pd().index)._values == q('key', mkt)._values).all()
     assert kx.K(pd.MultiIndex.from_product([[0, 1], [0, 1]])).py() == \
         {'0': [0, 0, 1, 1], '1': [0, 1, 0, 1]}
+    with pytest.raises(kx.exceptions.PyKXException,
+                       match='Failed to create table from pandas MultiIndex: nyi'):
+        kx.K(pd.MultiIndex.from_arrays([[1, 2], [3, 4]], names=['a', 1]))
     with pytest.raises(TypeError):
         kx.K(pd.IntervalIndex.from_tuples([(0, 1), (1, 4), (4, 6)]))
 
@@ -1494,6 +1525,27 @@ def test_null_roundtrip(kx):
             == kx.toq(t[col].np(), handle_nulls=True)
         ).all()
     assert (t == kx.toq(t.pd(), handle_nulls=True)).all().all()
+
+
+@pytest.mark.isolate
+def test_nep_49_free_large_array_unlicensed():
+    script = (
+        'import numpy as np, pykx as kx\n'
+        'assert not kx.licensed\n'
+        'for n in (1048574, 1048575, 2000000):\n'
+        '    a = np.empty(n, dtype=np.int64)\n'
+        '    a[:] = 1\n'
+        '    assert a.sum() == n\n'
+        '    del a\n'
+    )
+    proc = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c', script),
+        env={**os.environ, 'QARGS': '--unlicensed'},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stdout
 
 
 @pytest.mark.unlicensed

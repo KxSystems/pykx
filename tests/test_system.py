@@ -202,6 +202,13 @@ def test_system_load():
 
 
 @pytest.mark.isolate
+def test_system_load_empty_path(kx):
+    for empty in ('', kx.CharVector(b''), kx.SymbolAtom(''), kx.SymbolAtom(':')):
+        with pytest.raises(ValueError, match='path is empty'):
+            kx.q.system.load(empty)
+
+
+@pytest.mark.isolate
 def test_system_space_load(tmp_path):
     test_location = tmp_path/'test directory'
     os.makedirs(test_location, exist_ok=True)

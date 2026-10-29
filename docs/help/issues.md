@@ -67,6 +67,8 @@ q)h:hopen`::5001 /Attempting to create an IPC connection to a `pykx` embedded q 
 /This process is now hung indefinitely as the embedded q server cannot respond
 ```
 
+The same restriction applies to HTTP handlers. `#!q .z.ph` and `#!q .z.pp` are dispatched by the q main loop, so an embedded q process cannot serve HTTP requests either.
+
 #### Timers
 Timers in q rely on the main loop of the standalone executable so they will not work on the q process embedded in python.
 ```python

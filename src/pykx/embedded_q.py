@@ -147,14 +147,12 @@ class EmbeddedQ(Q, metaclass=ABCMetaSingleton):
             if os.getenv('PYKX_UNDER_Q', '') == '':
                 os.environ['PYKX_UNDER_PYTHON'] = 'true'
                 code += 'setenv[`PYKX_UNDER_PYTHON;"true"];'
+                code += '.pykx.util.underPython:1b;'
                 code += f'2:[`$"{pykx_qlib_path}";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
                 code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
             else:
-                suffix = ""
-                if os.getenv("PYKXQ_THREADING", '') != '':
-                    suffix = "_m"
-                code += f'2:[`$"{pykx_qlib_path}q{suffix}";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
-                code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q{suffix}") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
+                code += f'2:[`$"{pykx_qlib_path}q";(`k_pykx_init; 2)][`$"{find_core_lib("q").as_posix()}";{"1b" if pykx_threading else "0b"}];'  # noqa: E501
+                code += f'`.pykx.modpow set {{((`$"{pykx_qlib_path}q") 2: (`k_modpow; 3))["j"$x;"j"$y;$[z~(::);(::);"j"$z]]}};'  # noqa: E501
             code += '@[get;`.pykx.i.kxic.loadfailed;{()!()}]'
             kxic_loadfailed = self._call(code, skip_debug=True).py()
             if qce or '--sql' in qargs:

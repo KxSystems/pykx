@@ -51,7 +51,7 @@ Congratulations you now have a fully functional high-volume ingestion pipeline r
 The call to `#!python kx.tick.BASIC` above provides several keyword arguments which help to manage the initialization of the various processes:
 
 1. `#!python tables`: Provides a dictionary mapping the names of tables to be ingested and persisted to their schema. This is the only parameter required for initializing the basic infrastructure.
-2. `#!python log_directory`: Generates a directory (if not currently available) and persists a log of each incoming message to a log-file associated with today's date.
+2. `#!python log_directory`: Generates a directory (if not currently available) and persists a log of each incoming message to a log-file associated with today's date. Set this to `#!python None` if you do not want incoming messages to be logged, in which case no log-file or directory is created.
 3. `#!python database`: If omitted, the HDB process outlined above will not be initialized. The `#!python database` denoted here should point to a directory containing a partitioned KDB-X database, for more information on this form of database see [here](../database/index.md).
 
 For a full breakdown of the BASIC API functionality go [here](../../../api/tick.md#pykx.tick.BASIC).

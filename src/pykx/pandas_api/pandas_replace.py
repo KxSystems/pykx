@@ -10,6 +10,26 @@ class PandasReplace:
 
     @api_return
     def replace(self, to_replace, value):
+        """Replace all occurrences of a value in the table.
+
+        Parameters:
+            to_replace (Any): The value to replace.
+            value (Any): The value to replace it with.
+
+        Returns:
+            (Table): The table with the values replaced.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.replace(5, 50)
+            pykx.Table(pykx.q('
+            a b
+            ----
+            1 4
+            2 50
+            3 6
+            '))
+        """
         return q('''
                 {[t;s;r]
                 gt:$[-11h~type t;get;(::)] t;

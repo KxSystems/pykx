@@ -2,9 +2,84 @@ import pytest
 
 import os
 import sys
+from pathlib import Path
 from platform import system
 
 import numpy as np
+
+
+@pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_entry_points_do_not_leak_references():
+    # Repeated `.pykx` calls must not grow the target's reference count (KXI-73830).
+    # tests/test_underq_refcounts.py covers the same leaks in the under-q copy of the
+    # C library, along with a GIL leak that only bites there.
+    import pykx as kx
+
+    n = 200
+
+    def per_op(get, op):
+        op()  # warm up, so one-off interning is not counted
+        before = get()
+        for _ in range(n):
+            op()
+        return (get() - before) / n
+
+    getrc = lambda expr: kx.q(  # noqa: E731
+        '.pykx.eval["__import__(\'sys\').getrefcount(' + expr + ')"]`').py()
+
+    # Built-in exception types are immortal on Python 3.12+, so a leaked
+    # reference to one is not observable. Use a heap-allocated class instead.
+    kx.q('.pykx.pyexec"class Boom(Exception): pass"')
+
+    def raise_boom():
+        try:
+            kx.q('.pykx.eval["(_ for _ in ()).throw(Boom())"]`')
+        except Exception:
+            pass
+
+    assert per_op(lambda: getrc('Boom'), raise_boom) == 0  # k_py_error
+    assert per_op(lambda: sys.getrefcount(np), lambda: kx.q('.pykx.import`numpy')) == 0
+
+    kx.q('.pykx.pyexec"gv = object()"')
+    assert per_op(lambda: getrc('gv'), lambda: kx.q('.pykx.get`gv')) == 0
+
+    kx.q('.pykx.pyexec"import types"')
+    kx.q('.pykx.pyexec"holder = types.SimpleNamespace()"')
+    assert per_op(
+        lambda: getrc('holder'),
+        lambda: kx.q('.pykx.setattr[.pykx.unwrap .pykx.eval["holder"];`a;1]'),
+    ) == 0
+
+
+@pytest.mark.isolate
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_repr_does_not_leak_memory():
+    # repr leaked the bytes it encoded, which grows memory rather than a count.
+    import pykx as kx
+
+    def rss_pages():
+        with open('/proc/self/statm') as f:
+            return int(f.read().split()[1])
+
+    if not Path('/proc/self/statm').exists():
+        pytest.skip('no /proc to measure resident memory from')
+
+    kx.q('.pykx.pyexec"big = list(range(100000))"')
+    op = lambda: kx.q('.pykx.repr .pykx.unwrap .pykx.eval["big"]')  # noqa: E731
+    op()
+    before = rss_pages()
+    n = 500
+    for _ in range(n):
+        op()
+    # The leak was 168 pages per call, and page accounting drifts a little on its own.
+    assert (rss_pages() - before) / n < 20
 
 
 @pytest.mark.isolate

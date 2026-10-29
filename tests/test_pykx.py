@@ -35,6 +35,24 @@ def test_dir(kx):
 
 
 @pytest.mark.isolate
+def test_import_does_not_import_streamlit():
+    # Importing streamlit overwrites the default Plotly template, so it must wait for first use.
+    code = ("import sys, pykx; print('RESULT', 'streamlit' in sys.modules, "
+            "'pykx._streamlit_conn' in sys.modules, pykx.streamlit.__all__ == ['PyKXConnection'])")
+    out = subprocess.run([sys.executable, '-c', code], capture_output=True, text=True)
+    assert out.returncode == 0, out.stderr
+    result = [line for line in out.stdout.splitlines() if line.startswith('RESULT')]
+    assert result == ['RESULT False False True'], out.stdout + out.stderr
+
+
+@pytest.mark.unlicensed
+def test_streamlit_star_import(kx):
+    names = {}
+    exec('from pykx.streamlit import *', names)
+    assert names['PyKXConnection'] is kx.streamlit.PyKXConnection
+
+
+@pytest.mark.isolate
 def test_qargs_q_flag():
     # KDB-X Python used to fail on startup if the '-q' flag was manually provided
     os.environ['QARGS'] = '-q'
@@ -330,6 +348,28 @@ def test_pykx_stdout_stderr_under_q():
     assert (lambda x: ([int(i.split(',')[1]) for i in x]))(output) == list(range(1, 23))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_load_pykx_q_in_python_process():
+    subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c',
+         'import pykx;pykx.install_into_QHOME()'),
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )
+    res = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c',
+         'import pykx as kx\n'
+         'kx.q(\'system"l pykx.q"\')\n'
+         'print("underq-load-ok", kx.q(\'.pykx.eval["1+1"]`\').py())\n'),
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=120,
+    )
+    assert 'SIGSEGV' not in res.stdout, res.stdout
+    assert res.returncode == 0, res.stdout
+    assert 'underq-load-ok 2' in res.stdout, res.stdout
+
+
 @pytest.mark.isolate
 def test_compressed_enum_segfault(kx):
     import tempfile
@@ -354,7 +394,7 @@ def test_PYKX_Q_LIB_LOCATION():
     import shutil
     temp_dir = tempfile.TemporaryDirectory().name
     pykx_loc = os.path.dirname(importlib.util.find_spec("pykx").origin)
-    shutil.copytree(os.path.join(pykx_loc, "lib"), temp_dir)
+    shutil.copytree(os.path.join(pykx_loc, "lib"), temp_dir, ignore_dangling_symlinks=True)
     os.environ['PYKX_Q_LIB_LOCATION'] = temp_dir
     file = os.path.join(temp_dir, "PYKX_Q_LIB_LOCATION.q")
     with open(file, 'w') as f:
@@ -439,15 +479,15 @@ def test_kx_versions(kx):
     test_K = str(kx.q.z.K.py())
     test_vars = (test_os, test_arch, test_K)
     if test_vars == ('Linux', 'x86_64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.07.23')
+        assert kx.q.z.k == kx.q('2026.10.15')
     elif test_vars == ('Linux', 'aarch64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.07.23')
+        assert kx.q.z.k == kx.q('2026.10.15')
     elif test_vars == ('Darwin', 'x86_64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.07.23')
+        assert kx.q.z.k == kx.q('2026.10.15')
     elif test_vars == ('Darwin', 'arm64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.07.23')
+        assert kx.q.z.k == kx.q('2026.10.15')
     elif test_vars == ('Windows', 'AMD64', '5.0'):
-        assert kx.q.z.k == kx.q('2026.07.23')
+        assert kx.q.z.k == kx.q('2026.10.15')
     else:
         raise AssertionError(f"Unexpected env: {test_vars}")
 

@@ -15,7 +15,64 @@
 #define Py_True _Py_TrueStruct
 #define Py_False _Py_FalseStruct
 
+#ifdef _WIN32
+// Resolved at runtime rather than through a static import on q.dll, which the Windows loader
+// would satisfy from any copy of the interpreter it found by name (KXI-46558).
+#define Q_FUNCS \
+    X(K,    kb,  (int))              \
+    X(K,    kj,  (long long))        \
+    X(K,    knk, (int, ...))         \
+    X(K,    kp,  (char*))            \
+    X(K,    kpn, (char*, long long)) \
+    X(K,    krr, (const char*))      \
+    X(K,    ks,  (char*))            \
+    X(K,    ktn, (int, long long))   \
+    X(void, r0,  (K))                \
+    X(K,    r1,  (K))
+
+#define X(ret, name, args) static ret (*q_##name)args;
+Q_FUNCS
+#undef X
+
+static int q_funcs_loaded = 0;
+
+// dlopen(NULL) is the host executable, q.exe under q. dlfcn-win32 does not widen the search to
+// the other loaded modules, so an embedded host, where q.dll holds the API, needs naming.
+static void load_q_funcs(void) {
+    void* h = dlopen(NULL, RTLD_NOW | RTLD_GLOBAL);
+    q_funcs_loaded = 1;
+    if (!h || !dlsym(h, "kj"))
+        h = dlopen("q.dll", RTLD_NOW | RTLD_GLOBAL);
+    if (!h) {
+        fprintf(stderr, "pykxq: cannot find a q interpreter to resolve the q API against\n");
+        return;
+    }
+#define X(ret, name, args) \
+    if (!(q_##name = (ret (*)args)dlsym(h, #name))) \
+        fprintf(stderr, "pykxq: q symbol %s is not exported by the q interpreter\n", #name);
+    Q_FUNCS
+#undef X
+}
+
+// q enters this library through several functions and makes no promise about which comes first,
+// so bind on first use rather than from any one of them.
+#define Q_FUNC(name) (q_funcs_loaded ? q_##name : (load_q_funcs(), q_##name))
+
+#define kb  Q_FUNC(kb)
+#define kj  Q_FUNC(kj)
+#define knk Q_FUNC(knk)
+#define kp  Q_FUNC(kp)
+#define kpn Q_FUNC(kpn)
+#define krr Q_FUNC(krr)
+#define ks  Q_FUNC(ks)
+#define ktn Q_FUNC(ktn)
+#define r0  Q_FUNC(r0)
+#define r1  Q_FUNC(r1)
+#endif
+
 void* q_lib;
+
+K raise_k_error(char* error_str);
 
 static P sys;
 static P builtins;
@@ -36,8 +93,24 @@ static P KEYWORD_ONLY;
 static P VAR_KEYWORD;
 static P error_preamble;
 
-static P M, errfmt;
-static void** N;
+// Name of the first handle above that `k_pykx_init` could not resolve, or NULL.
+static const char* init_failure;
+
+// Under q the bootstrap `import pykx` is itself driven through k_pyrun, so anything
+// that import raises arrives here while every handle is still NULL.
+static int pykx_initialized = 0;
+
+static K uninitialized_error(void) {
+    if (init_failure) {
+        char msg[256];
+        snprintf(msg, sizeof(msg),
+                 "KDB-X Python is not initialized - could not resolve '%s' from the pykx "
+                 "Python package", init_failure);
+        return raise_k_error(msg);
+    }
+    return raise_k_error("KDB-X Python is not initialized - 'import pykx' did not complete");
+}
+
 
 int pykx_flag = -1;
 
@@ -66,69 +139,95 @@ static int check_py_foreign(K x){return x->t==112 && x->n==2 && *kK(x)==(K)py_de
 
 EXPORT K k_check_python(K x){return kb(check_py_foreign(x));}
 
+// PyImport_AddModule returns an empty module rather than failing, so a failed
+// `import pykx` shows up as a missing key in one of these dicts.
+static P init_module_dict(const char* module, int import) {
+    P m = import ? PyImport_ImportModule(module) : PyImport_AddModule(module);
+    // The module reference is held on purpose, the dict below is borrowed from it.
+    return m ? PyModule_GetDict(m) : NULL;
+}
+
+static P init_dict_item(P dict, const char* key) {
+    return dict ? PyDict_GetItemString(dict, key) : NULL;
+}
+
+static P init_attr(P obj, const char* attr) {
+    return obj ? PyObject_GetAttrString(obj, attr) : NULL;
+}
+
+// Record the first handle we could not resolve, rather than storing NULL and
+// segfaulting at some later, unrelated call.
+static P init_require(P p, const char* what) {
+    if (!p && !init_failure) init_failure = what;
+    return p;
+}
+
 EXPORT K k_pykx_init(K k_q_lib_pat, K _pykx_threading) {
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
 
-    sys = PyModule_GetDict(PyImport_ImportModule("sys"));
-    builtins = PyModule_GetDict(PyImport_ImportModule("builtins"));
-    toq_module = PyModule_GetDict(PyImport_AddModule("pykx.toq"));
-    toq = PyDict_GetItemString(toq_module, "toq");
-    wrappers_module = PyModule_GetDict(PyImport_AddModule("pykx._wrappers"));
-    py_wrappers_module = PyModule_GetDict(PyImport_AddModule("pykx.wrappers"));
-    exception_tracker = PyDict_GetItemString(wrappers_module, "_current_exception");
-    factory = PyDict_GetItemString(wrappers_module, "_factory");
-    pyfactory = PyDict_GetItemString(wrappers_module, "_pyfactory");
-    k_factory = PyDict_GetItemString(py_wrappers_module, "_internal_k_list_wrapper");
-    k_dict_converter = PyDict_GetItemString(py_wrappers_module, "_internal_k_dict_to_py");
-    thread_get_ident = PyDict_GetItemString(PyModule_GetDict(PyImport_AddModule("threading")), "get_ident");
-    P Parameter = PyDict_GetItemString(PyModule_GetDict(PyImport_AddModule("inspect")), "Parameter");
-    POSITIONAL_ONLY = PyObject_GetAttrString(Parameter, "POSITIONAL_ONLY");
-    POSITIONAL_OR_KEYWORD = PyObject_GetAttrString(Parameter, "POSITIONAL_OR_KEYWORD");
-    VAR_POSITIONAL = PyObject_GetAttrString(Parameter, "VAR_POSITIONAL");
-    KEYWORD_ONLY = PyObject_GetAttrString(Parameter, "KEYWORD_ONLY");
-    VAR_KEYWORD = PyObject_GetAttrString(Parameter, "VAR_KEYWORD");
+    init_failure = NULL;
+
+    sys = init_require(init_module_dict("sys", 1), "sys");
+    builtins = init_module_dict("builtins", 1);
+    toq_module = init_module_dict("pykx.toq", 0);
+    toq = init_require(init_dict_item(toq_module, "toq"), "pykx.toq.toq");
+    wrappers_module = init_module_dict("pykx._wrappers", 0);
+    py_wrappers_module = init_module_dict("pykx.wrappers", 0);
+    exception_tracker = init_require(init_dict_item(wrappers_module, "_current_exception"),
+                                     "pykx._wrappers._current_exception");
+    factory = init_dict_item(wrappers_module, "_factory");
+    pyfactory = init_require(init_dict_item(wrappers_module, "_pyfactory"),
+                             "pykx._wrappers._pyfactory");
+    k_factory = init_require(init_dict_item(py_wrappers_module, "_internal_k_list_wrapper"),
+                             "pykx.wrappers._internal_k_list_wrapper");
+    k_dict_converter = init_require(init_dict_item(py_wrappers_module, "_internal_k_dict_to_py"),
+                                    "pykx.wrappers._internal_k_dict_to_py");
+    thread_get_ident = init_require(init_dict_item(init_module_dict("threading", 0), "get_ident"),
+                                    "threading.get_ident");
+    P Parameter = init_dict_item(init_module_dict("inspect", 0), "Parameter");
+    POSITIONAL_ONLY = init_attr(Parameter, "POSITIONAL_ONLY");
+    POSITIONAL_OR_KEYWORD = init_attr(Parameter, "POSITIONAL_OR_KEYWORD");
+    VAR_POSITIONAL = init_attr(Parameter, "VAR_POSITIONAL");
+    KEYWORD_ONLY = init_attr(Parameter, "KEYWORD_ONLY");
+    VAR_KEYWORD = init_attr(Parameter, "VAR_KEYWORD");
     error_preamble = PyUnicode_FromString("Error in pykx q extension library: ");
 
+    // A failed lookup leaves an exception set that nothing is going to consume.
+    PyErr_Clear();
+    pykx_initialized = init_failure == NULL;
+
     PyGILState_Release(gstate);
-    return (K)0;
+    return pykx_initialized ? (K)0 : uninitialized_error();
 }
 
 EXPORT K k_init_python(K x, K y, K z) {
     static int i=0;
-    int f,g;
+    int f;
     char* l;
     char* h;
     char* hh;
-    K n,v;
-    P a,b,pyhome;
+    wchar_t* ph=NULL;
+    wchar_t* phh=NULL;
     P(i,0)l=zs(x),h=zs(y),hh=zs(z);
     f=pyl(l);
     free(l);
-    P(!f,krr("libpython"))
+    if(!f){free(h);free(hh);return krr("libpython");}
     if(!Py_IsInitialized()){
-        Py_SetPythonHome(Py_DecodeLocale(h,0));
-        Py_SetProgramName(Py_DecodeLocale(hh,0));
-        Py_InitializeEx(0);
+        ph=Py_DecodeLocale(h,0);
+        phh=Py_DecodeLocale(hh,0);
+        Py_SetPythonHome(ph);
+        Py_SetProgramName(phh);
+        Py_InitializeEx(1);
         if(PyEval_ThreadsInitialized()&&!PyGILState_Check())
             PyEval_RestoreThread(PyGILState_GetThisThreadState());
+        if(PyGILState_Check())
+            PyEval_SaveThread();
+        PyMem_RawFree(ph);
+        PyMem_RawFree(phh);
     }
-    M = PyModule_GetDict(PyImport_AddModule("__main__"));
-    n = ktn(KS,0);
-    v = ktn(0,0);
-    if(a = PyImport_ImportModule("numpy.core.multiarray")){
-        N = PyCapsule_GetPointer(b=PyObject_GetAttrString(a,"_ARRAY_API"),0);
-        if(!N||!pyn(N))
-            N=0;
-        Py_DecRef(b);
-        Py_DecRef(a);
-    }
-    PyErr_Clear();
-    if(a=PyImport_ImportModule("traceback")) {
-        errfmt=PyObject_GetAttrString(a,"format_exception");
-        Py_DecRef(a);
-    }
-    PyErr_Clear();
+    free(h);
+    free(hh);
     return (K)0;
 }
 
@@ -148,8 +247,9 @@ static K create_foreign(P p) {
 }
 
 void flush_stdout() {
+    if (!sys) return;
     P out = PyDict_GetItemString(sys, "stdout");
-    if ( PyObject_HasAttrString(out, "flush") ) {
+    if ( out && PyObject_HasAttrString(out, "flush") ) {
         PyObject_CallMethod(out, "flush", NULL);
     }
 }
@@ -165,9 +265,9 @@ K k_py_error() {
 
     // Build a q error object with the repr of the exception value as its message. The full
     // traceback is provided as the cause to the QError that will be raised.
-    P ex_repr = PyObject_CallMethod(ex_value, "__repr__", NULL);
-    K k = ks((char*)PyUnicode_AsUTF8(ex_repr));
-    k->t = -128;
+    P ex_repr = ex_value ? PyObject_CallMethod(ex_value, "__repr__", NULL) : NULL;
+    const char* repr_str = ex_repr ? PyUnicode_AsUTF8(ex_repr) : NULL;
+    K k = raise_k_error((char*)(repr_str ? repr_str : "Unknown Python error"));
     Py_XDECREF(ex_repr);
 
     // Store the Python exception in `k._current_exception` so that when the k module raises the
@@ -175,16 +275,26 @@ K k_py_error() {
     // `raise QError from _current_exception[threading.getident()]`.
     // We use a dict to track exceptions on a per-thread basis. Once the exception has been used
     // by the k module, it is set to `None` in the `exception_tracker` dictionary.
-    P thread_id = PyObject_CallFunction(thread_get_ident, NULL);
-    if (PyDict_SetItem(exception_tracker, thread_id, ex_value) && PyErr_Occurred()) {
-        PyErr_WriteUnraisable(ex_value);
+    // Skipped before initialization completes: the handles are still NULL, and the
+    // `pykx` code that consumes a tracked exception is what failed to import. This is
+    // what makes a failing `import pykx` under q reportable instead of fatal.
+    P thread_id = NULL;
+    if (pykx_initialized) {
+        thread_id = PyObject_CallFunction(thread_get_ident, NULL);
+        if (PyDict_SetItem(exception_tracker, thread_id, ex_value) && PyErr_Occurred()) {
+            PyErr_WriteUnraisable(ex_value);
+        }
     }
     if (ex_value)
         Py_XDECREF(ex_value);
+    if (ex_type)
+        Py_XDECREF(ex_type);
     if (ex_traceback)
         Py_XDECREF(ex_traceback);
     if (thread_id)
         Py_XDECREF(thread_id);
+    // Leave no exception set, it would be picked up by the next unrelated call.
+    PyErr_Clear();
     return k;
 }
 
@@ -240,6 +350,7 @@ static P k_to_py_list(K x) {
 
 EXPORT K k_to_py_foreign(K x, K typenum, K israw) {
     K k;
+    if (!pykx_initialized) return uninitialized_error();
     PyGILState_STATE gstate;
     gstate = PyGILState_Ensure();
     P p = k_to_py_cast(x, typenum, israw);
@@ -307,6 +418,12 @@ EXPORT K k_pyrun(K k_ret, K k_eval_or_exec, K as_foreign, K k_code_string) {
         Py_XDECREF(py_ret);
         PyGILState_Release(gstate);
         return k;
+    }
+    if (!toq) {
+        Py_XDECREF(py_ret);
+        flush_stdout();
+        PyGILState_Release(gstate);
+        return uninitialized_error();
     }
     P py_k_ret = PyObject_CallFunctionObjArgs(toq, py_ret, NULL);
     Py_XDECREF(py_ret);
@@ -399,6 +516,7 @@ EXPORT K k_modpow(K k_base, K k_exp, K k_mod_arg) {
 
 
 EXPORT K foreign_to_q(K f, K b, K a) {
+    if (!pykx_initialized) return uninitialized_error();
     if (f->t != 112)
         return raise_k_error("Expected foreign object for call to .pykx.toq");
     if (!check_py_foreign(f))
@@ -414,11 +532,17 @@ EXPORT K foreign_to_q(K f, K b, K a) {
     PyTuple_SetItem(toq_args, 1, Py_BuildValue(""));
 
     P _kwargs = PyDict_New();
-    PyDict_SetItemString(_kwargs, "strings_as_char", PyBool_FromLong((long)b->g));
-    PyDict_SetItemString(_kwargs, "no_allocator", PyBool_FromLong((long)a->g));
+    P strings_as_char = PyBool_FromLong((long)b->g);
+    P no_allocator = PyBool_FromLong((long)a->g);
+    PyDict_SetItemString(_kwargs, "strings_as_char", strings_as_char);
+    PyDict_SetItemString(_kwargs, "no_allocator", no_allocator);
+    Py_XDECREF(strings_as_char);
+    Py_XDECREF(no_allocator);
 
     P qpy_val = PyObject_Call(toq, toq_args, _kwargs);
     if ((k = k_py_error())) {
+        Py_XDECREF(toq_args);
+        Py_XDECREF(_kwargs);
         PyGILState_Release(gstate);
         return k;
     }
@@ -487,8 +611,10 @@ EXPORT K repr(K as_repr, K f) {
     }
     flush_stdout();
     const char *chars = PyBytes_AS_STRING(str);
+    K res = kp(chars);
+    Py_XDECREF(str);
     PyGILState_Release(gstate);
-    return kp(chars);
+    return res;
 }
 
 
@@ -532,12 +658,19 @@ EXPORT K get_global(K attr) {
         return k;
     }
     P _attr = Py_BuildValue("s", attr->s);
-    K res = create_foreign(PyObject_GetAttr(p, _attr));
+    P pres = PyObject_GetAttr(p, _attr);
     Py_XDECREF(_attr);
     if ((k = k_py_error())) {
+        Py_XDECREF(pres);
         PyGILState_Release(gstate);
         return k;
     }
+    if (!pres) {
+        PyGILState_Release(gstate);
+        return raise_k_error("Failed to get global in .pykx.get");
+    }
+    K res = create_foreign(pres);
+    Py_XDECREF(pres);
     PyGILState_Release(gstate);
     return res;
 }
@@ -584,7 +717,6 @@ EXPORT K set_attr(K f, K attr, K val) {
     int gstate = PyGILState_Ensure();
     K k;
     P p = get_py_ptr(f);
-    Py_INCREF(p);
     P v = get_py_ptr(val);
     if ((k = k_py_error())) {
         PyGILState_Release(gstate);
@@ -612,6 +744,7 @@ EXPORT K import(K module) {
        return k;
     }
     res = create_foreign(p);
+    Py_XDECREF(p);
     PyGILState_Release(gstate);
     return res;
 }
@@ -622,6 +755,7 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
 
     K k;
     P pyf = NULL;
+    if (!pykx_initialized) return uninitialized_error();
 
     int gstate = PyGILState_Ensure();
     if ((k = k_py_error())) {
@@ -631,6 +765,8 @@ EXPORT K call_func(K f, K has_no_args, K args, K kwargs) {
     pyf = get_py_ptr(f);
     Py_INCREF(pyf);
     if (!PyCallable_Check(pyf)) {
+        Py_XDECREF(pyf);
+        PyGILState_Release(gstate);
         return raise_k_error("Attempted to call non callable python foreign object");
     }
 

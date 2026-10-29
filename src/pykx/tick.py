@@ -10,7 +10,6 @@ from .ipc import SyncQConnection
 from . import wrappers as k
 
 import inspect
-import os
 import time
 from typing import Callable, Union
 
@@ -338,7 +337,8 @@ class TICK(STREAMING):
         tables: A dictionary mapping the names of tables and their schemas which are
             used to denote the tables which the tickerplant will process
         hard_reset: Reset logfiles for the current date when starting tickerplant
-        log_directory: The location of the directory to which logfiles will be published
+        log_directory: The location of the directory to which logfiles will be published,
+            if set to `None` no logfile will be created and messages will not be logged
         chained: If the tickerplant is 'chained' or not, if chained the process will
             not log messages or run end-of-day processing
         init_args: A list of arguments passed to the initialized q process at startup
@@ -391,11 +391,12 @@ class TICK(STREAMING):
     """
         self._chained = chained
         self._tables=tables
+        self._hard_reset = hard_reset
         self._name = 'Tickerplant'
 
         print(f'Initialising {self._name} process on port: {port}')
         super().__init__(port, process_logs=process_logs, init_args=init_args)
-        self._log_directory = os.getcwd() if log_directory is None else log_directory
+        self._log_directory = log_directory
         try:
             self._connection('{.tick.hardReset:x}', hard_reset)
             self._connection('{.tick.logdir:$[x~(::);();string[x]]}', log_directory)
@@ -408,7 +409,7 @@ class TICK(STREAMING):
         except BaseException as err:
             print(f'{self._name} failed to initialise on port: {port}\n')
             if self._connection is not None:
-                self.server.stop()
+                self.stop()
             raise err
         print(f'{self._name} initialised successfully on port: {port}\n')
 
@@ -480,6 +481,9 @@ class TICK(STREAMING):
         Initialising Tickerplant process on port: 5030
         Tickerplant initialised successfully on port: 5030
 
+        Starting Tickerplant data processing on port: 5030
+        Tickerplant process successfully started on port: 5030
+
         Tickerplant on port 5030 successfully restarted
         >>> tick('trade')
         pykx.Table(pykx.q('
@@ -489,14 +493,17 @@ class TICK(STREAMING):
         ```
         """
         print(f'Restarting {self._name} on port {self._port}\n')
+        init_config = self._init_config
         self.stop()
         self.__init__(port=self._port,
                       process_logs=self._process_logs,
                       tables=self._tables,
                       log_directory=self._log_directory,
-                      chained=self._chained)
-        if self._init_config is not None:
-            self.init(config=self._init_config)
+                      hard_reset=self._hard_reset,
+                      chained=self._chained,
+                      init_args=self._init_args)
+        if init_config is not None:
+            self.start(config=init_config)
         print(f'{self._name} on port {self._port} successfully restarted\n')
 
     def set_tables(self, tables: dict) -> None:
@@ -761,7 +768,7 @@ class RTP(STREAMING):
         except BaseException as err:
             print(f'{self._name} processor failed to initialise on port: {port}\n')
             if self._connection is not None:
-                self.server.stop()
+                self.stop()
             raise err
         print(f'{self._name} processor initialised successfully on port: {port}\n')
 
@@ -881,6 +888,7 @@ class RTP(STREAMING):
         ```
         """
         print(f'Restarting {self._name} processor on port {self._port}\n')
+        init_config = self._init_config
         self.stop()
         self.__init__(port=self._port,
                       process_logs=self._process_logs,
@@ -890,9 +898,10 @@ class RTP(STREAMING):
                       vanilla=self._vanilla,
                       pre_processor=self._pre_processor,
                       post_processor=self._post_processor,
-                      tables=self._tables)
-        if self._init_config is not None:
-            self.init(config=self._init_config)
+                      tables=self._tables,
+                      init_args=self._init_args)
+        if init_config is not None:
+            self.start(config=init_config)
         print(f'{self._name} processor on port {self._port} successfully restarted\n')
 
     def pre_processor(self, function: Callable) -> None:
@@ -1130,6 +1139,7 @@ class HDB(STREAMING):
         self._libraries = libraries
         self._apis = apis
         self._tables = tables
+        self._database = None
         print(f'Initialising {self._name} process on port: {port}')
         try:
             super().__init__(port,
@@ -1143,7 +1153,7 @@ class HDB(STREAMING):
         except BaseException as err:
             print(f'{self._name} failed to initialise on port: {port}\n')
             if self._connection is not None:
-                self.server.stop()
+                self.stop()
             raise err
         print(f'{self._name} initialised successfully on port: {port}\n')
 
@@ -1221,14 +1231,17 @@ class HDB(STREAMING):
         ```
         """
         print(f'Restarting {self._name} on port {self._port}\n')
+        init_config = self._init_config
+        database = self._database
         self.stop()
         self.__init__(port=self._port,
                       process_logs=self._process_logs,
                       libraries=self._libraries,
                       apis=self._apis,
-                      tables=self._tables)
-        if self._init_config is not None:
-            self.init(self._database, self._init_config)
+                      tables=self._tables,
+                      init_args=self._init_args)
+        if init_config is not None:
+            self.start(database=database, config=init_config)
         print(f'{self._name} on port {self._port} successfully restarted\n')
 
     def set_tables(self, tables: dict) -> None:
@@ -1362,7 +1375,7 @@ class GATEWAY(STREAMING):
         except BaseException as err:
             print(f'{self._name} failed to initialise on port: {port}\n')
             if self._connection is not None:
-                self.server.stop()
+                self.stop()
             raise err
         if connections is not None:
             self._connection('{.gw.ports:x}', connections)
@@ -1475,20 +1488,25 @@ class GATEWAY(STREAMING):
         Successfully registered callable function 'custom_function' on port 5035
         Gateway process initialised successfully on port: 5035
 
+        Starting Gateway access on port: 5035
+        Gateway access successfully started on port: 5035
+
         Gateway process on port 5035 successfully restarted
         >>> gateway('gateway_api', '1+1')
         pykx.LongAtom(pykx.q('2'))
         ```
         """
         print(f'Restarting {self._name} on port {self._port}\n')
+        init_config = self._init_config
         self.stop()
         self.__init__(port=self._port,
                       process_logs=self._process_logs,
                       libraries=self._libraries,
                       apis=self._apis,
-                      connection_validator=self._connection_validator)
-        if self._init_config is not None:
-            self.init(self._init_config)
+                      connection_validator=self._connection_validator,
+                      init_args=self._init_args)
+        if init_config is not None:
+            self.start(config=init_config)
         print(f'{self._name} on port {self._port} successfully restarted\n')
 
     def connection_validation(self, function: Callable) -> None:
@@ -1573,7 +1591,8 @@ class BASIC:
     Parameters:
         tables: A dictionary mapping the names of tables and their schemas which are
             used to denote the tables which the tickerplant will process
-        log_directory: The location of the directory to which logfiles will be published
+        log_directory: The location of the directory to which logfiles will be published,
+            if set to `None` no logfile will be created and messages will not be logged
         database: The path to the database which is to be loaded on the HDB process and
             the working directory of the RDB process
         hard_reset: Reset logfiles for the current date when starting tickerplant
@@ -1631,7 +1650,7 @@ class BASIC:
     """
         self._ports = ports
         self._tables = tables
-        self._log_directory = log_directory,
+        self._log_directory = log_directory
         self._database = database
         self._hard_reset = hard_reset
         self.tick = None

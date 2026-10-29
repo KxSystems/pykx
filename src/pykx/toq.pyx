@@ -61,14 +61,14 @@ x    y
 |                  |                           | closest conforming Python type before |             |
 |                  |                           | converting to a `pykx.K` object.      |             |
 +------------------+---------------------------+---------------------------------------+-------------+
-| `handle_nulls    | `bool`                    | Convert `pd.NaT` to corresponding q   | `False`     |
+| `handle_nulls`   | `bool`                    | Convert `pd.NaT` to corresponding q   | `False`     |
 |                  |                           | null values in Pandas dataframes and  |             |
 |                  |                           | Numpy arrays.                         |             |
 +------------------+---------------------------+---------------------------------------+-------------+
-| `no_allocator    | `bool`                    | When used the conversion will not use | `False`     |
+| `no_allocator`   | `bool`                    | When used the conversion will not use | `False`     |
 |                  |                           | the `PYKX_ALLOCATOR` behavior.        |             |
 +------------------+---------------------------+---------------------------------------+-------------+
-| `strings_as_char | `bool`                    | When used all Python `str` objects    | `False`     |
+| `strings_as_char`| `bool`                    | When used all Python `str` objects    | `False`     |
 |                  |                           | are converted to `pykx.CharVector`    |             |
 |                  |                           | objects.                              |             |
 +------------------+---------------------------+---------------------------------------+-------------+
@@ -116,6 +116,7 @@ from .config import beta_features, find_core_lib, keep_local_times, k_allocator,
 from .constants import NULL_INT16, NULL_INT32, NULL_INT64
 from .constants import INF_INT16, INF_INT32, INF_INT64, INF_NEG_INT16, INF_NEG_INT32, INF_NEG_INT64
 from .exceptions import LicenseException, PyArrowUnavailable, PyKXException, QError
+from .module import QModule, unwrap as unwrap_module
 from .util import df_from_arrays, slice_to_range
 
 import importlib.util
@@ -152,6 +153,7 @@ __all__ = [
     'from_pandas_index',
     'from_pandas_series',
     'from_pathlib_path',
+    'from_qmodule',
     'from_range',
     'from_slice',
     'from_str',
@@ -175,6 +177,17 @@ if system == 'Windows': # nocov
 
 cdef inline core.K _k(x):
     return <core.K><uintptr_t>x._addr
+
+
+cdef _raise_failed(str msg):
+    # A failed q C API call leaves its error pending.
+    # Collect and free it before raising, keeping its message.
+    cdef core.K err = core.ee(NULL)
+    if err != NULL:
+        if err.s != NULL:
+            msg = f'{msg}: {str(err.s, "utf-8")}'
+        core.r0(err)
+    raise PyKXException(msg)
 
 
 # nanoseconds between 1970-01-01 and 2000-01-01
@@ -517,7 +530,7 @@ def from_pykx_k(x: k.K,
             +========================+=============================================================+
             | `None`                 | The provided `pykx.K` object unchanged.                     |
             +------------------------+-------------------------------------------------------------+
-            | `The type of `x`       | Same as for `ktype=None`.                                   |
+            | The type of `x`        | Same as for `ktype=None`.                                   |
             +------------------------+-------------------------------------------------------------+
             | `pykx.List`            | The provided `pykx.K` object as a `pykx.List` object        |
             +------------------------+-------------------------------------------------------------+
@@ -1655,7 +1668,7 @@ def from_numpy_recarray(x: np.recarray,
     )
     kx = core.xT(core.r1(_k(kk)))
     if kx == NULL:
-        raise PyKXException('Failed to create table from numpy record array')
+        _raise_failed('Failed to create table from numpy record array')
     return factory(<uintptr_t>kx, False)
 
 
@@ -1706,13 +1719,13 @@ def _to_numpy_or_categorical(x, col_name=None, df=None):
                     )
                 if x.dtype.kind == 'i':
                     dtype = _int_size_to_class[x.dtype.itemsize]
-                elif x.dtype.kind == 'm':
-                    dtype = np.timedelta64()
-                elif x.dtype.kind == 'M':
-                    dtype =  np.datetime64()
+                    na = {'na_value': _size_to_nan[x.dtype.itemsize]}
+                else:
+                    dtype = np.timedelta64() if x.dtype.kind == 'm' else np.datetime64()
+                    na = {}
                 if k_allocator:
-                    return np.array(x.to_numpy(copy=False, na_value=_size_to_nan[x.dtype.itemsize], dtype=dtype))
-                return x.to_numpy(copy=False, na_value=_size_to_nan[x.dtype.itemsize], dtype=dtype)
+                    return np.array(x.to_numpy(copy=False, dtype=dtype, **na))
+                return x.to_numpy(copy=False, dtype=dtype, **na)
             elif x.dtype.kind == 'f' and attrnull and hasnull:
                 float_class = _float_size_to_class[x.dtype.itemsize]
                 if k_allocator:
@@ -1777,7 +1790,7 @@ def from_pandas_dataframe(x: pd.DataFrame,
     """
     cdef core.K kx
 
-    if not isinstance(x.columns.values.dtype, (np.dtypes.ObjectDType, pd.StringDtype)):
+    if x.columns.values.dtype.kind != 'O':
         col_names = ['x']
         cols_length =  len(x.columns)-1
         for i in range(cols_length):
@@ -1806,7 +1819,7 @@ def from_pandas_dataframe(x: pd.DataFrame,
         )
         kx = core.xT(core.r1(_k(kk)))
         if kx == NULL:
-            raise PyKXException('Failed to create table from k dictionary')
+            _raise_failed('Failed to create table from k dictionary')
     elif ktype is k.KeyedTable:
         idx = None
         if isinstance(x.index, pd.MultiIndex):
@@ -1818,7 +1831,7 @@ def from_pandas_dataframe(x: pd.DataFrame,
         k_values = from_pandas_dataframe(x.reset_index(drop=True), cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
         kx = core.xD(core.r1(_k(k_keys)), core.r1(_k(k_values)))
         if kx == NULL:
-            raise PyKXException('Failed to create k dictionary (keyed table)')
+            _raise_failed('Failed to create k dictionary (keyed table)')
     else:
         raise _conversion_TypeError(x, repr('pandas.DataFrame'), ktype)
     if convert_dict == None:
@@ -1918,13 +1931,18 @@ def from_pandas_index(x: pd.Index,
     Returns:
         An instance of `pykx.Vector` or `pykx.Table`.
     """
+    cdef core.K kx
+
     if isinstance(x, pd.CategoricalIndex):
         return from_pandas_categorical(x.values, ktype, x.name, no_allocator=no_allocator)
     elif isinstance(x, pd.MultiIndex):
         d = {(level.name if level.name else str(i)): level[x.codes[i]]
              for i, level in enumerate(x.levels)}
         index_dict = from_dict(d, no_allocator=no_allocator)
-        return factory(<uintptr_t>core.xT(core.r1(_k(index_dict))), False)
+        kx = core.xT(core.r1(_k(index_dict)))
+        if kx == NULL:
+            _raise_failed('Failed to create table from pandas MultiIndex')
+        return factory(<uintptr_t>kx, False)
     elif isinstance(x, _supported_pandas_index_types_via_numpy):
         return from_numpy_ndarray(x.to_numpy().copy(), cast=cast, handle_nulls=handle_nulls, no_allocator=no_allocator)
     else:
@@ -2078,8 +2096,7 @@ def from_arrow(x: Union['pa.Array', 'pa.Table'],
     Warning: Memory usage may spike during this function.
         Normally converting from Python to q results in one copy of the data being made, but
         because this function first converts to Pandas, it's possible for there to be a temporary
-        third copy made. `See the PyArrow docs about converting to Pandas for more details
-        <https://arrow.apache.org/docs/python/pandas.html#memory-usage-and-zero-copy>`_.
+        third copy made. [See the PyArrow docs about converting to Pandas for more details](https://arrow.apache.org/docs/python/pandas.html#memory-usage-and-zero-copy).
 
     Parameters:
         x: The `pyarrow.Array`  that will be converted into a `pykx.Vector`, or the
@@ -2653,6 +2670,45 @@ def from_pathlib_path(x: Path,
     return from_str(f'{"" if str(x)[:1] == ":" else ":"}{x.as_posix()}')
 
 
+def from_qmodule(x: QModule,
+                 ktype: Optional[KType] = None,
+                 *,
+                 cast: bool = False,
+                 handle_nulls: bool = False,
+                 strings_as_char: bool = False,
+                 no_allocator: bool = False,
+) -> k.K:
+    """Converts a loaded q module into the q dictionary behind it.
+
+    ```python
+    >>> import pykx as kx
+    >>> kx.q['printf'] = kx.use('kx.printf')
+    >>> kx.q('printf.printf ("%d rows";42)')
+    pykx.CharVector(pykx.q('"42 rows"'))
+    ```
+
+    A [`pykx.module.QNamespaceProxy`][pykx.module.QNamespaceProxy], being a `pykx.QModule`,
+    converts the same way.
+
+    Parameters:
+        x: A `pykx.QModule` instance.
+        ktype: Desired `pykx.K` subclass (or type number) for the returned value.
+        cast: Unused.
+        handle_nulls: Unused.
+
+    Returns:
+        The `pykx.Dictionary` a module publishes.
+    """
+    return from_pykx_k(
+        unwrap_module(x),
+        ktype,
+        cast=cast,
+        handle_nulls=handle_nulls,
+        strings_as_char=strings_as_char,
+        no_allocator=no_allocator,
+    )
+
+
 def from_ellipsis(x: Ellipsis,
                   ktype: Optional[KType] = None,
                   *,
@@ -3058,6 +3114,12 @@ if not pandas_gt1:
 
 _converter_from_python_type[pd._libs.tslibs.timedeltas.Timedelta] = from_pandas_timedelta
 
+if sys.version_info >= (3, 15):
+    def from_frozendict(x, ktype=None, **kwargs):
+        return from_dict(dict(x), ktype, **kwargs)
+
+    _converter_from_python_type[frozendict] = from_frozendict
+
 class ToqModule(ModuleType):
     def __call__(
         self,
@@ -3101,6 +3163,8 @@ class ToqModule(ModuleType):
         else:
             if type(x) in _converter_from_python_type:
                 converter = _converter_from_python_type[type(x)]
+            elif isinstance(x, QModule):
+                converter = from_qmodule
             elif isinstance(x, Path):
                 converter = from_pathlib_path
             elif x is Ellipsis:

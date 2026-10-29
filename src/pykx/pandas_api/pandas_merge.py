@@ -312,6 +312,50 @@ class PandasMerge:
             validate=None,
             q_join=False
     ):
+        """Join two tables with a database style join.
+
+        A `cross` join cannot be given any columns or indexes to join on.
+
+        Parameters:
+            right (Table or KeyedTable): The `Table` or `KeyedTable` to join with.
+            how (str): The type of join, one of `'inner'`, `'left'`, `'right'`, `'outer'` or
+                `'cross'`.
+            on (str): The name of the column to join on.
+            left_on (str): The name of the column in the left table to join on.
+            right_on (str): The name of the column in the right table to join on.
+            left_index (bool): Join on the index of the left table.
+            right_index (bool): Join on the index of the right table.
+            sort (bool): Sort the result on the join keys.
+            suffixes (tuple): The suffixes added to overlapping column names from the left and right
+                tables.
+            copy (bool): Not yet implemented.
+            validate (str): If given, check the join is of this type: `one_to_one` or `1:1`,
+                `one_to_many` or `1:m`, `many_to_one` or `m:1`, or `many_to_many` or `m:m`.
+            q_join (bool): Use the native q joins rather than the pandas style joins.
+
+        Returns:
+            (Table or KeyedTable): The joined table or keyed table.
+
+        Examples:
+            >>> left = kx.q('([] k:`a`b`c; v:1 2 3)')
+            >>> right = kx.q('([] k:`a`b`d; w:4 5 6)')
+            >>> left.merge(right, on='k')
+            pykx.Table(pykx.q('
+            k v w
+            -----
+            a 1 4
+            b 2 5
+            '))
+            >>> left.merge(right, on='k', how='outer')
+            pykx.Table(pykx.q('
+            k v w
+            -----
+            a 1 4
+            b 2 5
+            c 3
+            d   6
+            '))
+        """
         if (
             how == 'cross'
             and (
@@ -379,6 +423,39 @@ class PandasMerge:
             allow_exact_matches=True,
             direction='backward'
     ):
+        """Join two tables on the nearest earlier value of a key, as the q function `aj` does.
+
+        Parameters:
+            right (Table or KeyedTable): The `Table` or `KeyedTable` to join with.
+            on (str): The name of the column to join on, which must be sorted.
+            left_on (str): The name of the column in the left table to join on.
+            right_on (str): The name of the column in the right table to join on.
+            left_index (bool): Join on the index of the left table.
+            right_index (bool): Join on the index of the right table.
+            by (str or list): The columns to match exactly before the nearest value is found.
+            left_by (str or list): The names of the columns in the left table to match on.
+            right_by (str or list): The names of the columns in the right table to match on.
+            suffixes (tuple): The suffixes added to overlapping column names from the left and right
+                tables.
+            tolerance (None): Not yet implemented.
+            allow_exact_matches (bool): Not yet implemented.
+            direction (str): Only `'backward'` is implemented.
+
+        Returns:
+            (Table or KeyedTable): The joined table or keyed table.
+
+        Examples:
+            >>> trades = kx.q('([] time:10:00:01 10:00:03 10:00:05; sym:`a`a`a; px:1 2 3f)')
+            >>> quotes = kx.q('([] time:10:00:00 10:00:02 10:00:04; sym:`a`a`a; bid:9 8 7f)')
+            >>> trades.merge_asof(quotes, on='time', by='sym')
+            pykx.Table(pykx.q('
+            time     sym px bid
+            -------------------
+            10:00:01 a   1  9
+            10:00:03 a   2  8
+            10:00:05 a   3  7
+            '))
+        """
         if (
             direction != 'backward'
             or not allow_exact_matches
@@ -447,6 +524,40 @@ class PandasGroupBy:
         observed=False,
         dropna=True
     ):
+        """Group the table by the values of one or more columns.
+
+        Parameters:
+            by (str, int or list): The name of the column, or a list of names, to group by.
+            axis (int): Not yet implemented, must be 0.
+            level (str, int or list): The name or number of the key column, or a list of them, to
+                group by. A key number can only be used on a `KeyedTable`. `by` and `level` cannot
+                both be given.
+            as_index (bool): Return the groups as the key of the result.
+            sort (bool): Sort the result by the group keys.
+            group_keys (bool): Not yet implemented, must be `True`.
+            observed (bool): Not yet implemented, must be `False`.
+            dropna (bool): Drop the groups where any key is null.
+
+        Returns:
+            (GroupbyTable): A `GroupbyTable`, on which aggregations such as `sum` can be called.
+
+        Examples:
+            >>> tab = kx.q('([] k:`a`b`a; v:1 2 3)')
+            >>> tab.groupby('k').sum()
+            pykx.KeyedTable(pykx.q('
+            k| v
+            -| -
+            a| 4
+            b| 2
+            '))
+            >>> tab.groupby('k', as_index=False).sum()
+            pykx.KeyedTable(pykx.q('
+            idx| k v
+            ---| ---
+            0  | a 4
+            1  | b 2
+            '))
+        """
         if observed:
             raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() 'observed' parameter is not implemented, please set to False.") # noqa: E501
         if axis != 0:
@@ -459,16 +570,23 @@ class PandasGroupBy:
             raise RuntimeError('Cannot use both by and level keyword arguments.')
         pre_keys = q('keys', self)
         grouped = _parse_group_by_cols(self, by if by is not None else level)
-        res = q('{y xgroup x}', self, grouped)
-        post_keys = q('keys', res)
-        if len(pre_keys) > 0 and len(pre_keys) != len(post_keys):
-            to_remove = SymbolVector([x for x in pre_keys if x not in post_keys])
-            res = q(f'{{{len(post_keys)}!(y _ (0!x))}}', res, to_remove)
-        if dropna:
-            res = q(
-                '{[t] delete from t where (null value flip key t) 0}',
-                res
-            )
-        if sort:
-            res = q('{[t; b] b xasc t}', res, grouped)
-        return GTable(res, as_index, len(pre_keys) > 0)
+
+        def build():
+            res = q('{y xgroup x}', self, grouped)
+            post_keys = q('keys', res)
+            if len(pre_keys) > 0 and len(pre_keys) != len(post_keys):
+                to_remove = SymbolVector([x for x in pre_keys if x not in post_keys])
+                res = q(f'{{{len(post_keys)}!(y _ (0!x))}}', res, to_remove)
+            if dropna:
+                res = q(
+                    '{[t] delete from t where any null value flip key t}',
+                    res
+                )
+            if sort:
+                res = q('{[t; b] b xasc t}', res, grouped)
+            return res
+
+        if len(pre_keys) == 0 and q('{[tab; grp] all grp in cols tab}', self, grouped):
+            return GTable(None, as_index, False, build=build, source=self, by=grouped,
+                          sort=sort, dropna=dropna)
+        return GTable(build(), as_index, len(pre_keys) > 0)

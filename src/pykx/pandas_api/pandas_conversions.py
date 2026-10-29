@@ -71,7 +71,29 @@ def _init(_q):
 class PandasConversions:
     @api_return
     def astype(self, dtype, copy=True, errors='raise'): # noqa: max-complexity: 13
+        """Cast columns of the table to a different data type.
 
+        Parameters:
+            dtype (type or dict): A `pykx` or Python type to cast every column to, or a dictionary
+                of column names to types.
+            copy (bool): Only `True` is implemented.
+            errors (str): `'raise'` raises an error if a cast fails. Any other value returns the
+                table unchanged.
+
+        Returns:
+            (Table): The table with the columns cast.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:4 5 6)')
+            >>> tab.astype(kx.FloatVector)
+            pykx.Table(pykx.q('
+            a b
+            ---
+            1 4
+            2 5
+            3 6
+            '))
+        """
         try:
             if copy is not True:
                 raise NotImplementedError(f"pykx.{type(self).__name__}.{inspect.stack()[0][3]}() is only implemented when copy is set to True") # noqa: E501
@@ -299,6 +321,34 @@ class PandasConversions:
     @api_return
     def select_dtypes(self, include=None, exclude=None):
         # Check params included
+        """Select the columns of the table by their data types.
+
+        At least one of `include` and `exclude` is required and they cannot overlap. If both are
+        given `exclude` is ignored. For a `KeyedTable` the key columns are always kept and only the
+        value columns are filtered. Use `kx.CharAtom` for a column of single characters, as
+        `kx.CharVector` raises an error.
+
+        Parameters:
+            include (type, str or list): A data type or string, or a list of them, of the columns to
+                keep.
+            exclude (type, str or list): A data type or string, or a list of them, of the columns to
+                remove.
+
+        Returns:
+            (Table): The table of the selected columns, or `pykx.Identity(pykx.q("::"))` if there
+                are none.
+
+        Examples:
+            >>> tab = kx.q('([] a:1 2 3; b:1.5 2.5 3.5)')
+            >>> tab.select_dtypes(include=kx.FloatVector)
+            pykx.Table(pykx.q('
+            b
+            ---
+            1.5
+            2.5
+            3.5
+            '))
+        """
         if include is None and exclude is None:
             raise ValueError('Expecting either include or exclude param to be passed')
 

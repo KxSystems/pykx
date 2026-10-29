@@ -14,6 +14,9 @@ from .config import (tcore_path_location, _is_enabled, _license_install, pykx_th
                      ignore_qhome, lic_path, _pykx_force_licensed, _pykx_force_unlicensed)
 
 
+pykx_threading_enabled = pykx_threading
+
+
 def _normalize_qargs(user_args: List[str]) -> Tuple[bytes]:
     skip_indexes = [] # The indexes of user args to skip because they were already processed.
     normalized_args = [b'q'] # First arg is always the name of the program.
@@ -95,7 +98,8 @@ import subprocess
 import sys
 
 from .config import find_core_lib, qargs, qhome, qlic, pykx_lib_dir, \
-    release_gil, _set_licensed, _set_unlicensed_reason, under_q, use_q_lock, _qlic
+    release_gil, suppress_warnings, under_q, use_q_lock, _qlic, \
+    _set_licensed, _set_pykx_threading, _set_unlicensed_reason
 from .exceptions import PyKXException, PyKXWarning
 
 final_qhome = str(qhome if ignore_qhome else pykx_lib_dir)
@@ -171,7 +175,7 @@ cdef inline uintptr_t _keval(const char* code, K k1, K k2, K k3, K k4, K k5, K k
                 # with nogil ensures the gil is dropped during the call into k
                 with nogil:
                     return <uintptr_t>knogil(<void*> k, <char* const>code, k1, k2, k3, k4, k5, k6, k7, k8)
-            if pykx_threading:
+            if pykx_threading_enabled:
                 with nogil:
                     return <uintptr_t>k(handle, <char* const>code, k1, k2, k3, k4, k5, k6, k7, k8, NULL)
             return <uintptr_t>k(handle, <char* const>code, k1, k2, k3, k4, k5, k6, k7, k8, NULL)
@@ -273,7 +277,14 @@ def check_subprocess_init(lib_path, qhome, qlic):
 
 cdef void (*init_syms)(char* x)
 
-if not pykx_threading:
+_qinit_check_proc = None
+if not (_pykx_force_unlicensed or under_q or _is_enabled('PYKX_UNSAFE_LOAD', '--unsafeload')):
+    _qinit_check_proc = check_subprocess_init(find_core_lib('q'), final_qhome, qlic)
+
+if _pykx_force_unlicensed or (_qinit_check_proc is not None and _qinit_check_proc.returncode):
+    pykx_threading_enabled = False
+
+if not pykx_threading_enabled:
     if under_q: # nocov
         if '--unlicensed' in qargs: # nocov
             warn("The '--unlicensed' flag has no effect when running under a q process", # nocov
@@ -291,8 +302,7 @@ if not pykx_threading:
             _core_q_lib_path = find_core_lib('q')
             licensed = True
             _qinit_unsuccessful = False
-            if not _is_enabled('PYKX_UNSAFE_LOAD', '--unsafeload'):
-                _qinit_check_proc = check_subprocess_init(_core_q_lib_path, final_qhome, qlic)
+            if _qinit_check_proc is not None:
                 _qinit_output = '    ' + '    '.join(_qinit_check_proc.stdout.strip().splitlines(True))
                 _license_message = False
                 _qinit_unsuccessful = _qinit_check_proc.returncode
@@ -411,15 +421,21 @@ else:
     os.environ['QHOME'] = final_qhome
     licensed = True
 _set_licensed(licensed)
+_set_pykx_threading(pykx_threading_enabled)
+
+if pykx_threading and not pykx_threading_enabled and not suppress_warnings:
+    if licensed:
+        warn('PYKX_THREADING requires a license at import, one was not available. It has been '
+             'disabled, restart your process to use it.', PyKXWarning)
 
 
 def _is_licensed():
     return licensed
 
 
-sym_name = lambda x: bytes('_' + x, 'utf-8') if pykx_threading else bytes(x, 'utf-8')
+sym_name = lambda x: bytes('_' + x, 'utf-8') if pykx_threading_enabled else bytes(x, 'utf-8')
 
-if not pykx_threading:
+if not pykx_threading_enabled:
     kG = <unsigned char* (*)(K x)>dlsym(_q_handle, 'kG')
     kC = <unsigned char* (*)(K x)>dlsym(_q_handle, 'kC')
     kU = <U* (*)(K x)>dlsym(_q_handle, 'kU')
@@ -434,7 +450,7 @@ if not pykx_threading:
 _shutdown_thread = <void (*)()>dlsym(_q_handle, 'shutdown_thread')
 
 cpdef shutdown_thread():
-    if pykx_threading:
+    if pykx_threading_enabled:
         _shutdown_thread()
 
 cpdef m9():

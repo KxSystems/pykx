@@ -1538,7 +1538,7 @@ type      | description
 
     Application of this function is equivalent to calling Python's [`getattr(f, 'x')`](https://docs.python.org/3/library/functions.html#getattr) function.
 
-    The wrapped foreign objects provide a shorthand version of calling `.pykx.getattr`. Through the use of the ````:x``` syntax for attribute/property retrieval
+    The wrapped foreign objects provide a shorthand version of calling `.pykx.getattr`. Through the use of the `` `:x `` syntax for attribute/property retrieval
 
 **Example:**
 

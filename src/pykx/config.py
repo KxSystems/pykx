@@ -11,7 +11,6 @@ import webbrowser
 
 import toml
 import pandas as pd
-import numpy as np
 
 from .exceptions import QError
 
@@ -417,21 +416,39 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
                                 'provided on the KX Developer Center: ').strip()
                 _license_install_B64(license, lic_type)
 
-                print('\nKDB-X Python license successfully installed to: {qlic / lic_type}\n') # noqa: E501
+                print(f'\nKDB-X Python license successfully installed to: {qlic / lic_type}\n') # noqa: E501
             elif install_type == '2':
                 _unlicensed_config(unlicensed_message)
                 if return_value:
                     return False
         else:
-            install_type = input(
-                '\nPlease select the method you wish to use to activate your license:\n'
-                '    [1] Provide the location of your license file\n'
-                '    [2] Paste the license key\n'
-                'Enter your choice here [1/2]: ')
+            # An empty or blank value counts as unset, so it is not offered as a license
+            env_var = 'KDB_LICENSE_B64'
+            env_lic_type = _kc_lic
+            env_license = (_get_config_value(env_var, None) or '').strip() or None
+            if env_license is None:
+                env_var = 'KDB_K4LICENSE_B64'
+                env_lic_type = _k4_lic
+                env_license = (_get_config_value(env_var, None) or '').strip() or None
 
-            if install_type not in ('1', '2', ''):
-                raise Exception('User provided option was not one of [1/2]')
-            if install_type in ('1', ''):
+            install_menu = '\nPlease select the method you wish to use to activate your license:\n'\
+                           '    [1] Provide the location of your license file\n'\
+                           '    [2] Paste the license key\n'
+            install_options = ('1', '2')
+            if env_license is not None:
+                install_menu += '    [3] Use the license key supplied by the '\
+                                f'{env_var} environment variable\n'
+                install_options = ('1', '2', '3')
+            choices = '/'.join(install_options)
+            install_type = input(f'{install_menu}Enter your choice here [{choices}]: ')
+
+            if install_type not in install_options + ('',):
+                raise Exception(f'User provided option was not one of [{choices}]')
+            if install_type == '3':
+                _license_install_B64(env_license, env_lic_type)
+
+                print(f'\nKDB-X Python license successfully installed to: {qlic / env_lic_type}\n')
+            elif install_type in ('1', ''):
                 license = input('\nProvide the download location of your license '
                                 f'(for example, {root}kc.lic) : ').strip()
                 download_location = os.path.expanduser(Path(license))
@@ -446,7 +463,7 @@ def _license_install(intro=None, return_value=False, license_check=False, licens
                     raise Exception('User provided option was not one of [1/2]')
 
                 lic_type = _k4_lic if lic_type_choice == '2' else _kc_lic
-                license = input('f\nProvide your {lic_type} license key (base64 encoded string) : ').strip() # noqa: E501
+                license = input(f'\nProvide your {lic_type} license key (base64 encoded string) : ').strip() # noqa: E501
 
                 _license_install_B64(license, lic_type)
 
@@ -489,6 +506,9 @@ _pykx_force_licensed = ('--licensed' in qargs or _is_enabled('PYKX_LICENSED', '-
 qlib_location = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_libs_dir))
 pykx_threading = _is_enabled('PYKX_THREADING')
 
+if under_q and pykx_threading:
+    pykx_threading = False
+
 _executable = 'q'
 if platform.system() == 'Windows' and pykx_threading:
     _executable += '.exe'
@@ -516,7 +536,6 @@ pykx_debug_insights = _is_enabled('PYKX_DEBUG_INSIGHTS_LIBRARIES')
 
 pandas_gt1 = int(pd.__version__.split('.')[0]) > 1
 pandas_gt2 = int(pd.__version__.split('.')[0]) > 2
-numpy_gt1 = int(np.__version__.split('.')[0]) > 1
 jupyterq = _is_enabled('PYKX_JUPYTERQ')
 
 
@@ -541,6 +560,11 @@ def _set_unlicensed_reason(unlicensed_reason_):
     unlicensed_reason = unlicensed_reason_
 
 
+def _set_pykx_threading(pykx_threading_):
+    global pykx_threading
+    pykx_threading = pykx_threading_
+
+
 def _get_unlicensed_reason():
     return unlicensed_reason
 
@@ -561,6 +585,19 @@ def _set_keep_local_times(keep_local_times_):
 
 def _get_qexecutable():
     return _get_config_value('PYKX_Q_EXECUTABLE', shutil.which(_executable))
+
+
+_kdbx = None
+
+
+def kdbx() -> bool:
+    global _kdbx
+    if _kdbx is None:
+        if not licensed:
+            return False
+        from ._wrappers import _check_kdbx
+        _kdbx = _check_kdbx()
+    return _kdbx
 
 
 def _check_beta(feature_name, *, status=beta_features):
@@ -588,6 +625,7 @@ __all__ = [
     'qlic',
     'qargs',
     'licensed',
+    'kdbx',
     'under_q',
 
     'ignore_qhome',

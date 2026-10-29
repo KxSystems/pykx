@@ -1,5 +1,8 @@
 import os
 from pathlib import Path
+from platform import system
+import shutil
+import subprocess
 from tempfile import TemporaryDirectory
 import warnings
 
@@ -96,3 +99,32 @@ def test_PYKX_GC_UNLICENSED():
     os.environ['PYKX_UNLICENSED']='True'
     import pykx as kx # noqa: F401
     assert True
+
+
+@pytest.mark.skipif(
+    system() == 'Windows',
+    reason='PYKX_THREADING is unsupported on Windows'
+)
+def test_under_q_threading_disabled(tmp_path):
+    q_exe = shutil.which('q')
+    if q_exe is None:
+        pytest.skip('Unable to locate a q executable')
+    script = tmp_path/'threading.q'
+    script.write_text(
+        '\\l pykx.q\n'
+        '.pykx.pyexec"import pykx;print(\'THREADING=\'+str(pykx.config.pykx_threading))";\n'
+        'exit 0;\n'
+    )
+    proc = subprocess.run(
+        [q_exe, str(script)],
+        env={**os.environ, 'PYKX_THREADING': '1'},
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        timeout=120,
+    )
+    assert 0 == proc.returncode, proc.stdout
+    assert 'THREADING=False' in proc.stdout
+    assert 'SIGSEGV' not in proc.stdout
+    assert 'Warning' not in proc.stdout

@@ -9,8 +9,10 @@ import math
 from operator import index
 import os
 import pickle
+from pathlib import Path
 from platform import python_implementation
 import shutil
+import subprocess
 from textwrap import dedent
 from uuid import UUID
 import itertools
@@ -1095,13 +1097,13 @@ class Test_Atom:
         assert np.asarray(kx.TimespanAtom(timedelta(3))).dtype == "<m8[ns]"
 
     @pytest.mark.unlicensed
-    def test_array_protocol(self, kx, q):
+    def test_array_protocol(self, kx):
         # NumPy 2.* passes `dtype` positionally and `copy` by keyword to `__array__`.
         # Atoms and Vectors must accept both without raising a TypeError or emitting a
         # DeprecationWarning (see PandasUUIDArray regression in Test_Table). These paths
         # remain valid on NumPy 1.x, which never passes `copy`.
         numpy_gt2 = version.parse(np.__version__) >= version.parse('2.0')
-        for obj in (kx.LongAtom(42), kx.q('til 5')):
+        for obj in (kx.LongAtom(42), kx.toq(np.arange(5))):
             assert np.asarray(obj, dtype=object).dtype == object
             with warnings.catch_warnings():
                 warnings.simplefilter('error', DeprecationWarning)
@@ -1896,6 +1898,7 @@ class Test_Vector:
         v3 = q('()')
         assert v3.replace(1, 101) == v3
 
+    @pytest.mark.skipif(sys.version_info >= (3, 15), reason='torch has no Python 3.15 wheels')
     @pytest.mark.isolate
     def test_torch(self):
         import os
@@ -3599,6 +3602,27 @@ class Test_Dictionary:
         a['d'] = d
         assert isinstance(a['d'], kx.Table)
 
+    def test_setitem_keeps_dictionary_alive_under_gc(self):
+        script = (
+            'import pykx as kx\n'
+            'assert kx.config.k_gc\n'
+            "d = kx.q('`a`b!1 2')\n"
+            "d['c'] = 3\n"
+            "assert kx._wrappers.k_t(d) == 99, 'not a dictionary any more'\n"
+            "assert kx.q('.Q.s1', d).py() == b'`a`b`c!1 2 3'\n"
+            "d['e'] = kx.q('([] a:enlist 2;b:enlist 6)')\n"
+            "assert isinstance(d['e'], kx.Table)\n"
+            'repr(d)\n'
+        )
+        proc = subprocess.run(
+            (str(Path(sys.executable).as_posix()), '-c', script),
+            env={**os.environ, 'PYKX_GC': '1'},
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        assert proc.returncode == 0, proc.stdout
+
 
 class Test_KeyedTable:
     kt = '([k1:100+til 3] x:til 3; y:`singly`keyed`table)'
@@ -4006,6 +4030,22 @@ class Test_Function:
         assert isinstance(q('.pykx.util.isf'), kx.Foreign)
         assert isinstance(q.Q.ajf0, kx.SymbolicFunction)
 
+    def test_nullary_call_passes_generic_null(self, q, kx):
+        # `f()` must pass `::`, as q's `f[]` does, for every callable wrapper type.
+        foreign = q('.pykx.util.isf')
+        assert isinstance(foreign, kx.Foreign)
+        assert foreign() == q('.pykx.util.isf[]')
+
+        q('.test.nullary:{`$.Q.s1 x}')
+        expected = q('`$"::"')
+        assert q('.test.nullary')() == expected          # Lambda
+        assert q.test.nullary() == expected              # SymbolicFunction (context interface)
+
+    def test_nullary_call_leaves_arguments_alone(self, q):
+        foreign = q('.pykx.util.isf')
+        assert foreign(None) == q('.pykx.util.isf[::]')
+        assert foreign(q('{x}')) == q('.pykx.util.isf[{x}]')
+
     def test_args_property(self, q):
         assert q('{x+y*z}').args == ()
         assert q('{x+y*z}[;12]').args == (..., 12)
@@ -4028,6 +4068,24 @@ class Test_Function:
         assert q.Q.ajf0.params == ('f', 'g', 'x', 'y', 'z')
         # Ensure the param names of converted functions don't begin with the "PyKXParam" prefix
         assert kx.K(sorted).params == ('iterable', 'key', 'reverse')
+
+    @pytest.mark.skipif(
+        os.getenv('PYKX_THREADING') is not None,
+        reason='Not supported with PYKX_THREADING'
+    )
+    def test_params_property_composition(self, q):
+        # A Python function wrapped by the q interface is a Composition around a foreign
+        assert q('.pykx.eval["lambda x,y:x+y"]').params == ('x', 'y')
+        assert q('.pykx.eval["sorted"]').params == ('iterable', 'key', 'reverse')
+        with pytest.raises(TypeError, match='is not a callable object'):
+            q('.pykx.eval["1"]').params
+
+    def test_params_property_composition_without_params(self, q):
+        c = q('.pykx.wrap`abc')
+        with pytest.raises(AttributeError, match='wraps a SymbolAtom object'):
+            c.params
+        assert not hasattr(c, 'params')
+        assert getattr(c, 'params', None) is None
 
     def test_func_property(self, kx, q):
         f1 = q('{x*x}')

@@ -42,6 +42,7 @@ overtop
 param
 positionally
 pre
+preprocessing
 programmatically
 py
 PyKX
@@ -111,3 +112,13 @@ builtins
 kobject
 streamlit
 jupyter
+Parquet
+submodule
+submodules
+tickerplant
+scenegraph
+qSQL
+Nvidia
+DBmaint
+Fusionx
+Datagen

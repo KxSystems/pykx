@@ -18,7 +18,7 @@ from uuid import UUID
 import numpy as np
 
 from ._pyarrow import pyarrow as pa
-from .config import licensed, release_gil
+from .config import kdbx, licensed, release_gil
 from .core import q_lock
 from .exceptions import PyArrowUnavailable, QError
 
@@ -471,8 +471,19 @@ cdef object q_table_type(core.K val):
     return wrapper
 
 
+cpdef bint _check_kdbx():
+    cdef core.K x
+    cdef bint res
+    x = core.k(0, <char* const>'.z.K>=5f', NULL)
+    res = x.t == -1 and x.g == 1
+    core.r0(x)
+    return res
+
+
 cdef object q_foreign_type(core.K val):
     cdef core.K x
+    if not kdbx():
+        return wrappers.Foreign
     x = core.k(0, <char* const>'.Q.qO', core.r1(val), NULL)
     if x.t == -1 and x.g == 1:      # x == 1b
         wrapper = wrappers.VirtualTable
@@ -509,7 +520,7 @@ cpdef object _to_bytes(mode, x, wait):
     cdef core.K ser
     ser = core.b9(mode, <core.K><uintptr_t>x._addr)
     if ser == NULL:
-        return factory(<uintptr_t>core.ee(ser), False, 1)
+        return factory(<uintptr_t>core.ee(ser), False, '', 1)
     res = _to_bytes_(ser, <char>wait)
     return (<unsigned long long><uintptr_t>ser, res)
 

@@ -641,7 +641,6 @@ def test_tls():
                 assert q('til 10').py() == list(range(10))
 
 
-@pytest.mark.xfail(reason='ToDo: Resolve KXI-30608', strict=False)
 @pytest.mark.isolate
 @pytest.mark.unlicensed
 def test_server(kx):
@@ -690,18 +689,15 @@ def test_server(kx):
             with kx.QConnection(port=port, no_ctx=True) as q:
                 with pytest.raises(kx.QError) as err:
                     q('.pykx.getattr')
-                e = str(err.value)
-                assert "Result of query with return type '<class 'pykx.wrappers.Foreign" in e
+                assert 'type' == str(err.value)
             with kx.QConnection(port=port, no_ctx=True) as q:
                 with pytest.raises(kx.QError) as err:
                     q('.pykx.pyeval')
-                e = str(err.value)
-                assert "Result of query with return type '<class 'pykx.wrappers.Projection" in e
+                assert 'type' == str(err.value)
             with kx.QConnection(port=port, no_ctx=True) as q:
                 with pytest.raises(kx.QError) as err:
                     q('.pykx.preinit')
-                e = str(err.value)
-                assert "Result of query with return type '<class 'pykx.wrappers.Lambda" in e
+                assert 'type' == str(err.value)
         finally:
             if proc is not None:
                 proc.stdin.close()
@@ -1415,3 +1411,19 @@ async def test_async_connection_timeout(kx, q_port):
         info = q._connection_info
         assert ((info['port'] == q_port) and (info['timeout'] == 0.0)
                 and (info['connection_timeout']==0.0))
+
+
+@pytest.mark.embedded
+def test_pykx_as_server(kx, q):
+    proc = subprocess.Popen(
+        [sys.executable, 'docs/examples/server/server_async.py'],
+        stdout=subprocess.PIPE
+    )
+    time.sleep(2)
+    try:
+        with kx.SyncQConnection(port=5000) as conn:
+            assert list(range(10)) == conn('til 10').py()
+            assert [1 + x for x in list(range(10))] == conn('1 + til 10').py()
+    finally:
+        proc.terminate()
+        proc.wait()

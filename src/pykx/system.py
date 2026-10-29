@@ -258,13 +258,15 @@ class SystemCommands:
             path = path.py().decode()
         elif isinstance(path, k.SymbolAtom):
             path = path.py()
-            if path[0] == ':':
+            if path.startswith(':'):
                 path = path[1:]
         elif isinstance(path, Path):
             path = str(path)
         path = os.path.expanduser(path)
+        if not path:
+            raise ValueError('Provided path is empty, a file/directory must be supplied')
         if ' ' not in path:
-            if path[-1] == '/':
+            if path.endswith('/'):
                 path = path[:-1]
             return self._q._call(f'\\l {path}', wait=True)
         if not suppress_warnings:

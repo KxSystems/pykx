@@ -1,20 +1,64 @@
 # KDB-X Python under q Changelog
 
-This changelog covers KDB-X Python under q from version 2.0.0 onwards.
+_This changelog tracks KDB-X Python under q and PyKX under q releases from version 2.0.0 onwards, including additions, fixes, and improvements._
 
-!!! Note
 
-	For changes to KDB-X Python within a Python environment, refer to the [Python changelog](./changelog.md).
+!!! info "KDB-X Python and PyKX"
 
-## KDB-X
+    **KDB-X Python** (`pykx>=4.0`) is the evolution of **PyKX** (`pykx<4.0`).
+
+    This page groups release notes by product:
+
+    - **KDB-X Python** (`pykx>=4.0`)
+    - **PyKX** (`pykx<4.0`)
+
+    For guidance on migrating from PyKX to KDB-X Python, refer to the [migration guide](../upgrades/3040.md).
+
 
 KDB-X is the evolution of kdb+. For full details and to install, refer to the [KDB-X developer center](https://developer.kx.com/products/kdb-x/install).
 
+For changes to KDB-X Python within a Python environment, refer to the [Python changelog](./changelog.md).
+
 ## KDB-X Python
 
-KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, refer to the migration guide [here](../upgrades/3040.md).
+### 4.2.0
 
-## KDB-X Python 4.1.0
+**Release Date**
+
+2026-10-23
+
+**Fixes and Improvements**
+
+- A Python error raised while `pykx.q` is loading is now reported as a q error instead of crashing the process.
+
+	=== "Behavior prior to change"
+
+		```q
+		q)\l pykx.q
+		Sorry, this application or an associated library has encountered a fatal error and will exit.
+		..
+		SIGSEGV: Fault address 0x8
+		```
+
+	=== "Behavior post change"
+
+		```q
+		q)\l pykx.q
+		'ImportError("/lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.38' not found (required by /home/user/.linuxbrew/lib/libffi.so.8)")
+		```
+
+- Fixed Python reference leaks in `.pykx.import`, `.pykx.get`, `.pykx.setattr`, `.pykx.toq` and in the conversion of a Python exception to a q error.
+- Fixed a memory leak in `.pykx.repr` and `.pykx.print`.
+- Calling a foreign object that is not callable now releases the GIL before returning the error.
+- Fixed a deadlock when calling KDB-X Python from within a `peach` expression.
+- Setting `PYKX_THREADING` under q is now ignored instead of crashing the process.
+- Fixed a small memory leak on initial load of `pykx.q`.
+- Fixed `'.Q.qO` error when using `pykx.q` in kdb+ 4.1.
+- Fixed a crash on Windows when loading `pykx.q`.
+- A missing `libpython` now reports an error naming the path it looked for, rather than crashing.
+- Loading `pykx.q` under a Microsoft Store Python install now reports that it cannot be embedded.
+
+### 4.1.0
 
 **Release Date**
 
@@ -27,7 +71,9 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 - `.pykx.setdefault` now only changes the default conversion for the current process; it no longer exports `PYKX_DEFAULT_CONVERSION` (which previously leaked the value to child processes).
 - Fixed q projections passed to a Python function being evaluated during argument parsing.
 
-## PyKX 3.2.0
+## PyKX
+
+### 3.2.0
 
 **Release Date**
 
@@ -37,7 +83,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 
 - Fixed a memory leak when using `.pykx.getattr` on foreign object in `q`.
 
-## PyKX 3.1.5
+### 3.1.5
 
 **Release Date**
 
@@ -47,7 +93,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 
 - Added `.pykx.noalloc` which can be used to wrap a foreign object. When used with `.pykx.toq` the conversion will not use the `PYKX_ALLOCATOR`. See [here](../help/issues.md#known-issues) for details.
 
-## PyKX 3.1.4
+### 3.1.4
 
 **Release Date**
 
@@ -78,7 +124,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 		1011111110b
 		```
 
-## PyKX 3.1.3
+### 3.1.3
 
 **Release Date**
 
@@ -113,7 +159,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 
 - `.pykx.console[]` has been removed on Windows due to incompatibility. Will now error with `'.pykx.console is not available on Windows` if called.
 
-## PyKX 3.1.1
+### 3.1.1
 
 **Release Date**
 
@@ -145,7 +191,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 		q.pykx))
 		```
 
-## PyKX 3.1.0
+### 3.1.0
 
 **Release Date**
 
@@ -229,7 +275,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 	<class 'torch.Tensor'>
 	```
 
-## PyKX 3.0.1
+### 3.0.1
 
 **Release Date**
 
@@ -251,7 +297,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 	30
 	```
 
-## PyKX 3.0.0
+### 3.0.0
 
 **Release Date**
 
@@ -322,7 +368,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 		1b
 		```
 
-## PyKX 2.5.4
+### 2.5.4
 
 **Release Date**
 
@@ -332,7 +378,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 
 - `.pykx.util.loadfile` now loads a file using it's full path unless it contains a space. This is to avoid issues loading scripts which are sensitive to their working directory.
 
-## PyKX 2.5.3
+### 2.5.3
 
 **Release Date**
 
@@ -358,7 +404,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 		['test', None, datetime.datetime(2002, 1, 25, 11, 16, 58, 871372)]
 		```
 
-## PyKX 2.5.0
+### 2.5.0
 
 **Release Date**
 
@@ -368,7 +414,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 
 - When loading PyKX under from a source file path containing a space initialisation would fail with an `nyi` error message, this has now been resolved.
 
-## PyKX 2.4.1
+### 2.4.1
 
 **Release Date**
 
@@ -388,7 +434,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 	https://code.kx.com/pykx/pykx-under-q/intro.html#installation
 	```
 
-## PyKX 2.3.1
+### 2.3.1
 
 **Release Date**
 
@@ -453,7 +499,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 		test
 		```
 
-## PyKX 2.3.0
+### 2.3.0
 
 **Release Date**
 
@@ -484,7 +530,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
         10
 		```
 
-## PyKX 2.2.2
+### 2.2.2
 
 **Release Date**
 
@@ -494,7 +540,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 
 - When loaded in a q process loading `pykx.q` would not allow `Ctrl+C` (SIGINT) interruption.
 
-## PyKX 2.2.1
+### 2.2.1
 
 **Release Date**
 
@@ -548,7 +594,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 		<class 'pathlib.PosixPath'>
 		```
 
-## PyKX 2.2.0
+### 2.2.0
 
 **Release Date**
 
@@ -607,7 +653,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 - On load now sets `PYKX_SKIP_UNDERQ` rather than deprecated `SKIP_UNDERQ`
 - `safeReimport` now additionally unsets/resets: `PYKX_DEFAULT_CONVERSION`, `PYKX_SKIP_UNDERQ`, `PYKX_EXECUTABLE`, `PYKX_DIR`
 
-## PyKX 2.1.0
+### 2.1.0
 
 **Release Date**
 
@@ -635,7 +681,7 @@ KDB-X Python `pykx>=4.0` is the evolution of PyKX `pykx<4.0`. For more details, 
 		<class 'pandas.core.frame.DataFrame'>
 		```
 
-## PyKX 2.0.0
+### 2.0.0
 
 **Release Date**
 

@@ -31,7 +31,7 @@ _Install KDB-X Python, configure a license, and verify the installation._
 
 Before you start, make sure you have:
 
-- [**Python**](https://www.python.org/downloads/) 3.9-3.14
+- [**Python**](https://www.python.org/downloads/) 3.9-3.15
 - [**pip**](https://pypi.org/project/pip/)
 
 Create and activate a virtual environment to isolate KDB-X Python from other projects:
@@ -65,7 +65,7 @@ Create and activate a virtual environment to isolate KDB-X Python from other pro
 
 ## Supported environments
 
-KX supports KDB-X Python wheels for CPython 3.9-3.14 on Linux, macOS, and Windows.
+KX supports KDB-X Python wheels for CPython 3.9-3.15 on Linux, macOS, and Windows.
 
 ??? info "Supported wheel platform tags"
 
@@ -74,9 +74,9 @@ KX supports KDB-X Python wheels for CPython 3.9-3.14 on Linux, macOS, and Window
 	| **Platform** | **CPython versions** | **Wheel platform tags** |
 	| --- | --- | --- |
 	| Linux | 3.9-3.11 | `manylinux2014_x86_64`, `manylinux2014_aarch64` |
-	| Linux | 3.12-3.14 | `manylinux_2_28_x86_64`, `manylinux_2_28_aarch64` |
-	| macOS | 3.9-3.14 | `macosx_10_15_x86_64`, `macosx_10_15_arm64` |
-	| Windows | 3.9-3.14 | `win_amd64` |
+	| Linux | 3.12-3.15 | `manylinux_2_28_x86_64`, `manylinux_2_28_aarch64` |
+	| macOS | 3.9-3.15 | `macosx_10_15_x86_64`, `macosx_10_15_arm64` |
+	| Windows | 3.9-3.15 | `win_amd64` |
 
 ## Install from PyPI
 
@@ -168,6 +168,10 @@ Before you start, make sure you have one of these KDB-X licenses ready:
 
 	When prompted, confirm that you want to install a license. Choose a license file or base64-encoded license key, then provide its location or value.
 
+	If you set `KDB_LICENSE_B64` or `KDB_K4LICENSE_B64` before you start Python, the walkthrough offers an additional option to install the license key held in that environment variable:
+
+	`KDB_LICENSE_B64` installs a `kc.lic` license and `KDB_K4LICENSE_B64` installs a `k4.lic` license. If you set both, KDB-X Python uses `KDB_LICENSE_B64`.
+
 === "Environment variables"
 
 	Configure one license source before starting Python:
@@ -179,6 +183,8 @@ Before you start, make sure you have one of these KDB-X licenses ready:
 	| Base64-encoded `k4.lic` key | `KDB_K4LICENSE_B64` | License key supplied by KX |
 
 	KDB-X Python reads the configured license when the Python process starts.
+
+	If a license is not found and you start an interactive Python session, the license walkthrough offers to install the key from `KDB_LICENSE_B64` or `KDB_K4LICENSE_B64`. Refer to the **Python prompt** tab.
 
 ## Verify the installation
 

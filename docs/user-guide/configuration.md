@@ -212,11 +212,11 @@ KDB-X Python wheels include these native libraries:
 
 | **Platform** | **Mode** | **File** | **Version** |
 | --- | --- | --- | --- |
-| Linux ARM | KDB-X | `libq.so` | 5.0.20260706 |
-| Linux x86 | KDB-X | `libq.so` | 5.0.20260706 |
-| macOS ARM | KDB-X | `libq.dylib` | 5.0.20260706 |
-| macOS x86 | KDB-X | `libq.dylib` | 5.0.20260706 |
-| Windows | KDB-X | `q.dll`, `q.lib` | 5.0.20260706 |
+| Linux ARM | KDB-X | `libq.so` | 5.0.20261015 |
+| Linux x86 | KDB-X | `libq.so` | 5.0.20261015 |
+| macOS ARM | KDB-X | `libq.dylib` | 5.0.20261015 |
+| macOS x86 | KDB-X | `libq.dylib` | 5.0.20261015 |
+| Windows | KDB-X | `q.dll`, `qdll.lib` | 5.0.20261015 |
 | Linux ARM | Unlicensed | `libe.so` | 2023.11.22 |
 | Linux x86 | Unlicensed | `libe.so` | 2023.11.22 |
 | macOS ARM | Unlicensed | `libe.so` | 2023.11.22 |
@@ -288,7 +288,7 @@ These three routes are equivalent. Pick whichever suits how you start your appli
 | `PYKX_GC` | `False` | Trigger the q garbage collector when Python deallocates a NumPy array that KDB-X Python allocated. This returns q memory to the OS at the cost of a small overhead. Requires `PYKX_NO_ALLOCATOR` to be unset. |
 | `PYKX_RELEASE_GIL` | `False` | Release the Python Global Interpreter Lock when calling into q. |
 | `PYKX_Q_LOCK` | `False` | Add a re-entrant lock around calls into q, which stops two threads calling into q at once. This keeps embedded q thread safe even when you set `PYKX_RELEASE_GIL`. |
-| `PYKX_THREADING` | `False` | Start embedded q in a background thread, so a call into q from any thread can modify state. Licensed mode only. |
+| `PYKX_THREADING` | `False` | Start embedded q in a background thread, so a call into q from any thread can modify state. Licensed mode only, and ignored when running under q. |
 | `PYKX_LOAD_PYARROW_UNSAFE` | `False` | Import PyArrow directly, which speeds up importing KDB-X Python slightly. By default, KDB-X Python imports PyArrow in a subprocess, because an incompatible PyArrow version can crash the process. |
 
 ### Behavior and diagnostics

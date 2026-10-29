@@ -595,7 +595,7 @@ Use `apply()` when you need a custom Python calculation:
 
 ### 4.2 Use built-in table methods
 
-KDB-X Python tables provide methods for filtering, grouping, and calculating column values. The [pandas API notebook](../user-guide/advanced/Pandas_API.ipynb) documents the table methods that mirror pandas operations.
+KDB-X Python tables provide methods for filtering, grouping, and calculating column values. The [pandas API overview](../user-guide/advanced/Pandas_API.md) documents the table methods that mirror pandas operations.
 
 The following examples use a typed table with symbol and numeric columns:
 

@@ -143,6 +143,22 @@ def test_pykx_df_equals_both_directions(kx, q):
         assert df2.equals(df1)
 
 
+def test_pykx_df_symbol_column_dtype(q):
+    """Symbol columns take whatever dtype Pandas itself uses for string data."""
+    import pandas as pd
+    expected = pd.DataFrame({'s': ['a', 'b']})['s'].dtype
+    assert q('([] s:`a`b; i:1 2)').pd()['s'].dtype == expected
+    keyed = q('([s:`a`b] i:1 2)').pd()
+    assert keyed.index.dtype == expected
+
+
+def test_pykx_df_raw_symbol_column_dtype(q):
+    """Raw symbol data stays bytes, the same as `SymbolVector.pd(raw=True)` returns."""
+    assert q('`a`b').pd(raw=True).tolist() == [b'a', b'b']
+    assert q('([] s:`a`b; i:1 2)').pd(raw=True)['s'].tolist() == [b'a', b'b']
+    assert q('([s:`a`b] i:1 2)').pd(raw=True).index.tolist() == [b'a', b'b']
+
+
 @pytest.mark.unlicensed
 def test_dir(kx):
     assert isinstance(dir(kx.util), list)
