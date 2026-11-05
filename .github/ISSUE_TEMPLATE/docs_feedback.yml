@@ -1,0 +1,56 @@
+name: Documentation feedback
+description: Report an inaccuracy, a gap, or a findability problem in the documentation
+title: "[Docs]: "
+labels: ["documentation", "feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form only for issues with the documentation itself.
+        It is not for product bugs, support requests, or feature requests. If the product
+        is not behaving as expected and the docs are accurate, please use the appropriate
+        product or support channel instead, so your request is routed faster.
+
+        This creates an issue that the docs team will triage and prioritize.
+        You can also open a pull request instead.
+
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: Type of issue
+      options:
+        - Inaccurate
+        - Missing information
+        - I can't find what I'm looking for
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: page
+    attributes:
+      label: What documentation page or section is affected?
+      description: Include the URL for the page where you are seeing the problem.
+      placeholder: https://code.kx.com/...
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the documentation problem you are seeing. Screenshots are helpful too.
+    validations:
+      required: true
+
+  - type: textarea
+    id: versions
+    attributes:
+      label: Does this feedback apply to multiple versions?
+      description: If so, please elaborate so we can backport.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional info
+      description: Anything else we should know?
