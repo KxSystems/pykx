@@ -88,6 +88,14 @@ def test_ipc_messaging_tcp(kx, q_port):
 
 
 @pytest.mark.unlicensed
+@pytest.mark.parametrize('cls_name', ['QConnection', 'SyncQConnection'])
+def test_single_handle_no_double_init(kx, q_port, cls_name):
+    cls = getattr(kx, cls_name)
+    with cls('localhost', q_port) as q:
+        assert int(q('count .z.W')) == 1
+
+
+@pytest.mark.unlicensed
 @pytest.mark.parametrize('q_init', [[b'.z.pw:{(x~`username)&y~"password"}\n']])
 def test_ipc_messaging_tcp_auth(kx, q_port):
     with kx.QConnection('localhost', q_port, username='username', password='password') as q:
@@ -633,7 +641,6 @@ def test_tls():
                 assert q('til 10').py() == list(range(10))
 
 
-@pytest.mark.xfail(reason='ToDo: Resolve KXI-30608', strict=False)
 @pytest.mark.isolate
 @pytest.mark.unlicensed
 def test_server(kx):
@@ -682,18 +689,15 @@ def test_server(kx):
             with kx.QConnection(port=port, no_ctx=True) as q:
                 with pytest.raises(kx.QError) as err:
                     q('.pykx.getattr')
-                e = str(err.value)
-                assert "Result of query with return type '<class 'pykx.wrappers.Foreign" in e
+                assert 'type' == str(err.value)
             with kx.QConnection(port=port, no_ctx=True) as q:
                 with pytest.raises(kx.QError) as err:
                     q('.pykx.pyeval')
-                e = str(err.value)
-                assert "Result of query with return type '<class 'pykx.wrappers.Projection" in e
+                assert 'type' == str(err.value)
             with kx.QConnection(port=port, no_ctx=True) as q:
                 with pytest.raises(kx.QError) as err:
                     q('.pykx.preinit')
-                e = str(err.value)
-                assert "Result of query with return type '<class 'pykx.wrappers.Lambda" in e
+                assert 'type' == str(err.value)
         finally:
             if proc is not None:
                 proc.stdin.close()
@@ -717,6 +721,39 @@ def test_sync_helpful_error_for_closed_conn(kx, q_port):
     with pytest.raises(RuntimeError):
         with kx.SyncQConnection(port=q_port) as q:
             q('hclose .z.w; til 10')
+
+
+@pytest.mark.unlicensed
+def test_sync_close_finalizes_when_shutdown_fails(kx, q_port):
+    conn = kx.SyncQConnection(port=q_port)
+    real_sock = conn._sock
+    state = {'sock_closed': False, 'finalized': False}
+
+    class _ShutdownFails:
+        def shutdown(self, *args, **kwargs):
+            raise OSError('simulated dead peer')
+
+        def close(self, *args, **kwargs):
+            state['sock_closed'] = True
+            return real_sock.close(*args, **kwargs)
+
+        def __getattr__(self, name):
+            return getattr(real_sock, name)
+
+    real_finalizer = conn._finalizer
+
+    def _tracked_finalizer():
+        state['finalized'] = True
+        return real_finalizer()
+
+    object.__setattr__(conn, '_sock', _ShutdownFails())
+    object.__setattr__(conn, '_finalizer', _tracked_finalizer)
+
+    conn.close()
+
+    assert conn.closed
+    assert state['sock_closed'], 'socket was not closed after shutdown failure'
+    assert state['finalized'], 'finalizer did not run after shutdown failure'
 
 
 def check_enough_memory(GiB):
@@ -1374,3 +1411,41 @@ async def test_async_connection_timeout(kx, q_port):
         info = q._connection_info
         assert ((info['port'] == q_port) and (info['timeout'] == 0.0)
                 and (info['connection_timeout']==0.0))
+
+
+@pytest.mark.embedded
+def test_pykx_as_server(kx, q):
+    # Imported here because the generated Windows suites bind `time` to `datetime.time` and have
+    # no conftest module to import `random_free_port` from
+    import socket
+    import time
+    from pathlib import Path
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(('localhost', 0))
+        port = s.getsockname()[1]
+    example = Path('docs')/'examples'/'server'/'server_async.py'
+    script = next(p/example for p in Path(__file__).resolve().parents if (p/example).exists())
+    # The server imports pykx, so it must not inherit this process's pykx environment
+    with kx.PyKXReimport():
+        proc = subprocess.Popen(
+            [sys.executable, str(script), str(port)],
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
+    try:
+        # The server can take a while to import pykx and start listening
+        deadline = time.monotonic() + 60
+        while True:
+            assert proc.poll() is None, proc.stdout.read().decode()
+            try:
+                conn = kx.SyncQConnection(port=port)
+                break
+            except (kx.QError, OSError):
+                if time.monotonic() > deadline:
+                    raise
+                time.sleep(0.5)
+        with conn:
+            assert list(range(10)) == conn('til 10').py()
+            assert [1 + x for x in list(range(10))] == conn('1 + til 10').py()
+    finally:
+        proc.terminate()
+        proc.wait()

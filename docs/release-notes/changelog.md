@@ -6,6 +6,94 @@ This changelog tracks all PyKX releases and their associated additions, fixes, a
 
 	For changes to PyKX within a q environment, refer to the [PyKX under q changelog](./underq-changelog.md).
 
+## PyKX 3.2.1
+
+**Release Date**
+
+2026-11-13
+
+**Fixes and Improvements**
+
+- Updated the [kdb+ 4.1](https://code.kx.com/q/releases/41/) q libraries to 2026.10.23 for all platforms.
+- Fixed `.py()` conversion for large-magnitude `pykx.MinuteAtom` values. Before this fix, `.py()` returned an overflowed `datetime.timedelta` value or raised an error with NumPy 2.5 or later.
+- Fixed a segmentation fault in unlicensed mode when a NumPy array of 8MiB or more, allocated by the PyKX NumPy allocator, was deallocated.
+- `PYKX_THREADING` is now automatically disabled when unlicensed mode is used.
+- Fixed a segmentation fault when assigning an item into a `pykx.Dictionary` with garbage collection enabled (`PYKX_GC`).
+- `kx.QConnection.close()` no longer leaks the socket and underlying q handle when the peer has already died.
+- Fixed `__array__` of atoms, vectors, and GUID arrays with NumPy 2.x, which passes `dtype` and `copy` arguments. Before this fix, `numpy.asarray(obj, dtype=...)` could raise `TypeError: __array__() takes 1 positional argument but 2 were given`.
+- Fixed chained Boolean indexing with `kx.Table.loc` and `kx.Table.iloc` returning incorrect rows after an unrelated table with the same number of rows had been filtered. An unalignable Boolean mask now raises `IndexError` rather than `KeyError`.
+
+	=== "Behavior prior to change"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.q('([] x: til 10)')
+		>>> subset = tab.loc[tab['x'] > 4]
+		>>> other = kx.q('([] y: til 10)')
+		>>> filtered = other.loc[other['y'] > 6]  # an unrelated table of the same length
+		>>> subset.loc[tab['x'] < 8]
+		pykx.Table(pykx.q('
+		x
+		-
+		5
+		'))
+		```
+
+	=== "Behavior post change"
+
+		```python
+		>>> import pykx as kx
+		>>> tab = kx.q('([] x: til 10)')
+		>>> subset = tab.loc[tab['x'] > 4]
+		>>> other = kx.q('([] y: til 10)')
+		>>> filtered = other.loc[other['y'] > 6]  # an unrelated table of the same length
+		>>> subset.loc[tab['x'] < 8]
+		pykx.Table(pykx.q('
+		x
+		-
+		5
+		6
+		7
+		'))
+		```
+
+- `Table.head(n)` and `Table.tail(n)` no longer repeat rows when `n` is larger than the table. They return the whole table, matching pandas.
+- `Table.head(n)` and `Table.tail(n)` with a negative `n` now drop `-n` rows from the end (`head`) or the start (`tail`) and return the rest, matching pandas.
+- `PYKX_KEEP_LOCAL_TIMES` now applies to Pandas temporal types.
+- Fixed a segfault that could occur when converting some objects to `pykx.K` types in threads.
+- A failed conversion of a `pandas.DataFrame` to a table no longer leaves a q error pending. Previously the next q function call could fail with that error. The raised `PyKXException` now includes the q error, for example `Failed to create table from k dictionary: nyi`.
+- Converting a `pandas.MultiIndex` with mixed level name types, for example `names=['a', 1]`, now raises `PyKXException: Failed to create table from pandas MultiIndex: nyi`. Previously the process crashed.
+- `kx.TimestampVector.py()` now correctly converts every null in the vector to `pandas.NaT`.
+- `kx.TimestampVector.py(tzinfo=...)` no longer raises `AttributeError` when the vector contains nulls.
+- `import pykx` with `PYKX_THREADING` set no longer hangs if the q evaluation thread cannot be started. It now raises `PyKXException`.
+- Fixed a small memory leak on startup when `PYKX_THREADING` is set.
+- A client querying a PyKX server for an object that cannot be serialized no longer hangs waiting on a response. The server now throws `'type`.
+- `kx.serialize` now raises a `QError` when an object cannot be serialized. It previously raised `TypeError: Expected unicode, got int`.
+
+	```python
+	>>> import pykx as kx
+	>>> kx.serialize(kx.q('.pykx.getattr'))
+	pykx.exceptions.QError: Failed to serialize IPC message: type
+	```
+
+- Fixed a segfault when loading `pykx.q` into a process that had already imported `pykx`.
+- `#!python kx.install_into_QHOME` no longer copies `q.dll` into `#!bash QHOME` on Windows, as it is no longer required.
+- Fixed a bug when calling `poll_recv_async` on a `RawQConnection` object that would cause an error due to the use of `WeakMethod`s.
+- `kx.schema.builder` no longer raises `pykx.exceptions.QError: sector` when you pass a `kx.SecondVector`.
+- `kx.license.install` now installs license files that use nonstandard names and prints the destination path after a successful installation.
+
+	```python
+	>>> kx.license.install('~/.kx/kc_backup.lic', format='FILE', license_type='kc.lic')
+	PyKX license successfully installed: /home/user/.kx/kc.lic
+	True
+	```
+
+- Opening a `kx.QConnection` directly now opens a single handle to the server. Previously each connection opened two.
+- `kx.Table.rename` now ignores non-string column names instead of raising a `KeyError`.
+- `kx.KeyedTable.reset_index` no longer raises `pykx.exceptions.QError: ]` when you pass integer `levels` with `drop=True`.
+- `q.read.csv` and `kx.QReader.csv` now correctly map `kx.DatetimeAtom` and `kx.DatetimeVector` to the q datetime type when you pass a list of column types.
+- `import pykx` no longer imports `streamlit`, which was overwriting the default Plotly template and causing Plotly charts to lose their colors. `pykx.streamlit.PyKXConnection` now loads Streamlit on first use.
+
 ## PyKX 3.2.0
 
 **Release Date**

@@ -62,7 +62,7 @@ class PandasResetIndex:
                   levels,
                   self)
                 if drop:
-                    res = q('{x[y;(),cols[key y]z]]}', drop_keys, self, levels) # noqa: E501
+                    res = q('{x[y;(),cols[key y]z]}', drop_keys, self, levels) # noqa: E501
                 else:
                     res = q('{(cols[key x] except cols[key x]y) xkey x}', self, levels)
             else:

@@ -59,7 +59,7 @@ class QReader:
                 upd_types.append(i)
             else:
                 found = False
-                for key in _type_mapping.keys():
+                for key in sorted(_type_mapping.keys(), key=len, reverse=True):
                     if key in t:
                         found = True
                         upd_types.append(_type_mapping[key])

@@ -120,6 +120,12 @@ from .util import df_from_arrays, slice_to_range
 
 import importlib.util
 _torch_unavailable = importlib.util.find_spec('torch') is None
+_np_get_handler_name = (np.core.multiarray if np.__version__[0] == '1'
+                        else np._core.multiarray).get_handler_name
+
+
+cdef bint _pykx_allocated(x):
+    return _np_get_handler_name(x) == 'pykx_allocator'
 
 
 __all__ = [
@@ -169,6 +175,17 @@ if system == 'Windows': # nocov
 
 cdef inline core.K _k(x):
     return <core.K><uintptr_t>x._addr
+
+
+cdef _raise_failed(str msg):
+    # A failed q C API call leaves its error pending.
+    # Collect and free it before raising, keeping its message.
+    cdef core.K err = core.ee(NULL)
+    if err != NULL:
+        if err.s != NULL:
+            msg = f'{msg}: {str(err.s, "utf-8")}'
+        core.r0(err)
+    raise PyKXException(msg)
 
 
 # nanoseconds between 1970-01-01 and 2000-01-01
@@ -971,9 +988,7 @@ def from_list(x: list,
     if ktype is not None and not ktype is k.List:
         try:
             np_type = pykx_ktype_to_np_type.get(ktype) if ktype != k.GUIDVector else object
-
             if ktype is k.TimestampVector and config.keep_local_times:
-
                 x = [y.replace(tzinfo=None) for y in x]
             return from_numpy_ndarray(np.array(x, dtype=np_type), ktype, cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
         except TypeError as ex:
@@ -1380,11 +1395,16 @@ def from_numpy_ndarray(x: np.ndarray,
     Returns:
         An instance of a subclass of `pykx.Vector`.
     """
-    owndata = False
-    writeable = False
+    skip_allocator = False
     if hasattr(x, 'flags'):
-        owndata = x.flags.owndata
-        writeable = x.flags.writeable
+        if (
+            not k_allocator
+            or no_allocator
+            or not x.flags.owndata
+            or not x.flags.writeable
+            or not _pykx_allocated(x)
+        ):
+            skip_allocator = True
     if str(x.dtype) == "pykx.uuid":
         x = x.array
 
@@ -1484,7 +1504,7 @@ def from_numpy_ndarray(x: np.ndarray,
                 core.r0(kx)
                 raise TypeError('Item size mismatch when converting Numpy ndarray to q: q item size '
                                 f'({itemsize}) != Numpy item size ({x.itemsize})')
-            if not k_allocator or no_allocator or not owndata or not writeable:
+            if skip_allocator:
                 kx = core.ktn(ktype.t, n)
                 data = x.__array_interface__['data'][0]
                 memcpy(<void *> kx.G0, <void *> data, n * itemsize)
@@ -1535,12 +1555,12 @@ def from_numpy_ndarray(x: np.ndarray,
             core.r0(kx)
             raise TypeError('Item size mismatch when converting Numpy ndarray to q: q item size '
                             f'({itemsize}) != Numpy item size ({x.itemsize})')
-        if not k_allocator or no_allocator or not owndata or not writeable:
+        if skip_allocator:
             kx = core.ktn(ktype.t, n)
             data = x.__array_interface__['data'][0]
             memcpy(<void *> kx.G0, <void *> data, n * itemsize)
             return factory(<uintptr_t>kx, False)
-    if not k_allocator or no_allocator or not owndata or not writeable:
+    if skip_allocator:
         return factory(<uintptr_t>kx, False) # nocov
     Py_INCREF(x)
     data = x.__array_interface__['data'][0]
@@ -1576,6 +1596,8 @@ def _to_numpy_or_categorical(x, col_name=None, df=None):
     if isinstance(x, np.ndarray):
         return x
     elif isinstance(x, (pd.Series, pd.Index)):
+        if config.keep_local_times and hasattr(x, 'dt') and hasattr(x.dt, 'tz_localize'):
+            x = x.dt.tz_localize(None)
         if isinstance(x.values, pd.Categorical):
             return from_pandas_categorical(
                 x.values,
@@ -1689,7 +1711,7 @@ def from_pandas_dataframe(x: pd.DataFrame,
         )
         kx = core.xT(core.r1(_k(kk)))
         if kx == NULL:
-            raise PyKXException('Failed to create table from k dictionary')
+            _raise_failed('Failed to create table from k dictionary')
     elif ktype is k.KeyedTable:
         idx = None
         if isinstance(x.index, pd.MultiIndex):
@@ -1701,7 +1723,7 @@ def from_pandas_dataframe(x: pd.DataFrame,
         k_values = from_pandas_dataframe(x.reset_index(drop=True), cast=cast, handle_nulls=handle_nulls, strings_as_char=strings_as_char, no_allocator=no_allocator)
         kx = core.xD(core.r1(_k(k_keys)), core.r1(_k(k_values)))
         if kx == NULL:
-            raise PyKXException('Failed to create k dictionary (keyed table)')
+            _raise_failed('Failed to create k dictionary (keyed table)')
     else:
         raise _conversion_TypeError(x, repr('pandas.DataFrame'), ktype)
     if convert_dict == None:
@@ -1801,13 +1823,18 @@ def from_pandas_index(x: pd.Index,
     Returns:
         An instance of `pykx.Vector` or `pykx.Table`.
     """
+    cdef core.K kx
+
     if isinstance(x, pd.CategoricalIndex):
         return from_pandas_categorical(x.values, ktype, x.name, no_allocator=no_allocator)
     elif isinstance(x, pd.MultiIndex):
         d = {(level.name if level.name else str(i)): level[x.codes[i]]
              for i, level in enumerate(x.levels)}
         index_dict = from_dict(d, no_allocator=no_allocator)
-        return factory(<uintptr_t>core.xT(core.r1(_k(index_dict))), False)
+        kx = core.xT(core.r1(_k(index_dict)))
+        if kx == NULL:
+            _raise_failed('Failed to create table from pandas MultiIndex')
+        return factory(<uintptr_t>kx, False)
     elif isinstance(x, _supported_pandas_index_types_via_numpy):
         return from_numpy_ndarray(x.to_numpy().copy(), cast=cast, handle_nulls=handle_nulls, no_allocator=no_allocator)
     else:
@@ -2274,6 +2301,8 @@ def from_numpy_datetime64(x: np.datetime64,
     """
     cdef core.K kx
     if isinstance(x, pd._libs.tslibs.timestamps.Timestamp):
+        if config.keep_local_times and hasattr(x, 'tz_localize'):
+            x = x.tz_localize(None)
         x = x.to_datetime64()
     if ktype is None or ktype is k.TimestampAtom:
         kx = core.ktj(-12, x.astype(np.dtype('datetime64[ns]')).astype(np.int64) - TIMESTAMP_OFFSET) # noqa

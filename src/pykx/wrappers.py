@@ -250,6 +250,22 @@ def _rich_convert(x: 'K', stdlib: bool = True, raw=False):
     return x.np(raw=raw)
 
 
+def _as_array(arr, dtype, copy):
+    """Apply the NumPy `__array__(dtype, copy)` protocol to an already-materialised array.
+
+    NumPy 2.* passes `dtype` positionally and `copy` by keyword to `__array__`, so every
+    implementation must accept both. A dtype conversion is unavoidably a copy, so an explicit
+    `copy=False` alongside a differing dtype is refused (matching `numpy.ndarray`).
+    """
+    if dtype is not None and dtype != arr.dtype:
+        if copy is False:
+            raise ValueError('Unable to avoid copy while creating an array as requested.')
+        return arr.astype(dtype)
+    if copy:
+        return arr.copy()
+    return arr
+
+
 # HACK: This gets overwritten by the toq module to avoid a circular import error.
 def toq(*args, **kwargs): # nocov
     raise NotImplementedError
@@ -598,8 +614,8 @@ class Atom(K):
             res = res._unlicensed_getitem(0)
         return res
 
-    def __array__(self, dtype=None):
-        return np.asarray(self.np(), dtype=dtype)
+    def __array__(self, dtype=None, copy=None):
+        return _as_array(np.asarray(self.np()), dtype, copy)
 
 
 class EnumAtom(Atom):
@@ -657,9 +673,11 @@ class TemporalSpanAtom(TemporalAtom):
         as_np_timedelta = self.np()
         if pd.isnull(as_np_timedelta):
             return pd.NaT
-        return timedelta(
-            microseconds=int(as_np_timedelta.astype('timedelta64[ns]').astype(np.int64))//1000
-        )
+        if self._np_type == 'ns':
+            microseconds = int(as_np_timedelta.astype(np.int64)) // 1000
+        else:
+            microseconds = int(as_np_timedelta.astype('timedelta64[us]').astype(np.int64))
+        return timedelta(microseconds=microseconds)
 
     def np(self,
            *,
@@ -1873,13 +1891,13 @@ class Vector(Collection, abc.Sequence):
                 raise QError(str(err))
         self.__dict__.update(update_assign.__dict__)
 
-    def __array__(self):
+    def __array__(self, dtype=None, copy=None):
         # The `__array__` method must return a `np.ndarray`, not a `np.ma.masked_array`. As a
         # result, the null check we currently perform (by default) is a waste of time and memory,
         # since what will be returned in the end will ultimately expose the underlying values of
         # the nulls anyway. We can’t stop `__array__` from returning the raw null values, but we
         # can save that time and memory by using `has_nulls=False`.
-        return self.np(has_nulls=False)
+        return _as_array(self.np(has_nulls=False), dtype, copy)
 
     def __arrow_array__(self, type=None):
         if pa is None:
@@ -2560,8 +2578,8 @@ class PandasUUIDArray(pd.api.extensions.ExtensionArray):
     def __eq__(self, other):
         return self.array == other
 
-    def __array__(self):
-        return self.array
+    def __array__(self, dtype=None, copy=None):
+        return _as_array(self.array, dtype, copy)
 
     def reshape(self, *args, **kwargs):
         return self
@@ -2936,19 +2954,17 @@ class TimestampVector(TemporalFixedVector):
         if raw:
             return self.np(raw=True, has_nulls=has_nulls).tolist()
         if tzinfo is not None:
+            converted = self.np().astype('datetime64[us]').astype(datetime).tolist()
             if tzshift:
-                return [x.replace(tzinfo=pytz.utc).astimezone(tzinfo)
-                        for x in self.np().astype('datetime64[us]').astype(datetime).tolist()]
+                return [pd.NaT if x is None else x.replace(tzinfo=pytz.utc).astimezone(tzinfo)
+                        for x in converted]
             else:
-                return [x.replace(tzinfo=tzinfo)
-                        for x in self.np().astype('datetime64[us]').astype(datetime).tolist()]
-        converted_vector=self.np().astype('datetime64[us]').astype(datetime).tolist()
-        null_pos=[]
-        for x in converted_vector:
+                return [pd.NaT if x is None else x.replace(tzinfo=tzinfo)
+                        for x in converted]
+        converted_vector = self.np().astype('datetime64[us]').astype(datetime).tolist()
+        for i, x in enumerate(converted_vector):
             if x is None:
-                null_pos.append(converted_vector.index(x))
-        for i in null_pos:
-            converted_vector[i]=pd.NaT
+                converted_vector[i] = pd.NaT
         return converted_vector
 
 
@@ -4323,7 +4339,8 @@ class Dictionary(Mapping):
     def __setitem__(self, key, val):
         if isinstance(key, tuple):
             raise NotImplementedError(f"{__class__.__name__}.{inspect.stack()[0][3]}() is not implemented, .pykx.Dictionary objects do not support tuple key assignment") # noqa: E501
-        self.__dict__.update(q('{ye:(),y;x,ye!$[y~ye;z;enlist z]}', self, key, val).__dict__)
+        res = q('{ye:(),y;x,ye!$[y~ye;z;enlist z]}', self, key, val)
+        self.__dict__.update(res.__dict__)
 
     def _repr_html_(self):
         if not licensed:

@@ -70,7 +70,8 @@ class serialize:
         return self.data[key]
 
     def __del__(self):
-        decref(self._ptr)
+        if hasattr(self, '_ptr'):
+            decref(self._ptr)
 
     def np(self):
         """Returns a copy of the bytes making up the serialized object as a NumPy array.

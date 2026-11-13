@@ -50,7 +50,9 @@ windows_include_dirs = (str(windows_vcpkg_content/'include'),) if system == 'Win
 windows_library_dirs = () if system != 'Windows' else (str(Path(sys.exec_prefix)/'libs'),
                                                        str(Path(sys.base_exec_prefix)/'libs'),
                                                        str(windows_vcpkg_content/'lib'))
-windows_libraries = () if system != 'Windows' else ('psapi', 'q')
+# `q.lib` is deliberately absent: it would make every q symbol a static import on `q.dll`,
+# which under q binds to the wrong interpreter (KXI-46558). The q API is resolved at runtime.
+windows_libraries = () if system != 'Windows' else ('psapi',)
 
 
 class CustomInstallCommand(install):
@@ -111,7 +113,7 @@ class build_ext(default_build_ext):
                 extra_preargs=[
                     *(
                         ('-undefined dynamic_lookup',) if system == 'Darwin' else
-                        ('/LD /Fepykxq.dll q.lib -I include',) if system == 'Windows' else ()
+                        ('/LD /Fepykxq.dll -I include',) if system == 'Windows' else ()
                     ),
                 ],
             ),
@@ -138,7 +140,6 @@ class build_ext(default_build_ext):
         self.build_q_c_extension(compiler, 'pykxq', lib_ext)
         if system != 'Windows':
             self.build_q_c_extension(compiler, '_tcore', lib_ext, library=['pthread'])
-            self.build_q_c_extension(compiler, 'pykxq_m', lib_ext, library=['pthread'])
 
 
 def cythonize_extensions(extensions: List[Extension]) -> List[Extension]:

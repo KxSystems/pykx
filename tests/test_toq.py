@@ -4,7 +4,10 @@ import math
 import os
 from pathlib import Path
 from platform import system
+import subprocess
+import sys
 from sys import getrefcount
+from threading import Thread
 from uuid import UUID, uuid4
 
 # Do not import Pandas, PyArrow, or PyKX here - use the pd/pa/kx fixtures instead!
@@ -1120,6 +1123,20 @@ def test_from_pandas_dataframe_no_col_names(kx, pd):
     assert kx.K(df).t == 98
 
 
+def test_from_pandas_dataframe_col_name_types(kx, pd):
+    data = [[1, 2, 3], [4, 5, 6]]
+    assert kx.toq(pd.DataFrame(data, columns=['a', 'b', 'c'])).columns.py() == ['a', 'b', 'c']
+    for cols in ([0, 1, 2], [0.5, 1.5, 2.5]):
+        res = kx.toq(pd.DataFrame(data, columns=cols))
+        assert res.t == 98
+        assert res.columns.py() == ['x', 'x1', 'x2']
+    with pytest.raises(kx.exceptions.PyKXException,
+                       match='Failed to create table from k dictionary: nyi'):
+        kx.toq(pd.DataFrame(data, columns=['a', 1, 'c']))
+    # The failed conversion must not leave a q error pending for the next one to report
+    assert kx.toq(pd.DataFrame(data, columns=['a', 'b', 'c'])).columns.py() == ['a', 'b', 'c']
+
+
 @pytest.mark.nep49
 def test_from_pandas_index(q, kx, pd):
     t = q('([] a:til 4; b:"abcd"; c:`w`x`y`z; d:100+til 4)')
@@ -1128,6 +1145,9 @@ def test_from_pandas_index(q, kx, pd):
     assert (kx.K(mkt.pd().index)._values == q('key', mkt)._values).all()
     assert kx.K(pd.MultiIndex.from_product([[0, 1], [0, 1]])).py() == \
         {'0': [0, 0, 1, 1], '1': [0, 1, 0, 1]}
+    with pytest.raises(kx.exceptions.PyKXException,
+                       match='Failed to create table from pandas MultiIndex: nyi'):
+        kx.K(pd.MultiIndex.from_arrays([[1, 2], [3, 4]], names=['a', 1]))
     with pytest.raises(TypeError):
         kx.K(pd.IntervalIndex.from_tuples([(0, 1), (1, 4), (4, 6)]))
 
@@ -1388,6 +1408,27 @@ def test_null_roundtrip(kx):
             == kx.toq(t[col].np(), handle_nulls=True)
         ).all()
     assert (t == kx.toq(t.pd(), handle_nulls=True)).all().all()
+
+
+@pytest.mark.isolate
+def test_nep_49_free_large_array_unlicensed():
+    script = (
+        'import numpy as np, pykx as kx\n'
+        'assert not kx.licensed\n'
+        'for n in (1048574, 1048575, 2000000):\n'
+        '    a = np.empty(n, dtype=np.int64)\n'
+        '    a[:] = 1\n'
+        '    assert a.sum() == n\n'
+        '    del a\n'
+    )
+    proc = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c', script),
+        env={**os.environ, 'QARGS': '--unlicensed --pykxalloc'},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    assert proc.returncode == 0, proc.stdout
 
 
 @pytest.mark.unlicensed
@@ -1760,3 +1801,61 @@ def test_2d_array_from_file_no_allocator(kx):
 def test_embedding_segfault(kx):
     df=pd.DataFrame(dict(embeddings=list(np.random.ranf((500, 10)).astype(np.float32))))
     kx.toq(df)
+
+
+def test_keep_local_times_off(kx):
+    a = pd.Timestamp('2026-07-28 15:41:22.734077-0400', tz='America/New_York')
+    b = pd.Series([a, a])
+
+    k = kx.q('2026.07.28D15:41:22.734077000')
+    kk = kx.q('2026.07.28D15:41:22.734077000 2026.07.28D15:41:22.734077000')
+    k2 = kx.q('2026.07.28D19:41:22.734077000')
+    kk2 = kx.q('2026.07.28D19:41:22.734077000 2026.07.28D19:41:22.734077000')
+
+    assert kx.toq(a) == k2
+    assert (kx.toq(b) == kk2).all()
+    assert kx.toq(a) != k
+    assert not (kx.toq(b) == kk).any()
+
+
+@pytest.mark.isolate
+def test_keep_local_times_on():
+    import os
+    os.environ['PYKX_KEEP_LOCAL_TIMES'] = '1'
+    import pykx as kx
+    import pandas as pd
+
+    a = pd.Timestamp('2026-07-28 15:41:22.734077-0400', tz='America/New_York')
+    b = pd.Series([a, a])
+
+    k = kx.q('2026.07.28D15:41:22.734077000')
+    kk = kx.q('2026.07.28D15:41:22.734077000 2026.07.28D15:41:22.734077000')
+
+    assert kx.toq(a) == k
+    assert (kx.toq(b) == kk).all()
+
+
+@pytest.mark.nep49
+def test_table_in_thread(kx):
+
+    def generate_data():
+        now = datetime.utcnow()
+        trade_id = uuid4()
+        df = pd.DataFrame(
+            [[now, "VOD", "LSE", "buy", 75.90, 100, trade_id]],
+            columns=["time", "sym", "exch", "side", "price", "size", "tradeID"]
+        )
+        return kx.Table(df)
+
+    def generate_data_in_thread():
+        res = []
+
+        def thread_body():
+            d = generate_data()
+            res.append(d)
+        t = Thread(target=thread_body)
+        t.start()
+        t.join()
+        return res[0]
+
+    assert isinstance(generate_data_in_thread(), kx.Table)

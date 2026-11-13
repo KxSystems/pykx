@@ -35,6 +35,37 @@ def test_dir(kx):
 
 
 @pytest.mark.isolate
+def test_import_does_not_import_streamlit():
+    # Importing streamlit overwrites the default Plotly template, so it must wait for first use.
+    # The check runs in a fresh interpreter because `isolate` forks pytest, which has already
+    # imported streamlit while collecting tests/test_streamlit.py
+    import pykx as kx
+    check = (
+        'import sys, pykx as kx;'
+        "assert 'streamlit' not in sys.modules;"
+        "assert 'pykx._streamlit_conn' not in sys.modules;"
+        "assert kx.streamlit.__all__ == ['PyKXConnection'];"
+        "assert kx.streamlit.PyKXConnection is not None;"
+        "assert 'pykx._streamlit_conn' in sys.modules"
+    )
+    with kx.PyKXReimport():
+        output = subprocess.run(
+            (str(Path(sys.executable).as_posix()), '-c', check),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    assert output.returncode == 0, output.stdout
+
+
+@pytest.mark.unlicensed
+def test_streamlit_star_import(kx):
+    names = {}
+    exec('from pykx.streamlit import *', names)
+    assert names['PyKXConnection'] is kx.streamlit.PyKXConnection
+
+
+@pytest.mark.isolate
 def test_qargs_q_flag():
     # PyKX used to fail on startup if the '-q' flag was manually provided
     os.environ['QARGS'] = '-q'
@@ -329,6 +360,28 @@ def test_pykx_stdout_stderr_under_q():
     assert (lambda x: ([int(i.split(',')[1]) for i in x]))(output) == list(range(1, 23))
 
 
+@pytest.mark.skipif(
+    os.getenv('PYKX_THREADING') is not None,
+    reason='Not supported with PYKX_THREADING'
+)
+def test_load_pykx_q_in_python_process():
+    subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c',
+         'import pykx;pykx.install_into_QHOME()'),
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )
+    res = subprocess.run(
+        (str(Path(sys.executable).as_posix()), '-c',
+         'import pykx as kx\n'
+         'kx.q(\'system"l pykx.q"\')\n'
+         'print("underq-load-ok", kx.q(\'.pykx.eval["1+1"]`\').py())\n'),
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=120,
+    )
+    assert 'SIGSEGV' not in res.stdout, res.stdout
+    assert res.returncode == 0, res.stdout
+    assert 'underq-load-ok 2' in res.stdout, res.stdout
+
+
 @pytest.mark.isolate
 def test_compressed_enum_segfault(kx):
     import tempfile
@@ -380,6 +433,7 @@ def test_import_cd():
     assert cd == os.getcwd()
 
 
+@pytest.mark.timeout(200)
 @pytest.mark.xfail(reason='Allow to xfail if internet not available', strict=False)
 def test_links():
     links = ['https://code.kx.com/q4m3/12_Workspace_Organization/#122-contexts',
@@ -416,7 +470,7 @@ def test_links():
              'https://code.kx.com/q/ref/#iterators',
              'https://code.kx.com/q/ref/cast/']
     for url in links:
-        req = requests.get(url)
+        req = requests.get(url, timeout=5)
         print(url, req.status_code)
         assert req.status_code == 200
 
@@ -440,31 +494,31 @@ def test_kx_versions(kx):
     if test_vars == ('Linux',   'x86_64', '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Linux',   'x86_64', '4.1'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.10.23')
     # elif test_vars == ('Linux',   'x86_64', '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     elif test_vars == ('Linux',   'aarch64',    '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Linux',   'aarch64',    '4.1'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.10.23')
     # elif test_vars == ('Linux',   'aarch64',    '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     elif test_vars == ('Darwin',  'x86_64', '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Darwin',  'x86_64', '4.1'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.10.23')
     # elif test_vars == 'Darwin',  'x86_64', '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     elif test_vars == ('Darwin',  'arm64',    '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Darwin',  'arm64',    '4.1'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.10.23')
     # elif test_vars == ('Darwin',  'arm',    '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     elif test_vars == ('Windows', 'AMD64', '4.0'):
         assert kx.q.z.k == kx.q('2025.02.18')
     elif test_vars == ('Windows', 'AMD64', '4.1'):
-        assert kx.q.z.k == kx.q('2026.05.01')
+        assert kx.q.z.k == kx.q('2026.10.23')
     # elif test_vars == ('Windows', 'AMD64', '4.2'):
     #    assert kx.q.z.k == kx.q('?')
     else:

@@ -9,12 +9,15 @@ import math
 from operator import index
 import os
 import pickle
+from pathlib import Path
 from platform import python_implementation
 import shutil
+import subprocess
 from textwrap import dedent
 from uuid import UUID
 import itertools
 import sys
+import warnings
 
 # Do not import Pandas, PyArrow, or PyKX here - use the pd/pa/kx fixtures instead!
 import numpy as np
@@ -1085,6 +1088,25 @@ class Test_Atom:
         assert np.asarray(kx.TimespanAtom(timedelta(3))).dtype == "<m8[ns]"
 
     @pytest.mark.unlicensed
+    def test_array_protocol(self, kx):
+        # NumPy 2.* passes `dtype` positionally and `copy` by keyword to `__array__`.
+        # Atoms and Vectors must accept both without raising a TypeError or emitting a
+        # DeprecationWarning (see PandasUUIDArray regression in Test_Table). These paths
+        # remain valid on NumPy 1.x, which never passes `copy`.
+        numpy_gt2 = version.parse(np.__version__) >= version.parse('2.0')
+        for obj in (kx.LongAtom(42), kx.toq(np.arange(5))):
+            assert np.asarray(obj, dtype=object).dtype == object
+            with warnings.catch_warnings():
+                warnings.simplefilter('error', DeprecationWarning)
+                assert np.array(obj) is not None
+                assert np.array(obj, copy=True) is not None
+            if numpy_gt2:
+                # A dtype conversion is unavoidably a copy, so an explicit copy=False must
+                # be refused. NumPy 1.x has lenient copy semantics and does not raise here.
+                with pytest.raises(ValueError):
+                    np.array(obj, dtype=object, copy=False)
+
+    @pytest.mark.unlicensed
     def test_arr_nulls(self, kx, q):
         assert np.asarray(kx.ShortAtom(None)).dtype == "int16"
         assert np.asarray(kx.IntAtom(None)).dtype == "int32"
@@ -1272,15 +1294,19 @@ class Test_TemporalAtom:
 
     @pytest.mark.nep49
     def test_timestamp_timezone(self, kx):
-        kx.config._set_keep_local_times(False)
-        la = pytz.timezone("America/Los_Angeles")
-        tz = datetime(2022, 7, 20, 10, 0, 0, 0, la)
-        assert not tz == kx.toq(tz).py()
-        assert tz == kx.toq(tz).py(tzinfo=pytz.UTC)
-        assert tz == kx.toq(tz).py(tzinfo=la)
-        kx.config._set_keep_local_times(True)
-        assert datetime(2022, 7, 20, 10, 0, 0, 0) == kx.toq(tz).py()
-        assert tz == kx.toq(tz).py(tzinfo=la, tzshift=False)
+        keep_local_times = kx.config.keep_local_times
+        try:
+            kx.config._set_keep_local_times(False)
+            la = pytz.timezone("America/Los_Angeles")
+            tz = datetime(2022, 7, 20, 10, 0, 0, 0, la)
+            assert not tz == kx.toq(tz).py()
+            assert tz == kx.toq(tz).py(tzinfo=pytz.UTC)
+            assert tz == kx.toq(tz).py(tzinfo=la)
+            kx.config._set_keep_local_times(True)
+            assert datetime(2022, 7, 20, 10, 0, 0, 0) == kx.toq(tz).py()
+            assert tz == kx.toq(tz).py(tzinfo=la, tzshift=False)
+        finally:
+            kx.config._set_keep_local_times(keep_local_times)
 
     @pytest.mark.nep49
     def test_month(self, q, kx):
@@ -2406,18 +2432,22 @@ class Test_TimestampVector:
 
     @pytest.mark.nep49
     def test_timestamp_timezone_vector(self, kx):
-        kx.config._set_keep_local_times(False)
-        la = pytz.timezone("America/Los_Angeles")
-        tz = [datetime(2022, 7, 20, 10, 0, 0, 0, la), datetime(2021, 6, 5, 7, 0, 0, 0, la)]
+        keep_local_times = kx.config.keep_local_times
+        try:
+            kx.config._set_keep_local_times(False)
+            la = pytz.timezone("America/Los_Angeles")
+            tz = [datetime(2022, 7, 20, 10, 0, 0, 0, la), datetime(2021, 6, 5, 7, 0, 0, 0, la)]
 
-        assert not tz == kx.toq(tz).py()
-        assert tz == kx.TimestampVector(tz).py(tzinfo=pytz.UTC)
-        assert tz == kx.toq(tz).cast(kx.TimestampVector).py(tzinfo=la)
-        kx.config._set_keep_local_times(True)
-        assert kx.toq(tz).py() == \
-            [datetime(2022, 7, 20, 10, 0, 0, 0), datetime(2021, 6, 5, 7, 0, 0, 0)]
-        assert kx.toq(tz).cast(kx.TimestampVector).py(tzinfo=la, tzshift=False) == tz
-        assert kx.TimestampVector(tz).py(tzinfo=la, tzshift=False) == tz
+            assert not tz == kx.toq(tz).py()
+            assert tz == kx.TimestampVector(tz).py(tzinfo=pytz.UTC)
+            assert tz == kx.toq(tz).cast(kx.TimestampVector).py(tzinfo=la)
+            kx.config._set_keep_local_times(True)
+            assert kx.toq(tz).py() == \
+                [datetime(2022, 7, 20, 10, 0, 0, 0), datetime(2021, 6, 5, 7, 0, 0, 0)]
+            assert kx.toq(tz).cast(kx.TimestampVector).py(tzinfo=la, tzshift=False) == tz
+            assert kx.TimestampVector(tz).py(tzinfo=la, tzshift=False) == tz
+        finally:
+            kx.config._set_keep_local_times(keep_local_times)
 
     @pytest.mark.nep49
     def test_raw_np(self, q):
@@ -2429,6 +2459,27 @@ class Test_TimestampVector:
     def test_empty_vector(self, q):
         assert q('"p"$()').np().dtype == np.dtype('datetime64[ns]')
         assert q('"p"$()').np(raw=True).dtype == np.int64
+
+    @pytest.mark.nep49
+    def test_py_multiple_nulls(self, q, kx):
+        vec = kx.q('(2023.01.01D12:00:00.000000000; 0Np; 2023.01.03D06:30:00.000000000; 0Np; 0Np)')
+        assert isinstance(vec, kx.TimestampVector)
+        result = vec.py()
+        assert result[0] == datetime(2023, 1, 1, 12, 0, 0)
+        assert result[2] == datetime(2023, 1, 3, 6, 30, 0)
+        assert result[1] is pd.NaT
+        assert result[3] is pd.NaT
+        assert result[4] is pd.NaT
+        assert None not in result
+
+    @pytest.mark.nep49
+    def test_py_tzinfo_nulls(self, kx):
+        vec = kx.q('(2023.01.01D12:00:00.000000000; 0Np; 2023.01.03D06:30:00.000000000)')
+        result = vec.py(tzinfo=pytz.timezone('GMT'))
+        assert result[0] == datetime(2023, 1, 1, 12, 0, 0, tzinfo=pytz.utc)
+        assert result[0].tzinfo is not None
+        assert result[2] == datetime(2023, 1, 3, 6, 30, 0, tzinfo=pytz.utc)
+        assert result[1] is pd.NaT
 
 
 class Test_MonthVector:
@@ -2900,6 +2951,14 @@ class Test_Table:
     def test_pa(self, q, pa):
         t = q(self.q_table_str)
         assert all(t.pa().to_pandas() == t.pd(raw_guids=True))
+
+    def test_pd_raw_guids_repr(self, q):
+        # A raw_guids=True DataFrame must be renderable: pandas/numpy call
+        # PandasUUIDArray.__array__(dtype) when formatting, which previously
+        # raised `TypeError: __array__() takes 1 positional argument but 2 were given`.
+        df = q(self.q_table_str).pd(raw_guids=True)
+        assert repr(df)
+        assert np.asarray(df['c'].values, dtype=object).shape == (3,)
 
     def test_has_null_and_has_inf(self, q):
         table = q('([]0w,9?1f;0n,9?1f)')
@@ -3514,6 +3573,27 @@ class Test_Dictionary:
         d = kx.q('([] a:1 2;b:3 6)')
         a['d'] = d
         assert isinstance(a['d'], kx.Table)
+
+    def test_setitem_keeps_dictionary_alive_under_gc(self):
+        script = (
+            'import pykx as kx\n'
+            'assert kx.config.k_gc\n'
+            "d = kx.q('`a`b!1 2')\n"
+            "d['c'] = 3\n"
+            "assert kx._wrappers.k_t(d) == 99, 'not a dictionary any more'\n"
+            "assert kx.q('.Q.s1', d).py() == b'`a`b`c!1 2 3'\n"
+            "d['e'] = kx.q('([] a:enlist 2;b:enlist 6)')\n"
+            "assert isinstance(d['e'], kx.Table)\n"
+            'repr(d)\n'
+        )
+        proc = subprocess.run(
+            (str(Path(sys.executable).as_posix()), '-c', script),
+            env={**os.environ, 'PYKX_GC': '1'},
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        assert proc.returncode == 0, proc.stdout
 
 
 class Test_KeyedTable:
@@ -4245,7 +4325,7 @@ def test_infinites(kx, q, pa):
     py_positive_infinites = [math.inf, math.inf, math.inf, float('inf'), float('inf'),
                              datetime.datetime(2262, 4, 11, 23, 47, 16, 854775), 2147484007,
                              2147494604, datetime.timedelta(106751, 16, 854775, 0, 47, 23),
-                             datetime.timedelta(-3220, 4, 33138, 0, 5, 5),
+                             datetime.timedelta(minutes=2147483647),
                              datetime.timedelta(24855, 7, 0, 0, 14, 3),
                              datetime.timedelta(24, 23, 647000, 0, 31, 20)]
     compare_all_infinites(positive_infinites, py_positive_infinites, 'py')
@@ -4253,7 +4333,7 @@ def test_infinites(kx, q, pa):
     py_negative_infinites = [-math.inf, -math.inf, -math.inf, float('-inf'), float('-inf'),
                              datetime.datetime(1707, 9, 22, 0, 12, 43, 145224), -2147483287,
                              -2147472690, datetime.timedelta(-106752, 43, 145224, 0, 12),
-                             datetime.timedelta(3219, 55, 966861, 0, 54, 18),
+                             datetime.timedelta(minutes=-2147483647),
                              datetime.timedelta(-24856, 53, 0, 0, 45, 20),
                              datetime.timedelta(-25, 36, 353000, 0, 28, 3)]
     compare_all_infinites(negative_infinites, py_negative_infinites, 'py')

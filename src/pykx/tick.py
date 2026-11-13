@@ -61,7 +61,7 @@ class STREAMING:
         self._connection = None
         try:
             if not self._initialized:
-                self._initalized=False
+                self._initialized=False
         except BaseException:
             self._initialized=False
         self.server = start_q_subprocess(self._port, load_file='pykx.q', init_args=init_args)
@@ -71,7 +71,8 @@ class STREAMING:
                                                  load_file='pykx.q',
                                                  init_args=init_args)
             except BaseException as err:
-                raise QError(f'Unable to initialize q process with error {str(err.value)}')
+                raise QError(
+                    f'Unable to initialize q process with error {err}') from err
         try:
             connection = SyncQConnection(port=port)
             self._connection = connection

@@ -498,7 +498,7 @@ cpdef object _to_bytes(mode, x, wait):
     cdef core.K ser
     ser = core.b9(mode, <core.K><uintptr_t>x._addr)
     if ser == NULL:
-        return factory(<uintptr_t>core.ee(ser), False, 1)
+        return factory(<uintptr_t>core.ee(ser), False, '', 1)
     res = _to_bytes_(ser, <char>wait)
     return (<unsigned long long><uintptr_t>ser, res)
 

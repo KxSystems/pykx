@@ -413,10 +413,6 @@ def install_into_QHOME(overwrite_embedpy=False,
             shutil.copy(Path(__file__).parent/'lib'/i, Path(dest)/i)
     shutil.copy(Path(__file__).parent/'pykx.q', dest)
     shutil.copy(Path(__file__).parent/'pykx_init.q_', dest)
-    if platform.system() == 'Windows':
-        if dest == qhome:
-            dest = dest/'w64'
-        shutil.copy(Path(__file__).parent/'lib/w64/q.dll', dest)
 
 
 def activate_numpy_allocator() -> None:
