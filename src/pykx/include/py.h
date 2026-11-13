@@ -117,6 +117,7 @@ typedef struct{
  X(int,PyException_SetTraceback,(P,P))\
  X(void*,PyMem_Calloc,(size_t,size_t))\
  X(void,PyMem_Free,(void*))\
+ X(void,PyMem_RawFree,(void*))\
  X(void,PyErr_SetObject,(P,P))\
  X(void,PyErr_Print,())\
  X(P,PyObject_Repr,(P))\
@@ -163,23 +164,12 @@ typedef struct{
  X(int,Py_IsInitialized,())\
  X(int,PySys_WriteStdout,(char*,...))\
 
-//https://docs.scipy.org/doc/numpy/reference/c-api.html https://github.com/numpy/numpy/blob/master/numpy/core/code_generators/numpy_api.py
 #undef PyCFunction_New
 #define PyCFunction_New(x,y) PyCFunction_NewEx(x,y,NULL)
-#define NF \
- X(_p,PyArray_Type,,2)\
- X(_p,PyGenericArrType_Type,,10)\
- X(A,PyArray_NewCopy,(A,int),85)\
- X(A,PyArray_New,(P,int,L*,int,L*,void*,int,int,P),93)\
- X(int,PyArray_SetBaseObject,(A,P),282)\
- X(A,PyArray_FromScalar,(P,P),61)\
 
 #define X(r,n,a,...) typedef r T##n;static T##n(*n)a;
-PF NF
+PF
 #undef X
-
-static int ta(A a){int c[]={KB,-1,KG,KH,-1,KI,-1,4==sizeof(long)?KI:KJ,-1,KJ,-1,KE,KF,-1,-1,-1,-1,0,-1,-1,-1},t=a->d->n;return t>20?-1:c[t];}
-static int tk(K x){int c[]={-1,0,-1,-1,-1,3,5,9,11,12,-1,-1,9,5,5,12,9,5,5,5},t=xt>0?xt:-xt;return t>19?-1:c[t];}
 
 static int pyl(char* l){
 #if _WIN32
@@ -195,10 +185,6 @@ static int pyl(char* l){
 
 #define BUFFSIZE 4096
 
-static int pyn(void**v){
-#define X(r,n,a,i) U(n=(T##n(*)a)v[i])
- NF
- return 1;}
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wincompatible-pointer-types-discards-qualifiers"
 #pragma clang diagnostic ignored "-Wunused-parameter"

@@ -92,7 +92,7 @@ k)c:{'[y;x]}/|:
 k)ce:{'[y;x]}/enlist,|:
 
 // @desc Make use of `pykx.so` logic when running under Python
-if["true"~getenv`PYKX_UNDER_PYTHON;
+if[("true"~lower getenv`PYKX_UNDER_PYTHON) or 1b~@[get;`.pykx.util.underPython;0b];
   util.load:2:[hsym`$pykxDir,"/pykx";]
   ];
 
@@ -159,8 +159,17 @@ util.CFunctions:flip `qname`cname`args!flip (
 util.toPython:{wrap util.pyForeign[$[type[x]in 104 105 112h;wrap[unwrap x]`;x];y;z]}
 
 // @private
-// @desc Check if argument is of specified type
-util.isch  :{$[(104= type y);$[x~y[::]0;1b;0b];0b]}
+// @desc
+// Safely extract the pykx marker tag from a value, or ` if it is not a marker.
+util.mtag  :{$[104h<>type x;`;
+              104h<>type v0:(value x)0;`;
+              2>count vv:value v0;`;
+              enlist~first vv;vv 1;
+              `]}
+
+// @private
+// @desc Check if argument is a pykx marker of the specified type
+util.isch  :{x~util.mtag y}
 
 // @private
 // @desc

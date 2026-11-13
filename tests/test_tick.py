@@ -381,3 +381,20 @@ def test_init_args(kx):
     with pytest.raises(TypeError) as err:
         kx.tick.HDB(port=5012, init_args=['test', 1])
     assert 'str type objects' in str(err.value)
+
+
+def test_streaming_init_error_reports_cause(kx, monkeypatch):
+    # The retry branch used to format `err.value`, which no exception raised by
+    # start_q_subprocess defines, so the real reason was replaced by an AttributeError
+    attempts = []
+
+    def fake_start(*args, **kwargs):
+        attempts.append(1)
+        if len(attempts) == 1:
+            return None
+        raise RuntimeError('Unable to locate an appropriate q executable')
+
+    monkeypatch.setattr(kx.tick, 'start_q_subprocess', fake_start)
+    with pytest.raises(kx.QError) as err:
+        kx.tick.STREAMING(port=5030)
+    assert 'Unable to locate an appropriate q executable' in str(err.value)

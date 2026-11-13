@@ -71,6 +71,15 @@ def test_df_head(kx, q):
     assert check_result_and_type(kx, df.head(), q('5 # ([til 10] 10 - til 10)'))
     assert check_result_and_type(kx, df.head(2), q('2 # ([til 10] 10 - til 10)'))
 
+    # n larger than the table must not wrap around
+    assert check_result_and_type(kx, df.head(15), df)
+    df = q('([] a: 1 2 3)')
+    assert check_result_and_type(kx, df.head(5), df)
+    assert check_result_and_type(kx, df.head(-1), q('([] a: 1 2)'))
+    assert check_result_and_type(kx, df.head(-3), q('0#([] a: 1 2 3)'))
+    assert check_result_and_type(kx, df.head(-5), q('0#([] a: 1 2 3)'))
+    assert check_result_and_type(kx, df.head(0), q('0#([] a: 1 2 3)'))
+
 
 def test_df_tail(kx, q):
     df = q('([] til 10; 10 - til 10)')
@@ -79,6 +88,15 @@ def test_df_tail(kx, q):
     df = q('([til 10] 10 - til 10)')
     assert check_result_and_type(kx, df.tail(), q('5 _ ([til 10] 10 - til 10)'))
     assert check_result_and_type(kx, df.tail(2), q('8 _ ([til 10] 10 - til 10)'))
+
+    # n larger than the table must not wrap around
+    assert check_result_and_type(kx, df.tail(15), df)
+    df = q('([] a: 1 2 3)')
+    assert check_result_and_type(kx, df.tail(5), df)
+    assert check_result_and_type(kx, df.tail(-1), q('([] a: 2 3)'))
+    assert check_result_and_type(kx, df.tail(-3), q('0#([] a: 1 2 3)'))
+    assert check_result_and_type(kx, df.tail(-5), q('0#([] a: 1 2 3)'))
+    assert check_result_and_type(kx, df.tail(0), q('0#([] a: 1 2 3)'))
 
 
 def test_df_pop(kx, q):
@@ -187,6 +205,231 @@ def test_df_loc(kx, q):
     assert check_result_and_type(kx, df.loc[[1]], [{'x': [1], 'y': [9], 'z': ['a']}])
     assert check_result_and_type(kx, df.loc[[0, 1]], [{'x': [0], 'y': [10], 'z': ['a']}, {'x': [1], 'y': [9], 'z': ['a']}]) # noqa E501
     assert check_result_and_type(kx, df.loc[0, :], {'x': [0], 'y': [10], 'z': ['a']})
+
+
+def test_df_loc_chained_boolean(kx, q):
+    df = q('([] x: til 10)')
+    subset = df.loc[df['x'] > 4]
+    other = q('([] y: til 10)')
+    other.loc[other['y'] < 3]  # unrelated table of the same length
+    df.loc[df['x'] < 2]        # unrelated filter of the same table
+    assert subset.loc[df['x'] < 8]['x'].py() == [5, 6, 7]
+    with pytest.raises(IndexError):
+        df.head(3).loc[df['x'] > 4]
+    pdf = pd.DataFrame({'x': range(10)})
+    assert pdf.loc[pdf['x'] > 4].loc[pdf['x'] < 8]['x'].tolist() == [5, 6, 7]
+    with pytest.raises(IndexError):
+        pdf.head(3).loc[(pdf['x'] > 4).to_numpy()]
+
+
+def test_df_loc_chained_boolean_cross_table(kx, q):
+    df = q('([] x: til 10)')
+    subset = df.loc[df['x'] > 4]
+    other = q('([] y: til 10)')
+    other.loc[other['y'] > 6]  # unrelated table of the same length
+    assert subset.loc[df['x'] < 8]['x'].py() == [5, 6, 7]
+    pdf = pd.DataFrame({'x': range(10)})
+    assert pdf.loc[pdf['x'] > 4].loc[pdf['x'] < 8]['x'].tolist() == [5, 6, 7]
+
+
+def test_df_iloc_chained_boolean_cross_table(kx, q):
+    df = q('([] x: til 10)')
+    subset = df.iloc[df['x'] > 4]
+    other = q('([] y: til 10)')
+    other.iloc[other['y'] > 6]  # unrelated table of the same length
+    assert subset.iloc[df['x'] < 8]['x'].py() == [5, 6, 7]
+    pdf = pd.DataFrame({'x': range(10)})
+    psubset = pdf.iloc[(pdf['x'] > 4).to_numpy()]
+    assert psubset.iloc[(psubset['x'] < 8).to_numpy()]['x'].tolist() == [5, 6, 7]
+
+
+def test_df_loc_chained_boolean_after_parent_refilter(kx, q):
+    df = q('([] x: til 10)')
+    subset = df.loc[df['x'] > 4]
+    df.loc[df['x'] < 2]  # unrelated filter of the same table
+    assert subset.loc[df['x'] < 8]['x'].py() == [5, 6, 7]
+    pdf = pd.DataFrame({'x': range(10)})
+    psubset = pdf.loc[pdf['x'] > 4]
+    pdf.loc[pdf['x'] < 2]
+    assert psubset.loc[pdf['x'] < 8]['x'].tolist() == [5, 6, 7]
+
+
+def test_df_loc_chained_boolean_sibling_subsets(kx, q):
+    df = q('([] x: til 10)')
+    upper = df.loc[df['x'] > 4]
+    lower = df.loc[df['x'] < 5]
+    assert upper.loc[q('1111111011b')]['x'].py() == [5, 6, 8, 9]
+    assert lower.loc[q('1101111111b')]['x'].py() == [0, 1, 3, 4]
+    pdf = pd.DataFrame({'x': range(10)})
+    upper_mask = pd.Series([True] * 7 + [False] + [True] * 2)
+    lower_mask = pd.Series([True, True, False] + [True] * 7)
+    assert pdf.loc[pdf['x'] > 4].loc[upper_mask]['x'].tolist() == [5, 6, 8, 9]
+    assert pdf.loc[pdf['x'] < 5].loc[lower_mask]['x'].tolist() == [0, 1, 3, 4]
+
+
+def test_df_loc_chained_boolean_subset_reusable(kx, q):
+    df = q('([] x: til 10)')
+    subset = df.loc[df['x'] > 4]
+    assert subset.loc[df['x'] < 8]['x'].py() == [5, 6, 7]
+    assert subset.loc[df['x'] < 9]['x'].py() == [5, 6, 7, 8]
+    assert subset['x'].py() == [5, 6, 7, 8, 9]
+    pdf = pd.DataFrame({'x': range(10)})
+    psubset = pdf.loc[pdf['x'] > 4]
+    assert psubset.loc[pdf['x'] < 8]['x'].tolist() == [5, 6, 7]
+    assert psubset.loc[pdf['x'] < 9]['x'].tolist() == [5, 6, 7, 8]
+    assert psubset['x'].tolist() == [5, 6, 7, 8, 9]
+
+
+def test_df_loc_chained_boolean_three_levels(kx, q):
+    df = q('([] x: til 10)')
+    other = q('([] y: til 10)')
+    first = df.loc[df['x'] > 1]
+    other.loc[other['y'] > 6]  # unrelated table of the same length
+    second = first.loc[df['x'] < 8]
+    other.loc[other['y'] < 4]  # unrelated table of the same length
+    third = second.loc[q('0110111000b')]
+    assert first['x'].py() == [2, 3, 4, 5, 6, 7, 8, 9]
+    assert second['x'].py() == [2, 3, 4, 5, 6, 7]
+    assert third['x'].py() == [2, 4, 5, 6]
+    pdf = pd.DataFrame({'x': range(10)})
+    third_mask = pd.Series([False, True, True, False, True, True, True, False, False, False])
+    assert pdf.loc[pdf['x'] > 1].loc[pdf['x'] < 8].loc[third_mask]['x'].tolist() == [2, 4, 5, 6]
+
+
+def test_df_loc_chained_boolean_length_collision(kx, q):
+    df = q('([] x: til 10)')
+    subset = df.loc[df['x'] > 4]  # five rows, the same length as `short`
+    short = q('([] z: til 5)')
+    short_subset = short.loc[short['z'] > 1]
+    subset.loc[df['x'] < 8]
+    assert short_subset.loc[q('11101b')]['z'].py() == [2, 4]
+    pdf = pd.DataFrame({'x': range(10)})
+    pshort_subset = pd.DataFrame({'z': range(5)}).query('z > 1')
+    pdf.loc[pdf['x'] > 4].loc[pdf['x'] < 8]
+    assert pshort_subset.loc[pd.Series([True, True, True, False, True])]['z'].tolist() == [2, 4]
+
+
+def test_df_loc_chained_boolean_with_columns(kx, q):
+    df = q('([] x: til 10; y: 10 - til 10)')
+    subset = df.loc[df['x'] > 4, ['x', 'y']]
+    other = q('([] y: til 10)')
+    other.loc[other['y'] > 6]  # unrelated table of the same length
+    assert subset.loc[df['x'] < 8]['y'].py() == [5, 4, 3]
+    pdf = pd.DataFrame({'x': range(10), 'y': [10 - i for i in range(10)]})
+    assert pdf.loc[pdf['x'] > 4, ['x', 'y']].loc[pdf['x'] < 8]['y'].tolist() == [5, 4, 3]
+
+
+def test_df_iloc_chained_boolean_with_columns(kx, q):
+    df = q('([] x: til 10; y: 10 - til 10)')
+    subset = df.iloc[df['x'] > 4, ['x', 'y']]
+    other = q('([] y: til 10)')
+    other.iloc[other['y'] > 6]  # unrelated table of the same length
+    assert subset.iloc[df['x'] < 8]['y'].py() == [5, 4, 3]
+    pdf = pd.DataFrame({'x': range(10), 'y': [10 - i for i in range(10)]})
+    psubset = pdf.iloc[(pdf['x'] > 4).to_numpy(), [0, 1]]  # Pandas .iloc needs column positions
+    assert psubset.iloc[(psubset['x'] < 8).to_numpy()]['y'].tolist() == [5, 4, 3]
+
+
+def test_df_loc_chained_boolean_keyed(kx, q):
+    df = q('([x: til 10] y: 10 - til 10)')
+    subset = df.loc[q('0000011111b')]
+    other = q('([] y: til 10)')
+    other.loc[other['y'] > 6]  # unrelated table of the same length
+    assert q('0!', subset.loc[q('1111111100b')])['y'].py() == [5, 4, 3]
+    pdf = pd.DataFrame({'x': range(10), 'y': [10 - i for i in range(10)]}).set_index('x')
+    psubset = pdf.loc[np.array([False] * 5 + [True] * 5)]
+    assert psubset.loc[pd.Series([True] * 8 + [False] * 2)]['y'].tolist() == [5, 4, 3]
+
+
+def test_df_iloc_chained_boolean_keyed(kx, q):
+    df = q('([x: til 10] y: 10 - til 10)')
+    subset = df.iloc[q('0000011111b')]
+    other = q('([] y: til 10)')
+    other.iloc[other['y'] > 6]  # unrelated table of the same length
+    assert q('0!', subset.iloc[q('1111111100b')])['y'].py() == [5, 4, 3]
+    pdf = pd.DataFrame({'x': range(10), 'y': [10 - i for i in range(10)]}).set_index('x')
+    psubset = pdf.iloc[np.array([False] * 5 + [True] * 5)]
+    assert psubset.iloc[np.array([True] * 3 + [False] * 2)]['y'].tolist() == [5, 4, 3]
+
+
+def test_df_loc_chained_boolean_empty(kx, q):
+    df = q('([] x: til 10)')
+    subset = df.loc[df['x'] > 4]
+    other = q('([] y: til 10)')
+    other.loc[other['y'] > 6]  # unrelated table of the same length
+    assert subset.loc[df['x'] > 100]['x'].py() == []
+    assert subset.loc[df['x'] > 4]['x'].py() == [5, 6, 7, 8, 9]
+    pdf = pd.DataFrame({'x': range(10)})
+    psubset = pdf.loc[pdf['x'] > 4]
+    assert psubset.loc[pdf['x'] > 100]['x'].tolist() == []
+    assert psubset.loc[pdf['x'] > 4]['x'].tolist() == [5, 6, 7, 8, 9]
+
+
+def test_df_loc_chained_boolean_all_rows(kx, q):
+    df = q('([] x: til 10)')
+    subset = df.loc[df['x'] > 4]
+    other = q('([] y: til 10)')
+    other.loc[other['y'] > 6]  # unrelated table of the same length
+    assert subset.loc[df['x'] >= 0]['x'].py() == [5, 6, 7, 8, 9]
+    pdf = pd.DataFrame({'x': range(10)})
+    assert pdf.loc[pdf['x'] > 4].loc[pdf['x'] >= 0]['x'].tolist() == [5, 6, 7, 8, 9]
+
+
+def test_df_loc_unalignable_boolean_mask(kx, q):
+    df = q('([] x: til 3)')
+    with pytest.raises(IndexError):
+        df.loc[q('1010110b')]
+    pdf = pd.DataFrame({'x': range(3)})
+    with pytest.raises(IndexError):  # Pandas: 'Boolean index has wrong length: 7 instead of 3'
+        pdf.loc[np.array([True, False, True, False, True, True, False])]
+
+
+def test_df_iloc_unalignable_boolean_mask(kx, q):
+    df = q('([] x: til 3)')
+    with pytest.raises(IndexError):
+        df.iloc[q('1010110b')]
+    pdf = pd.DataFrame({'x': range(3)})
+    with pytest.raises(IndexError):
+        pdf.iloc[np.array([True, False, True, False, True, True, False])]
+
+
+def test_df_loc_unalignable_boolean_mask_unrelated_table(kx, q):
+    df = q('([] x: til 10)')
+    df.loc[df['x'] > 4]
+    short = q('([] x: til 3)')
+    with pytest.raises(IndexError):
+        short.loc[df['x'] > 4]
+    pdf = pd.DataFrame({'x': range(10)})
+    pdf.loc[pdf['x'] > 4]
+    pshort = pd.DataFrame({'x': range(3)})
+    with pytest.raises(IndexError):
+        pshort.loc[(pdf['x'] > 4).to_numpy()]  # an indexless mask, as a BooleanVector is
+
+
+def test_df_iloc_unalignable_boolean_mask_unrelated_table(kx, q):
+    df = q('([] x: til 10)')
+    df.iloc[df['x'] > 4]
+    short = q('([] x: til 3)')
+    with pytest.raises(IndexError):
+        short.iloc[df['x'] > 4]
+    pdf = pd.DataFrame({'x': range(10)})
+    pdf.iloc[(pdf['x'] > 4).to_numpy()]
+    pshort = pd.DataFrame({'x': range(3)})
+    with pytest.raises(IndexError):
+        pshort.iloc[(pdf['x'] > 4).to_numpy()]
+
+
+def test_df_loc_unalignable_boolean_mask_on_subset(kx, q):
+    df = q('([] x: til 10)')
+    subset = df.loc[df['x'] > 4].loc[df['x'] < 7]
+    assert subset['x'].py() == [5, 6]
+    with pytest.raises(IndexError):
+        subset.loc[q('1010110b')]
+    pdf = pd.DataFrame({'x': range(10)})
+    psubset = pdf.loc[pdf['x'] > 4].loc[pdf['x'] < 7]
+    assert psubset['x'].tolist() == [5, 6]
+    with pytest.raises(IndexError):
+        psubset.loc[np.array([True, False, True, False, True, True, False])]
 
 
 def test_df_loc_keyed(kx, q):
@@ -1467,6 +1710,11 @@ def test_df_rename(kx, q):
     t = kx.q('([] Policy: 1 2 3)')
     rez = t.rename({'Poliddcy': 'PolicyID', 'Policy': 'p_id'}, axis=1)
     assert all(t.pd().rename({'Poliddcy': 'PolicyID', 'Policy': 'p_id'}, axis=1).eq(rez.pd()))
+
+    t = kx.q('([] Policy: 1 2 3)')
+    cols = {0: 'ignored', 'Policy': 'PolicyID'}
+    rez = t.rename(cols, axis=1)
+    assert all(t.pd().rename(cols, axis=1).eq(rez.pd()))
 
     mixed_index_table = kx.q('([] id:(`a;2;1); Policy: 3 4 5; name:`a`b`c)').pd()
     df=kx.toq(mixed_index_table.set_index(['id']))

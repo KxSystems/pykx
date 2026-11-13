@@ -18,6 +18,8 @@ python -m pytest -vvv -n 0 --no-cov --color=yes --reruns=5 --junitxml=nep_unlice
 SET /A nep_unlicensed =  %ERRORLEVEL%
 python -m pytest -vvv -n 0 --no-cov --color=yes --reruns=5 --junitxml=pandas_licensed_report.xml .\tests\win_tests\pandas_lic\pandas_licensed_tests.py
 SET /A pandas_licensed =  %ERRORLEVEL%
+python -m pytest -vvv -n 0 --no-cov --color=yes --junitxml=underq_windows_report.xml .\tests\test_underq_windows.py
+SET /A underq_windows =  %ERRORLEVEL%
 IF %licensed% NEQ 0 (
     exit %licensed%
 )
@@ -41,5 +43,8 @@ IF %nep_unlicensed% NEQ 0 (
 )
 IF %pandas_licensed% NEQ 0 (
     exit %pandas_licensed%
+)
+IF %underq_windows% NEQ 0 (
+    exit %underq_windows%
 )
 

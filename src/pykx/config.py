@@ -360,6 +360,9 @@ _pykx_force_licensed = ('--licensed' in qargs or _is_enabled('PYKX_LICENSED', '-
 qlib_location = Path(_get_config_value('PYKX_Q_LIB_LOCATION', pykx_libs_dir))
 pykx_threading = _is_enabled('PYKX_THREADING')
 
+if under_q and pykx_threading:
+    pykx_threading = False
+
 _executable = 'q'
 if platform.system() == 'Windows' and pykx_threading:
     _executable += '.exe'
@@ -405,6 +408,11 @@ def find_core_lib(name: str) -> Path:
 def _set_licensed(licensed_):
     global licensed
     licensed = licensed_
+
+
+def _set_pykx_threading(pykx_threading_):
+    global pykx_threading
+    pykx_threading = pykx_threading_
 
 
 def _set_keep_local_times(keep_local_times_):

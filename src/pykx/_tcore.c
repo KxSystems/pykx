@@ -487,6 +487,7 @@ struct QInit {
 void* q_thread_init(void* _qini) {
     struct QInit* qini = (struct QInit*)_qini;
     qinit_rc = _qinit(qini->argc, qini->argv, qini->qhome, qini->qlic, qini->qqq);
+    // `qini` is owned and freed by q_init once it observes qinit_rc; do not free here.
     pthread_mutex_lock(&init_mutex);
     pthread_cond_signal(&init);
     pthread_mutex_unlock(&init_mutex);
@@ -546,12 +547,19 @@ int q_init(int argc, char** argv, char* qhome, char* qlic, char* qqq) {
     qini->qqq = qqq; // TODO: ADD COMMENT
     qinit_rc = -256;
     int rc = pthread_create(&q_thread, NULL, q_thread_init, (void*)qini);
+    if (rc != 0) {
+        // q_thread_init never runs, so free here and avoid waiting on `init` forever.
+        free(qini);
+        return rc;
+    }
 
     pthread_mutex_lock(&init_mutex);
     while (qinit_rc == -256) {
         pthread_cond_wait(&init, &init_mutex);
     }
     pthread_mutex_unlock(&init_mutex);
+    // Safe to free now: q_thread_init finished reading `qini` before signalling `init`.
+    free(qini);
     return qinit_rc;
 }
 

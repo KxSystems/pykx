@@ -24,7 +24,7 @@ from .config import (
     beta_features, ignore_qhome, jupyterq, k_allocator, k_gc, keep_local_times,
     load_pyarrow_unsafe, max_error_length, no_pykx_signal, no_qce, pykx_4_1,
     pykx_config_location, pykx_config_profile, pykx_debug_insights, pykx_dir, pykx_lib_dir,
-    pykx_qdebug, pykx_threading, q_executable, qargs, qhome, qlic, release_gil,
+    pykx_qdebug, q_executable, qargs, qhome, qlic, release_gil,
     skip_under_q, suppress_warnings, use_q_lock)
 from ._version import version as __version__
 from .exceptions import PyKXException
@@ -464,6 +464,8 @@ def config_information():
 
 
 def env_information():
+    from .config import pykx_threading
+
     env_info = '\n**** PyKX Configuration Variables ****\n'
 
     global_config = {'PYKX_IGNORE_QHOME': ignore_qhome, 'PYKX_KEEP_LOCAL_TIMES': keep_local_times,

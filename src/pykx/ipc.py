@@ -575,6 +575,8 @@ class QConnection(Q):
               reconnection_function: callable = reconnection_function,
               connection_timeout: Optional[float] = None,
     ):
+        if self.__dict__.get('_initialized'):
+            return
         credentials = f'{normalize_to_str(username, "Username")}:' \
                       f'{normalize_to_str(password, "Password")}'
         object.__setattr__(self, '_connection_info', {
@@ -1443,10 +1445,13 @@ class SyncQConnection(QConnection):
             self._writer.close()
             try:
                 self._sock.shutdown(socket.SHUT_RDWR)
-                self._sock.close()
-                self._finalizer()
             except BaseException:
                 pass
+            try:
+                self._sock.close()
+            except BaseException:
+                pass
+            self._finalizer()
 
     def fileno(self) -> int:
         """The file descriptor or handle of the connection."""
@@ -1954,10 +1959,13 @@ class AsyncQConnection(QConnection):
             self._writer.close()
             try:
                 self._sock.shutdown(socket.SHUT_RDWR)
-                self._sock.close()
-                self._finalizer()
             except BaseException:
                 pass
+            try:
+                self._sock.close()
+            except BaseException:
+                pass
+            self._finalizer()
 
     def fileno(self) -> int:
         """The file descriptor or handle of the connection."""
@@ -2026,10 +2034,13 @@ class _DeferredQConnection(QConnection):
             self._writer.close()
             try:
                 self._sock.shutdown(socket.SHUT_RDWR)
-                self._sock.close()
-                self._finalizer()
             except BaseException:
                 pass
+            try:
+                self._sock.close()
+            except BaseException:
+                pass
+            self._finalizer()
 
 
 def handshake(conn: socket.socket):
@@ -2423,9 +2434,9 @@ class RawQConnection(QConnection):
             response = response[1]
         try:
             msg = serialize(response, mode=level, wait=2)
-        except QError as e:
+        except Exception as e:
             error = True
-            response = SymbolAtom(f"{e}")
+            response = SymbolAtom(str(e).removeprefix('Failed to serialize IPC message: '))
             msg = serialize(response, mode=level, wait=2)
         if error:
             msg_view = list(msg.copy())
@@ -2520,7 +2531,7 @@ class RawQConnection(QConnection):
             events = reader.select(timeout)
             for key, _ in events:
                 callback = key.data
-                res = callback[0]()(key.fileobj)
+                res = callback()(key.fileobj)
                 if res is None:
                     count -= 1
                     if count > 1:
@@ -2550,7 +2561,7 @@ class RawQConnection(QConnection):
                         elif MessageType.async_msg.value == msg_type:
                             print(e)
                     if MessageType.sync_msg.value == msg_type:
-                        callback[0]()(key.fileobj, res, level)
+                        callback()(key.fileobj, res, level)
                     count -= 1
                     if count > 1:
                         return
@@ -2792,17 +2803,20 @@ class RawQConnection(QConnection):
                 events = self._reader.select()
                 for key, _mask in events:
                     callback = key.data
-                    callback[0](key.fileobj)
+                    callback[0]()(key.fileobj)
             self._reader.unregister(self._sock)
             self._writer.unregister(self._sock)
             self._reader.close()
             self._writer.close()
             try:
                 self._sock.shutdown(socket.SHUT_RDWR)
-                self._sock.close()
-                self._finalizer()
             except BaseException:
                 pass
+            try:
+                self._sock.close()
+            except BaseException:
+                pass
+            self._finalizer()
 
 
 class SecureQConnection(QConnection):

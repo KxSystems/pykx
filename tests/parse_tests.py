@@ -32,7 +32,8 @@ class ParamTest:
             self._func = x[1]
             source = []
             marks = ['ipc', 'isolate', 'licensed', 'nep', 'pandas_api', 'pypy', 'static']
-            etc = ['test', 'assert', 'np_ts', 'q_', 'mkt', 'self.v', 'kt', 'self.create_splayed']
+            etc = ['test', 'assert', 'np_ts', 'q_', 'mkt', 'self.v', 'kt', 'self.create_splayed',
+                   'self.create_partitioned_table', 'self.reset_sp', 'self.DEFAULT_PATH']
             for line in getsource(x[1]).split('\n'):
                 if line == '' or line == '\n':
                     continue
@@ -119,6 +120,8 @@ class ParseModule:
         self.module_str = str(self.module).split(' ')[1]
 
         self.members = getmembers(self.module, isfunction)
+        self.members.extend([(x[0], x[1].__wrapped__) for x in getmembers(self.module)
+                             if type(x[1]).__name__ == 'FixtureFunctionDefinition'])
         self.members.extend([x for x in
                              getmembers(self.module, isclass)
                              if str(x[1].__module__) in str(self.module)
@@ -169,7 +172,11 @@ class ParseTestSuite:
             helpers.extend(mod.helpers)
             for cls in mod.classes:
                 for func in cls.functions:
-                    if 'def create_splayed_table' in func.source:
+                    if any(f'def {helper}' in func.source
+                           for helper in ('create_splayed_table', 'reset_sp',
+                                          'create_partitioned_table')):
+                        func.source = func.source.replace('(self, ', '(', 1)
+                        func.add_class_attrs(cls.class_attrs)
                         helpers.append(func)
                     else:
                         func.add_class_attrs(cls.class_attrs)
@@ -297,7 +304,9 @@ test_libs = [
     'import itertools',
     'import operator',
     'import platform',
-    'import toml'
+    'import toml',
+    'import warnings',
+    'from threading import Thread'
 ]
 
 

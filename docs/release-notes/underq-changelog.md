@@ -6,6 +6,43 @@ This changelog covers PyKX under q from version 2.0.0 onwards.
 
 	For changes to PyKX within a Python environment, refer to the [Python changelog](./changelog.md).
 
+## PyKX 3.2.1
+
+**Release Date**
+
+2026-11-13
+
+**Fixes and Improvements**
+
+- A Python error raised while `pykx.q` is loading is now reported as a q error instead of crashing the process.
+
+	=== "Behavior prior to change"
+
+		```q
+		q)\l pykx.q
+		Sorry, this application or an associated library has encountered a fatal error and will exit.
+		..
+		SIGSEGV: Fault address 0x8
+		```
+
+	=== "Behavior post change"
+
+		```q
+		q)\l pykx.q
+		'ImportError("/lib/x86_64-linux-gnu/libc.so.6: version `GLIBC_2.38' not found (required by /home/user/.linuxbrew/lib/libffi.so.8)")
+		```
+
+- Fixed Python reference leaks in `.pykx.import`, `.pykx.get`, `.pykx.setattr`, `.pykx.toq` and in the conversion of a Python exception to a q error.
+- Fixed a memory leak in `.pykx.repr` and `.pykx.print`.
+- Calling a foreign object that is not callable now releases the GIL before returning the error.
+- Fixed a deadlock when calling PyKX from within a `peach` expression.
+- Setting `PYKX_THREADING` under q is now ignored instead of crashing the process.
+- Fixed a small memory leak on initial load of `pykx.q`.
+- Fixed a crash on Windows when loading `pykx.q`.
+- A missing `libpython` now reports an error naming the path it looked for, rather than crashing.
+- Loading `pykx.q` under a Microsoft Store Python install now reports that it cannot be embedded.
+- Fixed q projections passed to a Python function being evaluated during argument parsing.
+
 ## PyKX 3.2.0
 
 **Release Date**

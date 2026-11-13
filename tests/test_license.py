@@ -2,6 +2,7 @@ import base64
 from io import StringIO
 import os
 import re
+import sys
 
 # Do not import pykx here - use the `kx` fixture instead!
 import pytest
@@ -477,10 +478,6 @@ def test_license_invalid_lic_name(monkeypatch):
 
 
 @pytest.mark.skipif(
-    os.getenv('PYKX_THREADING') is not None,
-    reason='KXI-63218 PYKX_THREADING licence path differs'
-)
-@pytest.mark.skipif(
     os.getenv('SKIP_LIC_TESTS') is not None,
     reason='License tests are being skipped'
 )
@@ -540,10 +537,6 @@ def test_mode_monkeypatch_licensed_true(monkeypatch):
 
 
 @pytest.mark.skipif(
-    os.getenv('PYKX_THREADING') is not None,
-    reason='KXI-63218 PYKX_THREADING licence path differs'
-)
-@pytest.mark.skipif(
     os.getenv('SKIP_LIC_TESTS') is not None,
     reason='License tests are being skipped'
 )
@@ -563,10 +556,6 @@ def test_mode_monkeypatch_licensed_false(monkeypatch):
 
 
 @pytest.mark.skipif(
-    os.getenv('PYKX_THREADING') is not None,
-    reason='KXI-63218 PYKX_THREADING licence path differs'
-)
-@pytest.mark.skipif(
     os.getenv('SKIP_LIC_TESTS') is not None,
     reason='License tests are being skipped'
 )
@@ -579,3 +568,116 @@ def test_bad_license():
 
     import pykx as kx
     assert not kx.licensed
+
+
+def _threading_disabled(kx):
+    """PYKX_THREADING was asked for, unlicensed mode was reached, so it must have been turned off
+    everywhere it is observable."""
+    assert not kx.licensed
+    assert not kx.config.pykx_threading
+    assert not kx.core.pykx_threading_enabled
+    assert 'PYKX_THREADING: False' in kx.util.debug_environment(return_info=True)
+    # Unlicensed mode is still fully usable
+    assert [1, 2] == kx.toq([1, 2]).py()
+
+
+@pytest.mark.isolate
+def test_threading_unlicensed_qargs(recwarn):
+    os.environ['PYKX_THREADING'] = 'True'
+    os.environ['QARGS'] = '--unlicensed'
+    import pykx as kx
+    _threading_disabled(kx)
+    assert not [w for w in recwarn if 'PYKX_THREADING' in str(w.message)]
+
+
+@pytest.mark.isolate
+def test_threading_unlicensed_env_var():
+    os.environ['PYKX_THREADING'] = 'True'
+    os.environ['PYKX_UNLICENSED'] = 'True'
+    import pykx as kx
+    _threading_disabled(kx)
+
+
+@pytest.mark.isolate
+def test_threading_unlicensed_config_file(tmp_path):
+    # main reads .pykx-config from the PYKX_CONFIGURATION_LOCATION directory, where kdbx
+    # reads a config-pykx file named by that variable directly.
+    (tmp_path/'.pykx-config').write_text('[default]\nPYKX_UNLICENSED="true"\n')
+    os.environ['PYKX_THREADING'] = 'True'
+    os.environ['PYKX_CONFIGURATION_LOCATION'] = str(tmp_path)
+    import pykx as kx
+    _threading_disabled(kx)
+
+
+@pytest.mark.isolate
+def test_threading_light_load():
+    os.environ['PYKX_THREADING'] = 'True'
+    os.environ['PYKX_LIGHT_LOAD'] = 'True'
+    import pykx as kx
+    assert not kx.config.pykx_threading
+    assert not kx.core.pykx_threading_enabled
+
+
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+@pytest.mark.isolate
+def test_threading_no_license(tmp_path):
+    os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
+    os.environ['PYKX_THREADING'] = 'True'
+    import pykx as kx
+    _threading_disabled(kx)
+
+
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+@pytest.mark.isolate
+def test_threading_corrupt_license(tmp_path):
+    (tmp_path/'kc.lic').write_bytes(b'not a valid license')
+    os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
+    os.environ['PYKX_THREADING'] = 'True'
+    import pykx as kx
+    _threading_disabled(kx)
+
+
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+@pytest.mark.isolate
+def test_threading_no_license_interactive(tmp_path, monkeypatch):
+    (tmp_path/'kc.lic').write_bytes(b'not a valid license')
+    os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
+    os.environ['PYKX_THREADING'] = 'True'
+    inputs = iter(['N', 'N'])
+    monkeypatch.setattr('builtins.input', lambda _: next(inputs))
+    monkeypatch.setattr(sys, 'ps1', '>>> ', raising=False)
+    import pykx as kx
+    _threading_disabled(kx)
+
+
+@pytest.mark.skipif(
+    os.getenv('SKIP_LIC_TESTS') is not None,
+    reason='License tests are being skipped'
+)
+@pytest.mark.isolate
+def test_threading_no_license_forced_licensed(tmp_path):
+    os.environ['QLIC'] = os.environ['QHOME'] = str(tmp_path.absolute())
+    os.environ['PYKX_THREADING'] = 'True'
+    os.environ['QARGS'] = '--licensed'
+    with pytest.raises(Exception, match='(?i)Failed to initialize embedded q'):
+        import pykx # noqa: F401
+
+
+@pytest.mark.isolate
+def test_threading_licensed_still_enabled():
+    os.environ['PYKX_THREADING'] = 'True'
+    import pykx as kx
+    assert kx.licensed
+    assert kx.config.pykx_threading
+    assert kx.core.pykx_threading_enabled
+    assert 'PYKX_THREADING: True' in kx.util.debug_environment(return_info=True)
+    kx.shutdown_thread()

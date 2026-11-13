@@ -98,7 +98,6 @@ class PandasAPI(PandasApply, PandasMeta, PandasIndexing, PandasReindexing,
                 PandasSorting, PandasReplace, PandasResetIndex, PandasMap):
     """PandasAPI mixin class"""
     replace_self = False
-    prev_locs = {}
 
     def __init__(self, *args, **kwargs):
         if type(self) == PandasAPI:

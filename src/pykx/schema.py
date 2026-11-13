@@ -40,7 +40,7 @@ _ktype_to_conversion = {
     k.DatetimeAtom: "datetime", k.DatetimeVector: "datetime",
     k.TimespanAtom: "timespan", k.TimespanVector: "timespan",
     k.MinuteAtom: "minute", k.MinuteVector: "minute",
-    k.SecondAtom: "second", k.SecondVector: "sector",
+    k.SecondAtom: "second", k.SecondVector: "second",
     k.TimeAtom: "time", k.TimeVector: "time",
 }
 

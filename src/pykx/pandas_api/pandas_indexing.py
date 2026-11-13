@@ -161,23 +161,40 @@ def _parse_indexes(tab, loc):
     return loc
 
 
+def _carry_row_mask(src, dst):
+    mask = getattr(src, '_row_mask', None)
+    if mask is not None and isinstance(dst, K):
+        dst._row_mask = mask
+    return dst
+
+
+def _boolean_select(tab, loc):
+    mask = getattr(tab, '_row_mask', None)
+    if mask is not None and int(q('sum', mask)) != len(tab):
+        mask = None  # provenance no longer describes this table
+    if len(loc) != len(tab):
+        if mask is None or len(loc) != len(mask):
+            raise IndexError(
+                f'Unalignable boolean mask of length {len(loc)} provided as an indexer for a '
+                f'table of length {len(tab)}'
+            )
+        loc = q('{x where y}', loc, mask)
+    if 'Keyed' in str(type(tab)):
+        res = q('{(count keys x)!(0!x) where y}', tab, loc)
+    else:
+        res = q('{x where y}', tab, loc)
+    res._row_mask = loc if mask is None else q('{@[x; where x; :; y]}', mask, loc)
+    return res
+
+
 def _iloc(tab, loc):
     cols = None
     if isinstance(loc, tuple):
         cols = _parse_cols(tab, loc[1])
         loc = loc[0]
-        tab = _get(tab, cols, None)
+        tab = _carry_row_mask(tab, _get(tab, cols, None))
     if isinstance(loc, BooleanVector):
-        if len(loc) != len(tab):
-            new_loc = q('{x where y}', loc, tab.prev_locs[str(len(loc))])
-            tab.prev_locs[str(len(loc))] = tab.prev_locs[str(len(loc))] & loc
-            loc = new_loc
-            tab.prev_locs[str(len(loc))] = loc
-        else:
-            tab.prev_locs[str(len(tab))] = loc
-        if 'Keyed' in str(type(tab)):
-            return q('{(count keys x)!((0!x) each where y)}', tab, loc)
-        return q('{x where y}', tab, loc)
+        return _boolean_select(tab, loc)
     loc = _parse_indexes(tab, loc)
     if "Keyed" in str(type(tab)):
         return q('{((flip (keys x)!(enlist y))!x each y)}', tab, loc)
@@ -204,7 +221,7 @@ def _loc(tab, loc): # noqa
             return q(f'{{[t] flip value select from t where {where_clause}}}', tab)
         cols = _parse_cols(tab, loc[1])
         loc = loc[0]
-        tab = _get(tab, cols, None)
+        tab = _carry_row_mask(tab, _get(tab, cols, None))
     if isinstance(loc, slice):
         return _iloc(tab, loc)
     if (((isinstance(loc, list) and (isinstance(loc[0], str) or isinstance(loc[0], SymbolAtom)))
@@ -231,16 +248,7 @@ def _loc(tab, loc): # noqa
             )
         return _get(tab, loc, None)
     if isinstance(loc, BooleanVector):
-        if len(loc) != len(tab):
-            new_loc = q('{x where y}', loc, tab.prev_locs[str(len(loc))])
-            tab.prev_locs[str(len(loc))] = tab.prev_locs[str(len(loc))] & loc
-            loc = new_loc
-            tab.prev_locs[str(len(loc))] = loc
-        else:
-            tab.prev_locs[str(len(tab))] = loc
-        if 'Keyed' in str(type(tab)):
-            return q('{(count keys x)!((0!x) each where y)}', tab, loc)
-        return q('{x where y}', tab, loc)
+        return _boolean_select(tab, loc)
     if isinstance(loc, str) or isinstance(loc, SymbolAtom):
         if q('{not x in cols y}', loc, tab):
             raise QError(f'Attempted to retrieve inaccessible column: {loc}')
@@ -327,9 +335,7 @@ def _rename_columns(tab, labels):
     for x in list(labels.keys()):
         if type(labels[x]) is not str:
             raise ValueError('pykx.Table column names can only be of type pykx.SymbolAtom')
-        if type(x) is not str:
-            labels.pop(x)
-        if x not in tab.columns:
+        if type(x) is not str or x not in tab.columns:
             labels.pop(x)
     if "Keyed" in str(type(tab)):
         return q('''{
@@ -344,13 +350,13 @@ def _rename_columns(tab, labels):
 class PandasIndexing:
     @api_return
     def head(self, n: int = 5):
-        """Return the first `n` rows."""
-        return q(f'{{{n}#x}}', self)
+        """Return the first `n` rows, or all but the last `-n` rows if `n` is negative."""
+        return q('{$[y<0;(0|y+count x) sublist x;y sublist x]}', self, n)
 
     @api_return
     def tail(self, n: int = 5):
-        """Return the last `n` rows."""
-        return q(f'{{neg[{n}]#x}}', self)
+        """Return the last `n` rows, or all but the first `-n` rows if `n` is negative."""
+        return q('{$[y<0;(neg y)_x;(neg y) sublist x]}', self, n)
 
     @api_return
     def pop(self, col_name: str):
