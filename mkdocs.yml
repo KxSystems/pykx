@@ -19,7 +19,6 @@ validation:
   anchors: warn  # New in MkDocs 1.6
 
 extra_css:
-  - https://code.kx.com/assets/stylesheets/main.b941530a.min.css
   # - https://code.kx.com/stylesheets/2021.css
   # - https://code.kx.com/stylesheets/prism.css
   - https://code.kx.com/stylesheets/extra.css
@@ -37,7 +36,6 @@ extra_javascript:
   - https://code.kx.com/scripts/extra.js
   - https://code.kx.com/scripts/mathjax.js
   - https://code.kx.com/scripts/polyfill.min.js
-  - https://code.kx.com/scripts/tex-mmmdtml.js
   - 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-MML-AM_CHTML'
   - 'https://code.jquery.com/jquery-3.6.0.min.js'
   - 'https://use.fontawesome.com/3dbf29ed12.js'
